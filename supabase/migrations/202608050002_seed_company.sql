@@ -1,14 +1,14 @@
 -- Run after creating the Human CEO account in Supabase Auth.
--- Replace the placeholder UUID before applying this seed in a non-development environment.
+-- Human CEO UUID for the initial RYTHM organization is recorded below.
 
 do $$
 declare
-  ceo_user_id uuid := '00000000-0000-0000-0000-000000000000';
+  ceo_user_id uuid := '30f4573e-e045-4740-b8d9-8bd7b592df46';
   org_id uuid := gen_random_uuid();
   orchestrator_id uuid := gen_random_uuid();
 begin
-  if ceo_user_id = '00000000-0000-0000-0000-000000000000' then
-    raise notice 'RYTHM seed skipped: replace ceo_user_id with the Human CEO auth.users UUID.';
+  if exists (select 1 from public.organizations where slug = 'rythm') then
+    raise notice 'RYTHM seed skipped: organization with slug rythm already exists.';
     return;
   end if;
 
