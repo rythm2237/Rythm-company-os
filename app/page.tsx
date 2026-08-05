@@ -1,12 +1,13 @@
+import Link from "next/link";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
 const modules = [
   { name: "Executive Orchestrator", status: "Specification approved", code: "B-001" },
-  { name: "Company Memory", status: "Database migration ready", code: "CORE-02" },
-  { name: "Approvals", status: "Database migration ready", code: "CORE-03" },
-  { name: "Meetings", status: "Database migration ready", code: "CORE-04" },
-  { name: "Decisions", status: "Database migration ready", code: "CORE-05" },
-  { name: "Audit & Agent Runs", status: "Database migration ready", code: "CORE-06" },
+  { name: "Company Memory", status: "Database active", code: "CORE-02" },
+  { name: "Approvals", status: "Database active", code: "CORE-03" },
+  { name: "Meetings", status: "Database active", code: "CORE-04" },
+  { name: "Decisions", status: "Database active", code: "CORE-05" },
+  { name: "Audit & Agent Runs", status: "Database active", code: "CORE-06" },
 ];
 
 export default function HomePage() {
@@ -28,6 +29,7 @@ export default function HomePage() {
           <p className="subtitle">
             Governed coordination for company memory, decisions, meetings, approvals, and AI agents.
           </p>
+          <Link className="primary-link" href="/login">CEO sign in</Link>
         </div>
         <div className="authority">
           <span>Human authority</span>
@@ -38,10 +40,10 @@ export default function HomePage() {
       <section className="statusPanel" aria-label="Runtime readiness">
         <div>
           <p className="label">Implementation stage</p>
-          <h2>Company Core foundation</h2>
-          <p>Database and governance contracts are ready for migration. B-001 remains non-autonomous.</p>
+          <h2>Authentication and CEO access</h2>
+          <p>Secure sessions, route protection, and database-backed Owner authorization are implemented.</p>
         </div>
-        <div className="readiness">Phase 1</div>
+        <div className="readiness">55%</div>
       </section>
 
       <section className="contentGrid">
