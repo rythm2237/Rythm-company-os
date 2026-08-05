@@ -78,7 +78,14 @@ async function updateRuntimePolicy(formData: FormData) {
     object_type: "runtime_policy",
     object_id: organizationId,
     risk_level: enabled ? "medium" : "low",
-    payload: { monthly_budget_usd: monthlyBudget, per_run_budget_usd: perRunBudget, max_queued_runs: maxQueued, max_requests_per_hour: maxHourly, max_attempts, timeout_seconds },
+    payload: {
+      monthly_budget_usd: monthlyBudget,
+      per_run_budget_usd: perRunBudget,
+      max_queued_runs: maxQueued,
+      max_requests_per_hour: maxHourly,
+      max_attempts: maxAttempts,
+      timeout_seconds: timeoutSeconds,
+    },
   });
   revalidatePath("/readiness");
   revalidatePath("/runtime");
