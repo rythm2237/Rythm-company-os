@@ -8,6 +8,7 @@ const modules = [
   { name: "Meeting Engine", status: "Operational", code: "CORE-04" },
   { name: "Decision Engine", status: "Operational", code: "CORE-05" },
   { name: "Action Item Engine", status: "Operational", code: "CORE-06" },
+  { name: "Agent Runtime Control Plane", status: "Dry-run governed", code: "CORE-07" },
 ];
 
 export default function HomePage() {
@@ -26,7 +27,7 @@ export default function HomePage() {
         <div>
           <p className="eyebrow">RYTHM COMPANY OS</p>
           <h1>Executive Command Center</h1>
-          <p className="subtitle">Governed coordination for company memory, decisions, meetings, approvals, action items, and AI agents.</p>
+          <p className="subtitle">Governed coordination for company memory, decisions, meetings, approvals, action items, orchestration, and AI-agent runtime control.</p>
           <Link className="primary-link" href="/login">CEO sign in</Link>
         </div>
         <div className="authority"><span>Human authority</span><strong>CEO approval required</strong></div>
@@ -35,10 +36,10 @@ export default function HomePage() {
       <section className="statusPanel" aria-label="Runtime readiness">
         <div>
           <p className="label">Implementation stage</p>
-          <h2>Executive Orchestrator operational</h2>
-          <p>Approval, decision, meeting, and action work now feed a unified CEO priority queue and governed review-cycle generator.</p>
+          <h2>Agent Runtime Control Plane governed</h2>
+          <p>Dry-run requests now enforce agent risk ceilings, budget caps, human approval routing, immutable audit history, and database-level execution locks.</p>
         </div>
-        <div className="readiness">94%</div>
+        <div className="readiness">98%</div>
       </section>
 
       <section className="contentGrid">
@@ -50,14 +51,14 @@ export default function HomePage() {
         <aside className="checklist">
           <p className="label">Runtime checks</p><h2>Connection status</h2>
           <div className="checkRows">{checks.map(([name, status]) => <div className="checkRow" key={name}><span>{name}</span><strong>{status}</strong></div>)}</div>
-          <Link className="healthLink" href="/orchestrator">Open Executive Orchestrator</Link>
-          <Link className="healthLink" href="/actions" style={{ marginLeft: 16 }}>Actions</Link>
+          <Link className="healthLink" href="/runtime">Open Agent Runtime</Link>
+          <Link className="healthLink" href="/orchestrator" style={{ marginLeft: 16 }}>Orchestrator</Link>
           <a className="healthLink" href="/api/health" style={{ marginLeft: 16 }}>Health</a>
         </aside>
       </section>
 
       <footer>
-        <span>Foundation → B-001 Executive Orchestrator → Approval → Decision → Meeting → Action Item Engine</span>
+        <span>Foundation → Executive Orchestrator → Governed Engines → Agent Runtime Control Plane</span>
         <span>AI budget guardrail: ${config.monthlyAiBudgetUsd}/month</span>
       </footer>
     </main>
