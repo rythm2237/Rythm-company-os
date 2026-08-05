@@ -8,7 +8,7 @@ const modules = [
   { name: "Meeting Engine", status: "Operational", code: "CORE-04" },
   { name: "Decision Engine", status: "Operational", code: "CORE-05" },
   { name: "Action Item Engine", status: "Operational", code: "CORE-06" },
-  { name: "Agent Runtime Control Plane", status: "Dry-run governed", code: "CORE-07" },
+  { name: "Agent Runtime Control Plane", status: "Production hardened", code: "CORE-07" },
 ];
 
 export default function HomePage() {
@@ -17,8 +17,9 @@ export default function HomePage() {
     ["Vercel runtime", "Ready"],
     ["Supabase connection", config.supabaseConfigured ? "Configured" : "Needs environment variables"],
     ["OpenAI connection", config.openAIConfigured ? "Configured" : "Not configured"],
-    ["Agent execution", config.agentExecutionEnabled ? "Enabled" : "Safely disabled"],
-    ["External actions", config.externalActionsEnabled ? "Enabled" : "Safely disabled"],
+    ["Dry-run model", config.dryRunModel ? "Configured" : "Not configured"],
+    ["Agent execution", config.agentExecutionEnabled ? "Controlled switch enabled" : "Safely disabled"],
+    ["External actions", config.externalActionsEnabled ? "Unsafe: enabled" : "Safely disabled"],
   ];
 
   return (
@@ -27,7 +28,7 @@ export default function HomePage() {
         <div>
           <p className="eyebrow">RYTHM COMPANY OS</p>
           <h1>Executive Command Center</h1>
-          <p className="subtitle">Governed coordination for company memory, decisions, meetings, approvals, action items, orchestration, and AI-agent runtime control.</p>
+          <p className="subtitle">Governed coordination for company memory, decisions, meetings, approvals, action items, orchestration, and controlled AI-agent execution.</p>
           <Link className="primary-link" href="/login">CEO sign in</Link>
         </div>
         <div className="authority"><span>Human authority</span><strong>CEO approval required</strong></div>
@@ -36,10 +37,10 @@ export default function HomePage() {
       <section className="statusPanel" aria-label="Runtime readiness">
         <div>
           <p className="label">Implementation stage</p>
-          <h2>Agent Runtime Control Plane governed</h2>
-          <p>Dry-run requests now enforce agent risk ceilings, budget caps, human approval routing, immutable audit history, and database-level execution locks.</p>
+          <h2>Production-hardened foundation complete</h2>
+          <p>Controlled dry-run execution now uses dual kill switches, immutable audit history, owner-only activation, rate and budget limits, bounded retries, timeouts, idempotency, and external-action isolation.</p>
         </div>
-        <div className="readiness">98%</div>
+        <div className="readiness">100%</div>
       </section>
 
       <section className="contentGrid">
@@ -51,14 +52,14 @@ export default function HomePage() {
         <aside className="checklist">
           <p className="label">Runtime checks</p><h2>Connection status</h2>
           <div className="checkRows">{checks.map(([name, status]) => <div className="checkRow" key={name}><span>{name}</span><strong>{status}</strong></div>)}</div>
-          <Link className="healthLink" href="/runtime">Open Agent Runtime</Link>
-          <Link className="healthLink" href="/orchestrator" style={{ marginLeft: 16 }}>Orchestrator</Link>
+          <Link className="healthLink" href="/readiness">Production Readiness</Link>
+          <Link className="healthLink" href="/runtime" style={{ marginLeft: 16 }}>Agent Runtime</Link>
           <a className="healthLink" href="/api/health" style={{ marginLeft: 16 }}>Health</a>
         </aside>
       </section>
 
       <footer>
-        <span>Foundation → Executive Orchestrator → Governed Engines → Agent Runtime Control Plane</span>
+        <span>Foundation → Executive Orchestrator → Governed Engines → Hardened Agent Runtime</span>
         <span>AI budget guardrail: ${config.monthlyAiBudgetUsd}/month</span>
       </footer>
     </main>
