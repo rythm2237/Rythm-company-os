@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
 const modules = [
-  { name: "Executive Orchestrator", status: "Specification approved", code: "B-001" },
+  { name: "Executive Orchestrator", status: "Operational", code: "B-001" },
   { name: "Company Memory", status: "Operational", code: "CORE-02" },
   { name: "Approval Engine", status: "Operational", code: "CORE-03" },
   { name: "Meeting Engine", status: "Operational", code: "CORE-04" },
@@ -35,10 +35,10 @@ export default function HomePage() {
       <section className="statusPanel" aria-label="Runtime readiness">
         <div>
           <p className="label">Implementation stage</p>
-          <h2>Governed execution layer operational</h2>
-          <p>Approval, decision, meeting, and action-item lifecycles now operate under Owner authority with audit enforcement.</p>
+          <h2>Executive Orchestrator operational</h2>
+          <p>Approval, decision, meeting, and action work now feed a unified CEO priority queue and governed review-cycle generator.</p>
         </div>
-        <div className="readiness">89%</div>
+        <div className="readiness">94%</div>
       </section>
 
       <section className="contentGrid">
@@ -50,14 +50,14 @@ export default function HomePage() {
         <aside className="checklist">
           <p className="label">Runtime checks</p><h2>Connection status</h2>
           <div className="checkRows">{checks.map(([name, status]) => <div className="checkRow" key={name}><span>{name}</span><strong>{status}</strong></div>)}</div>
-          <Link className="healthLink" href="/actions">Open Action Item Engine</Link>
-          <Link className="healthLink" href="/approvals" style={{ marginLeft: 16 }}>Approvals</Link>
+          <Link className="healthLink" href="/orchestrator">Open Executive Orchestrator</Link>
+          <Link className="healthLink" href="/actions" style={{ marginLeft: 16 }}>Actions</Link>
           <a className="healthLink" href="/api/health" style={{ marginLeft: 16 }}>Health</a>
         </aside>
       </section>
 
       <footer>
-        <span>Foundation → B-001 → Core Runtime → Approval → Decision → Meeting → Action Item Engine</span>
+        <span>Foundation → B-001 Executive Orchestrator → Approval → Decision → Meeting → Action Item Engine</span>
         <span>AI budget guardrail: ${config.monthlyAiBudgetUsd}/month</span>
       </footer>
     </main>
