@@ -3,8 +3,8 @@ import { getRuntimeConfig } from "@/lib/runtime-config";
 
 const modules = [
   { name: "Executive Orchestrator", status: "Specification approved", code: "B-001" },
-  { name: "Company Memory", status: "Database active", code: "CORE-02" },
-  { name: "Approvals", status: "Database active", code: "CORE-03" },
+  { name: "Company Memory", status: "Operational", code: "CORE-02" },
+  { name: "Approval Engine", status: "Operational", code: "CORE-03" },
   { name: "Meetings", status: "Database active", code: "CORE-04" },
   { name: "Decisions", status: "Database active", code: "CORE-05" },
   { name: "Audit & Agent Runs", status: "Database active", code: "CORE-06" },
@@ -40,10 +40,10 @@ export default function HomePage() {
       <section className="statusPanel" aria-label="Runtime readiness">
         <div>
           <p className="label">Implementation stage</p>
-          <h2>Authentication and CEO access</h2>
-          <p>Secure sessions, route protection, and database-backed Owner authorization are implemented.</p>
+          <h2>Approval Engine operational</h2>
+          <p>Owner-only approval resolution, expiration enforcement, CEO response notes, and audit history are implemented.</p>
         </div>
-        <div className="readiness">55%</div>
+        <div className="readiness">74%</div>
       </section>
 
       <section className="contentGrid">
@@ -77,12 +77,13 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <a className="healthLink" href="/api/health">View health endpoint</a>
+          <Link className="healthLink" href="/approvals">Open Approval Engine</Link>
+          <a className="healthLink" href="/api/health" style={{ marginLeft: 16 }}>View health endpoint</a>
         </aside>
       </section>
 
       <footer>
-        <span>Specification lineage: Foundation v1.0 → B-001 v1.0 → Core Runtime v1.0</span>
+        <span>Specification lineage: Foundation v1.0 → B-001 v1.0 → Core Runtime v1.0 → Approval Engine v1.0</span>
         <span>AI budget guardrail: ${config.monthlyAiBudgetUsd}/month</span>
       </footer>
     </main>
