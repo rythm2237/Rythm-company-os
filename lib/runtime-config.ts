@@ -10,9 +10,13 @@ export type RuntimeConfig = {
 const enabled = (value: string | undefined) => value === "true";
 
 export function getRuntimeConfig(): RuntimeConfig {
+  const supabasePublicKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
   return {
     supabaseConfigured: Boolean(
-      process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      process.env.NEXT_PUBLIC_SUPABASE_URL && supabasePublicKey,
     ),
     openAIConfigured: Boolean(process.env.OPENAI_API_KEY),
     agentExecutionEnabled: enabled(process.env.RYTHM_AGENT_EXECUTION_ENABLED),
