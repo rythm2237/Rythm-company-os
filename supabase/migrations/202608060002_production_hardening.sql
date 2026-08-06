@@ -136,8 +136,8 @@ begin
     if new.status = 'queued' and not agent_row.enabled then
       raise exception 'Paused agents cannot enter the queue';
     end if;
-    if case new.risk_level when 'low' then 0 when 'medium' then 1 when 'high' then 2 else 3 end >
-       case agent_row.risk_ceiling when 'low' then 0 when 'medium' then 1 when 'high' then 2 else 3 end then
+    if (case new.risk_level when 'low' then 0 when 'medium' then 1 when 'high' then 2 else 3 end) >
+       (case agent_row.risk_ceiling when 'low' then 0 when 'medium' then 1 when 'high' then 2 else 3 end) then
       raise exception 'Requested risk exceeds the agent risk ceiling';
     end if;
     if new.risk_level in ('high','critical') and not new.requires_human_approval then
