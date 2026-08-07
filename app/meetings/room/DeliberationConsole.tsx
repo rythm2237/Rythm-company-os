@@ -58,6 +58,9 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
   const [summary,setSummary]=useState("");
   const [summarizing,setSummarizing]=useState(false);
   const [showTranscript,setShowTranscript]=useState(true);
+  const [summaryLanguageChoice,setSummaryLanguageChoice]=useState("__meeting__");
+  const [customSummaryLanguage,setCustomSummaryLanguage]=useState("");
+  const [summaryLanguageUsed,setSummaryLanguageUsed]=useState("");
   const [ceoOpen,setCeoOpen]=useState(false);
   const [ceoText,setCeoText]=useState("");
   const [ceoSending,setCeoSending]=useState(false);
@@ -94,10 +97,16 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
   };
 
   const requestSummary=async()=>{
+    const requestedLanguage=summaryLanguageChoice==="__meeting__"?"":summaryLanguageChoice==="__other__"?customSummaryLanguage.trim():summaryLanguageChoice;
+    if(summaryLanguageChoice==="__other__"&&requestedLanguage.length<2){
+      setError("Enter the language you want for the meeting summary.");
+      return;
+    }
     setSummarizing(true);setError("");
     try{
-      const payload=await jsonPost("/api/meetings/summarize",{sessionId});
+      const payload=await jsonPost("/api/meetings/summarize",{sessionId,summaryLanguage:requestedLanguage});
       setSummary(String(payload.summary??""));
+      setSummaryLanguageUsed(String(payload.language??requestedLanguage||"Meeting language"));
       setShowTranscript(false);
     }catch(cause){setError(cause instanceof Error?cause.message:"Meeting summary failed.");}
     finally{setSummarizing(false);}
@@ -123,8 +132,10 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
       <div className="row-meta"><span>Session: {status}</span><b className={status === "completed" ? "state-active" : "state-paused"}>{running ? "Agents speaking…" : status}</b></div>
     </div>
 
-    <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"12px 0"}}>
-      {messages.length>1?<button type="button" className="secondary-button" onClick={requestSummary} disabled={summarizing}>{summarizing?"Summarizing…":"Summarize meeting"}</button>:null}
+    <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"12px 0",alignItems:"end"}}>
+      {messages.length>1?<div style={{display:"grid",gap:5,minWidth:180}}><label htmlFor="summary-language" style={{fontSize:".78rem",color:"#5d687b",fontWeight:700}}>Summary language</label><select id="summary-language" value={summaryLanguageChoice} onChange={e=>setSummaryLanguageChoice(e.target.value)} disabled={summarizing} style={{padding:"9px 10px",border:"1px solid #cfd6e2",borderRadius:8}}><option value="__meeting__">Meeting language</option><option value="Persian">فارسی — Persian</option><option value="English">English</option><option value="German">Deutsch — German</option><option value="Hungarian">Magyar — Hungarian</option><option value="__other__">Other…</option></select></div>:null}
+      {messages.length>1&&summaryLanguageChoice==="__other__"?<div style={{display:"grid",gap:5,minWidth:180}}><label htmlFor="summary-language-other" style={{fontSize:".78rem",color:"#5d687b",fontWeight:700}}>Other language</label><input id="summary-language-other" value={customSummaryLanguage} onChange={e=>setCustomSummaryLanguage(e.target.value)} maxLength={80} placeholder="e.g. French, Arabic" disabled={summarizing} style={{padding:"9px 10px",border:"1px solid #cfd6e2",borderRadius:8}}/></div>:null}
+      {messages.length>1?<button type="button" className="secondary-button" onClick={requestSummary} disabled={summarizing}>{summarizing?"Summarizing…":summary?"Regenerate summary":"Summarize meeting"}</button>:null}
       {summary?<button type="button" className="secondary-button" onClick={()=>setShowTranscript(v=>!v)}>{showTranscript?"Hide full transcript":"Open full transcript"}</button>:null}
       {canCeoContribute?<button type="button" className="secondary-button" onClick={()=>setCeoOpen(v=>!v)} disabled={running}>{ceoOpen?"Close CEO contribution":"Join meeting as Human CEO"}</button>:null}
     </div>
@@ -136,7 +147,7 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
     {error ? <p className="form-error" role="alert">{error}</p> : null}
     {progressText ? <p className="form-success" role="status">{progressText}</p> : null}
 
-    {summary?<article style={{border:"1px solid #cfd6e2",borderRadius:14,padding:18,background:"#f6f8fc",margin:"14px 0 18px"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center"}}><div><p className="label">Executive summary</p><h3 style={{marginTop:0}}>Decision-focused meeting brief</h3></div><span className="pill">AI summary · advisory</span></div><p style={{whiteSpace:"pre-wrap",lineHeight:1.7,color:"#46536a",marginBottom:0}}>{summary}</p></article>:null}
+    {summary?<article style={{border:"1px solid #cfd6e2",borderRadius:14,padding:18,background:"#f6f8fc",margin:"14px 0 18px"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><div><p className="label">Executive summary</p><h3 style={{marginTop:0}}>Decision-focused meeting brief</h3></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{summaryLanguageUsed?<span className="pill">{summaryLanguageUsed}</span>:null}<span className="pill">AI summary · advisory</span></div></div><p style={{whiteSpace:"pre-wrap",lineHeight:1.7,color:"#46536a",marginBottom:0}}>{summary}</p></article>:null}
 
     {canRun ? <button type="button" onClick={runMeeting} disabled={running} style={{ margin: "12px 0 18px" }}>{running ? "Running governed deliberation…" : status === "running" ? "Continue agent meeting" : "Start agent deliberation"}</button> : null}
 
