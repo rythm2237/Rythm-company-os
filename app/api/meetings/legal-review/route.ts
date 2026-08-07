@@ -9,9 +9,17 @@ export const maxDuration = 60;
 
 const CALIBRATION_VERSION=2;
 const fail=(error:string,status:number)=>NextResponse.json({ok:false,error},{status});
-const cleanJson=(value:string)=>value.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/```$/i,"").trim();
 const estimateCost=(inputTokens:number,outputTokens:number,inputRate:number,outputRate:number)=>(inputTokens/1_000_000)*inputRate+(outputTokens/1_000_000)*outputRate;
 
+type LegalPayload={
+  outcome:string;
+  legal_applicability:string;
+  executive_note:string;
+  risk_summary:string;
+  conditions:string[];
+  jurisdictions:string[];
+  licensed_counsel_required:boolean;
+};
 type ResponseLike={output_text?:string;output?:Array<{type?:string;content?:Array<{type?:string;text?:string}>}>;usage?:{input_tokens?:number;output_tokens?:number}};
 function extractText(response:ResponseLike){
   const direct=String(response.output_text??"").trim();
@@ -23,6 +31,31 @@ function extractText(response:ResponseLike){
   }
   return parts.join("\n").trim();
 }
+function extractJsonObject(value:string){
+  const cleaned=value.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/```$/i,"").trim();
+  try{return JSON.parse(cleaned) as LegalPayload;}catch{}
+  const start=cleaned.indexOf("{");
+  const end=cleaned.lastIndexOf("}");
+  if(start>=0&&end>start){
+    try{return JSON.parse(cleaned.slice(start,end+1)) as LegalPayload;}catch{}
+  }
+  throw new Error("A-106 returned invalid structured output.");
+}
+
+const legalSchema={
+  type:"object",
+  additionalProperties:false,
+  properties:{
+    outcome:{type:"string",enum:["CLEAR","CLEAR_WITH_CONDITIONS","RISK_IDENTIFIED","LICENSED_COUNSEL_REQUIRED"]},
+    legal_applicability:{type:"string",enum:["STRATEGIC_CONDITIONS_ONLY","EXECUTION_REVIEW_REQUIRED","LICENSED_COUNSEL_REQUIRED"]},
+    executive_note:{type:"string"},
+    risk_summary:{type:"string"},
+    conditions:{type:"array",items:{type:"string"}},
+    jurisdictions:{type:"array",items:{type:"string"}},
+    licensed_counsel_required:{type:"boolean"},
+  },
+  required:["outcome","legal_applicability","executive_note","risk_summary","conditions","jurisdictions","licensed_counsel_required"],
+} as const;
 
 async function authContext(){
   const supabase=await createAuthServerClient();
@@ -77,20 +110,39 @@ export async function POST(request:Request){
   const {data:messages}=await supabase.from("meeting_agent_messages").select("round_no,message_type,content,agents(agent_code,display_name,name)").eq("session_id",sessionId).eq("organization_id",organizationId).neq("message_type","system").order("turn_index");
   const transcript=(messages??[]).map((row:any)=>{const a=Array.isArray(row.agents)?row.agents[0]:row.agents;return `${a?.agent_code??"Human CEO/System"} (${row.message_type}, round ${row.round_no}): ${row.content}`;}).join("\n\n").slice(-30000);
 
+  const systemPrompt=`You are A-106, RYTHM Legal & Regulatory Counsel. You provide advisory AI legal issue-spotting, not licensed legal advice. Calibration rule: first distinguish a strategic/policy direction from a concrete execution authorization. Do NOT require licensed counsel merely because future implementation could touch regulated areas. A strategic decision may normally be CLEAR_WITH_CONDITIONS when the legal issues attach to future experiments or execution steps rather than to adopting the strategy itself. Use LICENSED_COUNSEL_REQUIRED only when the decision package itself authorizes or commits to a concrete legally sensitive action, transaction, customer-facing change, regulated data processing, contract, cross-border transfer, pricing/payment change, material external claim, or other jurisdiction-specific act that should not execute without qualified counsel. If execution-level review is needed later but the strategic direction can be approved now, use legal_applicability EXECUTION_REVIEW_REQUIRED and normally CLEAR_WITH_CONDITIONS. If conditions are only future guardrails, use STRATEGIC_CONDITIONS_ONLY. Cover only relevant issues such as AI regulation, privacy/data protection, consumer protection, online commerce/platform duties, contracts, payments/tax implications, intellectual property, employment, advertising claims, licensing, and cross-border operations. Never state that a matter is legally approved. Respond in ${session.language}.`;
+  const userPrompt=`Meeting: ${meeting.title}\nPurpose: ${meeting.purpose}\nDecision question: ${session.decision_question}\nAgenda: ${Array.isArray(meeting.agenda)?meeting.agenda.map(String).join(" | "):""}\nB-001 legal triage: ${session.legal_triage_status} — ${session.legal_triage_reason??""}\nSynthesis: ${session.synthesis??""}\nRecommendation: ${session.recommendation??""}\nDecision options: ${JSON.stringify(session.decision_options??[])}\n\nTranscript:\n${transcript}`;
+
   const client=new OpenAI({apiKey:process.env.OPENAI_API_KEY});
   try{
-    const response=await client.responses.create({
-      model:config.dryRunModel,
-      max_output_tokens:1800,
-      input:[
-        {role:"system",content:[{type:"input_text",text:`You are A-106, RYTHM Legal & Regulatory Counsel. You provide advisory AI legal issue-spotting, not licensed legal advice. Calibration rule: first distinguish a strategic/policy direction from a concrete execution authorization. Do NOT require licensed counsel merely because future implementation could touch regulated areas. A strategic decision may normally be CLEAR_WITH_CONDITIONS when the legal issues attach to future experiments or execution steps rather than to adopting the strategy itself. Use LICENSED_COUNSEL_REQUIRED only when the decision package itself authorizes or commits to a concrete legally sensitive action, transaction, customer-facing change, regulated data processing, contract, cross-border transfer, pricing/payment change, material external claim, or other jurisdiction-specific act that should not execute without qualified counsel. If execution-level review is needed later but the strategic direction can be approved now, use legal_applicability EXECUTION_REVIEW_REQUIRED and normally CLEAR_WITH_CONDITIONS. If conditions are only future guardrails, use STRATEGIC_CONDITIONS_ONLY. Cover only relevant issues such as AI regulation, privacy/data protection, consumer protection, online commerce/platform duties, contracts, payments/tax implications, intellectual property, employment, advertising claims, licensing, and cross-border operations. Never state that a matter is legally approved. Return STRICT JSON only with keys: outcome (CLEAR, CLEAR_WITH_CONDITIONS, RISK_IDENTIFIED, LICENSED_COUNSEL_REQUIRED), legal_applicability (STRATEGIC_CONDITIONS_ONLY, EXECUTION_REVIEW_REQUIRED, LICENSED_COUNSEL_REQUIRED), executive_note (2-4 concise sentences), risk_summary (concise string), conditions (array of strings), jurisdictions (array of jurisdiction strings or "Not specified"), licensed_counsel_required (boolean). Respond in ${session.language}.`}]},
-        {role:"user",content:[{type:"input_text",text:`Meeting: ${meeting.title}\nPurpose: ${meeting.purpose}\nDecision question: ${session.decision_question}\nAgenda: ${Array.isArray(meeting.agenda)?meeting.agenda.map(String).join(" | "):""}\nB-001 legal triage: ${session.legal_triage_status} — ${session.legal_triage_reason??""}\nSynthesis: ${session.synthesis??""}\nRecommendation: ${session.recommendation??""}\nDecision options: ${JSON.stringify(session.decision_options??[])}\n\nTranscript:\n${transcript}`}]}],
-    },{signal:AbortSignal.timeout(config.agentTimeoutMs)}) as unknown as ResponseLike;
+    let response:ResponseLike;
+    try{
+      response=await client.responses.create({
+        model:config.dryRunModel,
+        max_output_tokens:1800,
+        text:{format:{type:"json_schema",name:"rythm_legal_review",description:"Calibrated advisory legal review for a governed RYTHM meeting.",strict:true,schema:legalSchema}},
+        input:[
+          {role:"system",content:[{type:"input_text",text:systemPrompt}]},
+          {role:"user",content:[{type:"input_text",text:userPrompt}]},
+        ],
+      },{signal:AbortSignal.timeout(config.agentTimeoutMs)}) as unknown as ResponseLike;
+    }catch(structuredError){
+      const structuredMessage=structuredError instanceof Error?structuredError.message:String(structuredError);
+      const unsupported=/json_schema|text\.format|unsupported|not supported|unknown parameter/i.test(structuredMessage);
+      if(!unsupported) throw structuredError;
+      response=await client.responses.create({
+        model:config.dryRunModel,
+        max_output_tokens:1800,
+        input:[
+          {role:"system",content:[{type:"input_text",text:`${systemPrompt} Return one valid JSON object only, with exactly these keys: outcome, legal_applicability, executive_note, risk_summary, conditions, jurisdictions, licensed_counsel_required. No markdown fences or commentary.`}]},
+          {role:"user",content:[{type:"input_text",text:userPrompt}]},
+        ],
+      },{signal:AbortSignal.timeout(config.agentTimeoutMs)}) as unknown as ResponseLike;
+    }
 
     const raw=extractText(response);
     if(!raw) throw new Error("A-106 returned no displayable text.");
-    let parsed:{outcome?:string;legal_applicability?:string;executive_note?:string;risk_summary?:string;conditions?:unknown;jurisdictions?:unknown;licensed_counsel_required?:boolean};
-    try{parsed=JSON.parse(cleanJson(raw)) as typeof parsed;}catch{throw new Error("A-106 returned invalid structured output.");}
+    const parsed=extractJsonObject(raw);
     const allowedOutcomes=new Set(["CLEAR","CLEAR_WITH_CONDITIONS","RISK_IDENTIFIED","LICENSED_COUNSEL_REQUIRED"]);
     const allowedApplicability=new Set(["STRATEGIC_CONDITIONS_ONLY","EXECUTION_REVIEW_REQUIRED","LICENSED_COUNSEL_REQUIRED"]);
     const outcome=allowedOutcomes.has(String(parsed.outcome))?String(parsed.outcome):"RISK_IDENTIFIED";
