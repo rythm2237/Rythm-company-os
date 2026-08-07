@@ -7,8 +7,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const fail=(error:string,status:number)=>NextResponse.json({ok:false,error},{status});
+const estimateCost=(inputTokens:number,outputTokens:number,inputRate:number,outputRate:number)=>(inputTokens/1_000_000)*inputRate+(outputTokens/1_000_000)*outputRate;
 
-type ResponseLike={output_text?:string;output?:Array<{type?:string;content?:Array<{type?:string;text?:string}>}>};
+type ResponseLike={output_text?:string;output?:Array<{type?:string;content?:Array<{type?:string;text?:string}>}>;usage?:{input_tokens?:number;output_tokens?:number}};
 function extractText(response:ResponseLike){
   const direct=String(response.output_text??"").trim();
   if(direct) return direct;
@@ -43,10 +44,10 @@ export async function POST(request:Request){
   if(!sessionId) return fail("sessionId is required.",400);
 
   const organizationId=membership.organization_id as string;
-  const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,decision_question,language,status").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
+  const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,decision_question,language,status,total_input_tokens,total_output_tokens,estimated_cost_usd,budget_cap_usd").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
   if(!session) return fail("Meeting session not found.",404);
   const summaryLanguage=requestedLanguage||session.language||"English";
-  const {data:meeting}=await supabase.from("meetings").select("title,purpose,agenda").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();
+  const {data:meeting}=await supabase.from("meetings").select("id,title,purpose,agenda").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();
   if(!meeting) return fail("Linked meeting not found.",404);
   const {data:rows}=await supabase.from("meeting_agent_messages").select("turn_index,round_no,message_type,speaker_type,content,agents(agent_code,display_name,name)").eq("session_id",sessionId).eq("organization_id",organizationId).neq("message_type","system").order("turn_index");
   if(!rows?.length) return fail("There is not enough meeting content to summarize yet.",409);
@@ -67,7 +68,20 @@ export async function POST(request:Request){
     },{signal:AbortSignal.timeout(config.agentTimeoutMs)}) as unknown as ResponseLike;
     const summary=extractText(response).slice(0,10000);
     if(!summary) return fail("The summary model returned no displayable text. Retry is safe.",502);
-    return NextResponse.json({ok:true,summary,language:summaryLanguage,meetingLanguage:session.language,status:session.status});
+
+    const inputTokens=Number(response.usage?.input_tokens??0);
+    const outputTokens=Number(response.usage?.output_tokens??0);
+    const summaryCostUsd=estimateCost(inputTokens,outputTokens,config.inputCostPerMillionUsd,config.outputCostPerMillionUsd);
+    const sessionEstimatedCostUsd=Number(session.estimated_cost_usd??0)+summaryCostUsd;
+    await supabase.from("meeting_agent_sessions").update({
+      total_input_tokens:Number(session.total_input_tokens??0)+inputTokens,
+      total_output_tokens:Number(session.total_output_tokens??0)+outputTokens,
+      estimated_cost_usd:sessionEstimatedCostUsd,
+      updated_at:new Date().toISOString(),
+    }).eq("id",sessionId).eq("organization_id",organizationId);
+    await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"meeting.summary_generated",object_type:"meeting",object_id:meeting.id,risk_level:"low",payload:{session_id:sessionId,summary_language:summaryLanguage,model:config.dryRunModel,input_tokens:inputTokens,output_tokens:outputTokens,estimated_cost_usd:summaryCostUsd,session_estimated_cost_usd:sessionEstimatedCostUsd,budget_cap_usd:Number(session.budget_cap_usd??0),external_actions:false}});
+
+    return NextResponse.json({ok:true,summary,language:summaryLanguage,meetingLanguage:session.language,status:session.status,model:config.dryRunModel,inputTokens,outputTokens,summaryCostUsd,sessionEstimatedCostUsd});
   }catch(error){
     const message=error instanceof Error?error.message:"Meeting summary failed.";
     return fail(`Meeting summary failed: ${message}`,502);
