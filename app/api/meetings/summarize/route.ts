@@ -33,13 +33,19 @@ export async function POST(request:Request){
   if(!membership) return fail("Owner authorization required.",403);
 
   let sessionId="";
-  try{sessionId=String(((await request.json()) as {sessionId?:string}).sessionId??"").trim();}
+  let requestedLanguage="";
+  try{
+    const body=(await request.json()) as {sessionId?:string;summaryLanguage?:string};
+    sessionId=String(body.sessionId??"").trim();
+    requestedLanguage=String(body.summaryLanguage??"").trim().slice(0,80);
+  }
   catch{return fail("A JSON body with sessionId is required.",400);}
   if(!sessionId) return fail("sessionId is required.",400);
 
   const organizationId=membership.organization_id as string;
   const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,decision_question,language,status").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
   if(!session) return fail("Meeting session not found.",404);
+  const summaryLanguage=requestedLanguage||session.language||"English";
   const {data:meeting}=await supabase.from("meetings").select("title,purpose,agenda").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();
   if(!meeting) return fail("Linked meeting not found.",404);
   const {data:rows}=await supabase.from("meeting_agent_messages").select("turn_index,round_no,message_type,speaker_type,content,agents(agent_code,display_name,name)").eq("session_id",sessionId).eq("organization_id",organizationId).neq("message_type","system").order("turn_index");
@@ -56,12 +62,12 @@ export async function POST(request:Request){
       model:config.dryRunModel,
       max_output_tokens:1800,
       input:[
-        {role:"system",content:[{type:"input_text",text:`You are the RYTHM meeting secretary. Summarize the governed meeting in ${session.language}. Be concise but decision-useful. Do not invent evidence. Use exactly these headings: Executive summary; Key points; Consensus; Material disagreements; Risks; Decision-ready options; Recommended next step. Clearly distinguish consensus from unresolved issues. Human CEO remains final authority.`}]},
-        {role:"user",content:[{type:"input_text",text:`Meeting: ${meeting.title}\nPurpose: ${meeting.purpose}\nDecision question: ${session.decision_question}\nAgenda: ${Array.isArray(meeting.agenda)?meeting.agenda.map(String).join(" | "):""}\n\nTranscript:\n${transcript}`}]}],
+        {role:"system",content:[{type:"input_text",text:`You are the RYTHM meeting secretary. Summarize the governed meeting in ${summaryLanguage}. Be concise but decision-useful. Do not invent evidence. Use exactly these headings, translated naturally into the requested summary language: Executive summary; Key points; Consensus; Material disagreements; Risks; Decision-ready options; Recommended next step. Clearly distinguish consensus from unresolved issues. Human CEO remains final authority.`}]},
+        {role:"user",content:[{type:"input_text",text:`Meeting: ${meeting.title}\nPurpose: ${meeting.purpose}\nDecision question: ${session.decision_question}\nOriginal meeting language: ${session.language}\nRequested summary language: ${summaryLanguage}\nAgenda: ${Array.isArray(meeting.agenda)?meeting.agenda.map(String).join(" | "):""}\n\nTranscript:\n${transcript}`}]}],
     },{signal:AbortSignal.timeout(config.agentTimeoutMs)}) as unknown as ResponseLike;
     const summary=extractText(response).slice(0,10000);
     if(!summary) return fail("The summary model returned no displayable text. Retry is safe.",502);
-    return NextResponse.json({ok:true,summary,language:session.language,status:session.status});
+    return NextResponse.json({ok:true,summary,language:summaryLanguage,meetingLanguage:session.language,status:session.status});
   }catch(error){
     const message=error instanceof Error?error.message:"Meeting summary failed.";
     return fail(`Meeting summary failed: ${message}`,502);
