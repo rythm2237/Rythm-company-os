@@ -24,32 +24,20 @@ type Props = {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function jsonPost(path:string,body:Record<string,unknown>){
+  const response=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},credentials:"same-origin",cache:"no-store",body:JSON.stringify(body)});
+  const raw=await response.text();
+  let payload:Record<string,any>={};
+  if(raw){try{payload=JSON.parse(raw) as Record<string,any>;}catch{throw new Error(`Meeting runtime returned HTTP ${response.status} with a non-JSON response.`);}}
+  if(!response.ok||!payload.ok) throw new Error(String(payload.error??`Request failed with HTTP ${response.status}.`));
+  return payload;
+}
+
 async function postMeetingTurn(sessionId: string) {
   let lastNetworkError: unknown = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const response = await fetch("/api/meetings/deliberate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        credentials: "same-origin",
-        cache: "no-store",
-        body: JSON.stringify({ sessionId }),
-      });
-
-      const raw = await response.text();
-      let payload: Record<string, any> = {};
-      if (raw) {
-        try {
-          payload = JSON.parse(raw) as Record<string, any>;
-        } catch {
-          throw new Error(`Meeting runtime returned HTTP ${response.status} with a non-JSON response.`);
-        }
-      }
-
-      if (!response.ok || !payload.ok) {
-        throw new Error(String(payload.error ?? `Meeting turn failed with HTTP ${response.status}.`));
-      }
-      return payload;
+      return await jsonPost("/api/meetings/deliberate",{sessionId});
     } catch (cause) {
       lastNetworkError = cause;
       const isNetworkFailure = cause instanceof TypeError || (cause instanceof Error && cause.message === "Failed to fetch");
@@ -67,6 +55,12 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
   const [running, setRunning] = useState(false);
   const [error, setError] = useState(initialError ?? "");
   const [progressText, setProgressText] = useState("");
+  const [summary,setSummary]=useState("");
+  const [summarizing,setSummarizing]=useState(false);
+  const [showTranscript,setShowTranscript]=useState(true);
+  const [ceoOpen,setCeoOpen]=useState(false);
+  const [ceoText,setCeoText]=useState("");
+  const [ceoSending,setCeoSending]=useState(false);
 
   const runMeeting = async () => {
     setRunning(true);
@@ -75,26 +69,17 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
     try {
       for (let step = 0; step < 40; step += 1) {
         const payload = await postMeetingTurn(sessionId);
-
         if (payload.content) {
           setMessages((current) => [...current, {
-            turnIndex: Number(payload.turnIndex ?? current.length + 1),
-            roundNo: Number(payload.roundNo ?? 1),
-            messageType: String(payload.phase ?? "position"),
-            content: String(payload.content),
-            speakerCode: String(payload.speaker?.code ?? "B-001"),
-            speakerName: String(payload.speaker?.name ?? "Executive Orchestrator"),
-            speakerRole: String(payload.speaker?.role ?? "Meeting synthesis"),
+            turnIndex: Number(payload.turnIndex ?? current.length + 1), roundNo: Number(payload.roundNo ?? 1), messageType: String(payload.phase ?? "position"), content: String(payload.content), speakerCode: String(payload.speaker?.code ?? "B-001"), speakerName: String(payload.speaker?.name ?? "Executive Orchestrator"), speakerRole: String(payload.speaker?.role ?? "Meeting synthesis"),
           }]);
         }
-
         setStatus(String(payload.status ?? "running"));
         if (payload.status === "completed") {
           setProgressText("Deliberation complete. Human CEO decision is now required.");
           router.refresh();
           return;
         }
-
         const remaining = Number(payload.remainingTurns ?? 0);
         setProgressText(`${payload.speaker?.code ?? "Agent"} completed ${payload.phase ?? "turn"}. ${remaining} deliberation turns remain before synthesis.`);
         await delay(500);
@@ -105,38 +90,61 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
       setError(message === "Failed to fetch" ? "The meeting runtime could not be reached after three attempts. Check the Production runtime configuration or serverless function logs." : message);
       setProgressText("");
       router.refresh();
-    } finally {
-      setRunning(false);
-    }
+    } finally { setRunning(false); }
+  };
+
+  const requestSummary=async()=>{
+    setSummarizing(true);setError("");
+    try{
+      const payload=await jsonPost("/api/meetings/summarize",{sessionId});
+      setSummary(String(payload.summary??""));
+      setShowTranscript(false);
+    }catch(cause){setError(cause instanceof Error?cause.message:"Meeting summary failed.");}
+    finally{setSummarizing(false);}
+  };
+
+  const sendCeoContribution=async()=>{
+    if(!ceoText.trim()) return;
+    setCeoSending(true);setError("");
+    try{
+      const payload=await jsonPost("/api/meetings/ceo-contribute",{sessionId,content:ceoText});
+      setMessages(current=>[...current,{turnIndex:Number(payload.turnIndex??current.length+1),roundNo:Number(payload.roundNo??1),messageType:"ceo_contribution",content:String(payload.content??ceoText),speakerCode:"CEO",speakerName:"Human CEO",speakerRole:"Meeting Chair"}]);
+      setCeoText("");setCeoOpen(false);setProgressText("Human CEO contribution added. Subsequent agents will receive it in the meeting context.");
+    }catch(cause){setError(cause instanceof Error?cause.message:"CEO contribution could not be added.");}
+    finally{setCeoSending(false);}
   };
 
   const canRun = meetingStatus === "running" && ["ready", "running"].includes(status);
+  const canCeoContribute=meetingStatus==="running"&&["ready","running"].includes(status);
 
   return <section style={{ marginTop: 20 }}>
     <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-      <div>
-        <p className="label">Live transcript</p>
-        <h2 style={{ margin: 0 }}>Multi-Agent Deliberation</h2>
-      </div>
+      <div><p className="label">Live transcript</p><h2 style={{ margin: 0 }}>Multi-Agent Deliberation</h2></div>
       <div className="row-meta"><span>Session: {status}</span><b className={status === "completed" ? "state-active" : "state-paused"}>{running ? "Agents speaking…" : status}</b></div>
     </div>
+
+    <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"12px 0"}}>
+      {messages.length>1?<button type="button" className="secondary-button" onClick={requestSummary} disabled={summarizing}>{summarizing?"Summarizing…":"Summarize meeting"}</button>:null}
+      {summary?<button type="button" className="secondary-button" onClick={()=>setShowTranscript(v=>!v)}>{showTranscript?"Hide full transcript":"Open full transcript"}</button>:null}
+      {canCeoContribute?<button type="button" className="secondary-button" onClick={()=>setCeoOpen(v=>!v)} disabled={running}>{ceoOpen?"Close CEO contribution":"Join meeting as Human CEO"}</button>:null}
+    </div>
+
+    <p className="security-note">Human CEO is invited by default. Participation is optional; final decision authority remains with the Human CEO. External actions remain disabled.</p>
+    {ceoOpen?<div style={{border:"1px solid #dfe4ec",borderRadius:12,padding:14,marginBottom:14}}><p className="label">Human CEO contribution</p><textarea value={ceoText} onChange={e=>setCeoText(e.target.value)} maxLength={4000} rows={5} placeholder="Add a question, challenge, instruction, or viewpoint for the agents…" style={{width:"100%",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10}}/><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginTop:8}}><small>{ceoText.length}/4000</small><button type="button" onClick={sendCeoContribution} disabled={ceoSending||running||ceoText.trim().length<2}>{ceoSending?"Adding…":"Add to meeting transcript"}</button></div></div>:null}
 
     {meetingStatus !== "running" && ["ready", "running"].includes(status) ? <p className="security-note">Start the governed meeting first. Agent deliberation cannot execute while the meeting is {meetingStatus}.</p> : null}
     {error ? <p className="form-error" role="alert">{error}</p> : null}
     {progressText ? <p className="form-success" role="status">{progressText}</p> : null}
 
-    {canRun ? <button type="button" onClick={runMeeting} disabled={running} style={{ margin: "12px 0 18px" }}>
-      {running ? "Running governed deliberation…" : status === "running" ? "Continue agent meeting" : "Start agent deliberation"}
-    </button> : null}
+    {summary?<article style={{border:"1px solid #cfd6e2",borderRadius:14,padding:18,background:"#f6f8fc",margin:"14px 0 18px"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center"}}><div><p className="label">Executive summary</p><h3 style={{marginTop:0}}>Decision-focused meeting brief</h3></div><span className="pill">AI summary · advisory</span></div><p style={{whiteSpace:"pre-wrap",lineHeight:1.7,color:"#46536a",marginBottom:0}}>{summary}</p></article>:null}
 
-    <div style={{ display: "grid", gap: 12, maxHeight: 720, overflowY: "auto", paddingRight: 4 }} aria-live="polite">
-      {messages.length ? messages.map((message, index) => <article key={`${message.turnIndex}-${index}`} style={{ border: "1px solid #dfe4ec", borderRadius: 14, padding: 16, background: message.messageType === "synthesis" ? "#f3f6fb" : "#fff" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-          <div><strong>{message.speakerCode} · {message.speakerName}</strong><span style={{ display: "block", color: "#717b8e", fontSize: ".82rem", marginTop: 3 }}>{message.speakerRole}</span></div>
-          <span className="pill">{message.messageType} · round {message.roundNo}</span>
-        </div>
+    {canRun ? <button type="button" onClick={runMeeting} disabled={running} style={{ margin: "12px 0 18px" }}>{running ? "Running governed deliberation…" : status === "running" ? "Continue agent meeting" : "Start agent deliberation"}</button> : null}
+
+    {showTranscript?<div style={{ display: "grid", gap: 12, maxHeight: 720, overflowY: "auto", paddingRight: 4 }} aria-live="polite">
+      {messages.length ? messages.map((message, index) => <article key={`${message.turnIndex}-${index}`} style={{ border: "1px solid #dfe4ec", borderRadius: 14, padding: 16, background: message.messageType === "synthesis" ? "#f3f6fb" : message.messageType.startsWith("ceo_")?"#fff9ea":"#fff" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}><div><strong>{message.speakerCode} · {message.speakerName}</strong><span style={{ display: "block", color: "#717b8e", fontSize: ".82rem", marginTop: 3 }}>{message.speakerRole}</span></div><span className="pill">{message.messageType} · round {message.roundNo}</span></div>
         <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.65, color: "#46536a", marginBottom: 0 }}>{message.content}</p>
       </article>) : <p className="empty-state">No agent has spoken yet.</p>}
-    </div>
+    </div>:null}
   </section>;
 }
