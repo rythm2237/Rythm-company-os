@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/meetings/deliberate/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
