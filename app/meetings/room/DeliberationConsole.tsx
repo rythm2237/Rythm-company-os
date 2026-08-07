@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type TranscriptMessage = {
@@ -36,9 +36,8 @@ async function jsonPost(path:string,body:Record<string,unknown>){
 async function postMeetingTurn(sessionId: string) {
   let lastNetworkError: unknown = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try {
-      return await jsonPost("/api/meetings/deliberate",{sessionId});
-    } catch (cause) {
+    try { return await jsonPost("/api/meetings/deliberate",{sessionId}); }
+    catch (cause) {
       lastNetworkError = cause;
       const isNetworkFailure = cause instanceof TypeError || (cause instanceof Error && cause.message === "Failed to fetch");
       if (!isNetworkFailure || attempt === 3) throw cause;
@@ -64,11 +63,45 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
   const [ceoOpen,setCeoOpen]=useState(false);
   const [ceoText,setCeoText]=useState("");
   const [ceoSending,setCeoSending]=useState(false);
+  const [legalTriageStatus,setLegalTriageStatus]=useState("not_assessed");
+  const [legalTriageReason,setLegalTriageReason]=useState("");
+  const [legalReviewStatus,setLegalReviewStatus]=useState("not_requested");
+  const [legalReviewReport,setLegalReviewReport]=useState("");
+  const [legalChecking,setLegalChecking]=useState(false);
+  const [legalReviewRunning,setLegalReviewRunning]=useState(false);
+  const [legalAutoChecked,setLegalAutoChecked]=useState(false);
+
+  const runLegalTriage=async()=>{
+    setLegalChecking(true);
+    try{
+      const payload=await jsonPost("/api/meetings/legal-triage",{sessionId});
+      setLegalTriageStatus(String(payload.triageStatus??"not_assessed"));
+      setLegalTriageReason(String(payload.reason??""));
+      setLegalReviewStatus(String(payload.legalReviewStatus??"not_requested"));
+    }catch(cause){
+      const message=cause instanceof Error?cause.message:"B-001 legal relevance check failed.";
+      setError(message);
+    }finally{setLegalChecking(false);}
+  };
+
+  useEffect(()=>{
+    if(status!=="completed"||legalAutoChecked)return;
+    setLegalAutoChecked(true);
+    void runLegalTriage();
+  },[status,legalAutoChecked]);
+
+  const requestLegalReview=async()=>{
+    setLegalReviewRunning(true);setError("");
+    try{
+      const payload=await jsonPost("/api/meetings/legal-review",{sessionId});
+      setLegalReviewStatus(String(payload.status??"failed"));
+      setLegalReviewReport(String(payload.report??""));
+    }catch(cause){setError(cause instanceof Error?cause.message:"A-106 legal review failed.");}
+    finally{setLegalReviewRunning(false);}
+  };
 
   const runMeeting = async () => {
-    setRunning(true);
-    setError("");
-    setProgressText("Opening governed agent deliberation…");
+    setRunning(true);setError("");setProgressText("Opening governed agent deliberation…");
     try {
       for (let step = 0; step < 40; step += 1) {
         const payload = await postMeetingTurn(sessionId);
@@ -79,7 +112,8 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
         }
         setStatus(String(payload.status ?? "running"));
         if (payload.status === "completed") {
-          setProgressText("Deliberation complete. Human CEO decision is now required.");
+          setProgressText("Deliberation complete. B-001 is checking whether specialist legal review may be relevant before the Human CEO decision.");
+          setLegalAutoChecked(false);
           router.refresh();
           return;
         }
@@ -91,17 +125,13 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "Meeting execution failed.";
       setError(message === "Failed to fetch" ? "The meeting runtime could not be reached after three attempts. Check the Production runtime configuration or serverless function logs." : message);
-      setProgressText("");
-      router.refresh();
+      setProgressText("");router.refresh();
     } finally { setRunning(false); }
   };
 
   const requestSummary=async()=>{
     const requestedLanguage=summaryLanguageChoice==="__meeting__"?"":summaryLanguageChoice==="__other__"?customSummaryLanguage.trim():summaryLanguageChoice;
-    if(summaryLanguageChoice==="__other__"&&requestedLanguage.length<2){
-      setError("Enter the language you want for the meeting summary.");
-      return;
-    }
+    if(summaryLanguageChoice==="__other__"&&requestedLanguage.length<2){setError("Enter the language you want for the meeting summary.");return;}
     setSummarizing(true);setError("");
     try{
       const payload=await jsonPost("/api/meetings/summarize",{sessionId,summaryLanguage:requestedLanguage});
@@ -125,6 +155,8 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
 
   const canRun = meetingStatus === "running" && ["ready", "running"].includes(status);
   const canCeoContribute=meetingStatus==="running"&&["ready","running"].includes(status);
+  const legalFlagged=["recommended","required"].includes(legalTriageStatus);
+  const legalReviewComplete=["clear","clear_with_conditions","licensed_counsel_required"].includes(legalReviewStatus);
 
   return <section style={{ marginTop: 20 }}>
     <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -148,6 +180,13 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
     {progressText ? <p className="form-success" role="status">{progressText}</p> : null}
 
     {summary?<article style={{border:"1px solid #cfd6e2",borderRadius:14,padding:18,background:"#f6f8fc",margin:"14px 0 18px"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><div><p className="label">Executive summary</p><h3 style={{marginTop:0}}>Decision-focused meeting brief</h3></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{summaryLanguageUsed?<span className="pill">{summaryLanguageUsed}</span>:null}<span className="pill">AI summary · advisory</span></div></div><p style={{whiteSpace:"pre-wrap",lineHeight:1.7,color:"#46536a",marginBottom:0}}>{summary}</p></article>:null}
+
+    {status==="completed"?<article style={{border:`1px solid ${legalFlagged?"#e8c66a":"#cfd6e2"}`,borderRadius:14,padding:18,background:legalFlagged?"#fff9e8":"#f7f9fc",margin:"14px 0 18px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><div><p className="label">B-001 legal relevance check</p><h3 style={{margin:"3px 0 0"}}>{legalChecking?"Checking legal relevance…":legalTriageStatus==="not_needed"?"No specialist legal review indicated":legalFlagged?"Legal review notice":"Legal relevance not yet assessed"}</h3></div><span className="pill">{legalTriageStatus.replaceAll("_"," ")}</span></div>
+      {legalTriageReason?<p style={{color:"#596579",lineHeight:1.65}}>{legalTriageReason}</p>:null}
+      {legalFlagged&&!legalReviewComplete?<><p className="security-note">B-001 identified a plausible legal/regulatory dependency. A-106 is not a standing meeting participant. The Human CEO may route the completed meeting record for a focused advisory review before applying the decision.</p><button type="button" onClick={requestLegalReview} disabled={legalReviewRunning}>{legalReviewRunning?"A-106 reviewing…":"Send meeting to A-106 Legal Counsel"}</button></>:null}
+      {legalReviewComplete?<div style={{marginTop:14,borderTop:"1px solid #dfe4ec",paddingTop:14}}><div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><strong>A-106 · Legal & Regulatory Counsel</strong><span className="pill">{legalReviewStatus.replaceAll("_"," ")}</span></div><p style={{whiteSpace:"pre-wrap",lineHeight:1.7,color:"#46536a",marginBottom:0}}>{legalReviewReport}</p><p className="security-note">Advisory AI legal review. It is not formal legal advice and does not replace jurisdiction-specific licensed counsel.</p></div>:null}
+    </article>:null}
 
     {canRun ? <button type="button" onClick={runMeeting} disabled={running} style={{ margin: "12px 0 18px" }}>{running ? "Running governed deliberation…" : status === "running" ? "Continue agent meeting" : "Start agent deliberation"}</button> : null}
 
