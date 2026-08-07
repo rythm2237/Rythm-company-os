@@ -1,0 +1,1 @@
+Temporary implementation note for Meeting Engine summary-language selector. Summary language is independent from the meeting deliberation language and does not mutate session language.
