@@ -3,204 +3,46 @@ import { NextResponse } from "next/server";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
+export const dynamic="force-dynamic";
+export const runtime="nodejs";
+export const maxDuration=60;
 
-const jsonError = (message: string, status: number) => NextResponse.json({ ok: false, error: message }, { status });
-const estimateCost = (inputTokens: number, outputTokens: number, inputRate: number, outputRate: number) =>
-  (inputTokens / 1_000_000) * inputRate + (outputTokens / 1_000_000) * outputRate;
-const asList = (value: unknown) => Array.isArray(value) ? value.map(String) : [];
-const cleanJson = (value: string) => value.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+const fail=(error:string,status:number)=>NextResponse.json({ok:false,error},{status});
+const estimateCost=(i:number,o:number,ir:number,or:number)=>(i/1_000_000)*ir+(o/1_000_000)*or;
+const asList=(v:unknown)=>Array.isArray(v)?v.map(String):[];
+const cleanJson=(v:string)=>v.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/```$/i,"").trim();
+type Agent={id:string;agent_code:string;display_name:string|null;name:string;role_title:string;purpose:string|null;work_style:string|null};
+type Participant={agent_id:string;seat_order:number;session_role:string;agents:Agent|Agent[]|null};
+type Msg={turn_index:number;round_no:number;message_type:string;content:string;agent_id:string|null};
+type Synth={executive_summary?:string;consensus?:string;disagreements?:string[];options?:string[];recommendation?:string;next_step?:string;legal_review_recommended?:boolean;legal_review_reason?:string};
+type Resp={output_text?:string;output?:Array<{type?:string;content?:Array<{type?:string;text?:string}>}>;usage?:{input_tokens?:number;output_tokens?:number};status?:string;incomplete_details?:{reason?:string}|null};
+const agentOf=(p:Participant):Agent|null=>Array.isArray(p.agents)?p.agents[0]??null:p.agents??null;
+function outputText(r:Resp){const d=String(r.output_text??"").trim();if(d)return d;const a:string[]=[];for(const item of r.output??[]){if(item.type!=="message")continue;for(const part of item.content??[])if((part.type==="output_text"||part.type==="text")&&part.text)a.push(part.text);}return a.join("\n").trim();}
 
-type AgentRow = { id:string; agent_code:string; display_name:string|null; name:string; role_title:string; purpose:string|null; work_style:string|null };
-type ParticipantRow = { agent_id:string; seat_order:number; session_role:string; agents:AgentRow|AgentRow[]|null };
-type MessageRow = { turn_index:number; round_no:number; message_type:string; content:string; agent_id:string|null };
-type SynthesisPayload = { executive_summary?:string; consensus?:string; disagreements?:string[]; options?:string[]; recommendation?:string; next_step?:string };
-
-type ResponseLike = {
-  output_text?: string;
-  output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
-  usage?: { input_tokens?: number; output_tokens?: number };
-  status?: string;
-  incomplete_details?: { reason?: string } | null;
-};
-
-function participantAgent(row:ParticipantRow):AgentRow|null {
-  return Array.isArray(row.agents) ? row.agents[0] ?? null : row.agents ?? null;
-}
-
-function extractResponseText(response:ResponseLike):string {
-  const direct = String(response.output_text ?? "").trim();
-  if (direct) return direct;
-  const fragments:string[] = [];
-  for (const item of response.output ?? []) {
-    if (item.type !== "message") continue;
-    for (const part of item.content ?? []) {
-      if ((part.type === "output_text" || part.type === "text") && part.text) fragments.push(part.text);
-    }
+export async function POST(request:Request){
+ const config=getRuntimeConfig();if(!config.agentExecutionEnabled)return fail("Agent execution is disabled by environment policy.",503);if(config.externalActionsEnabled)return fail("Meeting runtime refuses to operate while external actions are enabled.",503);if(!config.openAIConfigured||!config.dryRunModel)return fail("OpenAI and RYTHM_DRY_RUN_MODEL must be configured.",503);
+ const supabase=await createAuthServerClient();const {data:{user}}=await supabase.auth.getUser();if(!user)return fail("Authentication required.",401);const {data:membership}=await supabase.from("organization_members").select("organization_id").eq("user_id",user.id).eq("role","owner").maybeSingle();if(!membership)return fail("Owner authorization required.",403);const organizationId=membership.organization_id as string;
+ let sessionId="";try{sessionId=String(((await request.json())as{sessionId?:string}).sessionId??"").trim();}catch{return fail("A JSON body with sessionId is required.",400);}if(!sessionId)return fail("sessionId is required.",400);
+ const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,project_id,status,decision_question,language,max_rounds,budget_cap_usd,external_research_allowed,total_input_tokens,total_output_tokens,estimated_cost_usd").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();if(!session)return fail("Meeting agent session not found.",404);if(!["ready","running"].includes(session.status))return fail(session.status==="completed"?"This deliberation is already completed.":"This deliberation cannot run in its current state.",409);if(session.external_research_allowed)return fail("This runtime supports internal analysis only. External research must remain separately approval-gated.",409);
+ const {data:meeting}=await supabase.from("meetings").select("id,title,purpose,status,agenda").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();if(!meeting)return fail("Linked meeting not found.",404);if(meeting.status!=="running")return fail("Start the meeting before running agent deliberation.",409);
+ const {data:pdata}=await supabase.from("meeting_agent_participants").select("agent_id,seat_order,session_role,agents(id,agent_code,display_name,name,role_title,purpose,work_style)").eq("session_id",sessionId).eq("organization_id",organizationId).eq("explicitly_authorized_by_ceo",true).order("seat_order");const participants=(pdata??[])as unknown as Participant[];if(participants.length<2)return fail("At least two CEO-authorized agents are required.",409);
+ const {data:mdata}=await supabase.from("meeting_agent_messages").select("turn_index,round_no,message_type,content,agent_id").eq("session_id",sessionId).eq("organization_id",organizationId).order("turn_index");const messages=(mdata??[])as Msg[];const deliberation=messages.filter(m=>m.message_type==="position"||m.message_type==="challenge");const totalTurns=participants.length*Number(session.max_rounds);const nextTurn=(messages.at(-1)?.turn_index??0)+1;
+ if(session.status==="ready"){const now=new Date().toISOString();const {data:claimed}=await supabase.from("meeting_agent_sessions").update({status:"running",started_by_user_id:user.id,started_at:now,model:config.dryRunModel,error_message:null,updated_at:now}).eq("id",sessionId).eq("organization_id",organizationId).eq("status","ready").select("id").maybeSingle();if(!claimed)return fail("The meeting session could not be claimed for execution.",409);await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"meeting.agent_deliberation_started",object_type:"meeting",object_id:meeting.id,risk_level:"medium",payload:{session_id:sessionId,participants:participants.length,rounds:session.max_rounds,model:config.dryRunModel,external_actions:false,external_research:false}});}
+ const transcript=messages.filter(m=>m.message_type!=="system").map(m=>{const p=participants.find(x=>x.agent_id===m.agent_id);const a=p?agentOf(p):null;return `${a?.agent_code??"HUMAN/SYSTEM"} (${m.message_type}, round ${m.round_no}): ${m.content}`;}).join("\n\n").slice(-14000);
+ const shared=[`Meeting: ${meeting.title}`,`Purpose: ${meeting.purpose}`,`Agenda: ${asList(meeting.agenda).join(" | ")}`,`Decision question: ${session.decision_question}`,`Language: ${session.language}`,"Governance: Human CEO has final authority. Internal analysis only. No browsing, tools, external messages, transactions, deployments, or external actions are authorized."].join("\n");
+ const client=new OpenAI({apiKey:process.env.OPENAI_API_KEY});
+ try{
+  if(deliberation.length<totalTurns){const pi=deliberation.length%participants.length;const roundNo=Math.floor(deliberation.length/participants.length)+1;const p=participants[pi];const a=agentOf(p);if(!a)return fail("A participant agent record is missing.",409);const type:"position"|"challenge"=roundNo===1?"position":"challenge";const instruction=roundNo===1?"State your independent position. Identify the strongest rationale, major risks, and recommended option. Do not simply agree.":"Challenge prior discussion, identify weak assumptions or missing trade-offs, respond to disagreements, and revise your recommendation if warranted.";
+   const r=await client.responses.create({model:config.dryRunModel,max_output_tokens:1400,input:[{role:"system",content:[{type:"input_text",text:`You are ${a.agent_code}, ${a.display_name??a.name}, RYTHM ${a.role_title}. Mandate: ${a.purpose??"Provide disciplined internal analysis."} Work style: ${a.work_style??"Evidence-led and concise."} Stay inside your professional lens. Do not impersonate the CEO. No tools or external research. ${instruction} Respond in ${session.language}. Use short headings: Position, Rationale, Risks/Challenges, Recommendation.`}]},{role:"user",content:[{type:"input_text",text:`${shared}\n\nTranscript so far:\n${transcript||"No prior agent statements."}`}]}]},{signal:AbortSignal.timeout(config.agentTimeoutMs)})as unknown as Resp;
+   const text=outputText(r).slice(0,6000),i=Number(r.usage?.input_tokens??0),o=Number(r.usage?.output_tokens??0),cost=estimateCost(i,o,config.inputCostPerMillionUsd,config.outputCostPerMillionUsd),total=Number(session.estimated_cost_usd??0)+cost;if(total>Number(session.budget_cap_usd)){await supabase.from("meeting_agent_sessions").update({status:"failed",error_message:`Estimated cost $${total.toFixed(6)} exceeded the session budget cap.`,updated_at:new Date().toISOString()}).eq("id",sessionId).eq("organization_id",organizationId);return fail("The next agent turn exceeded the configured meeting budget cap.",409);}if(!text){const reason=r.incomplete_details?.reason??r.status??"empty model output";await supabase.from("meeting_agent_sessions").update({error_message:`Agent ${a.agent_code} returned no displayable text (${reason}). Retry is safe; no turn was recorded.`,updated_at:new Date().toISOString()}).eq("id",sessionId).eq("organization_id",organizationId);return fail(`Agent ${a.agent_code} produced no displayable text. The turn was not recorded; retry is safe.`,502);}
+   const {error}=await supabase.from("meeting_agent_messages").insert({organization_id:organizationId,meeting_id:meeting.id,session_id:sessionId,agent_id:a.id,turn_index:nextTurn,round_no:roundNo,speaker_type:"agent",message_type:type,content:text,model:config.dryRunModel,input_tokens:i,output_tokens:o,estimated_cost_usd:cost});if(error)return fail(error.message,500);await supabase.from("meeting_agent_sessions").update({total_input_tokens:Number(session.total_input_tokens??0)+i,total_output_tokens:Number(session.total_output_tokens??0)+o,estimated_cost_usd:total,error_message:null,updated_at:new Date().toISOString()}).eq("id",sessionId).eq("organization_id",organizationId);return NextResponse.json({ok:true,sessionId,status:"running",phase:type,roundNo,turnIndex:nextTurn,speaker:{id:a.id,code:a.agent_code,name:a.display_name??a.name,role:a.role_title},content:text,remainingTurns:totalTurns-deliberation.length-1});
   }
-  return fragments.join("\n").trim();
-}
-
-export async function POST(request:Request) {
-  const config = getRuntimeConfig();
-  if (!config.agentExecutionEnabled) return jsonError("Agent execution is disabled by environment policy.", 503);
-  if (config.externalActionsEnabled) return jsonError("Meeting runtime refuses to operate while external actions are enabled.", 503);
-  if (!config.openAIConfigured || !config.dryRunModel) return jsonError("OpenAI and RYTHM_DRY_RUN_MODEL must be configured.", 503);
-
-  const supabase = await createAuthServerClient();
-  const { data:{ user } } = await supabase.auth.getUser();
-  if (!user) return jsonError("Authentication required.", 401);
-  const { data:membership } = await supabase.from("organization_members").select("organization_id").eq("user_id", user.id).eq("role", "owner").maybeSingle();
-  if (!membership) return jsonError("Owner authorization required.", 403);
-
-  let sessionId = "";
-  try { sessionId = String(((await request.json()) as {sessionId?:string}).sessionId ?? "").trim(); }
-  catch { return jsonError("A JSON body with sessionId is required.", 400); }
-  if (!sessionId) return jsonError("sessionId is required.", 400);
-
-  const organizationId = membership.organization_id as string;
-  const { data:session } = await supabase.from("meeting_agent_sessions")
-    .select("id,meeting_id,project_id,status,decision_question,language,max_rounds,budget_cap_usd,external_research_allowed,total_input_tokens,total_output_tokens,estimated_cost_usd")
-    .eq("id", sessionId).eq("organization_id", organizationId).maybeSingle();
-  if (!session) return jsonError("Meeting agent session not found.", 404);
-  if (!["ready","running"].includes(session.status)) return jsonError(session.status === "completed" ? "This deliberation is already completed." : "This deliberation cannot run in its current state.", 409);
-  if (session.external_research_allowed) return jsonError("This runtime supports internal analysis only. External research must remain separately approval-gated.", 409);
-
-  const { data:meeting } = await supabase.from("meetings").select("id,title,purpose,status,agenda").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();
-  if (!meeting) return jsonError("Linked meeting not found.", 404);
-  if (meeting.status !== "running") return jsonError("Start the meeting before running agent deliberation.", 409);
-
-  const { data:participantData } = await supabase.from("meeting_agent_participants")
-    .select("agent_id,seat_order,session_role,agents(id,agent_code,display_name,name,role_title,purpose,work_style)")
-    .eq("session_id",sessionId).eq("organization_id",organizationId).eq("explicitly_authorized_by_ceo",true).order("seat_order");
-  const participants = (participantData ?? []) as unknown as ParticipantRow[];
-  if (participants.length < 2) return jsonError("At least two CEO-authorized agents are required.", 409);
-
-  const { data:messageData } = await supabase.from("meeting_agent_messages")
-    .select("turn_index,round_no,message_type,content,agent_id").eq("session_id",sessionId).eq("organization_id",organizationId).order("turn_index");
-  const messages = (messageData ?? []) as MessageRow[];
-  const deliberationMessages = messages.filter(m => m.message_type === "position" || m.message_type === "challenge");
-  const totalAgentTurns = participants.length * Number(session.max_rounds);
-  const nextTurnIndex = (messages.at(-1)?.turn_index ?? 0) + 1;
-
-  if (session.status === "ready") {
-    const startedAt = new Date().toISOString();
-    const { data:claimed } = await supabase.from("meeting_agent_sessions")
-      .update({ status:"running", started_by_user_id:user.id, started_at:startedAt, model:config.dryRunModel, error_message:null, updated_at:startedAt })
-      .eq("id",sessionId).eq("organization_id",organizationId).eq("status","ready").select("id").maybeSingle();
-    if (!claimed) return jsonError("The meeting session could not be claimed for execution.", 409);
-    await supabase.from("audit_events").insert({ organization_id:organizationId, actor_type:"user", actor_user_id:user.id, event_type:"meeting.agent_deliberation_started", object_type:"meeting", object_id:meeting.id, risk_level:"medium", payload:{ session_id:sessionId, participants:participants.length, rounds:session.max_rounds, model:config.dryRunModel, external_actions:false, external_research:false } });
-  }
-
-  const client = new OpenAI({ apiKey:process.env.OPENAI_API_KEY });
-  const transcript = messages.filter(m => m.message_type !== "system").map(m => {
-    const participant = participants.find(p => p.agent_id === m.agent_id);
-    const agent = participant ? participantAgent(participant) : null;
-    return `${agent?.agent_code ?? "SYSTEM"} (${m.message_type}, round ${m.round_no}): ${m.content}`;
-  }).join("\n\n").slice(-14000);
-
-  const sharedContext = [
-    `Meeting: ${meeting.title}`,
-    `Purpose: ${meeting.purpose}`,
-    `Agenda: ${asList(meeting.agenda).join(" | ")}`,
-    `Decision question: ${session.decision_question}`,
-    `Language: ${session.language}`,
-    "Governance: Human CEO has final authority. Internal analysis only. No tools, browsing, external messages, transactions, deployments, or record changes are authorized by this deliberation."
-  ].join("\n");
-
-  try {
-    if (deliberationMessages.length < totalAgentTurns) {
-      const participantIndex = deliberationMessages.length % participants.length;
-      const roundNo = Math.floor(deliberationMessages.length / participants.length) + 1;
-      const participant = participants[participantIndex];
-      const responseAgent = participantAgent(participant);
-      if (!responseAgent) return jsonError("A participant agent record is missing.", 409);
-      const messageType:"position"|"challenge" = roundNo === 1 ? "position" : "challenge";
-      const roundInstruction = roundNo === 1
-        ? "State your independent position. Identify the strongest rationale, major risks, and the option you recommend. You may reference earlier speakers, but do not simply agree."
-        : "Challenge the prior discussion. Identify weak assumptions or missing trade-offs, respond to disagreements, and revise your recommendation if warranted.";
-
-      const response = await client.responses.create({
-        model:config.dryRunModel,
-        max_output_tokens:1400,
-        input:[
-          { role:"system", content:[{ type:"input_text", text:`You are ${responseAgent.agent_code}, ${responseAgent.display_name ?? responseAgent.name}, the RYTHM ${responseAgent.role_title}. Your mandate: ${responseAgent.purpose ?? "Provide disciplined internal analysis."} Work style: ${responseAgent.work_style ?? "Evidence-led and concise."} Stay inside your assigned professional lens. Do not impersonate the CEO. Do not use tools or claim external research. ${roundInstruction} Respond in ${session.language}. Use short headings: Position, Rationale, Risks/Challenges, Recommendation.` }] },
-          { role:"user", content:[{ type:"input_text", text:`${sharedContext}\n\nTranscript so far:\n${transcript || "No prior agent statements."}` }] }
-        ]
-      }, { signal:AbortSignal.timeout(config.agentTimeoutMs) }) as unknown as ResponseLike;
-
-      const responseText = extractResponseText(response).slice(0,6000);
-      const inputTokens = Number(response.usage?.input_tokens ?? 0);
-      const outputTokens = Number(response.usage?.output_tokens ?? 0);
-      const cost = estimateCost(inputTokens,outputTokens,config.inputCostPerMillionUsd,config.outputCostPerMillionUsd);
-      const accumulatedCost = Number(session.estimated_cost_usd ?? 0) + cost;
-      if (accumulatedCost > Number(session.budget_cap_usd)) {
-        await supabase.from("meeting_agent_sessions").update({ status:"failed", error_message:`Estimated cost $${accumulatedCost.toFixed(6)} exceeded the session budget cap.`, updated_at:new Date().toISOString() }).eq("id",sessionId).eq("organization_id",organizationId);
-        return jsonError("The next agent turn exceeded the configured meeting budget cap.",409);
-      }
-      if (!responseText) {
-        const reason = response.incomplete_details?.reason ?? response.status ?? "empty model output";
-        await supabase.from("meeting_agent_sessions").update({ error_message:`Agent ${responseAgent.agent_code} returned no displayable text (${reason}). Retry is safe; no turn was recorded.`, updated_at:new Date().toISOString() }).eq("id",sessionId).eq("organization_id",organizationId);
-        await supabase.from("audit_events").insert({ organization_id:organizationId, actor_type:"system", event_type:"meeting.agent_empty_output", object_type:"meeting", object_id:meeting.id, risk_level:"low", payload:{ session_id:sessionId, agent_code:responseAgent.agent_code, round_no:roundNo, reason, turn_recorded:false } });
-        return jsonError(`Agent ${responseAgent.agent_code} produced no displayable text. The turn was not recorded; retry is safe.`,502);
-      }
-
-      const { error:insertError } = await supabase.from("meeting_agent_messages").insert({ organization_id:organizationId, meeting_id:meeting.id, session_id:sessionId, agent_id:responseAgent.id, turn_index:nextTurnIndex, round_no:roundNo, speaker_type:"agent", message_type:messageType, content:responseText, model:config.dryRunModel, input_tokens:inputTokens, output_tokens:outputTokens, estimated_cost_usd:cost });
-      if (insertError) return jsonError(insertError.message,500);
-      await supabase.from("meeting_agent_sessions").update({ total_input_tokens:Number(session.total_input_tokens ?? 0)+inputTokens, total_output_tokens:Number(session.total_output_tokens ?? 0)+outputTokens, estimated_cost_usd:accumulatedCost, error_message:null, updated_at:new Date().toISOString() }).eq("id",sessionId).eq("organization_id",organizationId);
-      return NextResponse.json({ ok:true, sessionId, status:"running", phase:messageType, roundNo, turnIndex:nextTurnIndex, speaker:{ id:responseAgent.id, code:responseAgent.agent_code, name:responseAgent.display_name ?? responseAgent.name, role:responseAgent.role_title }, content:responseText, remainingTurns:totalAgentTurns-deliberationMessages.length-1 });
-    }
-
-    const synthesizerParticipant = participants.find(p => participantAgent(p)?.agent_code === "B-001") ?? participants.find(p => p.session_role === "synthesizer") ?? participants[0];
-    const responseAgent = participantAgent(synthesizerParticipant);
-    const roundNo = Number(session.max_rounds)+1;
-    const synthesisResponse = await client.responses.create({
-      model:config.dryRunModel,
-      max_output_tokens:2200,
-      input:[
-        { role:"system", content:[{ type:"input_text", text:`You are the RYTHM Executive Orchestrator synthesizing a governed internal multi-agent meeting. Do not invent evidence. Preserve material disagreements instead of forcing consensus. Human CEO makes the final decision. Respond in ${session.language}. Return STRICT JSON only with keys: executive_summary (string), consensus (string), disagreements (array of strings), options (array of 2-4 decision-ready strings), recommendation (string), next_step (string). No markdown fences.` }] },
-        { role:"user", content:[{ type:"input_text", text:`${sharedContext}\n\nFull deliberation transcript:\n${transcript}` }] }
-      ]
-    }, { signal:AbortSignal.timeout(config.agentTimeoutMs) }) as unknown as ResponseLike;
-
-    const raw = extractResponseText(synthesisResponse);
-    const inputTokens = Number(synthesisResponse.usage?.input_tokens ?? 0);
-    const outputTokens = Number(synthesisResponse.usage?.output_tokens ?? 0);
-    const cost = estimateCost(inputTokens,outputTokens,config.inputCostPerMillionUsd,config.outputCostPerMillionUsd);
-    const finalCost = Number(session.estimated_cost_usd ?? 0)+cost;
-    if (finalCost > Number(session.budget_cap_usd)) {
-      await supabase.from("meeting_agent_sessions").update({ status:"failed", error_message:`Estimated cost $${finalCost.toFixed(6)} exceeded the session budget cap during synthesis.`, updated_at:new Date().toISOString() }).eq("id",sessionId).eq("organization_id",organizationId);
-      return jsonError("Meeting synthesis exceeded the configured budget cap.",409);
-    }
-    if (!raw) {
-      const reason = synthesisResponse.incomplete_details?.reason ?? synthesisResponse.status ?? "empty model output";
-      await supabase.from("meeting_agent_sessions").update({ error_message:`Synthesis returned no displayable text (${reason}). Retry is safe; synthesis was not recorded.`, updated_at:new Date().toISOString() }).eq("id",sessionId).eq("organization_id",organizationId);
-      return jsonError("Executive synthesis produced no displayable text. It was not recorded; retry is safe.",502);
-    }
-
-    let payload:SynthesisPayload;
-    try { payload = JSON.parse(cleanJson(raw)) as SynthesisPayload; }
-    catch { payload = { executive_summary:raw.slice(0,4000), consensus:"Structured JSON synthesis could not be parsed; review the synthesis text directly.", disagreements:[], options:["Review transcript and defer decision","Adopt the strongest supported recommendation with CEO conditions"], recommendation:"Human CEO review required.", next_step:"Review the transcript and record a governed decision." }; }
-    const options = Array.isArray(payload.options) ? payload.options.map(String).slice(0,4) : [];
-    const responseText = [
-      `Executive summary\n${payload.executive_summary ?? ""}`,
-      `Consensus\n${payload.consensus ?? ""}`,
-      `Material disagreements\n${(payload.disagreements ?? []).map(item=>`• ${item}`).join("\n") || "None recorded."}`,
-      `Recommendation\n${payload.recommendation ?? "Human CEO review required."}`,
-      `Next governed step\n${payload.next_step ?? "Human CEO decision."}`
-    ].join("\n\n").slice(0,8000);
-
-    const { error:synthesisInsertError } = await supabase.from("meeting_agent_messages").insert({ organization_id:organizationId, meeting_id:meeting.id, session_id:sessionId, agent_id:responseAgent?.id ?? null, turn_index:nextTurnIndex, round_no:roundNo, speaker_type:"agent", message_type:"synthesis", content:responseText, model:config.dryRunModel, input_tokens:inputTokens, output_tokens:outputTokens, estimated_cost_usd:cost });
-    if (synthesisInsertError) return jsonError(synthesisInsertError.message,500);
-    const completedAt = new Date().toISOString();
-    await supabase.from("meeting_agent_sessions").update({ status:"completed", synthesis:responseText, recommendation:String(payload.recommendation ?? "Human CEO review required."), decision_options:options, total_input_tokens:Number(session.total_input_tokens ?? 0)+inputTokens, total_output_tokens:Number(session.total_output_tokens ?? 0)+outputTokens, estimated_cost_usd:finalCost, completed_at:completedAt, updated_at:completedAt, error_message:null }).eq("id",sessionId).eq("organization_id",organizationId);
-    await supabase.from("audit_events").insert({ organization_id:organizationId, actor_type:"system", event_type:"meeting.agent_deliberation_completed", object_type:"meeting", object_id:meeting.id, risk_level:"medium", payload:{ session_id:sessionId, rounds:session.max_rounds, participants:participants.length, decision_options:options.length, external_actions:false, human_decision_required:true } });
-    return NextResponse.json({ ok:true, sessionId, status:"completed", phase:"synthesis", roundNo, turnIndex:nextTurnIndex, speaker:responseAgent ? { id:responseAgent.id, code:responseAgent.agent_code, name:responseAgent.display_name ?? responseAgent.name, role:responseAgent.role_title } : null, content:responseText, decisionOptions:options, recommendation:payload.recommendation ?? "Human CEO review required." });
-  } catch (error) {
-    const message = error instanceof Error ? error.message.slice(0,1000) : "Unknown meeting runtime error";
-    await supabase.from("meeting_agent_sessions").update({ error_message:message, updated_at:new Date().toISOString() }).eq("id",sessionId).eq("organization_id",organizationId);
-    await supabase.from("audit_events").insert({ organization_id:organizationId, actor_type:"system", event_type:"meeting.agent_deliberation_retryable_error", object_type:"meeting", object_id:meeting.id, risk_level:"low", payload:{ session_id:sessionId, message, external_actions:false, session_left_resumable:true } });
-    return jsonError(`Agent deliberation hit a retryable runtime error: ${message}`,500);
-  }
+  const synthP=participants.find(p=>agentOf(p)?.agent_code==="B-001")??participants.find(p=>p.session_role==="synthesizer")??participants[0];const a=agentOf(synthP);const roundNo=Number(session.max_rounds)+1;
+  const r=await client.responses.create({model:config.dryRunModel,max_output_tokens:2400,input:[{role:"system",content:[{type:"input_text",text:`You are B-001, the RYTHM Executive Orchestrator, synthesizing a governed internal multi-agent meeting. Do not invent evidence. Preserve material disagreements. Human CEO makes the final decision. Also perform a conservative legal-relevance triage, not legal advice: set legal_review_recommended=true only when the proposed decision plausibly touches law, regulation, privacy/data protection, contracts, payments/monetization, consumer rights, IP, employment, advertising claims, AI regulation, cross-border operations, or another material legal obligation; when uncertain, recommend review and explain briefly. Do not attempt the legal review yourself. Respond in ${session.language}. Return STRICT JSON only with keys: executive_summary (string), consensus (string), disagreements (array of strings), options (array of 2-4 decision-ready strings), recommendation (string), next_step (string), legal_review_recommended (boolean), legal_review_reason (string). No markdown fences.`}]},{role:"user",content:[{type:"input_text",text:`${shared}\n\nFull deliberation transcript:\n${transcript}`}]}]},{signal:AbortSignal.timeout(config.agentTimeoutMs)})as unknown as Resp;
+  const raw=outputText(r),i=Number(r.usage?.input_tokens??0),o=Number(r.usage?.output_tokens??0),cost=estimateCost(i,o,config.inputCostPerMillionUsd,config.outputCostPerMillionUsd),finalCost=Number(session.estimated_cost_usd??0)+cost;if(finalCost>Number(session.budget_cap_usd)){await supabase.from("meeting_agent_sessions").update({status:"failed",error_message:`Estimated cost $${finalCost.toFixed(6)} exceeded the session budget cap during synthesis.`,updated_at:new Date().toISOString()}).eq("id",sessionId).eq("organization_id",organizationId);return fail("Meeting synthesis exceeded the configured budget cap.",409);}if(!raw)return fail("Executive synthesis produced no displayable text. It was not recorded; retry is safe.",502);
+  let payload:Synth;try{payload=JSON.parse(cleanJson(raw))as Synth;}catch{payload={executive_summary:raw.slice(0,4000),consensus:"Structured JSON synthesis could not be parsed; review the synthesis text directly.",disagreements:[],options:["Review transcript and defer decision","Adopt the strongest supported recommendation with CEO conditions"],recommendation:"Human CEO review required.",next_step:"Review the transcript and record a governed decision.",legal_review_recommended:true,legal_review_reason:"Structured synthesis could not be parsed reliably; precautionary legal review is recommended before consequential execution."};}
+  const options=Array.isArray(payload.options)?payload.options.map(String).slice(0,4):[];const legalRecommended=Boolean(payload.legal_review_recommended);const legalReason=String(payload.legal_review_reason??(legalRecommended?"B-001 identified possible legal or regulatory relevance.":"No material legal-review trigger identified by B-001.")).slice(0,2000);
+  const text=[`Executive summary\n${payload.executive_summary??""}`,`Consensus\n${payload.consensus??""}`,`Material disagreements\n${(payload.disagreements??[]).map(x=>`• ${x}`).join("\n")||"None recorded."}`,`Recommendation\n${payload.recommendation??"Human CEO review required."}`,`Legal review notice\n${legalRecommended?`Recommended — ${legalReason}`:"Not recommended — no material legal trigger identified."}`,`Next governed step\n${payload.next_step??"Human CEO decision."}`].join("\n\n").slice(0,9000);
+  const {error}=await supabase.from("meeting_agent_messages").insert({organization_id:organizationId,meeting_id:meeting.id,session_id:sessionId,agent_id:a?.id??null,turn_index:nextTurn,round_no:roundNo,speaker_type:"agent",message_type:"synthesis",content:text,model:config.dryRunModel,input_tokens:i,output_tokens:o,estimated_cost_usd:cost});if(error)return fail(error.message,500);const completedAt=new Date().toISOString();await supabase.from("meeting_agent_sessions").update({status:"completed",synthesis:text,recommendation:String(payload.recommendation??"Human CEO review required."),decision_options:options,legal_review_recommended:legalRecommended,legal_review_reason:legalReason,total_input_tokens:Number(session.total_input_tokens??0)+i,total_output_tokens:Number(session.total_output_tokens??0)+o,estimated_cost_usd:finalCost,completed_at:completedAt,updated_at:completedAt,error_message:null}).eq("id",sessionId).eq("organization_id",organizationId);await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"system",event_type:"meeting.agent_deliberation_completed",object_type:"meeting",object_id:meeting.id,risk_level:"medium",payload:{session_id:sessionId,rounds:session.max_rounds,participants:participants.length,decision_options:options.length,legal_review_recommended:legalRecommended,legal_review_reason:legalReason,external_actions:false,human_decision_required:true}});return NextResponse.json({ok:true,sessionId,status:"completed",phase:"synthesis",roundNo,turnIndex:nextTurn,speaker:a?{id:a.id,code:a.agent_code,name:a.display_name??a.name,role:a.role_title}:null,content:text,decisionOptions:options,recommendation:payload.recommendation??"Human CEO review required.",legalReviewRecommended:legalRecommended,legalReviewReason:legalReason});
+ }catch(error){const message=error instanceof Error?error.message.slice(0,1000):"Unknown meeting runtime error";await supabase.from("meeting_agent_sessions").update({error_message:message,updated_at:new Date().toISOString()}).eq("id",sessionId).eq("organization_id",organizationId);return fail(`Agent deliberation hit a retryable runtime error: ${message}`,500);}
 }
