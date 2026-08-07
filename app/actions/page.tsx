@@ -18,6 +18,31 @@ type Props = { searchParams:Promise<{ action?:string; status?:string; priority?:
 const statuses=new Set<ActionStatus>(["open","in_progress","blocked","completed","cancelled"]);
 const formatDate=(value:string|null)=>value?new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short"}).format(new Date(value)):"Not set";
 const asList=(value:unknown)=>Array.isArray(value)?value.map(String):[];
+const extendedFields="id,project_id,meeting_id,decision_id,action_code,phase_name,owner_label,assigned_agent_id,risk_level,title,description,status,priority,assigned_user_id,due_at,completed_at,created_at,dependencies,success_criteria,evidence_required";
+const legacyFields="id,meeting_id,decision_id,title,description,status,priority,assigned_user_id,due_at,completed_at,created_at";
+
+const normalizeLegacy=(row:Record<string,unknown>):ActionRow=>({
+  id:String(row.id),
+  project_id:null,
+  meeting_id:row.meeting_id?String(row.meeting_id):null,
+  decision_id:row.decision_id?String(row.decision_id):null,
+  action_code:null,
+  phase_name:null,
+  owner_label:null,
+  assigned_agent_id:null,
+  risk_level:null,
+  title:String(row.title??"Untitled action"),
+  description:row.description?String(row.description):null,
+  status:String(row.status??"open") as ActionStatus,
+  priority:Number(row.priority??3),
+  assigned_user_id:row.assigned_user_id?String(row.assigned_user_id):null,
+  due_at:row.due_at?String(row.due_at):null,
+  completed_at:row.completed_at?String(row.completed_at):null,
+  created_at:String(row.created_at??new Date(0).toISOString()),
+  dependencies:[],
+  success_criteria:[],
+  evidence_required:[],
+});
 
 async function ownerContext(){
   const supabase=await createAuthServerClient();
@@ -54,7 +79,7 @@ async function updateAction(formData:FormData){
   const priority=Number(formData.get("priority")??3);
   const dueValue=String(formData.get("dueAt")??"").trim();
   if(!actionId||!statuses.has(nextStatus)||note.length<3||!Number.isInteger(priority)||priority<1||priority>5) redirect(`/actions?action=${actionId}&error=Status%2C%20priority%2C%20and%20a%20transition%20note%20are%20required.`);
-  const {data:current}=await supabase.from("action_items").select("id,title,status,project_id,action_code").eq("organization_id",organizationId).eq("id",actionId).maybeSingle();
+  const {data:current}=await supabase.from("action_items").select("id,title,status").eq("organization_id",organizationId).eq("id",actionId).maybeSingle();
   if(!current) redirect("/actions?error=Action%20item%20not%20found.");
   if(["completed","cancelled"].includes(current.status)) redirect(`/actions?action=${actionId}&error=Final%20action%20items%20are%20immutable.`);
   const dueAt=dueValue?new Date(dueValue):null;
@@ -62,7 +87,7 @@ async function updateAction(formData:FormData){
   const now=new Date().toISOString();
   const {data:updated,error}=await supabase.from("action_items").update({status:nextStatus,priority,due_at:dueAt?.toISOString()??null,completed_at:nextStatus==="completed"?now:null,assigned_user_id:user.id}).eq("organization_id",organizationId).eq("id",actionId).eq("status",current.status).select("id").maybeSingle();
   if(error||!updated) redirect(`/actions?action=${actionId}&error=${encodeURIComponent(error?.message??"Action item could not be updated.")}`);
-  await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:`action.${nextStatus}`,object_type:"action_item",object_id:actionId,risk_level:nextStatus==="blocked"?"medium":"low",payload:{title:current.title,action_code:current.action_code,project_id:current.project_id,previous_status:current.status,status:nextStatus,priority,note,due_at:dueAt?.toISOString()??null}});
+  await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:`action.${nextStatus}`,object_type:"action_item",object_id:actionId,risk_level:nextStatus==="blocked"?"medium":"low",payload:{title:current.title,previous_status:current.status,status:nextStatus,priority,note,due_at:dueAt?.toISOString()??null}});
   revalidatePath("/actions");revalidatePath("/projects/execution-plan");revalidatePath("/projects");revalidatePath("/command-center");
   redirect(`/actions?action=${actionId}&status=${nextStatus}&message=Action%20item%20updated.`);
 }
@@ -72,12 +97,33 @@ export default async function ActionItemEngine({searchParams}:Props){
   const {supabase,organizationId}=await ownerContext();
   const selectedStatus=statuses.has(params.status as ActionStatus)?params.status as ActionStatus:"open";
   const selectedPriority=["1","2","3","4","5"].includes(params.priority??"")?Number(params.priority):null;
-  const fields="id,project_id,meeting_id,decision_id,action_code,phase_name,owner_label,assigned_agent_id,risk_level,title,description,status,priority,assigned_user_id,due_at,completed_at,created_at,dependencies,success_criteria,evidence_required";
-  let query=supabase.from("action_items").select(fields).eq("organization_id",organizationId).eq("status",selectedStatus).order("priority",{ascending:true}).order("due_at",{ascending:true,nullsFirst:false}).limit(100);
-  if(selectedPriority)query=query.eq("priority",selectedPriority);
-  const actions=((await query).data??[]) as unknown as ActionRow[];
+
+  let extendedQuery=supabase.from("action_items").select(extendedFields).eq("organization_id",organizationId).eq("status",selectedStatus).order("priority",{ascending:true}).order("due_at",{ascending:true,nullsFirst:false}).limit(100);
+  if(selectedPriority)extendedQuery=extendedQuery.eq("priority",selectedPriority);
+  const extendedResult=await extendedQuery;
+  const schemaReady=!extendedResult.error;
+
+  let actions:ActionRow[]=[];
+  if(schemaReady){
+    actions=(extendedResult.data??[]) as unknown as ActionRow[];
+  }else{
+    let legacyQuery=supabase.from("action_items").select(legacyFields).eq("organization_id",organizationId).eq("status",selectedStatus).order("priority",{ascending:true}).order("due_at",{ascending:true,nullsFirst:false}).limit(100);
+    if(selectedPriority)legacyQuery=legacyQuery.eq("priority",selectedPriority);
+    const legacyResult=await legacyQuery;
+    actions=((legacyResult.data??[]) as unknown as Record<string,unknown>[]).map(normalizeLegacy);
+  }
+
   const selectedId=params.action??actions[0]?.id??null;
-  const selected=selectedId?((await supabase.from("action_items").select(fields).eq("organization_id",organizationId).eq("id",selectedId).maybeSingle()).data as unknown as ActionRow|null):null;
+  let selected:ActionRow|null=null;
+  if(selectedId){
+    if(schemaReady){
+      selected=((await supabase.from("action_items").select(extendedFields).eq("organization_id",organizationId).eq("id",selectedId).maybeSingle()).data as unknown as ActionRow|null);
+    }else{
+      const legacySelected=(await supabase.from("action_items").select(legacyFields).eq("organization_id",organizationId).eq("id",selectedId).maybeSingle()).data as unknown as Record<string,unknown>|null;
+      selected=legacySelected?normalizeLegacy(legacySelected):null;
+    }
+  }
+
   const agent=selected?.assigned_agent_id?((await supabase.from("agents").select("agent_code,display_name,name,role_title").eq("id",selected.assigned_agent_id).maybeSingle()).data):null;
   const audit=selected?(((await supabase.from("audit_events").select("id,event_type,actor_type,risk_level,created_at").eq("organization_id",organizationId).eq("object_type","action_item").eq("object_id",selected.id).order("created_at",{ascending:false}).limit(25)).data??[]) as AuditRow[]):[];
   const isFinal=selected?["completed","cancelled"].includes(selected.status):false;
@@ -85,14 +131,15 @@ export default async function ActionItemEngine({searchParams}:Props){
   return <main className="command-shell">
     <header className="command-header"><div><p className="eyebrow">RYTHM ACTION ITEM ENGINE</p><h1>Accountable execution control</h1><p className="subtitle">Govern project commitments, owners, dependencies and lifecycle transitions inside one execution register.</p></div><div style={{display:"flex",gap:10,flexWrap:"wrap"}}><Link className="secondary-button" href="/projects/execution-plan">Execution Plan</Link><Link className="secondary-button" href="/command-center">Command Center</Link></div></header>
     <section className="organization-banner"><div><span>Authority</span><strong>Human CEO / Owner</strong></div><div><span>Lifecycle</span><strong>Open → In progress / Blocked → Completed</strong></div><div><span>External actions</span><strong>Disabled</strong></div></section>
+    {!schemaReady?<p className="security-note" style={{padding:"12px 14px",border:"1px solid #ead9aa",borderRadius:10,background:"#fff9e9"}}>Execution metadata migration is pending. Existing Action Items remain available in legacy-safe mode until the release migration is applied.</p>:null}
     {params.message?<p className="form-success">{params.message}</p>:null}{params.error?<p className="form-error">{params.error}</p>:null}
     <section className="panel panel-wide" style={{marginTop:18}}>
       <div className="panel-heading"><div><p className="label">Execution register</p><h2>Action Item Inbox</h2></div><span className="pill">{actions.length} matching items</span></div>
       <form method="get" style={{display:"grid",gridTemplateColumns:"220px 220px auto",gap:10,marginBottom:18}}><select name="status" defaultValue={selectedStatus}><option value="open">Open</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select><select name="priority" defaultValue={selectedPriority?.toString()??""}><option value="">All priorities</option><option value="1">1 — Highest</option><option value="2">2 — High</option><option value="3">3 — Normal</option><option value="4">4 — Low</option><option value="5">5 — Lowest</option></select><button className="secondary-button">Apply filters</button></form>
       <div style={{display:"grid",gridTemplateColumns:"minmax(260px,.7fr) minmax(0,1.35fr) minmax(300px,.8fr)",gap:18}}>
-        <div className="data-list">{actions.length?actions.map(a=><Link key={a.id} href={`/actions?status=${selectedStatus}&priority=${selectedPriority??""}&action=${a.id}`} style={{display:"block",padding:"15px 0",borderBottom:"1px solid #e7eaf0",textDecoration:"none"}}><strong>{a.action_code?`${a.action_code} · `:""}{a.title}</strong><span style={{display:"block",marginTop:6,color:"#717b8e",fontSize:".82rem"}}>{a.phase_name?`${a.phase_name} · `:""}P{a.priority} · {a.risk_level??"low"} risk · Due {formatDate(a.due_at)}</span></Link>):<p className="empty-state">No action items match these filters.</p>}</div>
+        <div className="data-list">{actions.length?actions.map(a=><Link key={a.id} href={`/actions?status=${selectedStatus}&priority=${selectedPriority??""}&action=${a.id}`} style={{display:"block",padding:"15px 0",borderBottom:"1px solid #e7eaf0",textDecoration:"none"}}><strong>{a.action_code?`${a.action_code} · `:""}{a.title}</strong><span style={{display:"block",marginTop:6,color:"#717b8e",fontSize:".82rem"}}>{a.phase_name?`${a.phase_name} · `:""}P{a.priority} · {a.risk_level??"legacy"} risk · Due {formatDate(a.due_at)}</span></Link>):<p className="empty-state">No action items match these filters.</p>}</div>
         {selected?<article style={{border:"1px solid #dfe4ec",borderRadius:16,padding:20,background:"#f8f9fb"}}>
-          <div className="panel-heading"><div><p className="label">{selected.action_code??"Action details"}</p><h2>{selected.title}</h2></div><div className="row-meta"><span>P{selected.priority}</span><span>{selected.risk_level??"low"} risk</span><b className={selected.status==="completed"?"state-active":"state-paused"}>{selected.status}</b></div></div>
+          <div className="panel-heading"><div><p className="label">{selected.action_code??"Action details"}</p><h2>{selected.title}</h2></div><div className="row-meta"><span>P{selected.priority}</span>{selected.risk_level?<span>{selected.risk_level} risk</span>:null}<b className={selected.status==="completed"?"state-active":"state-paused"}>{selected.status}</b></div></div>
           <p style={{color:"#596579",lineHeight:1.65}}>{selected.description??"No description recorded."}</p>
           <div className="compact-list"><div><strong>Phase</strong><span>{selected.phase_name??"General company action"}</span></div><div><strong>Owner / assigned agent</strong><span>{selected.owner_label??"Human CEO"}{agent?` · ${agent.agent_code} · ${agent.display_name??agent.name}`:""}</span></div><div><strong>Due</strong><span>{formatDate(selected.due_at)}</span></div><div><strong>Dependencies</strong><span>{asList(selected.dependencies).join(" · ")||"None"}</span></div><div><strong>Success criteria</strong><span>{asList(selected.success_criteria).join(" · ")||"Not specified"}</span></div><div><strong>Evidence required</strong><span>{asList(selected.evidence_required).join(" · ")||"Not specified"}</span></div><div><strong>Source</strong><span>{selected.decision_id?`Governed decision ${selected.decision_id}`:selected.meeting_id?`Meeting ${selected.meeting_id}`:"Direct CEO action"}</span></div></div>
           {!isFinal?<form action={updateAction} className="auth-form" style={{marginTop:20}}><input type="hidden" name="actionId" value={selected.id}/><label>Status<select name="nextStatus" defaultValue={selected.status}><option value="open">Open</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label><label>Priority<select name="priority" defaultValue={selected.priority.toString()}><option value="1">1 — Highest</option><option value="2">2 — High</option><option value="3">3 — Normal</option><option value="4">4 — Low</option><option value="5">5 — Lowest</option></select></label><label>Due date<input name="dueAt" type="datetime-local"/></label><label>Transition note<textarea name="note" minLength={3} required rows={4} style={{width:"100%",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10}}/></label><button>Update action item</button></form>:<p className="security-note">Final action items are immutable.</p>}
