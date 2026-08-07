@@ -31,7 +31,29 @@ function extractText(response:ResponseLike){
   }
   return parts.join("\n").trim();
 }
-function extractJsonObject(value:string){
+
+function firstSentences(value:string,max=4){
+  const compact=value.replace(/\s+/g," ").trim();
+  if(!compact) return "A-106 completed advisory legal issue-spotting, but returned no concise executive note.";
+  const parts=compact.split(/(?<=[.!?])\s+/).filter(Boolean).slice(0,max);
+  return parts.join(" ").slice(0,1600);
+}
+
+function extractSection(value:string,startNames:string[],endNames:string[]){
+  const lines=value.split(/\r?\n/);
+  let active=false;
+  const picked:string[]=[];
+  for(const line of lines){
+    const normalized=line.trim().replace(/^#+\s*/,"").replace(/\*\*/g,"").trim();
+    const lower=normalized.toLowerCase();
+    if(!active&&startNames.some(name=>lower===name||lower.startsWith(`${name}:`))){active=true;continue;}
+    if(active&&endNames.some(name=>lower===name||lower.startsWith(`${name}:`))) break;
+    if(active&&normalized) picked.push(normalized);
+  }
+  return picked.join("\n").trim();
+}
+
+function normalizeLegalPayload(value:string):LegalPayload{
   const cleaned=value.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/```$/i,"").trim();
   try{return JSON.parse(cleaned) as LegalPayload;}catch{}
   const start=cleaned.indexOf("{");
@@ -39,7 +61,43 @@ function extractJsonObject(value:string){
   if(start>=0&&end>start){
     try{return JSON.parse(cleaned.slice(start,end+1)) as LegalPayload;}catch{}
   }
-  throw new Error("A-106 returned invalid structured output.");
+
+  const upper=cleaned.toUpperCase();
+  const explicitlyLicensed=/LICENSED[_\s-]?COUNSEL[_\s-]?REQUIRED/.test(upper)||/LICENSED\s+COUNSEL\s+(?:IS\s+)?REQUIRED/i.test(cleaned)||/MUST\s+NOT\s+(?:PROCEED|EXECUTE)[\s\S]{0,120}LICENSED\s+COUNSEL/i.test(cleaned)||/DO\s+NOT\s+(?:PROCEED|EXECUTE)[\s\S]{0,120}(?:QUALIFIED|LICENSED)\s+(?:LEGAL\s+)?COUNSEL/i.test(cleaned);
+
+  let outcome="CLEAR_WITH_CONDITIONS";
+  if(explicitlyLicensed) outcome="LICENSED_COUNSEL_REQUIRED";
+  else if(/RISK[_\s-]?IDENTIFIED/.test(upper)||/MATERIAL\s+LEGAL\s+RISK/i.test(cleaned)) outcome="RISK_IDENTIFIED";
+  else if(/\bCLEAR\b/.test(upper)&&!/CLEAR[_\s-]?WITH[_\s-]?CONDITIONS/.test(upper)) outcome="CLEAR";
+
+  let legalApplicability="STRATEGIC_CONDITIONS_ONLY";
+  if(explicitlyLicensed) legalApplicability="LICENSED_COUNSEL_REQUIRED";
+  else if(/EXECUTION[_\s-]?REVIEW[_\s-]?REQUIRED/.test(upper)||/BEFORE\s+EXECUTION/i.test(cleaned)||/EXECUTION[-\s]LEVEL\s+(?:LEGAL\s+)?REVIEW/i.test(cleaned)||/FUTURE\s+(?:EXPERIMENT|IMPLEMENTATION|EXECUTION)/i.test(cleaned)) legalApplicability="EXECUTION_REVIEW_REQUIRED";
+
+  const conditionsSection=extractSection(cleaned,["conditions","conditions / guardrails","guardrails"],["jurisdictions","jurisdiction context","licensed counsel","disclaimer"]);
+  const conditionLines=(conditionsSection||cleaned)
+    .split(/\r?\n/)
+    .map(line=>line.trim())
+    .filter(line=>/^[-*•]\s+/.test(line)||/^\d+[.)]\s+/.test(line))
+    .map(line=>line.replace(/^[-*•]\s+/,"").replace(/^\d+[.)]\s+/,"").trim())
+    .filter(Boolean)
+    .slice(0,12);
+
+  const riskSection=extractSection(cleaned,["risk summary","risks","legal risk summary"],["conditions","jurisdictions","jurisdiction context","recommendation"]);
+  const jurisdictionSection=extractSection(cleaned,["jurisdictions","jurisdiction context"],["conditions","licensed counsel","disclaimer"]);
+  const jurisdictions=jurisdictionSection
+    ? jurisdictionSection.split(/[,;\n]/).map(v=>v.trim()).filter(Boolean).slice(0,12)
+    : /NOT\s+SPECIFIED/i.test(cleaned)?["Not specified"]:["Not specified"];
+
+  return {
+    outcome,
+    legal_applicability:legalApplicability,
+    executive_note:firstSentences(cleaned,4),
+    risk_summary:(riskSection||firstSentences(cleaned,6)).slice(0,1800),
+    conditions:conditionLines,
+    jurisdictions,
+    licensed_counsel_required:explicitlyLicensed,
+  };
 }
 
 const legalSchema={
@@ -142,10 +200,10 @@ export async function POST(request:Request){
 
     const raw=extractText(response);
     if(!raw) throw new Error("A-106 returned no displayable text.");
-    const parsed=extractJsonObject(raw);
+    const parsed=normalizeLegalPayload(raw);
     const allowedOutcomes=new Set(["CLEAR","CLEAR_WITH_CONDITIONS","RISK_IDENTIFIED","LICENSED_COUNSEL_REQUIRED"]);
     const allowedApplicability=new Set(["STRATEGIC_CONDITIONS_ONLY","EXECUTION_REVIEW_REQUIRED","LICENSED_COUNSEL_REQUIRED"]);
-    const outcome=allowedOutcomes.has(String(parsed.outcome))?String(parsed.outcome):"RISK_IDENTIFIED";
+    const outcome=allowedOutcomes.has(String(parsed.outcome))?String(parsed.outcome):"CLEAR_WITH_CONDITIONS";
     const legalApplicability=allowedApplicability.has(String(parsed.legal_applicability))?String(parsed.legal_applicability):"EXECUTION_REVIEW_REQUIRED";
     const conditions=Array.isArray(parsed.conditions)?parsed.conditions.map(String).slice(0,12):[];
     const jurisdictions=Array.isArray(parsed.jurisdictions)?parsed.jurisdictions.map(String).slice(0,12):["Not specified"];
@@ -161,7 +219,7 @@ export async function POST(request:Request){
     const {data:review,error:updateError}=await supabase.from("meeting_legal_reviews").update({status:"completed",outcome:normalizedOutcome,legal_applicability:normalizedApplicability,calibration_version:CALIBRATION_VERSION,executive_note:String(parsed.executive_note??"").slice(0,4000),risk_summary:String(parsed.risk_summary??"").slice(0,4000),conditions,jurisdictions,licensed_counsel_required:licensed,model:config.dryRunModel,input_tokens:inputTokens,output_tokens:outputTokens,estimated_cost_usd:cost,error_message:null,completed_at:completedAt,updated_at:completedAt}).eq("id",reviewId).eq("organization_id",organizationId).select("id,status,outcome,legal_applicability,calibration_version,executive_note,risk_summary,conditions,jurisdictions,licensed_counsel_required,estimated_cost_usd,requested_at,completed_at").single();
     if(updateError||!review) return fail(updateError?.message??"Legal review could not be saved.",500);
     await supabase.from("meeting_agent_sessions").update({total_input_tokens:Number(session.total_input_tokens??0)+inputTokens,total_output_tokens:Number(session.total_output_tokens??0)+outputTokens,estimated_cost_usd:newCost,updated_at:completedAt}).eq("id",sessionId).eq("organization_id",organizationId);
-    await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"agent",actor_agent_id:legalAgent.id,event_type:"meeting.ai_legal_review_completed",object_type:"meeting",object_id:meeting.id,risk_level:normalizedOutcome==="CLEAR"?"low":normalizedOutcome==="CLEAR_WITH_CONDITIONS"?"medium":"high",payload:{session_id:sessionId,review_id:review.id,agent_code:"A-106",outcome:normalizedOutcome,legal_applicability:normalizedApplicability,calibration_version:CALIBRATION_VERSION,licensed_counsel_required:licensed,conditions,jurisdictions,model:config.dryRunModel,input_tokens:inputTokens,output_tokens:outputTokens,estimated_cost_usd:cost,external_actions:false,advisory_only:true}});
+    await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"agent",actor_agent_id:legalAgent.id,event_type:"meeting.ai_legal_review_completed",object_type:"meeting",object_id:meeting.id,risk_level:normalizedOutcome==="CLEAR"?"low":normalizedOutcome==="CLEAR_WITH_CONDITIONS"?"medium":"high",payload:{session_id:sessionId,review_id:review.id,agent_code:"A-106",outcome:normalizedOutcome,legal_applicability:normalizedApplicability,calibration_version:CALIBRATION_VERSION,licensed_counsel_required:licensed,conditions,jurisdictions,model:config.dryRunModel,input_tokens:inputTokens,output_tokens:outputTokens,estimated_cost_usd:cost,external_actions:false,advisory_only:true,normalizer:"deterministic_v1"}});
     return NextResponse.json({ok:true,review,sessionEstimatedCostUsd:newCost,recalibrated:Boolean(existing&&Number(existing.calibration_version??1)<CALIBRATION_VERSION)});
   }catch(error){
     const message=error instanceof Error?error.message:"AI legal review failed.";
