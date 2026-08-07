@@ -30,18 +30,9 @@ create index if not exists action_items_decision_handoff_idx
   on public.action_items(decision_id, handoff_source, created_at desc)
   where decision_id is not null;
 
--- Classify the existing 90-day execution plan without changing its lifecycle.
-update public.action_items
-set handoff_source = 'execution_plan_seed',
-    authorized_at = coalesce(authorized_at, created_at),
-    authorization_snapshot = authorization_snapshot || jsonb_build_object(
-      'source', 'AI-PR-001 governed execution-plan seed',
-      'external_actions', false,
-      'historical_classification', true
-    )
-where action_code like 'AI-PR-001-ACT-%'
-  and decision_id is not null
-  and handoff_source is null;
+-- Historical Action Items are intentionally not updated here.
+-- Existing execution-plan rows remain authoritative and are detected by decision_id,
+-- so WF-006 does not need to mutate them in order to prevent duplicates.
 
 -- -----------------------------------------------------------------------------
 -- 2. Approval-aware, idempotent Decision -> Action function
