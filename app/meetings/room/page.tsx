@@ -13,6 +13,7 @@ type Meeting = { id:string; project_id:string|null; title:string; purpose:string
 type Session = { id:string; meeting_id:string; project_id:string|null; status:string; decision_question:string; language:string; max_rounds:number; budget_cap_usd:number; recommendation:string|null; decision_options:unknown; synthesis:string|null; error_message:string|null; estimated_cost_usd:number };
 type Participant = { agent_id:string; seat_order:number; session_role:string; agents:Agent|Agent[]|null };
 type Message = { id:string; turn_index:number; round_no:number; message_type:string; content:string; agent_id:string|null; agents:Pick<Agent,"agent_code"|"display_name"|"name"|"role_title">|Pick<Agent,"agent_code"|"display_name"|"name"|"role_title">[]|null };
+type LegalDecisionReview = { outcome:string|null; executive_note:string|null; risk_summary:string|null; conditions:unknown; licensed_counsel_required:boolean };
 type Props = { searchParams: Promise<{ meeting?:string; session?:string; message?:string; error?:string }> };
 
 const list = (value:unknown) => Array.isArray(value) ? value.map(String) : [];
@@ -105,10 +106,10 @@ async function recordCeoDecision(formData:FormData){
   if(!session||session.status!=="completed") redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=The%20agent%20deliberation%20must%20finish%20before%20a%20CEO%20decision%20is%20recorded.`);
   if(session.legal_triage_status==="pending") redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=${encodeURIComponent("B-001 legal relevance triage must finish before the Human CEO decision is recorded.")}`);
 
-  let legalReview:{outcome:string|null;executive_note:string|null;risk_summary:string|null;conditions:unknown;licensed_counsel_required:boolean}|null=null;
+  let legalReview:LegalDecisionReview|null=null;
   if(session.legal_triage_status==="recommended"){
     const result=await supabase.from("meeting_legal_reviews").select("outcome,executive_note,risk_summary,conditions,licensed_counsel_required,status").eq("session_id",sessionId).eq("organization_id",organizationId).eq("status","completed").order("created_at",{ascending:false}).limit(1).maybeSingle();
-    legalReview=result.data as typeof legalReview;
+    legalReview=result.data as LegalDecisionReview|null;
     if(!legalReview) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=${encodeURIComponent("B-001 recommended legal review. Complete the A-106 AI Legal Review before recording the final CEO decision.")}`);
     if(legalReview.licensed_counsel_required||legalReview.outcome==="LICENSED_COUNSEL_REQUIRED") redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=${encodeURIComponent("A-106 requires licensed counsel review before this legally sensitive decision can be finalized for execution.")}`);
     if(legalReview.outcome==="RISK_IDENTIFIED"&&!['high','critical'].includes(riskLevel)) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=${encodeURIComponent("A-106 identified material legal risk. Record this decision as High or Critical risk so it routes through the Approval Engine.")}`);
