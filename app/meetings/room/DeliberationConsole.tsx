@@ -106,7 +106,7 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
     try{
       const payload=await jsonPost("/api/meetings/summarize",{sessionId,summaryLanguage:requestedLanguage});
       setSummary(String(payload.summary??""));
-      setSummaryLanguageUsed(String(payload.language??requestedLanguage||"Meeting language"));
+      setSummaryLanguageUsed(String(payload.language ?? requestedLanguage || "Meeting language"));
       setShowTranscript(false);
     }catch(cause){setError(cause instanceof Error?cause.message:"Meeting summary failed.");}
     finally{setSummarizing(false);}
