@@ -37,7 +37,8 @@ export async function GET(request:Request){
   if("error" in auth) return auth.error;
   const sessionId=new URL(request.url).searchParams.get("sessionId")?.trim()??"";
   if(!sessionId) return fail("sessionId is required.",400);
-  const {data:review}=await auth.supabase.from("meeting_legal_reviews").select("id,status,outcome,executive_note,risk_summary,conditions,jurisdictions,licensed_counsel_required,estimated_cost_usd,error_message,requested_at,completed_at,agents:legal_agent_id(agent_code,display_name,name,role_title)").eq("session_id",sessionId).eq("organization_id",auth.organizationId).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  const {data:review,error}=await auth.supabase.from("meeting_legal_reviews").select("id,status,outcome,executive_note,risk_summary,conditions,jurisdictions,licensed_counsel_required,estimated_cost_usd,error_message,requested_at,completed_at").eq("session_id",sessionId).eq("organization_id",auth.organizationId).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  if(error) return fail(error.message,500);
   return NextResponse.json({ok:true,review:review??null});
 }
 
