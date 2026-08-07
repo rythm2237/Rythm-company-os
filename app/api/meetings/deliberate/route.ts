@@ -38,6 +38,15 @@ type MessageRow = {
   agent_id: string | null;
 };
 
+type SynthesisPayload = {
+  executive_summary?: string;
+  consensus?: string;
+  disagreements?: string[];
+  options?: string[];
+  recommendation?: string;
+  next_step?: string;
+};
+
 function participantAgent(row: ParticipantRow): AgentRow | null {
   if (Array.isArray(row.agents)) return row.agents[0] ?? null;
   return row.agents ?? null;
@@ -160,7 +169,7 @@ export async function POST(request: Request) {
   let responseAgent: AgentRow | null = null;
   let messageType: "position" | "challenge" | "synthesis" = "position";
   let roundNo = 1;
-  let synthesisPayload: { executive_summary?: string; consensus?: string; disagreements?: string[]; options?: string[]; recommendation?: string; next_step?: string } | null = null;
+  let synthesisPayload: SynthesisPayload = {};
 
   try {
     if (deliberationMessages.length < totalAgentTurns) {
@@ -190,7 +199,7 @@ export async function POST(request: Request) {
       const inputTokens = Number(response.usage?.input_tokens ?? 0);
       const outputTokens = Number(response.usage?.output_tokens ?? 0);
       const cost = estimateCost(inputTokens, outputTokens, config.inputCostPerMillionUsd, config.outputCostPerMillionUsd);
-      const accumulatedCost = Number(session.estimated_cost_usd ?? 0) + messages.reduce((sum, item) => sum, 0) + cost;
+      const accumulatedCost = Number(session.estimated_cost_usd ?? 0) + cost;
       if (accumulatedCost > Number(session.budget_cap_usd)) {
         await supabase.from("meeting_agent_sessions").update({ status: "failed", error_message: `Estimated cost $${accumulatedCost.toFixed(6)} exceeded the session budget cap.`, updated_at: new Date().toISOString() }).eq("id", sessionId).eq("organization_id", organizationId);
         return jsonError("The next agent turn exceeded the configured meeting budget cap.", 409);
@@ -252,7 +261,7 @@ export async function POST(request: Request) {
 
     const raw = (synthesisResponse.output_text || "{}").trim();
     try {
-      synthesisPayload = JSON.parse(cleanJson(raw));
+      synthesisPayload = JSON.parse(cleanJson(raw)) as SynthesisPayload;
     } catch {
       synthesisPayload = {
         executive_summary: raw.slice(0, 4000),
