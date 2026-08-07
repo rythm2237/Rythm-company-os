@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type TranscriptMessage = {
@@ -12,6 +12,19 @@ type TranscriptMessage = {
   speakerCode: string;
   speakerName: string;
   speakerRole?: string;
+};
+
+type LegalReview = {
+  id?: string;
+  status?: string;
+  outcome?: string|null;
+  executive_note?: string|null;
+  risk_summary?: string|null;
+  conditions?: unknown;
+  jurisdictions?: unknown;
+  licensed_counsel_required?: boolean;
+  estimated_cost_usd?: number;
+  error_message?: string|null;
 };
 
 type Props = {
@@ -26,6 +39,15 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function jsonPost(path:string,body:Record<string,unknown>){
   const response=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},credentials:"same-origin",cache:"no-store",body:JSON.stringify(body)});
+  const raw=await response.text();
+  let payload:Record<string,any>={};
+  if(raw){try{payload=JSON.parse(raw) as Record<string,any>;}catch{throw new Error(`Meeting runtime returned HTTP ${response.status} with a non-JSON response.`);}}
+  if(!response.ok||!payload.ok) throw new Error(String(payload.error??`Request failed with HTTP ${response.status}.`));
+  return payload;
+}
+
+async function jsonGet(path:string){
+  const response=await fetch(path,{method:"GET",headers:{Accept:"application/json"},credentials:"same-origin",cache:"no-store"});
   const raw=await response.text();
   let payload:Record<string,any>={};
   if(raw){try{payload=JSON.parse(raw) as Record<string,any>;}catch{throw new Error(`Meeting runtime returned HTTP ${response.status} with a non-JSON response.`);}}
@@ -64,6 +86,36 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
   const [ceoOpen,setCeoOpen]=useState(false);
   const [ceoText,setCeoText]=useState("");
   const [ceoSending,setCeoSending]=useState(false);
+  const [legalTriage,setLegalTriage]=useState<"pending"|"recommended"|"not_indicated">("pending");
+  const [legalTriageReason,setLegalTriageReason]=useState("");
+  const [legalTriageRunning,setLegalTriageRunning]=useState(false);
+  const [legalReview,setLegalReview]=useState<LegalReview|null>(null);
+  const [legalReviewRunning,setLegalReviewRunning]=useState(false);
+
+  useEffect(()=>{
+    if(status!=="completed") return;
+    let cancelled=false;
+    const load=async()=>{
+      try{
+        const triage=await jsonGet(`/api/meetings/legal-triage?sessionId=${encodeURIComponent(sessionId)}`);
+        if(cancelled) return;
+        setLegalTriage((triage.status??"pending") as "pending"|"recommended"|"not_indicated");
+        setLegalTriageReason(String(triage.reason??""));
+        if(triage.status==="pending"){
+          setLegalTriageRunning(true);
+          const completed=await jsonPost("/api/meetings/legal-triage",{sessionId});
+          if(!cancelled){setLegalTriage((completed.status??"pending") as "pending"|"recommended"|"not_indicated");setLegalTriageReason(String(completed.reason??""));}
+          setLegalTriageRunning(false);
+        }
+        const reviewPayload=await jsonGet(`/api/meetings/legal-review?sessionId=${encodeURIComponent(sessionId)}`);
+        if(!cancelled) setLegalReview((reviewPayload.review??null) as LegalReview|null);
+      }catch(cause){
+        if(!cancelled){setLegalTriageRunning(false);setError(cause instanceof Error?cause.message:"Legal governance status could not be loaded.");}
+      }
+    };
+    void load();
+    return()=>{cancelled=true;};
+  },[sessionId,status]);
 
   const runMeeting = async () => {
     setRunning(true);
@@ -79,7 +131,7 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
         }
         setStatus(String(payload.status ?? "running"));
         if (payload.status === "completed") {
-          setProgressText("Deliberation complete. Human CEO decision is now required.");
+          setProgressText("Deliberation complete. B-001 legal relevance triage will run before the Human CEO gate.");
           router.refresh();
           return;
         }
@@ -123,8 +175,21 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
     finally{setCeoSending(false);}
   };
 
+  const requestLegalReview=async()=>{
+    setLegalReviewRunning(true);setError("");
+    try{
+      const payload=await jsonPost("/api/meetings/legal-review",{sessionId});
+      setLegalReview((payload.review??null) as LegalReview|null);
+      setProgressText("A-106 legal review completed and attached to the meeting decision package.");
+      router.refresh();
+    }catch(cause){setError(cause instanceof Error?cause.message:"AI legal review failed.");}
+    finally{setLegalReviewRunning(false);}
+  };
+
   const canRun = meetingStatus === "running" && ["ready", "running"].includes(status);
   const canCeoContribute=meetingStatus==="running"&&["ready","running"].includes(status);
+  const conditions=Array.isArray(legalReview?.conditions)?legalReview?.conditions.map(String):[];
+  const jurisdictions=Array.isArray(legalReview?.jurisdictions)?legalReview?.jurisdictions.map(String):[];
 
   return <section style={{ marginTop: 20 }}>
     <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -148,6 +213,23 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
     {progressText ? <p className="form-success" role="status">{progressText}</p> : null}
 
     {summary?<article style={{border:"1px solid #cfd6e2",borderRadius:14,padding:18,background:"#f6f8fc",margin:"14px 0 18px"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><div><p className="label">Executive summary</p><h3 style={{marginTop:0}}>Decision-focused meeting brief</h3></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{summaryLanguageUsed?<span className="pill">{summaryLanguageUsed}</span>:null}<span className="pill">AI summary · advisory</span></div></div><p style={{whiteSpace:"pre-wrap",lineHeight:1.7,color:"#46536a",marginBottom:0}}>{summary}</p></article>:null}
+
+    {status==="completed"?<article style={{border:"1px solid #d9dee8",borderRadius:14,padding:18,background:legalTriage==="recommended"?"#fff8e8":"#f7f9fc",margin:"14px 0 18px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><div><p className="label">Legal relevance check</p><h3 style={{margin:"0 0 6px"}}>B-001 Legal Review Trigger</h3></div><span className="pill">{legalTriageRunning?"Checking…":legalTriage==="recommended"?"Legal review recommended":legalTriage==="not_indicated"?"Not indicated":"Pending"}</span></div>
+      <p style={{color:"#596579",lineHeight:1.65,marginBottom:12}}>{legalTriageRunning?"B-001 is checking whether the meeting decision has plausible legal or regulatory implications.":legalTriageReason||"Legal relevance triage is pending."}</p>
+      <button type="button" className="secondary-button" onClick={requestLegalReview} disabled={legalReviewRunning||legalTriageRunning}>{legalReviewRunning?"A-106 reviewing…":legalReview?.status==="completed"?"Legal review completed":"Request AI Legal Review"}</button>
+      <p className="security-note" style={{marginBottom:0}}>The Human CEO may request A-106 review even when B-001 does not flag legal relevance. AI legal review is advisory and is not a substitute for licensed jurisdiction-specific counsel.</p>
+    </article>:null}
+
+    {legalReview?.status==="completed"?<article style={{border:"1px solid #cfd6e2",borderRadius:14,padding:18,background:"#f5f7fb",margin:"14px 0 18px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><div><p className="label">A-106 · Legal & Regulatory Counsel</p><h3 style={{margin:"0 0 6px"}}>AI Legal Review</h3></div><span className="pill">{legalReview.outcome??"Review completed"}</span></div>
+      <p style={{whiteSpace:"pre-wrap",lineHeight:1.65,color:"#46536a"}}>{legalReview.executive_note}</p>
+      {legalReview.risk_summary?<><p className="label">Risk summary</p><p style={{color:"#596579",lineHeight:1.65}}>{legalReview.risk_summary}</p></>:null}
+      {conditions.length?<><p className="label">Conditions</p><ul style={{color:"#596579",lineHeight:1.65}}>{conditions.map((item,index)=><li key={`${item}-${index}`}>{item}</li>)}</ul></>:null}
+      {jurisdictions.length?<p className="security-note">Jurisdiction context: {jurisdictions.join(", ")}</p>:null}
+      {legalReview.licensed_counsel_required?<p className="form-error">Licensed counsel review required before execution of the legally sensitive decision.</p>:null}
+      <p className="security-note" style={{marginBottom:0}}>Advisory AI legal issue-spotting only. This does not constitute formal legal advice or legal approval.</p>
+    </article>:null}
 
     {canRun ? <button type="button" onClick={runMeeting} disabled={running} style={{ margin: "12px 0 18px" }}>{running ? "Running governed deliberation…" : status === "running" ? "Continue agent meeting" : "Start agent deliberation"}</button> : null}
 
