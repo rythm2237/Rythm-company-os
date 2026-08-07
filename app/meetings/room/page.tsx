@@ -13,6 +13,7 @@ type Meeting = { id:string; project_id:string|null; title:string; purpose:string
 type Session = { id:string; meeting_id:string; project_id:string|null; status:string; decision_question:string; language:string; max_rounds:number; budget_cap_usd:number; recommendation:string|null; decision_options:unknown; synthesis:string|null; error_message:string|null; estimated_cost_usd:number };
 type Participant = { agent_id:string; seat_order:number; session_role:string; agents:Agent|Agent[]|null };
 type Message = { id:string; turn_index:number; round_no:number; message_type:string; content:string; agent_id:string|null; agents:Pick<Agent,"agent_code"|"display_name"|"name"|"role_title">|Pick<Agent,"agent_code"|"display_name"|"name"|"role_title">[]|null };
+type LegalDecisionReview = { outcome:string|null; executive_note:string|null; risk_summary:string|null; conditions:unknown; licensed_counsel_required:boolean };
 type Props = { searchParams: Promise<{ meeting?:string; session?:string; message?:string; error?:string }> };
 
 const list = (value:unknown) => Array.isArray(value) ? value.map(String) : [];
@@ -101,8 +102,19 @@ async function recordCeoDecision(formData:FormData){
   const riskLevel=String(formData.get("riskLevel")??"medium");
   if(!selectedOption||rationale.length<3||!["low","medium","high","critical"].includes(riskLevel)) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=Select%20a%20decision%20option%20and%20enter%20CEO%20rationale.`);
 
-  const {data:session}=await supabase.from("meeting_agent_sessions").select("id,project_id,status,decision_question,decision_options,recommendation,synthesis").eq("id",sessionId).eq("meeting_id",meetingId).eq("organization_id",organizationId).maybeSingle();
+  const {data:session}=await supabase.from("meeting_agent_sessions").select("id,project_id,status,decision_question,decision_options,recommendation,synthesis,legal_triage_status,legal_triage_reason").eq("id",sessionId).eq("meeting_id",meetingId).eq("organization_id",organizationId).maybeSingle();
   if(!session||session.status!=="completed") redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=The%20agent%20deliberation%20must%20finish%20before%20a%20CEO%20decision%20is%20recorded.`);
+  if(session.legal_triage_status==="pending") redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=${encodeURIComponent("B-001 legal relevance triage must finish before the Human CEO decision is recorded.")}`);
+
+  let legalReview:LegalDecisionReview|null=null;
+  if(session.legal_triage_status==="recommended"){
+    const result=await supabase.from("meeting_legal_reviews").select("outcome,executive_note,risk_summary,conditions,licensed_counsel_required,status").eq("session_id",sessionId).eq("organization_id",organizationId).eq("status","completed").order("created_at",{ascending:false}).limit(1).maybeSingle();
+    legalReview=result.data as LegalDecisionReview|null;
+    if(!legalReview) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=${encodeURIComponent("B-001 recommended legal review. Complete the A-106 AI Legal Review before recording the final CEO decision.")}`);
+    if(legalReview.licensed_counsel_required||legalReview.outcome==="LICENSED_COUNSEL_REQUIRED") redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=${encodeURIComponent("A-106 requires licensed counsel review before this legally sensitive decision can be finalized for execution.")}`);
+    if(legalReview.outcome==="RISK_IDENTIFIED"&&!['high','critical'].includes(riskLevel)) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=${encodeURIComponent("A-106 identified material legal risk. Record this decision as High or Critical risk so it routes through the Approval Engine.")}`);
+  }
+
   const options=list(session.decision_options);
   if(!options.includes(selectedOption)) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=The%20selected%20option%20is%20not%20part%20of%20the%20meeting%20decision%20package.`);
 
@@ -112,7 +124,8 @@ async function recordCeoDecision(formData:FormData){
   const {data:b001}=await supabase.from("agents").select("id").eq("organization_id",organizationId).eq("agent_code","B-001").maybeSingle();
   const decisionKey=`DEC-${Date.now()}`;
   const title="AI-PR-001 — 90-Day Product Scope Strategy";
-  const context=`Decision produced from governed multi-agent meeting. Question: ${session.decision_question}`;
+  const legalContext=legalReview?` AI Legal Review: ${legalReview.outcome}. ${legalReview.executive_note??""}`:"";
+  const context=`Decision produced from governed multi-agent meeting. Question: ${session.decision_question}.${legalContext}`;
   const {data:decision,error}=await supabase.from("decisions").insert({
     organization_id:organizationId,
     project_id:session.project_id,
@@ -132,15 +145,18 @@ async function recordCeoDecision(formData:FormData){
   if(error||!decision) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=${encodeURIComponent(error?.message??"Decision could not be recorded.")}`);
 
   if(requiresApproval){
-    await supabase.from("approval_requests").insert({organization_id:organizationId,project_id:session.project_id,subject_type:"decision",subject_id:decision.id,title:`Approve decision: ${title}`,summary:context,risk_level:riskLevel,status:"pending",conditions:["Human CEO approval required before this high-risk decision is finalized","External actions remain disabled"],expires_at:new Date(Date.now()+7*86400000).toISOString()});
+    const conditions=["Human CEO approval required before this high-risk decision is finalized","External actions remain disabled"];
+    if(legalReview?.outcome==="RISK_IDENTIFIED") conditions.push("A-106 identified material legal risk; resolve legal conditions before execution");
+    await supabase.from("approval_requests").insert({organization_id:organizationId,project_id:session.project_id,subject_type:"decision",subject_id:decision.id,title:`Approve decision: ${title}`,summary:context,risk_level:riskLevel,status:"pending",conditions,expires_at:new Date(Date.now()+7*86400000).toISOString()});
   }
 
   const lastMessage=(await supabase.from("meeting_agent_messages").select("turn_index").eq("session_id",sessionId).order("turn_index",{ascending:false}).limit(1).maybeSingle()).data;
   await supabase.from("meeting_agent_messages").insert({organization_id:organizationId,meeting_id:meetingId,session_id:sessionId,agent_id:null,turn_index:Number(lastMessage?.turn_index??0)+1,round_no:99,speaker_type:"human_ceo",message_type:"ceo_decision",content:`CEO decision: ${selectedOption}\n\nRationale: ${rationale}`});
 
   const now=new Date().toISOString();
-  await supabase.from("meetings").update({status:"completed",ended_at:now,minutes:{text:`Multi-Agent deliberation completed.\n\n${session.synthesis??""}\n\nHuman CEO decision: ${selectedOption}\nRationale: ${rationale}\nDecision record: ${decisionKey}`}}).eq("id",meetingId).eq("organization_id",organizationId).eq("status","running");
-  await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:requiresApproval?"decision.created":"decision.approved",object_type:"decision",object_id:decision.id,risk_level:riskLevel,payload:{meeting_id:meetingId,session_id:sessionId,selected_option:selectedOption,human_authority:"Human CEO / Owner",external_actions:false}});
+  const legalMinutes=legalReview?`\n\nAI Legal Review (${legalReview.outcome}): ${legalReview.executive_note??""}\nRisk summary: ${legalReview.risk_summary??""}`:"";
+  await supabase.from("meetings").update({status:"completed",ended_at:now,minutes:{text:`Multi-Agent deliberation completed.\n\n${session.synthesis??""}${legalMinutes}\n\nHuman CEO decision: ${selectedOption}\nRationale: ${rationale}\nDecision record: ${decisionKey}`}}).eq("id",meetingId).eq("organization_id",organizationId).eq("status","running");
+  await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:requiresApproval?"decision.created":"decision.approved",object_type:"decision",object_id:decision.id,risk_level:riskLevel,payload:{meeting_id:meetingId,session_id:sessionId,selected_option:selectedOption,human_authority:"Human CEO / Owner",legal_triage_status:session.legal_triage_status,legal_review_outcome:legalReview?.outcome??null,external_actions:false}});
   revalidatePath("/meetings/room");revalidatePath("/meetings");revalidatePath("/decisions");revalidatePath("/approvals");revalidatePath("/command-center");
   redirect(`/decisions?decision=${decision.id}&status=${finalStatus}&message=${requiresApproval?"Meeting%20decision%20created%20for%20governed%20approval.":"Meeting%20decision%20approved%20by%20Human%20CEO."}`);
 }
@@ -202,7 +218,7 @@ export default async function Boardroom({searchParams}:Props){
 
       <section className="panel panel-wide" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">Decision mandate</p><h2>{session.decision_question}</h2></div><span className="pill">{session.max_rounds} rounds · ${Number(session.budget_cap_usd).toFixed(2)} cap</span></div>{meeting.status!=="running"&&["draft","scheduled"].includes(meeting.status)?<form action={startMeeting}><input type="hidden" name="meetingId" value={meeting.id}/><input type="hidden" name="sessionId" value={session.id}/><button>Start governed meeting</button></form>:null}<DeliberationConsole sessionId={session.id} meetingStatus={meeting.status} initialStatus={session.status} initialMessages={transcript} initialError={session.error_message}/></section>
 
-      {session.status==="completed"&&meeting.status==="running"?<section className="panel panel-wide" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">Human CEO gate</p><h2>Record the meeting decision</h2></div><span className="pill">Agent recommendation is advisory</span></div><div style={{padding:14,borderRadius:12,background:"#f8f9fb",marginBottom:14}}><p className="label">B-001 recommendation</p><p style={{color:"#596579",lineHeight:1.65}}>{session.recommendation??"Review the synthesis and choose an option."}</p></div><form action={recordCeoDecision} className="auth-form"><input type="hidden" name="meetingId" value={meeting.id}/><input type="hidden" name="sessionId" value={session.id}/><label>CEO selected option<select name="selectedOption" required defaultValue=""><option value="" disabled>Select decision</option>{decisionOptions.map(option=><option key={option} value={option}>{option}</option>)}</select></label><label>CEO rationale<textarea name="rationale" required minLength={3} rows={5} style={{width:"100%",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10}}/></label><label>Decision risk<select name="riskLevel" defaultValue="medium"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High — routes to Approval Engine</option><option value="critical">Critical — routes to Approval Engine</option></select></label><button>Record Human CEO decision</button><p className="security-note">Low/medium decisions are finalized here by the Human CEO. High/critical decisions create a governed Approval Request before final resolution.</p></form></section>:null}
+      {session.status==="completed"&&meeting.status==="running"?<section className="panel panel-wide" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">Human CEO gate</p><h2>Record the meeting decision</h2></div><span className="pill">Agent recommendation is advisory</span></div><div style={{padding:14,borderRadius:12,background:"#f8f9fb",marginBottom:14}}><p className="label">B-001 recommendation</p><p style={{color:"#596579",lineHeight:1.65}}>{session.recommendation??"Review the synthesis and choose an option."}</p></div><form action={recordCeoDecision} className="auth-form"><input type="hidden" name="meetingId" value={meeting.id}/><input type="hidden" name="sessionId" value={session.id}/><label>CEO selected option<select name="selectedOption" required defaultValue=""><option value="" disabled>Select decision</option>{decisionOptions.map(option=><option key={option} value={option}>{option}</option>)}</select></label><label>CEO rationale<textarea name="rationale" required minLength={3} rows={5} style={{width:"100%",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10}}/></label><label>Decision risk<select name="riskLevel" defaultValue="medium"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High — routes to Approval Engine</option><option value="critical">Critical — routes to Approval Engine</option></select></label><button>Record Human CEO decision</button><p className="security-note">Low/medium decisions are finalized here by the Human CEO. High/critical decisions create a governed Approval Request before final resolution. If B-001 recommends legal review, A-106 review must complete before this decision can be finalized.</p></form></section>:null}
     </>:null}
   </main>;
 }
