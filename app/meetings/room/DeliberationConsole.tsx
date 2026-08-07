@@ -24,6 +24,42 @@ type Props = {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function postMeetingTurn(sessionId: string) {
+  let lastNetworkError: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch("/api/meetings/deliberate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+        body: JSON.stringify({ sessionId }),
+      });
+
+      const raw = await response.text();
+      let payload: Record<string, any> = {};
+      if (raw) {
+        try {
+          payload = JSON.parse(raw) as Record<string, any>;
+        } catch {
+          throw new Error(`Meeting runtime returned HTTP ${response.status} with a non-JSON response.`);
+        }
+      }
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(String(payload.error ?? `Meeting turn failed with HTTP ${response.status}.`));
+      }
+      return payload;
+    } catch (cause) {
+      lastNetworkError = cause;
+      const isNetworkFailure = cause instanceof TypeError || (cause instanceof Error && cause.message === "Failed to fetch");
+      if (!isNetworkFailure || attempt === 3) throw cause;
+      await delay(900 * attempt);
+    }
+  }
+  throw lastNetworkError instanceof Error ? lastNetworkError : new Error("Meeting runtime could not be reached.");
+}
+
 export default function DeliberationConsole({ sessionId, meetingStatus, initialStatus, initialMessages, initialError }: Props) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
@@ -38,13 +74,7 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
     setProgressText("Opening governed agent deliberation…");
     try {
       for (let step = 0; step < 40; step += 1) {
-        const response = await fetch("/api/meetings/deliberate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId }),
-        });
-        const payload = await response.json();
-        if (!response.ok || !payload.ok) throw new Error(payload.error ?? "Meeting turn failed.");
+        const payload = await postMeetingTurn(sessionId);
 
         if (payload.content) {
           setMessages((current) => [...current, {
@@ -67,11 +97,12 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
 
         const remaining = Number(payload.remainingTurns ?? 0);
         setProgressText(`${payload.speaker?.code ?? "Agent"} completed ${payload.phase ?? "turn"}. ${remaining} deliberation turns remain before synthesis.`);
-        await delay(350);
+        await delay(500);
       }
       throw new Error("Meeting exceeded the maximum client orchestration steps.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Meeting execution failed.");
+      const message = cause instanceof Error ? cause.message : "Meeting execution failed.";
+      setError(message === "Failed to fetch" ? "The meeting runtime could not be reached after three attempts. Check the Production runtime configuration or serverless function logs." : message);
       setProgressText("");
       router.refresh();
     } finally {
