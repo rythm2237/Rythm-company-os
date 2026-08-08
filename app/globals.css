@@ -84,6 +84,12 @@ footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 2
 .status-dot.safe { background: #1f9d66; box-shadow: 0 0 0 5px rgba(31,157,102,.12); }
 .status-dot.paused { background: #d29b2b; box-shadow: 0 0 0 5px rgba(210,155,43,.13); }
 
+/* Voice controls are deferred from the active MVP Boardroom UI after Production validation. */
+div:has(> textarea) button.secondary-button { display: none !important; }
+div:has(> textarea) > p.security-note { display: none !important; }
+div:has(> button.secondary-button) > label:has(> input[type="checkbox"]) { display: none !important; }
+span.pill + button.secondary-button { display: none !important; }
+
 @media (max-width: 1050px) {
   .metrics-grid { grid-template-columns: repeat(3, 1fr); }
 }
