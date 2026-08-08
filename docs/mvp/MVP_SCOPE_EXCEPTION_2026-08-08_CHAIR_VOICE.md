@@ -1,8 +1,8 @@
-# MVP Scope Exception — Chair-Controlled Meeting Closure & Voice
+# MVP Scope Exception — Chair-Controlled Meeting Closure
 
 Date: 2026-08-08
 Authority: Human CEO / Owner
-Status: Approved for Batch 2.5 completion
+Status: Approved for Batch 2.5 completion; browser voice UX deferred after Production validation
 
 ## Reason
 Production testing showed that agent synthesis could complete the session before the Human CEO had finished asking questions or correcting the discussion. The Human CEO explicitly required the highest human authority present in a meeting to confirm meeting closure.
@@ -13,16 +13,20 @@ Production testing showed that agent synthesis could complete the session before
 3. Human CEO can add a contribution after synthesis; B-001 responds and the synthesis is regenerated before closure.
 4. Legal relevance triage starts only after explicit chair closure.
 5. CEO decision capture is unavailable until chair closure and legal governance gates are satisfied.
-6. MVP voice input uses browser speech recognition and remains editable before submission.
-7. MVP agent voice playback uses browser speech synthesis with deterministic per-agent voice profiles where the browser exposes stable voices; auto-play is optional and off by default.
-8. Boardroom text inputs and transcript surfaces must remain width-bounded and responsive.
+6. Boardroom text inputs and transcript surfaces must remain width-bounded and responsive.
 
-## Non-goals
+## Voice decision after Production test
+The initial browser-only speech recognition and browser speech synthesis experiment did not meet MVP quality expectations. Dictation failed to produce reliable editable text in the tested Production environment, and browser-generated agent voices sounded materially artificial.
+
+Therefore voice input, agent voice playback, and auto-play controls are deferred from the MVP UI. A future voice implementation may be reconsidered with a higher-quality governed STT/TTS or realtime voice architecture, explicit cost controls, and stable per-agent voice identities.
+
+## Non-goals for current MVP
 - No realtime voice meeting runtime.
+- No browser speech-recognition dependency in the active Boardroom UI.
+- No browser speech-synthesis agent playback in the active Boardroom UI.
 - No autonomous meeting closure.
 - No external actions.
 - No voice cloning or custom biometric voice identity.
-- No paid TTS/STT provider dependency in this bounded MVP extension.
 
 ## Governance
-Human CEO retains final authority. Browser voice capabilities are convenience interfaces only and do not change authorization, decision, legal, approval, audit, or external-action controls.
+Human CEO retains final authority. Deferring voice does not change authorization, decision, legal, approval, audit, cost, or external-action controls.
