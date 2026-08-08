@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./experience.css";
+import "./project-portfolio.css";
 import ProjectPulse from "@/components/project-pulse/ProjectPulse";
 import ProductNav from "@/components/product-nav/ProductNav";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
