@@ -32,7 +32,7 @@ export function getRuntimeConfig(): RuntimeConfig {
     agentExecutionEnabled: enabled(process.env.RYTHM_AGENT_EXECUTION_ENABLED),
     externalActionsEnabled: enabled(process.env.RYTHM_EXTERNAL_ACTIONS_ENABLED),
     monthlyAiBudgetUsd: boundedNumber(process.env.RYTHM_MONTHLY_AI_BUDGET_USD, 25, 0, 100000),
-    environment: process.env.RYTHM_ENV ?? process.env.NODE_ENV ?? "development",
+    environment: process.env.VERCEL_ENV ?? process.env.RYTHM_ENV ?? process.env.NODE_ENV ?? "development",
     dryRunModel: process.env.RYTHM_DRY_RUN_MODEL?.trim() || null,
     agentTimeoutMs: boundedNumber(process.env.RYTHM_AGENT_TIMEOUT_MS, 45000, 5000, 180000),
     agentMaxRetries: boundedNumber(process.env.RYTHM_AGENT_MAX_RETRIES, 1, 0, 4),

@@ -12,7 +12,7 @@ const estimateCost = (inputTokens: number, outputTokens: number, inputRate: numb
 const asList = (value: unknown) => Array.isArray(value) ? value.map(String) : [];
 const cleanJson = (value: string) => value.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
 
-type AgentRow = { id:string; agent_code:string; display_name:string|null; name:string; role_title:string; purpose:string|null; work_style:string|null };
+type AgentRow = { id:string; agent_code:string; display_name:string|null; name:string; role_title:string; purpose:string|null; work_style:string|null; enabled:boolean };
 type ParticipantRow = { agent_id:string; seat_order:number; session_role:string; agents:AgentRow|AgentRow[]|null };
 type MessageRow = { turn_index:number; round_no:number; message_type:string; content:string; agent_id:string|null };
 type SynthesisPayload = { executive_summary?:string; consensus?:string; disagreements?:string[]; options?:string[]; recommendation?:string; next_step?:string };
@@ -72,10 +72,16 @@ export async function POST(request:Request) {
   if (meeting.status !== "running") return jsonError("The meeting is not open for agent deliberation.", 409);
 
   const { data:participantData } = await supabase.from("meeting_agent_participants")
-    .select("agent_id,seat_order,session_role,agents(id,agent_code,display_name,name,role_title,purpose,work_style)")
+    .select("agent_id,seat_order,session_role,agents(id,agent_code,display_name,name,role_title,purpose,work_style,enabled)")
     .eq("session_id",sessionId).eq("organization_id",organizationId).eq("explicitly_authorized_by_ceo",true).order("seat_order");
   const participants = (participantData ?? []) as unknown as ParticipantRow[];
   if (participants.length < 2) return jsonError("At least two CEO-authorized agents are required.", 409);
+
+  const participantAgents = participants.map(participantAgent);
+  if (participantAgents.some(agent => !agent)) return jsonError("A participant agent record is unavailable. Refresh the meeting before continuing.", 409);
+  const pausedAgents = participantAgents.filter((agent):agent is AgentRow => Boolean(agent && !agent.enabled));
+  if (pausedAgents.length) return jsonError(`Agent execution is paused for ${pausedAgents.map(agent=>agent.agent_code).join(", ")}. The Human CEO must enable the agent before the meeting can continue.`, 409);
+  if (!participantAgents.some(agent => agent?.agent_code === "B-001" && agent.enabled)) return jsonError("Enabled B-001 Executive Orchestrator is required for governed meeting synthesis.", 409);
 
   const { data:messageData } = await supabase.from("meeting_agent_messages")
     .select("turn_index,round_no,message_type,content,agent_id").eq("session_id",sessionId).eq("organization_id",organizationId).order("turn_index");
@@ -86,9 +92,13 @@ export async function POST(request:Request) {
 
   if (session.status === "ready") {
     const startedAt = new Date().toISOString();
-    const { data:claimed } = await supabase.from("meeting_agent_sessions")
+    const { data:claimed, error:claimError } = await supabase.from("meeting_agent_sessions")
       .update({ status:"running", started_by_user_id:user.id, started_at:startedAt, model:config.dryRunModel, error_message:null, updated_at:startedAt })
       .eq("id",sessionId).eq("organization_id",organizationId).eq("status","ready").select("id").maybeSingle();
+    if (claimError) {
+      console.error("meeting_session_claim_failed", { sessionId, claimError });
+      return jsonError("The meeting session could not start. Confirm that every selected agent is enabled and retry.", 409);
+    }
     if (!claimed) return jsonError("The meeting session could not be claimed for execution.", 409);
     await supabase.from("audit_events").insert({ organization_id:organizationId, actor_type:"user", actor_user_id:user.id, event_type:"meeting.agent_deliberation_started", object_type:"meeting", object_id:meeting.id, risk_level:"medium", payload:{ session_id:sessionId, participants:participants.length, rounds:session.max_rounds, model:config.dryRunModel, external_actions:false, external_research:false } });
   }
@@ -115,7 +125,7 @@ export async function POST(request:Request) {
     const synthesizerAgent = participantAgent(synthesizerParticipant);
 
     if(lastMessage?.message_type==="ceo_contribution" && deliberationMessages.length>=totalAgentTurns){
-      if(!synthesizerAgent) return jsonError("B-001 or another synthesizer is required for CEO follow-up.",409);
+      if(!synthesizerAgent || !synthesizerAgent.enabled) return jsonError("Enabled B-001 Executive Orchestrator is required for CEO follow-up.",409);
       const response=await client.responses.create({
         model:config.dryRunModel,
         max_output_tokens:1200,
@@ -132,7 +142,10 @@ export async function POST(request:Request) {
       if(!responseText) return jsonError("The chair follow-up produced no displayable text. Retry is safe.",502);
       const roundNo=Math.max(Number(session.max_rounds)+1,Number(lastMessage.round_no)+1);
       const {error:insertError}=await supabase.from("meeting_agent_messages").insert({organization_id:organizationId,meeting_id:meeting.id,session_id:sessionId,agent_id:synthesizerAgent.id,turn_index:nextTurnIndex,round_no:roundNo,speaker_type:"agent",message_type:"challenge",content:responseText,model:config.dryRunModel,input_tokens:inputTokens,output_tokens:outputTokens,estimated_cost_usd:cost});
-      if(insertError) return jsonError(insertError.message,500);
+      if(insertError) {
+        console.error("meeting_chair_followup_persist_failed", { sessionId, insertError });
+        return jsonError("The chair follow-up could not be persisted. Retry is safe; no valid turn was accepted.",500);
+      }
       await supabase.from("meeting_agent_sessions").update({total_input_tokens:Number(session.total_input_tokens??0)+inputTokens,total_output_tokens:Number(session.total_output_tokens??0)+outputTokens,estimated_cost_usd:accumulatedCost,error_message:null,updated_at:new Date().toISOString()}).eq("id",sessionId).eq("organization_id",organizationId);
       return NextResponse.json({ok:true,sessionId,status:"running",phase:"chair_follow_up",roundNo,turnIndex:nextTurnIndex,speaker:{id:synthesizerAgent.id,code:synthesizerAgent.agent_code,name:synthesizerAgent.display_name??synthesizerAgent.name,role:synthesizerAgent.role_title},content:responseText,remainingTurns:0});
     }
@@ -143,6 +156,7 @@ export async function POST(request:Request) {
       const participant = participants[participantIndex];
       const responseAgent = participantAgent(participant);
       if (!responseAgent) return jsonError("A participant agent record is missing.", 409);
+      if (!responseAgent.enabled) return jsonError(`Agent ${responseAgent.agent_code} is paused. The meeting cannot continue until the Human CEO enables the agent.`,409);
       const messageType:"position"|"challenge" = roundNo === 1 ? "position" : "challenge";
       const roundInstruction = roundNo === 1
         ? "State your independent position. Identify the strongest rationale, major risks, and the option you recommend. You may reference earlier speakers, but do not simply agree."
@@ -174,12 +188,16 @@ export async function POST(request:Request) {
       }
 
       const { error:insertError } = await supabase.from("meeting_agent_messages").insert({ organization_id:organizationId, meeting_id:meeting.id, session_id:sessionId, agent_id:responseAgent.id, turn_index:nextTurnIndex, round_no:roundNo, speaker_type:"agent", message_type:messageType, content:responseText, model:config.dryRunModel, input_tokens:inputTokens, output_tokens:outputTokens, estimated_cost_usd:cost });
-      if (insertError) return jsonError(insertError.message,500);
+      if (insertError) {
+        console.error("meeting_agent_turn_persist_failed", { sessionId, agentCode:responseAgent.agent_code, insertError });
+        return jsonError("The agent turn could not be persisted. Retry is safe; no valid turn was accepted.",500);
+      }
       await supabase.from("meeting_agent_sessions").update({ total_input_tokens:Number(session.total_input_tokens ?? 0)+inputTokens, total_output_tokens:Number(session.total_output_tokens ?? 0)+outputTokens, estimated_cost_usd:accumulatedCost, error_message:null, updated_at:new Date().toISOString() }).eq("id",sessionId).eq("organization_id",organizationId);
       return NextResponse.json({ ok:true, sessionId, status:"running", phase:messageType, roundNo, turnIndex:nextTurnIndex, speaker:{ id:responseAgent.id, code:responseAgent.agent_code, name:responseAgent.display_name ?? responseAgent.name, role:responseAgent.role_title }, content:responseText, remainingTurns:totalAgentTurns-deliberationMessages.length-1 });
     }
 
     const responseAgent = synthesizerAgent;
+    if (!responseAgent || !responseAgent.enabled || responseAgent.agent_code !== "B-001") return jsonError("Enabled B-001 Executive Orchestrator is required for governed meeting synthesis.",409);
     const roundNo = Math.max(Number(session.max_rounds)+1,Number(messages.at(-1)?.round_no??0)+1);
     const synthesisResponse = await client.responses.create({
       model:config.dryRunModel,
@@ -217,16 +235,20 @@ export async function POST(request:Request) {
       `Next governed step\n${payload.next_step ?? "Human CEO review, then explicit chair closure."}`
     ].join("\n\n").slice(0,8000);
 
-    const { error:synthesisInsertError } = await supabase.from("meeting_agent_messages").insert({ organization_id:organizationId, meeting_id:meeting.id, session_id:sessionId, agent_id:responseAgent?.id ?? null, turn_index:nextTurnIndex, round_no:roundNo, speaker_type:"agent", message_type:"synthesis", content:responseText, model:config.dryRunModel, input_tokens:inputTokens, output_tokens:outputTokens, estimated_cost_usd:cost });
-    if (synthesisInsertError) return jsonError(synthesisInsertError.message,500);
+    const { error:synthesisInsertError } = await supabase.from("meeting_agent_messages").insert({ organization_id:organizationId, meeting_id:meeting.id, session_id:sessionId, agent_id:responseAgent.id, turn_index:nextTurnIndex, round_no:roundNo, speaker_type:"agent", message_type:"synthesis", content:responseText, model:config.dryRunModel, input_tokens:inputTokens, output_tokens:outputTokens, estimated_cost_usd:cost });
+    if (synthesisInsertError) {
+      console.error("meeting_synthesis_persist_failed", { sessionId, synthesisInsertError });
+      return jsonError("Executive synthesis could not be persisted. Retry is safe; no synthesis was accepted.",500);
+    }
     const completedAt = new Date().toISOString();
     await supabase.from("meeting_agent_sessions").update({ status:"completed", synthesis:responseText, recommendation:String(payload.recommendation ?? "Human CEO review required."), decision_options:options, total_input_tokens:Number(session.total_input_tokens ?? 0)+inputTokens, total_output_tokens:Number(session.total_output_tokens ?? 0)+outputTokens, estimated_cost_usd:finalCost, completed_at:completedAt, updated_at:completedAt, error_message:null }).eq("id",sessionId).eq("organization_id",organizationId);
     await supabase.from("audit_events").insert({ organization_id:organizationId, actor_type:"system", event_type:"meeting.agent_deliberation_completed", object_type:"meeting", object_id:meeting.id, risk_level:"medium", payload:{ session_id:sessionId, rounds:session.max_rounds, participants:participants.length, decision_options:options.length, awaiting_chair_close:true, external_actions:false, human_decision_required:true } });
-    return NextResponse.json({ ok:true, sessionId, status:"completed", phase:"synthesis", roundNo, turnIndex:nextTurnIndex, speaker:responseAgent ? { id:responseAgent.id, code:responseAgent.agent_code, name:responseAgent.display_name ?? responseAgent.name, role:responseAgent.role_title } : null, content:responseText, decisionOptions:options, recommendation:payload.recommendation ?? "Human CEO review required.",awaitingChairClose:true });
+    return NextResponse.json({ ok:true, sessionId, status:"completed", phase:"synthesis", roundNo, turnIndex:nextTurnIndex, speaker:{ id:responseAgent.id, code:responseAgent.agent_code, name:responseAgent.display_name ?? responseAgent.name, role:responseAgent.role_title }, content:responseText, decisionOptions:options, recommendation:payload.recommendation ?? "Human CEO review required.",awaitingChairClose:true });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0,1000) : "Unknown meeting runtime error";
     await supabase.from("meeting_agent_sessions").update({ error_message:message, updated_at:new Date().toISOString() }).eq("id",sessionId).eq("organization_id",organizationId);
     await supabase.from("audit_events").insert({ organization_id:organizationId, actor_type:"system", event_type:"meeting.agent_deliberation_retryable_error", object_type:"meeting", object_id:meeting.id, risk_level:"low", payload:{ session_id:sessionId, message, external_actions:false, session_left_resumable:true } });
-    return jsonError(`Agent deliberation hit a retryable runtime error: ${message}`,500);
+    console.error("meeting_deliberation_retryable_error", { sessionId, error });
+    return jsonError("Agent deliberation hit a retryable runtime error. Retry is safe; the failed turn was not recorded.",500);
   }
 }
