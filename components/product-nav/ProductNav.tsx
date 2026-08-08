@@ -8,7 +8,7 @@ const groups = [
     label: "Operate",
     items: [
       ["Command", "/command-center"],
-      ["Project", "/projects/operating"],
+      ["Project", "/projects"],
       ["Actions", "/actions"],
     ],
   },
@@ -33,6 +33,7 @@ const groups = [
 
 function active(pathname: string, href: string) {
   if (href === "/command-center") return pathname === href;
+  if (href === "/projects") return pathname === "/projects" || pathname.startsWith("/projects/");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
