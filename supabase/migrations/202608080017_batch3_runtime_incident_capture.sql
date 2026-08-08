@@ -58,7 +58,7 @@ do $$
 begin
   if to_regclass('public.meeting_agent_sessions') is not null then
     execute 'drop trigger if exists meeting_session_incident_capture on public.meeting_agent_sessions';
-    execute 'create trigger meeting_session_incident_capture after insert or update of status,error_message on public.meeting_agent_sessions for each row execute function public.capture_meeting_session_incident()';
+    execute 'create trigger meeting_session_incident_capture after insert or update on public.meeting_agent_sessions for each row execute function public.capture_meeting_session_incident()';
   end if;
 end $$;
 
