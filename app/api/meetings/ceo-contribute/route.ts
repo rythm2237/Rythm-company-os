@@ -25,9 +25,9 @@ export async function POST(request:Request){
 
   const organizationId=membership.organization_id as string;
   const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,status").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
-  if(!session||!["ready","running"].includes(session.status)) return fail("CEO contributions are allowed only while the governed session is ready or running.",409);
+  if(!session||!["ready","running","completed"].includes(session.status)) return fail("CEO contributions are allowed while the governed meeting remains open.",409);
   const {data:meeting}=await supabase.from("meetings").select("id,status").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();
-  if(!meeting||meeting.status!=="running") return fail("Start the governed meeting before contributing.",409);
+  if(!meeting||meeting.status!=="running") return fail("This meeting has already been closed by the chair.",409);
 
   const {data:last}=await supabase.from("meeting_agent_messages").select("turn_index,round_no").eq("session_id",sessionId).eq("organization_id",organizationId).order("turn_index",{ascending:false}).limit(1).maybeSingle();
   const turnIndex=Number(last?.turn_index??0)+1;
@@ -45,6 +45,11 @@ export async function POST(request:Request){
   });
   if(error) return fail(error.message,500);
 
-  await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"meeting.ceo_contribution_added",object_type:"meeting",object_id:meeting.id,risk_level:"low",payload:{session_id:sessionId,turn_index:turnIndex,external_actions:false}});
-  return NextResponse.json({ok:true,turnIndex,roundNo,content,speaker:{code:"CEO",name:"Human CEO",role:"Meeting Chair"}});
+  if(session.status==="completed"){
+    const now=new Date().toISOString();
+    await supabase.from("meeting_agent_sessions").update({status:"running",legal_triage_status:"pending",legal_triage_reason:null,legal_triaged_at:null,completed_at:null,updated_at:now}).eq("id",sessionId).eq("organization_id",organizationId);
+  }
+
+  await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"meeting.ceo_contribution_added",object_type:"meeting",object_id:meeting.id,risk_level:"low",payload:{session_id:sessionId,turn_index:turnIndex,chair_follow_up:true,external_actions:false}});
+  return NextResponse.json({ok:true,turnIndex,roundNo,content,sessionStatus:session.status==="completed"?"running":session.status,speaker:{code:"CEO",name:"Human CEO",role:"Meeting Chair"}});
 }

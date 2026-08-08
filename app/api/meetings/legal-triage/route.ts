@@ -35,9 +35,10 @@ export async function GET(request:Request){
   if("error" in auth) return auth.error;
   const sessionId=new URL(request.url).searchParams.get("sessionId")?.trim()??"";
   if(!sessionId) return fail("sessionId is required.",400);
-  const {data:session}=await auth.supabase.from("meeting_agent_sessions").select("id,status,legal_triage_status,legal_triage_reason,legal_triaged_at").eq("id",sessionId).eq("organization_id",auth.organizationId).maybeSingle();
+  const {data:session}=await auth.supabase.from("meeting_agent_sessions").select("id,meeting_id,status,legal_triage_status,legal_triage_reason,legal_triaged_at").eq("id",sessionId).eq("organization_id",auth.organizationId).maybeSingle();
   if(!session) return fail("Meeting session not found.",404);
-  return NextResponse.json({ok:true,status:session.legal_triage_status,reason:session.legal_triage_reason,triagedAt:session.legal_triaged_at,sessionStatus:session.status});
+  const {data:meeting}=await auth.supabase.from("meetings").select("status").eq("id",session.meeting_id).eq("organization_id",auth.organizationId).maybeSingle();
+  return NextResponse.json({ok:true,status:session.legal_triage_status,reason:session.legal_triage_reason,triagedAt:session.legal_triaged_at,sessionStatus:session.status,meetingStatus:meeting?.status??null});
 }
 
 export async function POST(request:Request){
@@ -56,13 +57,14 @@ export async function POST(request:Request){
   const {supabase,user,organizationId}=auth;
   const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,status,decision_question,language,synthesis,recommendation,decision_options,legal_triage_status,legal_triage_reason,legal_triaged_at").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
   if(!session) return fail("Meeting session not found.",404);
-  if(session.status!=="completed") return fail("Legal triage runs after agent deliberation is completed.",409);
+  if(session.status!=="completed") return fail("Legal triage runs after the latest agent synthesis is completed.",409);
   if(session.legal_triage_status!=="pending") return NextResponse.json({ok:true,status:session.legal_triage_status,reason:session.legal_triage_reason,triagedAt:session.legal_triaged_at,cached:true});
 
-  const {data:meeting}=await supabase.from("meetings").select("id,title,purpose,agenda").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();
+  const {data:meeting}=await supabase.from("meetings").select("id,title,purpose,agenda,status").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();
   if(!meeting) return fail("Linked meeting not found.",404);
+  if(meeting.status!=="completed") return fail("The Human CEO / Chair must explicitly close the meeting before legal relevance triage begins.",409);
   const {data:messages}=await supabase.from("meeting_agent_messages").select("round_no,message_type,content,agents(agent_code)").eq("session_id",sessionId).eq("organization_id",organizationId).neq("message_type","system").order("turn_index");
-  const transcript=(messages??[]).map((row:any)=>`${Array.isArray(row.agents)?row.agents[0]?.agent_code:row.agents?.agent_code??"SYSTEM"} (${row.message_type}, round ${row.round_no}): ${row.content}`).join("\n\n").slice(-22000);
+  const transcript=(messages??[]).map((row:any)=>`${Array.isArray(row.agents)?row.agents[0]?.agent_code:row.agents?.agent_code??(row.message_type==="ceo_contribution"?"HUMAN CEO":"SYSTEM")} (${row.message_type}, round ${row.round_no}): ${row.content}`).join("\n\n").slice(-22000);
 
   const client=new OpenAI({apiKey:process.env.OPENAI_API_KEY});
   try{
@@ -70,7 +72,7 @@ export async function POST(request:Request){
       model:config.dryRunModel,
       max_output_tokens:500,
       input:[
-        {role:"system",content:[{type:"input_text",text:`You are B-001, RYTHM Executive Orchestrator. Perform only legal/re regulatory relevance triage after a governed meeting. You are NOT giving legal advice. Decide whether the proposed decision plausibly touches law, regulation, contractual obligations, privacy/data protection, AI regulation, consumer protection, payments/tax implications, intellectual property, employment, advertising claims, online-platform obligations, cross-border operations, licensing, or similar legal exposure. If there is meaningful uncertainty, recommend legal review. Do not recommend legal review for ordinary product/UI/operational matters with no plausible legal effect. Return STRICT JSON only: {"legal_review_recommended":boolean,"reason":"one concise sentence"}. Respond in ${session.language}.`}]},
+        {role:"system",content:[{type:"input_text",text:`You are B-001, RYTHM Executive Orchestrator. Perform only legal/regulatory relevance triage after the Human CEO/Chair has explicitly closed a governed meeting. You are NOT giving legal advice. Decide whether the proposed decision plausibly touches law, regulation, contractual obligations, privacy/data protection, AI regulation, consumer protection, payments/tax implications, intellectual property, employment, advertising claims, online-platform obligations, cross-border operations, licensing, or similar legal exposure. If there is meaningful uncertainty, recommend legal review. Do not recommend legal review for ordinary product/UI/operational matters with no plausible legal effect. Return STRICT JSON only: {"legal_review_recommended":boolean,"reason":"one concise sentence"}. Respond in ${session.language}.`}]},
         {role:"user",content:[{type:"input_text",text:`Meeting: ${meeting.title}\nPurpose: ${meeting.purpose}\nDecision question: ${session.decision_question}\nAgenda: ${Array.isArray(meeting.agenda)?meeting.agenda.map(String).join(" | "):""}\nSynthesis: ${session.synthesis??""}\nRecommendation: ${session.recommendation??""}\nDecision options: ${JSON.stringify(session.decision_options??[])}\n\nTranscript:\n${transcript}`}]}],
     },{signal:AbortSignal.timeout(config.agentTimeoutMs)}) as unknown as ResponseLike;
     const raw=extractText(response);
@@ -83,7 +85,7 @@ export async function POST(request:Request){
     const now=new Date().toISOString();
     const {error:updateError}=await supabase.from("meeting_agent_sessions").update({legal_triage_status:status,legal_triage_reason:reason,legal_triaged_at:now,updated_at:now}).eq("id",sessionId).eq("organization_id",organizationId).eq("legal_triage_status","pending");
     if(updateError) return fail(updateError.message,500);
-    await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"agent",actor_agent_id:null,event_type:"meeting.legal_triage_completed",object_type:"meeting",object_id:meeting.id,risk_level:recommended?"medium":"low",payload:{session_id:sessionId,orchestrator:"B-001",legal_review_recommended:recommended,reason,model:config.dryRunModel,external_actions:false}});
+    await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"agent",actor_agent_id:null,event_type:"meeting.legal_triage_completed",object_type:"meeting",object_id:meeting.id,risk_level:recommended?"medium":"low",payload:{session_id:sessionId,orchestrator:"B-001",chair_closed:true,legal_review_recommended:recommended,reason,model:config.dryRunModel,external_actions:false}});
     return NextResponse.json({ok:true,status,reason,triagedAt:now,recommended});
   }catch(error){
     const message=error instanceof Error?error.message:"Legal triage failed.";

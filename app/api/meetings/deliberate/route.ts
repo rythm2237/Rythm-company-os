@@ -64,12 +64,12 @@ export async function POST(request:Request) {
     .select("id,meeting_id,project_id,status,decision_question,language,max_rounds,budget_cap_usd,external_research_allowed,total_input_tokens,total_output_tokens,estimated_cost_usd")
     .eq("id", sessionId).eq("organization_id", organizationId).maybeSingle();
   if (!session) return jsonError("Meeting agent session not found.", 404);
-  if (!["ready","running"].includes(session.status)) return jsonError(session.status === "completed" ? "This deliberation is already completed." : "This deliberation cannot run in its current state.", 409);
+  if (!["ready","running"].includes(session.status)) return jsonError(session.status === "completed" ? "Agent synthesis is complete. The Human CEO may contribute or close the meeting." : "This deliberation cannot run in its current state.", 409);
   if (session.external_research_allowed) return jsonError("This runtime supports internal analysis only. External research must remain separately approval-gated.", 409);
 
   const { data:meeting } = await supabase.from("meetings").select("id,title,purpose,status,agenda").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();
   if (!meeting) return jsonError("Linked meeting not found.", 404);
-  if (meeting.status !== "running") return jsonError("Start the meeting before running agent deliberation.", 409);
+  if (meeting.status !== "running") return jsonError("The meeting is not open for agent deliberation.", 409);
 
   const { data:participantData } = await supabase.from("meeting_agent_participants")
     .select("agent_id,seat_order,session_role,agents(id,agent_code,display_name,name,role_title,purpose,work_style)")
@@ -97,8 +97,8 @@ export async function POST(request:Request) {
   const transcript = messages.filter(m => m.message_type !== "system").map(m => {
     const participant = participants.find(p => p.agent_id === m.agent_id);
     const agent = participant ? participantAgent(participant) : null;
-    return `${agent?.agent_code ?? "SYSTEM"} (${m.message_type}, round ${m.round_no}): ${m.content}`;
-  }).join("\n\n").slice(-14000);
+    return `${agent?.agent_code ?? (m.message_type==="ceo_contribution"?"HUMAN CEO":"SYSTEM")} (${m.message_type}, round ${m.round_no}): ${m.content}`;
+  }).join("\n\n").slice(-18000);
 
   const sharedContext = [
     `Meeting: ${meeting.title}`,
@@ -106,10 +106,37 @@ export async function POST(request:Request) {
     `Agenda: ${asList(meeting.agenda).join(" | ")}`,
     `Decision question: ${session.decision_question}`,
     `Language: ${session.language}`,
-    "Governance: Human CEO has final authority. Internal analysis only. No tools, browsing, external messages, transactions, deployments, or record changes are authorized by this deliberation."
+    "Governance: Human CEO has final authority. The meeting remains open until the Human CEO/Chair explicitly closes it. Internal analysis only. No tools, browsing, external messages, transactions, deployments, or record changes are authorized by this deliberation."
   ].join("\n");
 
   try {
+    const lastMessage=messages.at(-1);
+    const synthesizerParticipant = participants.find(p => participantAgent(p)?.agent_code === "B-001") ?? participants.find(p => p.session_role === "synthesizer") ?? participants[0];
+    const synthesizerAgent = participantAgent(synthesizerParticipant);
+
+    if(lastMessage?.message_type==="ceo_contribution" && deliberationMessages.length>=totalAgentTurns){
+      if(!synthesizerAgent) return jsonError("B-001 or another synthesizer is required for CEO follow-up.",409);
+      const response=await client.responses.create({
+        model:config.dryRunModel,
+        max_output_tokens:1200,
+        input:[
+          {role:"system",content:[{type:"input_text",text:`You are ${synthesizerAgent.agent_code}, ${synthesizerAgent.display_name??synthesizerAgent.name}, responding inside an open Human CEO-chaired meeting. Address the Human CEO's latest contribution directly, correct misunderstandings where needed, and identify whether the prior recommendation should change. Do not close the meeting. Do not claim external research. Respond in ${session.language}. Use short headings: Response to Chair; Clarification; Updated Recommendation.`}]},
+          {role:"user",content:[{type:"input_text",text:`${sharedContext}\n\nTranscript including the latest Human CEO contribution:\n${transcript}`}]}]
+      },{signal:AbortSignal.timeout(config.agentTimeoutMs)}) as unknown as ResponseLike;
+      const responseText=extractResponseText(response).slice(0,6000);
+      const inputTokens=Number(response.usage?.input_tokens??0);
+      const outputTokens=Number(response.usage?.output_tokens??0);
+      const cost=estimateCost(inputTokens,outputTokens,config.inputCostPerMillionUsd,config.outputCostPerMillionUsd);
+      const accumulatedCost=Number(session.estimated_cost_usd??0)+cost;
+      if(accumulatedCost>Number(session.budget_cap_usd)) return jsonError("CEO follow-up would exceed the configured meeting budget cap.",409);
+      if(!responseText) return jsonError("The chair follow-up produced no displayable text. Retry is safe.",502);
+      const roundNo=Math.max(Number(session.max_rounds)+1,Number(lastMessage.round_no)+1);
+      const {error:insertError}=await supabase.from("meeting_agent_messages").insert({organization_id:organizationId,meeting_id:meeting.id,session_id:sessionId,agent_id:synthesizerAgent.id,turn_index:nextTurnIndex,round_no:roundNo,speaker_type:"agent",message_type:"challenge",content:responseText,model:config.dryRunModel,input_tokens:inputTokens,output_tokens:outputTokens,estimated_cost_usd:cost});
+      if(insertError) return jsonError(insertError.message,500);
+      await supabase.from("meeting_agent_sessions").update({total_input_tokens:Number(session.total_input_tokens??0)+inputTokens,total_output_tokens:Number(session.total_output_tokens??0)+outputTokens,estimated_cost_usd:accumulatedCost,error_message:null,updated_at:new Date().toISOString()}).eq("id",sessionId).eq("organization_id",organizationId);
+      return NextResponse.json({ok:true,sessionId,status:"running",phase:"chair_follow_up",roundNo,turnIndex:nextTurnIndex,speaker:{id:synthesizerAgent.id,code:synthesizerAgent.agent_code,name:synthesizerAgent.display_name??synthesizerAgent.name,role:synthesizerAgent.role_title},content:responseText,remainingTurns:0});
+    }
+
     if (deliberationMessages.length < totalAgentTurns) {
       const participantIndex = deliberationMessages.length % participants.length;
       const roundNo = Math.floor(deliberationMessages.length / participants.length) + 1;
@@ -152,14 +179,13 @@ export async function POST(request:Request) {
       return NextResponse.json({ ok:true, sessionId, status:"running", phase:messageType, roundNo, turnIndex:nextTurnIndex, speaker:{ id:responseAgent.id, code:responseAgent.agent_code, name:responseAgent.display_name ?? responseAgent.name, role:responseAgent.role_title }, content:responseText, remainingTurns:totalAgentTurns-deliberationMessages.length-1 });
     }
 
-    const synthesizerParticipant = participants.find(p => participantAgent(p)?.agent_code === "B-001") ?? participants.find(p => p.session_role === "synthesizer") ?? participants[0];
-    const responseAgent = participantAgent(synthesizerParticipant);
-    const roundNo = Number(session.max_rounds)+1;
+    const responseAgent = synthesizerAgent;
+    const roundNo = Math.max(Number(session.max_rounds)+1,Number(messages.at(-1)?.round_no??0)+1);
     const synthesisResponse = await client.responses.create({
       model:config.dryRunModel,
       max_output_tokens:2200,
       input:[
-        { role:"system", content:[{ type:"input_text", text:`You are the RYTHM Executive Orchestrator synthesizing a governed internal multi-agent meeting. Do not invent evidence. Preserve material disagreements instead of forcing consensus. Human CEO makes the final decision. Respond in ${session.language}. Return STRICT JSON only with keys: executive_summary (string), consensus (string), disagreements (array of strings), options (array of 2-4 decision-ready strings), recommendation (string), next_step (string). No markdown fences.` }] },
+        { role:"system", content:[{ type:"input_text", text:`You are the RYTHM Executive Orchestrator synthesizing an open, Human CEO-chaired internal multi-agent meeting. Incorporate any Human CEO contributions and follow-up responses. Do not invent evidence. Preserve material disagreements instead of forcing consensus. Human CEO makes the final decision and separately confirms meeting closure. Respond in ${session.language}. Return STRICT JSON only with keys: executive_summary (string), consensus (string), disagreements (array of strings), options (array of 2-4 decision-ready strings), recommendation (string), next_step (string). No markdown fences.` }] },
         { role:"user", content:[{ type:"input_text", text:`${sharedContext}\n\nFull deliberation transcript:\n${transcript}` }] }
       ]
     }, { signal:AbortSignal.timeout(config.agentTimeoutMs) }) as unknown as ResponseLike;
@@ -188,15 +214,15 @@ export async function POST(request:Request) {
       `Consensus\n${payload.consensus ?? ""}`,
       `Material disagreements\n${(payload.disagreements ?? []).map(item=>`• ${item}`).join("\n") || "None recorded."}`,
       `Recommendation\n${payload.recommendation ?? "Human CEO review required."}`,
-      `Next governed step\n${payload.next_step ?? "Human CEO decision."}`
+      `Next governed step\n${payload.next_step ?? "Human CEO review, then explicit chair closure."}`
     ].join("\n\n").slice(0,8000);
 
     const { error:synthesisInsertError } = await supabase.from("meeting_agent_messages").insert({ organization_id:organizationId, meeting_id:meeting.id, session_id:sessionId, agent_id:responseAgent?.id ?? null, turn_index:nextTurnIndex, round_no:roundNo, speaker_type:"agent", message_type:"synthesis", content:responseText, model:config.dryRunModel, input_tokens:inputTokens, output_tokens:outputTokens, estimated_cost_usd:cost });
     if (synthesisInsertError) return jsonError(synthesisInsertError.message,500);
     const completedAt = new Date().toISOString();
     await supabase.from("meeting_agent_sessions").update({ status:"completed", synthesis:responseText, recommendation:String(payload.recommendation ?? "Human CEO review required."), decision_options:options, total_input_tokens:Number(session.total_input_tokens ?? 0)+inputTokens, total_output_tokens:Number(session.total_output_tokens ?? 0)+outputTokens, estimated_cost_usd:finalCost, completed_at:completedAt, updated_at:completedAt, error_message:null }).eq("id",sessionId).eq("organization_id",organizationId);
-    await supabase.from("audit_events").insert({ organization_id:organizationId, actor_type:"system", event_type:"meeting.agent_deliberation_completed", object_type:"meeting", object_id:meeting.id, risk_level:"medium", payload:{ session_id:sessionId, rounds:session.max_rounds, participants:participants.length, decision_options:options.length, external_actions:false, human_decision_required:true } });
-    return NextResponse.json({ ok:true, sessionId, status:"completed", phase:"synthesis", roundNo, turnIndex:nextTurnIndex, speaker:responseAgent ? { id:responseAgent.id, code:responseAgent.agent_code, name:responseAgent.display_name ?? responseAgent.name, role:responseAgent.role_title } : null, content:responseText, decisionOptions:options, recommendation:payload.recommendation ?? "Human CEO review required." });
+    await supabase.from("audit_events").insert({ organization_id:organizationId, actor_type:"system", event_type:"meeting.agent_deliberation_completed", object_type:"meeting", object_id:meeting.id, risk_level:"medium", payload:{ session_id:sessionId, rounds:session.max_rounds, participants:participants.length, decision_options:options.length, awaiting_chair_close:true, external_actions:false, human_decision_required:true } });
+    return NextResponse.json({ ok:true, sessionId, status:"completed", phase:"synthesis", roundNo, turnIndex:nextTurnIndex, speaker:responseAgent ? { id:responseAgent.id, code:responseAgent.agent_code, name:responseAgent.display_name ?? responseAgent.name, role:responseAgent.role_title } : null, content:responseText, decisionOptions:options, recommendation:payload.recommendation ?? "Human CEO review required.",awaitingChairClose:true });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0,1000) : "Unknown meeting runtime error";
     await supabase.from("meeting_agent_sessions").update({ error_message:message, updated_at:new Date().toISOString() }).eq("id",sessionId).eq("organization_id",organizationId);
