@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type TranscriptMessage = {
@@ -69,8 +69,6 @@ async function postMeetingTurn(sessionId: string) {
   throw lastNetworkError instanceof Error ? lastNetworkError : new Error("Meeting runtime could not be reached.");
 }
 
-const voiceSeed=(code:string)=>[...code].reduce((sum,ch)=>sum+ch.charCodeAt(0),0);
-
 export default function DeliberationConsole({ sessionId, meetingStatus, initialStatus, initialMessages, initialError }: Props) {
   const router = useRouter();
   const [meetingState,setMeetingState]=useState(meetingStatus);
@@ -89,51 +87,11 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
   const [ceoText,setCeoText]=useState("");
   const [ceoSending,setCeoSending]=useState(false);
   const [chairClosing,setChairClosing]=useState(false);
-  const [dictating,setDictating]=useState(false);
-  const [autoVoice,setAutoVoice]=useState(false);
-  const recognitionRef=useRef<any>(null);
   const [legalTriage,setLegalTriage]=useState<"pending"|"recommended"|"not_indicated">("pending");
   const [legalTriageReason,setLegalTriageReason]=useState("");
   const [legalTriageRunning,setLegalTriageRunning]=useState(false);
   const [legalReview,setLegalReview]=useState<LegalReview|null>(null);
   const [legalReviewRunning,setLegalReviewRunning]=useState(false);
-
-  const speakMessage=(message:TranscriptMessage)=>{
-    if(typeof window==="undefined"||!("speechSynthesis" in window)||message.speakerCode==="CEO") return;
-    window.speechSynthesis.cancel();
-    const utterance=new SpeechSynthesisUtterance(message.content);
-    const voices=window.speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang));
-    if(voices.length) utterance.voice=voices[voiceSeed(message.speakerCode)%voices.length];
-    utterance.rate=0.96+(voiceSeed(message.speakerCode)%5)*0.015;
-    utterance.pitch=0.92+(voiceSeed(message.speakerCode)%7)*0.025;
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const startDictation=()=>{
-    if(typeof window==="undefined") return;
-    const Recognition=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
-    if(!Recognition){setError("Voice dictation is not supported by this browser. Chrome/Edge desktop is recommended for the MVP voice input.");return;}
-    if(dictating){recognitionRef.current?.stop();return;}
-    const recognition=new Recognition();
-    recognition.lang="en-US";
-    recognition.continuous=true;
-    recognition.interimResults=true;
-    let finalText="";
-    recognition.onstart=()=>setDictating(true);
-    recognition.onresult=(event:any)=>{
-      let interim="";
-      for(let i=event.resultIndex;i<event.results.length;i+=1){
-        const text=String(event.results[i][0]?.transcript??"");
-        if(event.results[i].isFinal) finalText+=`${text} `; else interim+=text;
-      }
-      setCeoText(current=>`${current}${current&&!current.endsWith(" ")?" ":""}${finalText}${interim}`.slice(0,4000));
-      finalText="";
-    };
-    recognition.onerror=(event:any)=>{setError(`Voice dictation error: ${String(event.error??"unknown error")}`);setDictating(false);};
-    recognition.onend=()=>setDictating(false);
-    recognitionRef.current=recognition;
-    recognition.start();
-  };
 
   useEffect(()=>{
     if(status!=="completed"||meetingState!=="completed") return;
@@ -168,7 +126,6 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
         if (payload.content) {
           const nextMessage={turnIndex:Number(payload.turnIndex??messages.length+1),roundNo:Number(payload.roundNo??1),messageType:String(payload.phase??"position"),content:String(payload.content),speakerCode:String(payload.speaker?.code??"B-001"),speakerName:String(payload.speaker?.name??"Executive Orchestrator"),speakerRole:String(payload.speaker?.role??"Meeting synthesis")};
           setMessages(current=>[...current,nextMessage]);
-          if(autoVoice) speakMessage(nextMessage);
         }
         setStatus(String(payload.status ?? "running"));
         if (payload.status === "completed") {
@@ -241,11 +198,10 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
       {messages.length>1?<button type="button" className="secondary-button" onClick={requestSummary} disabled={summarizing}>{summarizing?"Summarizing…":summary?"Regenerate summary":"Summarize meeting"}</button>:null}
       {summary?<button type="button" className="secondary-button" onClick={()=>setShowTranscript(v=>!v)}>{showTranscript?"Hide full transcript":"Open full transcript"}</button>:null}
       {canCeoContribute?<button type="button" className="secondary-button" onClick={()=>setCeoOpen(v=>!v)} disabled={running}>{ceoOpen?"Close CEO contribution":"Join meeting as Human CEO"}</button>:null}
-      <label style={{display:"flex",alignItems:"center",gap:7,fontSize:".85rem",color:"#596579"}}><input type="checkbox" checked={autoVoice} onChange={e=>setAutoVoice(e.target.checked)}/> Auto-play agent voice</label>
     </div>
 
     <p className="security-note">Human CEO is invited by default and is the meeting chair. Agent synthesis never closes the meeting. External actions remain disabled.</p>
-    {ceoOpen?<div style={{border:"1px solid #dfe4ec",borderRadius:12,padding:14,marginBottom:14,maxWidth:"100%",minWidth:0,boxSizing:"border-box",overflow:"hidden"}}><p className="label">Human CEO contribution</p><textarea value={ceoText} onChange={e=>setCeoText(e.target.value)} maxLength={4000} rows={5} placeholder="Add a question, challenge, instruction, or viewpoint for the agents…" style={{display:"block",width:"100%",maxWidth:"100%",minWidth:0,boxSizing:"border-box",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10,overflowWrap:"anywhere"}}/><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginTop:8,flexWrap:"wrap",minWidth:0}}><small>{ceoText.length}/4000</small><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="button" className="secondary-button" onClick={startDictation} disabled={ceoSending||running}>{dictating?"■ Stop voice":"🎙 Dictate"}</button><button type="button" onClick={sendCeoContribution} disabled={ceoSending||running||ceoText.trim().length<2}>{ceoSending?"Adding…":"Add to meeting transcript"}</button></div></div><p className="security-note" style={{marginBottom:0}}>Voice dictation uses the browser speech-recognition capability and remains editable before submission.</p></div>:null}
+    {ceoOpen?<div style={{border:"1px solid #dfe4ec",borderRadius:12,padding:14,marginBottom:14,maxWidth:"100%",minWidth:0,boxSizing:"border-box",overflow:"hidden"}}><p className="label">Human CEO contribution</p><textarea value={ceoText} onChange={e=>setCeoText(e.target.value)} maxLength={4000} rows={5} placeholder="Add a question, challenge, instruction, or viewpoint for the agents…" style={{display:"block",width:"100%",maxWidth:"100%",minWidth:0,boxSizing:"border-box",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10,overflowWrap:"anywhere"}}/><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginTop:8,flexWrap:"wrap",minWidth:0}}><small>{ceoText.length}/4000</small><button type="button" onClick={sendCeoContribution} disabled={ceoSending||running||ceoText.trim().length<2}>{ceoSending?"Adding…":"Add to meeting transcript"}</button></div></div>:null}
 
     {awaitingChairClose?<article style={{border:"1px solid #e4c86b",borderRadius:14,padding:18,background:"#fff9e8",margin:"14px 0 18px",maxWidth:"100%",boxSizing:"border-box"}}><div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap"}}><div style={{minWidth:0}}><p className="label">Chair closure gate</p><h3 style={{margin:"0 0 6px"}}>Agent synthesis complete — meeting remains open</h3></div><span className="pill">AWAITING CHAIR CLOSE</span></div><p style={{color:"#596579",lineHeight:1.65}}>The Human CEO may ask another question or add a correction. If a contribution is added, continue the agent meeting so B-001 responds and refreshes the synthesis. Close the meeting only when the chair is satisfied.</p><div style={{display:"flex",gap:10,flexWrap:"wrap"}}><button type="button" className="secondary-button" onClick={()=>setCeoOpen(true)}>Add CEO contribution</button><button type="button" onClick={closeMeeting} disabled={chairClosing}>{chairClosing?"Closing…":"End meeting · Chair confirm"}</button></div></article>:null}
 
@@ -261,6 +217,6 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
 
     {canRun?<button type="button" onClick={runMeeting} disabled={running} style={{margin:"12px 0 18px"}}>{running?"Running governed deliberation…":status==="running"?"Continue agent meeting":"Start agent deliberation"}</button>:null}
 
-    {showTranscript?<div style={{display:"grid",gap:12,maxHeight:720,overflowY:"auto",overflowX:"hidden",paddingRight:4,minWidth:0,maxWidth:"100%"}} aria-live="polite">{messages.length?messages.map((message,index)=><article key={`${message.turnIndex}-${index}`} style={{border:"1px solid #dfe4ec",borderRadius:14,padding:16,background:message.messageType==="synthesis"?"#f3f6fb":message.messageType.startsWith("ceo_")?"#fff9ea":"#fff",minWidth:0,maxWidth:"100%",boxSizing:"border-box",overflow:"hidden"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap",minWidth:0}}><div style={{minWidth:0}}><strong>{message.speakerCode} · {message.speakerName}</strong><span style={{display:"block",color:"#717b8e",fontSize:".82rem",marginTop:3}}>{message.speakerRole}</span></div><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><span className="pill">{message.messageType} · round {message.roundNo}</span>{message.speakerCode!=="CEO"?<button type="button" className="secondary-button" onClick={()=>speakMessage(message)} style={{padding:"6px 10px"}}>▶ Listen</button>:null}</div></div><p style={{whiteSpace:"pre-wrap",lineHeight:1.65,color:"#46536a",marginBottom:0,overflowWrap:"anywhere",wordBreak:"break-word"}}>{message.content}</p></article>):<p className="empty-state">No agent has spoken yet.</p>}</div>:null}
+    {showTranscript?<div style={{display:"grid",gap:12,maxHeight:720,overflowY:"auto",overflowX:"hidden",paddingRight:4,minWidth:0,maxWidth:"100%"}} aria-live="polite">{messages.length?messages.map((message,index)=><article key={`${message.turnIndex}-${index}`} style={{border:"1px solid #dfe4ec",borderRadius:14,padding:16,background:message.messageType==="synthesis"?"#f3f6fb":message.messageType.startsWith("ceo_")?"#fff9ea":"#fff",minWidth:0,maxWidth:"100%",boxSizing:"border-box",overflow:"hidden"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap",minWidth:0}}><div style={{minWidth:0}}><strong>{message.speakerCode} · {message.speakerName}</strong><span style={{display:"block",color:"#717b8e",fontSize:".82rem",marginTop:3}}>{message.speakerRole}</span></div><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><span className="pill">{message.messageType} · round {message.roundNo}</span></div></div><p style={{whiteSpace:"pre-wrap",lineHeight:1.65,color:"#46536a",marginBottom:0,overflowWrap:"anywhere",wordBreak:"break-word"}}>{message.content}</p></article>):<p className="empty-state">No agent has spoken yet.</p>}</div>:null}
   </section>;
 }
