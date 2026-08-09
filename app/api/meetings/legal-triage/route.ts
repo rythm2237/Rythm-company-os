@@ -8,6 +8,12 @@ export const runtime = "nodejs";
 
 const fail=(error:string,status:number)=>NextResponse.json({ok:false,error},{status});
 const cleanJson=(value:string)=>value.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/```$/i,"").trim();
+const timestamp=(value:string|null|undefined)=>value?new Date(value).getTime():Number.NaN;
+const triageIsPostClosure=(triagedAt:string|null|undefined,closedAt:string|null|undefined)=>{
+  const triaged=timestamp(triagedAt);
+  const closed=timestamp(closedAt);
+  return Number.isFinite(triaged)&&Number.isFinite(closed)&&triaged>=closed;
+};
 
 type ResponseLike={output_text?:string;output?:Array<{type?:string;content?:Array<{type?:string;text?:string}>}>;usage?:{input_tokens?:number;output_tokens?:number}};
 function extractText(response:ResponseLike){
@@ -37,8 +43,27 @@ export async function GET(request:Request){
   if(!sessionId) return fail("sessionId is required.",400);
   const {data:session}=await auth.supabase.from("meeting_agent_sessions").select("id,meeting_id,status,legal_triage_status,legal_triage_reason,legal_triaged_at").eq("id",sessionId).eq("organization_id",auth.organizationId).maybeSingle();
   if(!session) return fail("Meeting session not found.",404);
-  const {data:meeting}=await auth.supabase.from("meetings").select("status").eq("id",session.meeting_id).eq("organization_id",auth.organizationId).maybeSingle();
-  return NextResponse.json({ok:true,status:session.legal_triage_status,reason:session.legal_triage_reason,triagedAt:session.legal_triaged_at,sessionStatus:session.status,meetingStatus:meeting?.status??null});
+  const {data:meeting}=await auth.supabase.from("meetings").select("status,ended_at").eq("id",session.meeting_id).eq("organization_id",auth.organizationId).maybeSingle();
+  if(!meeting) return fail("Linked meeting not found.",404);
+
+  const postClosure=meeting.status==="completed"&&triageIsPostClosure(session.legal_triaged_at,meeting.ended_at);
+  if(!postClosure){
+    const reason=meeting.status==="completed"
+      ?"Legal relevance triage must run after explicit Human CEO / Chair closure."
+      :"Awaiting explicit Human CEO / Chair closure before legal relevance triage.";
+    return NextResponse.json({
+      ok:true,
+      status:"pending",
+      reason,
+      triagedAt:null,
+      sessionStatus:session.status,
+      meetingStatus:meeting.status,
+      meetingClosedAt:meeting.ended_at,
+      staleStoredTriage:session.legal_triage_status!=="pending"||Boolean(session.legal_triaged_at),
+    });
+  }
+
+  return NextResponse.json({ok:true,status:session.legal_triage_status,reason:session.legal_triage_reason,triagedAt:session.legal_triaged_at,sessionStatus:session.status,meetingStatus:meeting.status,meetingClosedAt:meeting.ended_at,staleStoredTriage:false});
 }
 
 export async function POST(request:Request){
@@ -58,11 +83,16 @@ export async function POST(request:Request){
   const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,status,decision_question,language,synthesis,recommendation,decision_options,legal_triage_status,legal_triage_reason,legal_triaged_at").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
   if(!session) return fail("Meeting session not found.",404);
   if(session.status!=="completed") return fail("Legal triage runs after the latest agent synthesis is completed.",409);
-  if(session.legal_triage_status!=="pending") return NextResponse.json({ok:true,status:session.legal_triage_status,reason:session.legal_triage_reason,triagedAt:session.legal_triaged_at,cached:true});
 
-  const {data:meeting}=await supabase.from("meetings").select("id,title,purpose,agenda,status").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();
+  const {data:meeting}=await supabase.from("meetings").select("id,title,purpose,agenda,status,ended_at").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();
   if(!meeting) return fail("Linked meeting not found.",404);
-  if(meeting.status!=="completed") return fail("The Human CEO / Chair must explicitly close the meeting before legal relevance triage begins.",409);
+  if(meeting.status!=="completed"||!meeting.ended_at) return fail("The Human CEO / Chair must explicitly close the meeting before legal relevance triage begins.",409);
+
+  const postClosure=triageIsPostClosure(session.legal_triaged_at,meeting.ended_at);
+  if(session.legal_triage_status!=="pending"&&postClosure){
+    return NextResponse.json({ok:true,status:session.legal_triage_status,reason:session.legal_triage_reason,triagedAt:session.legal_triaged_at,cached:true,meetingClosedAt:meeting.ended_at});
+  }
+
   const {data:messages}=await supabase.from("meeting_agent_messages").select("round_no,message_type,content,agents(agent_code)").eq("session_id",sessionId).eq("organization_id",organizationId).neq("message_type","system").order("turn_index");
   const transcript=(messages??[]).map((row:any)=>`${Array.isArray(row.agents)?row.agents[0]?.agent_code:row.agents?.agent_code??(row.message_type==="ceo_contribution"?"HUMAN CEO":"SYSTEM")} (${row.message_type}, round ${row.round_no}): ${row.content}`).join("\n\n").slice(-22000);
 
@@ -83,10 +113,10 @@ export async function POST(request:Request){
     const reason=String(parsed.reason??(recommended?"Potential legal or regulatory relevance identified.":"No material legal relevance identified.")).slice(0,1000);
     const status=recommended?"recommended":"not_indicated";
     const now=new Date().toISOString();
-    const {error:updateError}=await supabase.from("meeting_agent_sessions").update({legal_triage_status:status,legal_triage_reason:reason,legal_triaged_at:now,updated_at:now}).eq("id",sessionId).eq("organization_id",organizationId).eq("legal_triage_status","pending");
+    const {error:updateError}=await supabase.from("meeting_agent_sessions").update({legal_triage_status:status,legal_triage_reason:reason,legal_triaged_at:now,updated_at:now}).eq("id",sessionId).eq("organization_id",organizationId);
     if(updateError) return fail(updateError.message,500);
-    await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"agent",actor_agent_id:null,event_type:"meeting.legal_triage_completed",object_type:"meeting",object_id:meeting.id,risk_level:recommended?"medium":"low",payload:{session_id:sessionId,orchestrator:"B-001",chair_closed:true,legal_review_recommended:recommended,reason,model:config.dryRunModel,external_actions:false}});
-    return NextResponse.json({ok:true,status,reason,triagedAt:now,recommended});
+    await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"agent",actor_agent_id:null,event_type:"meeting.legal_triage_completed",object_type:"meeting",object_id:meeting.id,risk_level:recommended?"medium":"low",payload:{session_id:sessionId,orchestrator:"B-001",chair_closed:true,chair_closed_at:meeting.ended_at,legal_review_recommended:recommended,reason,model:config.dryRunModel,external_actions:false}});
+    return NextResponse.json({ok:true,status,reason,triagedAt:now,recommended,meetingClosedAt:meeting.ended_at});
   }catch(error){
     const message=error instanceof Error?error.message:"Legal triage failed.";
     return fail(`B-001 legal triage failed: ${message}`,502);
