@@ -84,6 +84,7 @@ export async function POST(request:Request){
   if(!config.agentExecutionEnabled) return fail("Agent execution is disabled by environment policy.",503);
   if(config.externalActionsEnabled) return fail("Legal triage refuses to run while external actions are enabled.",503);
   if(!config.openAIConfigured||!config.dryRunModel) return fail("OpenAI runtime is not configured.",503);
+  const model=config.dryRunModel;
 
   const auth=await context();
   if("error" in auth) return auth.error;
@@ -115,7 +116,7 @@ export async function POST(request:Request){
   const client=new OpenAI({apiKey:process.env.OPENAI_API_KEY});
   const requestTriage=async(correction?:string)=>{
     const response=await client.responses.create({
-      model:config.dryRunModel,
+      model,
       max_output_tokens:500,
       input:[
         {role:"system",content:[{type:"input_text",text:correction?`${systemText}\n${correction}`:systemText}]},
@@ -140,7 +141,7 @@ export async function POST(request:Request){
     const now=new Date().toISOString();
     const {error:updateError}=await supabase.from("meeting_agent_sessions").update({legal_triage_status:status,legal_triage_reason:reason,legal_triaged_at:now,legal_triage_basis_closed_at:meeting.ended_at,updated_at:now}).eq("id",sessionId).eq("organization_id",organizationId);
     if(updateError) return fail("Legal relevance triage could not be persisted against the chair-closure snapshot.",500);
-    await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"agent",actor_agent_id:null,event_type:"meeting.legal_triage_completed",object_type:"meeting",object_id:meeting.id,risk_level:recommended?"medium":"low",payload:{session_id:sessionId,orchestrator:"B-001",chair_closed:true,chair_closed_at:meeting.ended_at,triage_basis_closed_at:meeting.ended_at,legal_review_recommended:recommended,reason,model:config.dryRunModel,external_actions:false}});
+    await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"agent",actor_agent_id:null,event_type:"meeting.legal_triage_completed",object_type:"meeting",object_id:meeting.id,risk_level:recommended?"medium":"low",payload:{session_id:sessionId,orchestrator:"B-001",chair_closed:true,chair_closed_at:meeting.ended_at,triage_basis_closed_at:meeting.ended_at,legal_review_recommended:recommended,reason,model,external_actions:false}});
     return NextResponse.json({ok:true,status,reason,triagedAt:now,recommended,meetingClosedAt:meeting.ended_at,triageBasisClosedAt:meeting.ended_at});
   }catch(error){
     const message=error instanceof Error?error.message:"Legal triage failed.";
