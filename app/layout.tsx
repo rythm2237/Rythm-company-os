@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import "./experience.css";
 import "./project-portfolio.css";
@@ -50,7 +51,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body>
         <a className="skip-link" href="#main-content">Skip to main content</a>
         <ProductNav />
-        <DecisionDraftGuard />
+        <Suspense fallback={null}><DecisionDraftGuard /></Suspense>
         <div id="main-content">{children}</div>
         <ProjectPulse event={pulseEvent} nodes={pulseNodes} project={pulseProject} />
       </body>
