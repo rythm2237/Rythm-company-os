@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import "./experience.css";
 import "./project-portfolio.css";
 import ProjectPulse from "@/components/project-pulse/ProjectPulse";
 import ProductNav from "@/components/product-nav/ProductNav";
+import DecisionDraftGuard from "@/components/decision-draft-guard/DecisionDraftGuard";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
 export const metadata: Metadata = {
@@ -49,6 +51,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body>
         <a className="skip-link" href="#main-content">Skip to main content</a>
         <ProductNav />
+        <Suspense fallback={null}><DecisionDraftGuard /></Suspense>
         <div id="main-content">{children}</div>
         <ProjectPulse event={pulseEvent} nodes={pulseNodes} project={pulseProject} />
       </body>
