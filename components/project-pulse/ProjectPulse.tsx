@@ -18,7 +18,7 @@ export default function ProjectPulse({event,nodes,project}:Props){
   const projectParam=searchParams.get("project");
   const [scoped,setScoped]=useState<Props|null>(null);
   const requiresScopedFetch=Boolean(projectParam&&event?.project_id!==projectParam);
-  const active=requiresScopedFetch?(scoped??EMPTY_PULSE):{event,nodes,project};
+  const active=!projectParam?EMPTY_PULSE:requiresScopedFetch?(scoped??EMPTY_PULSE):{event,nodes,project};
   const activeEvent=active.event;
   const activeNodes=active.nodes;
   const activeProject=active.project;
