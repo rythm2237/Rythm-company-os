@@ -53,7 +53,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <ProductNav />
         <Suspense fallback={null}><DecisionDraftGuard /></Suspense>
         <div id="main-content">{children}</div>
-        <ProjectPulse event={pulseEvent} nodes={pulseNodes} project={pulseProject} />
+        <Suspense fallback={null}><ProjectPulse event={pulseEvent} nodes={pulseNodes} project={pulseProject} /></Suspense>
       </body>
     </html>
   );
