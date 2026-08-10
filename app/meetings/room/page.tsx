@@ -16,6 +16,7 @@ type Message = { id:string; turn_index:number; round_no:number; message_type:str
 type LegalDecisionReview = { outcome:string|null; executive_note:string|null; risk_summary:string|null; conditions:unknown; licensed_counsel_required:boolean };
 type Props = { searchParams: Promise<{ meeting?:string; session?:string; project?:string; message?:string; error?:string }> };
 
+const CUSTOM_CEO_OPTION="__custom_ceo_decision__";
 const list = (value:unknown) => Array.isArray(value) ? value.map(String) : [];
 const joinedAgent = <T,>(value:T|T[]|null):T|null => Array.isArray(value) ? value[0] ?? null : value;
 
@@ -95,10 +96,13 @@ async function recordCeoDecision(formData:FormData){
   const {supabase,organizationId}=await ownerContext();
   const meetingId=String(formData.get("meetingId")??"");
   const sessionId=String(formData.get("sessionId")??"");
-  const selectedOption=String(formData.get("selectedOption")??"").trim();
+  const selectedOptionKey=String(formData.get("selectedOption")??"").trim();
+  const customDecision=String(formData.get("customDecision")??"").trim();
   const rationale=String(formData.get("rationale")??"").trim();
   const riskLevel=String(formData.get("riskLevel")??"medium");
-  if(!selectedOption||rationale.length<3||!["low","medium","high","critical"].includes(riskLevel)) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=Select%20a%20decision%20option%20and%20enter%20CEO%20rationale.`);
+  const isCustomDecision=selectedOptionKey===CUSTOM_CEO_OPTION;
+  if(!selectedOptionKey||rationale.length<3||!["low","medium","high","critical"].includes(riskLevel)) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=Select%20a%20decision%20option%20and%20enter%20CEO%20rationale.`);
+  if(isCustomDecision&&(customDecision.length<10||customDecision.length>2000)) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=${encodeURIComponent("Enter a custom Human CEO decision between 10 and 2000 characters.")}`);
 
   const {data:meeting}=await supabase.from("meetings").select("id,status,title,project_id").eq("id",meetingId).eq("organization_id",organizationId).maybeSingle();
   if(!meeting||meeting.status!=="completed") redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=${encodeURIComponent("The Human CEO / Chair must explicitly close the meeting before recording the final decision.")}`);
@@ -116,13 +120,16 @@ async function recordCeoDecision(formData:FormData){
   }
 
   const options=list(session.decision_options);
-  if(!options.includes(selectedOption)) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=The%20selected%20option%20is%20not%20part%20of%20the%20meeting%20decision%20package.`);
+  if(!isCustomDecision&&!options.includes(selectedOptionKey)) redirect(`/meetings/room?meeting=${meetingId}&session=${sessionId}&error=The%20selected%20option%20is%20not%20part%20of%20the%20meeting%20decision%20package.`);
+  const selectedOption=isCustomDecision?`Custom Human CEO Decision: ${customDecision}`:selectedOptionKey;
+  const recordedOptions=isCustomDecision?[...options,selectedOption]:options;
+  const decisionSource=isCustomDecision?"Human CEO — Custom":"Human CEO — selected from B-001 decision package";
   const {data:b001}=await supabase.from("agents").select("id").eq("organization_id",organizationId).eq("agent_code","B-001").maybeSingle();
   const {data:project}=session.project_id?await supabase.from("projects").select("project_code,name").eq("id",session.project_id).eq("organization_id",organizationId).maybeSingle():{data:null};
   const projectPrefix=project?`${project.project_code} — ${project.name}`:"Company-wide";
   const title=meeting.title.toLowerCase().includes(String(project?.project_code??"").toLowerCase())&&project?.project_code?meeting.title:`${projectPrefix}: ${meeting.title}`;
   const legalContext=legalReview?` AI Legal Review: ${legalReview.outcome}. ${legalReview.executive_note??""}`:"";
-  const context=`Project: ${projectPrefix}. Meeting: ${meeting.title}. Decision produced from governed multi-agent meeting after explicit chair closure. Question: ${session.decision_question}.${legalContext}`;
+  const context=`Project: ${projectPrefix}. Meeting: ${meeting.title}. Decision source: ${decisionSource}. Decision produced from governed multi-agent meeting after explicit chair closure. Question: ${session.decision_question}.${legalContext}`;
   const legalMinutes=legalReview?`\n\nAI Legal Review (${legalReview.outcome}): ${legalReview.executive_note??""}\nRisk summary: ${legalReview.risk_summary??""}`:"";
 
   const {data:decisionId,error}=await supabase.rpc("record_meeting_ceo_decision",{
@@ -132,7 +139,7 @@ async function recordCeoDecision(formData:FormData){
     target_project_id:session.project_id,
     target_title:title,
     target_context:context,
-    target_options:options,
+    target_options:recordedOptions,
     target_recommendation:session.recommendation?{text:session.recommendation}:null,
     target_rationale:rationale,
     target_risk_level:riskLevel,
@@ -203,7 +210,7 @@ export default async function Boardroom({searchParams}:Props){
 
       <section className="panel panel-wide" style={{marginTop:18,minWidth:0,maxWidth:"100%",boxSizing:"border-box"}}><div className="panel-heading"><div><p className="label">Decision mandate</p><h2>{session.decision_question}</h2></div><span className="pill">{session.max_rounds} rounds · ${Number(session.budget_cap_usd).toFixed(2)} cap</span></div>{meeting.status!=="running"&&["draft","scheduled"].includes(meeting.status)?<form action={startMeeting}><input type="hidden" name="meetingId" value={meeting.id}/><input type="hidden" name="sessionId" value={session.id}/><button>Start governed meeting</button></form>:null}<DeliberationConsole sessionId={session.id} meetingStatus={meeting.status} initialStatus={session.status} initialMessages={transcript} initialError={session.error_message}/></section>
 
-      {session.status==="completed"&&meeting.status==="completed"?<section className="panel panel-wide" style={{marginTop:18,minWidth:0,maxWidth:"100%",boxSizing:"border-box"}}><div className="panel-heading"><div><p className="label">Human CEO gate</p><h2>Record the meeting decision</h2></div><span className="pill">Agent recommendation is advisory</span></div><div style={{padding:14,borderRadius:12,background:"#f8f9fb",marginBottom:14,minWidth:0}}><p className="label">B-001 recommendation</p><p style={{color:"#596579",lineHeight:1.65,overflowWrap:"anywhere"}}>{session.recommendation??"Review the synthesis and choose an option."}</p></div><form action={recordCeoDecision} className="auth-form"><input type="hidden" name="meetingId" value={meeting.id}/><input type="hidden" name="sessionId" value={session.id}/><label>CEO selected option<select name="selectedOption" required defaultValue=""><option value="" disabled>Select decision</option>{decisionOptions.map(option=><option key={option} value={option}>{option}</option>)}</select></label><label>CEO rationale<textarea name="rationale" required minLength={3} rows={5} style={{width:"100%",maxWidth:"100%",minWidth:0,boxSizing:"border-box",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10}}/></label><label>Decision risk<select name="riskLevel" defaultValue="medium"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High — routes to Approval Engine</option><option value="critical">Critical — routes to Approval Engine</option></select></label><button>Record Human CEO decision</button><p className="security-note">This gate appears only after explicit chair closure. The session can create only one canonical CEO decision. Low/medium decisions are finalized here; High/Critical decisions create a governed Approval Request.</p></form></section>:null}
+      {session.status==="completed"&&meeting.status==="completed"?<section className="panel panel-wide" style={{marginTop:18,minWidth:0,maxWidth:"100%",boxSizing:"border-box"}}><div className="panel-heading"><div><p className="label">Human CEO gate</p><h2>Record the meeting decision</h2></div><span className="pill">Agent recommendation is advisory</span></div><div style={{padding:14,borderRadius:12,background:"#f8f9fb",marginBottom:14,minWidth:0}}><p className="label">B-001 recommendation</p><p style={{color:"#596579",lineHeight:1.65,overflowWrap:"anywhere"}}>{session.recommendation??"Review the synthesis and choose an option."}</p></div><form action={recordCeoDecision} className="auth-form"><input type="hidden" name="meetingId" value={meeting.id}/><input type="hidden" name="sessionId" value={session.id}/><label>CEO selected option<select name="selectedOption" required defaultValue=""><option value="" disabled>Select decision</option>{decisionOptions.map(option=><option key={option} value={option}>{option}</option>)}<option value={CUSTOM_CEO_OPTION}>Other — Custom Human CEO Decision</option></select></label><label>CEO custom decision<textarea name="customDecision" minLength={10} maxLength={2000} rows={3} placeholder="Required only when Other — Custom Human CEO Decision is selected." style={{width:"100%",maxWidth:"100%",minWidth:0,boxSizing:"border-box",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10}}/><small style={{display:"block",marginTop:6,color:"#717b8e",lineHeight:1.5}}>Use this field only when selecting Other. The custom decision is recorded as a Human CEO decision and remains subject to the same legal, risk, approval, audit, and external-action controls.</small></label><label>CEO rationale<textarea name="rationale" required minLength={3} rows={5} style={{width:"100%",maxWidth:"100%",minWidth:0,boxSizing:"border-box",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10}}/></label><label>Decision risk<select name="riskLevel" defaultValue="medium"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High — routes to Approval Engine</option><option value="critical">Critical — routes to Approval Engine</option></select></label><button>Record Human CEO decision</button><p className="security-note">This gate appears only after explicit chair closure. The Human CEO may choose a B-001 option or record a custom decision. The session can create only one canonical CEO decision. Low/medium decisions are finalized here; High/Critical decisions create a governed Approval Request.</p></form></section>:null}
     </>:null}
   </main>;
 }
