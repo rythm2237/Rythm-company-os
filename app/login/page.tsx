@@ -29,6 +29,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <button type="submit">Sign in</button>
         </form>
 
+        <p className="security-note"><Link href="/forgot-password">Forgot password?</Link></p>
         <p className="security-note">Access is restricted by Supabase authentication, validated organization membership, and role-based governance.</p>
         <p className="security-note">New B2B customer? <Link href="/signup">Create an account</Link></p>
       </section>
