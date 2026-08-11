@@ -32,7 +32,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         const [nodesResult, projectResult] = await Promise.all([
           supabase.from("project_progress_nodes")
             .select("stage_code,label,sequence_no,weight_percent,node_type")
-            .eq("organization_id", organizationId)
             .eq("project_id", event.project_id).order("sequence_no"),
           supabase.from("projects")
             .select("project_code,name")
