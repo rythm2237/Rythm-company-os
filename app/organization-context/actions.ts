@@ -15,17 +15,17 @@ export async function switchOrganization(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id,role")
-    .eq("user_id", user.id)
-    .eq("organization_id", organizationId)
-    .maybeSingle();
+  const { data: selectedOrganizationId, error } = await supabase.rpc("set_active_organization", {
+    target_org_id: organizationId,
+  });
 
-  if (!membership) {
+  if (error || String(selectedOrganizationId ?? "") !== organizationId) {
+    console.error("organization_context_switch_failed", { userId: user.id, organizationId, error });
     redirect("/command-center?error=You%20are%20not%20authorized%20for%20that%20organization.");
   }
 
+  // Cookie is a non-authoritative UI/cache hint. Database active_organization_id is
+  // the source of truth and the RPC above validates membership before changing it.
   const cookieStore = await cookies();
   cookieStore.set(ACTIVE_ORGANIZATION_COOKIE, organizationId, {
     httpOnly: true,
