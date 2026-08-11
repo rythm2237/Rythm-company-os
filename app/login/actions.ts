@@ -13,11 +13,19 @@ export async function login(formData: FormData) {
   }
 
   const supabase = await createAuthServerClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) {
+  if (error || !data.user) {
     redirect(`/login?error=${encodeURIComponent("Invalid email or password.")}`);
   }
+
+  const { data: memberships } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", data.user.id)
+    .limit(1);
+
+  if (!memberships?.length) redirect("/setup/company");
 
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/command-center";
   redirect(safeNext);
