@@ -141,15 +141,15 @@ export default async function WorkflowTraceabilityPage({ searchParams }: Props) 
               <div><strong>Decision</strong><span><Link href={`/decisions?decision=${selected.id}&status=${selected.status}`}>{selected.decision_key}</Link></span></div>
               <div><strong>Human CEO finalized</strong><span>{formatDate(selected.decided_at)}</span></div>
               <div><strong>Approval Request</strong><span>{approval ? <Link href={`/approvals?approval=${approval.id}`}>{approval.status} · {approval.risk_level} risk</Link> : "Not required / not created"}</span></div>
-              <div><strong>Project</strong><span>{project ? <Link href="/projects/operating">{project.project_code} · {project.name} · {project.stage ?? "stage not set"} · {project.progress_percent ?? 0}%</Link> : "No linked project"}</span></div>
-              <div><strong>Source meeting</strong><span>{meeting ? <Link href={`/meetings/room?meeting=${meeting.id}`}>{meeting.title} · {meeting.status}</Link> : "No meeting relationship found"}</span></div>
+              <div><strong>Project</strong><span>{project ? <Link href={`/projects/operating?project=${project.id}`}>{project.project_code} · {project.name} · {project.stage ?? "stage not set"} · {project.progress_percent ?? 0}%</Link> : "No linked project"}</span></div>
+              <div><strong>Source meeting</strong><span>{meeting ? <Link href={`/meetings/room?meeting=${meeting.id}${selected.project_id ? `&project=${selected.project_id}` : ""}`}>{meeting.title} · {meeting.status}</Link> : "No meeting relationship found"}</span></div>
             </div>
 
             <div style={{ marginTop: 22 }}>
               <p className="label">Linked execution actions</p>
               {actions.length ? <div className="compact-list">{actions.map((action) => (
                 <div key={action.id}>
-                  <strong><Link href={`/actions?action=${action.id}&status=${action.status}`}>{action.action_code ?? "Action"} · {action.title}</Link></strong>
+                  <strong><Link href={`/actions?action=${action.id}&status=${action.status}${action.project_id ? `&project=${action.project_id}` : ""}`}>{action.action_code ?? "Action"} · {action.title}</Link></strong>
                   <span>{action.status} · {action.risk_level ?? "unclassified"} risk · {action.handoff_source ?? "legacy/direct"} · authorized {formatDate(action.authorized_at)}</span>
                 </div>
               ))}</div> : <p className="empty-state">No Action Item is linked to this decision. For a newly approved decision, this indicates the execution handoff has not occurred.</p>}
