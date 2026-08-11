@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
@@ -15,6 +14,16 @@ type OrganizationRow = {
   slug: string;
   status: string;
   owner_user_id: string | null;
+};
+
+type OrganizationListRow = {
+  organization_id: string;
+  organization_name: string;
+  organization_slug: string;
+  organization_status: string;
+  owner_user_id: string | null;
+  membership_role: string;
+  is_active: boolean;
 };
 
 export type OrganizationEntitlement = {
@@ -47,52 +56,68 @@ export type OrganizationContext = {
   entitlement: OrganizationEntitlement | null;
 };
 
-export async function resolveOrganizationContext(): Promise<OrganizationContext | null> {
-  const supabase = await createAuthServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: membershipData, error: membershipError } = await supabase
+async function legacyMembershipFallback(
+  supabase: Awaited<ReturnType<typeof createAuthServerClient>>,
+  userId: string,
+) {
+  const { data: membershipData } = await supabase
     .from("organization_members")
     .select("organization_id,role")
-    .eq("user_id", user.id);
-
-  if (membershipError) {
-    console.error("organization_context_membership_query_failed", membershipError);
-    return null;
-  }
+    .eq("user_id", userId);
 
   const membershipRows = (membershipData ?? []) as MembershipRow[];
-  if (!membershipRows.length) return null;
+  if (!membershipRows.length) return [];
 
   const organizationIds = [...new Set(membershipRows.map((row) => row.organization_id))];
-  const { data: organizationData, error: organizationError } = await supabase
+  const { data: organizationData } = await supabase
     .from("organizations")
     .select("id,name,slug,status,owner_user_id")
     .in("id", organizationIds);
-
-  if (organizationError) {
-    console.error("organization_context_organization_query_failed", organizationError);
-    return null;
-  }
 
   const organizationMap = new Map(
     ((organizationData ?? []) as OrganizationRow[]).map((organization) => [organization.id, organization]),
   );
 
-  const memberships = membershipRows
+  return membershipRows
     .map((membership) => {
       const organization = organizationMap.get(membership.organization_id);
-      return organization ? { ...membership, organization } : null;
+      return organization ? { ...membership, organization, isActive: false } : null;
     })
-    .filter((value): value is MembershipRow & { organization: OrganizationRow } => Boolean(value));
+    .filter((value): value is MembershipRow & { organization: OrganizationRow; isActive: boolean } => Boolean(value));
+}
+
+export async function resolveOrganizationContext(): Promise<OrganizationContext | null> {
+  const supabase = await createAuthServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: organizationListData, error: organizationListError } = await supabase.rpc("list_my_organizations");
+
+  let memberships: Array<MembershipRow & { organization: OrganizationRow; isActive: boolean }> = [];
+
+  if (!organizationListError && organizationListData) {
+    memberships = (organizationListData as OrganizationListRow[]).map((row) => ({
+      organization_id: row.organization_id,
+      role: row.membership_role,
+      isActive: row.is_active,
+      organization: {
+        id: row.organization_id,
+        name: row.organization_name,
+        slug: row.organization_slug,
+        status: row.organization_status,
+        owner_user_id: row.owner_user_id,
+      },
+    }));
+  } else {
+    // Allows Preview/pre-migration login surfaces to render. After Day 2 migration,
+    // list_my_organizations() is the canonical membership-discovery path.
+    memberships = await legacyMembershipFallback(supabase, user.id);
+  }
 
   if (!memberships.length) return null;
 
-  const cookieStore = await cookies();
-  const requestedOrganizationId = cookieStore.get(ACTIVE_ORGANIZATION_COOKIE)?.value ?? "";
   const selectedMembership =
-    memberships.find((item) => item.organization_id === requestedOrganizationId) ??
+    memberships.find((item) => item.isActive) ??
     memberships.find((item) => item.role === "owner") ??
     memberships[0];
 
@@ -100,7 +125,7 @@ export async function resolveOrganizationContext(): Promise<OrganizationContext 
     .rpc("resolve_organization_entitlement", { target_org_id: selectedMembership.organization_id })
     .maybeSingle();
 
-  if (entitlementError) {
+  if (entitlementError && !organizationListError) {
     console.error("organization_context_entitlement_query_failed", entitlementError);
   }
 
@@ -110,7 +135,7 @@ export async function resolveOrganizationContext(): Promise<OrganizationContext 
     organizationId: selectedMembership.organization_id,
     organization: selectedMembership.organization,
     role: selectedMembership.role,
-    memberships,
+    memberships: memberships.map(({ isActive: _isActive, ...membership }) => membership),
     entitlement: (entitlementData as OrganizationEntitlement | null) ?? null,
   };
 }
