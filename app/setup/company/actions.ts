@@ -30,8 +30,22 @@ export async function provisionCompany(formData: FormData) {
     redirect(`/setup/company?error=${encodeURIComponent("Company provisioning could not be completed. No commercial activation was performed.")}`);
   }
 
+  const organizationIdString = String(organizationId);
+  const { data: activeOrganizationId, error: contextError } = await supabase.rpc("set_active_organization", {
+    target_org_id: organizationIdString,
+  });
+
+  if (contextError || String(activeOrganizationId ?? "") !== organizationIdString) {
+    console.error("new_organization_context_activation_failed", {
+      userId: user.id,
+      organizationId: organizationIdString,
+      error: contextError,
+    });
+    redirect(`/setup/company?error=${encodeURIComponent("Company was provisioned, but its active context could not be selected. Contact RYTHM support before continuing.")}`);
+  }
+
   const cookieStore = await cookies();
-  cookieStore.set(ACTIVE_ORGANIZATION_COOKIE, String(organizationId), {
+  cookieStore.set(ACTIVE_ORGANIZATION_COOKIE, organizationIdString, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
