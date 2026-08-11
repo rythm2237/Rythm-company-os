@@ -39,7 +39,7 @@ function active(pathname: string, href: string) {
 
 export default function ProductNav() {
   const pathname = usePathname();
-  if (!pathname || pathname.startsWith("/login")) return null;
+  if (!pathname || pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname.startsWith("/setup/")) return null;
 
   return (
     <nav className="product-nav" aria-label="RYTHM primary navigation">
