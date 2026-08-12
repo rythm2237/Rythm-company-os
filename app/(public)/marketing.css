@@ -616,6 +616,7 @@
 }
 .offer-card:hover, .pricing-card:hover, .public-template-grid article:hover, .tour-card:hover, .meeting-flow-grid article:hover, .boundary-grid article:hover { border-color: #c5cdea; transform: translateY(-4px); box-shadow: 0 24px 62px rgba(23,32,51,.1); }
 .offer-card:focus-within, .pricing-card:focus-within, .public-template-grid article:focus-within, .tour-card:focus-within { border-color: var(--mk-accent); box-shadow: 0 0 0 4px rgba(90,104,232,.1); }
+.demo-agent-panel { top: 0; overscroll-behavior: contain; }
 .experience-entry-section a { position: relative; overflow: hidden; transition: background .22s ease, transform .22s ease, box-shadow .22s ease; }
 .experience-entry-section a::after { content: ""; position: absolute; right: 18px; bottom: 18px; width: 7px; height: 7px; border: 1px solid #8994aa; border-width: 1px 1px 0 0; transform: rotate(45deg); transition: transform .2s ease, border-color .2s ease; }
 .experience-entry-section a:hover { background: linear-gradient(145deg, #f0f2ff, #f7f9fd); box-shadow: inset 0 0 0 1px rgba(90,104,232,.08); }
@@ -667,7 +668,7 @@
 
 .marketing-site a:focus-visible, .marketing-site button:focus-visible { outline: 3px solid rgba(90,104,232,.5); outline-offset: 3px; }
 
-@keyframes marketing-page-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes marketing-page-enter { from { opacity: 0; } to { opacity: 1; } }
 @keyframes marketing-scrim-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes marketing-guide-in { from { opacity: 0; transform: translateY(20px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes marketing-orbit-spin { to { transform: rotate(360deg); } }
