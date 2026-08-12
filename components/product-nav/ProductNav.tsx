@@ -13,6 +13,14 @@ const groups = [
     ],
   },
   {
+    label: "Build",
+    items: [
+      ["Agents", "/studio/agents"],
+      ["Templates", "/studio/templates"],
+      ["Company Builder", "/studio/builder"],
+    ],
+  },
+  {
     label: "Govern",
     items: [
       ["Ideas", "/ideas"],
@@ -39,7 +47,7 @@ function active(pathname: string, href: string) {
 
 export default function ProductNav() {
   const pathname = usePathname();
-  if (!pathname || pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname.startsWith("/setup/")) return null;
+  if (!pathname || pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname.startsWith("/setup/") || pathname.startsWith("/forgot-password") || pathname.startsWith("/reset-password") || pathname.startsWith("/auth/")) return null;
 
   return (
     <nav className="product-nav" aria-label="RYTHM primary navigation">
