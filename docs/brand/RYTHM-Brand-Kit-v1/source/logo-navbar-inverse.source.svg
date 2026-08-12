@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 104" role="img" aria-label="RYTHM Company OS logo">
+  <title>RYTHM Company OS</title>
+  <metadata>RYTHM Company OS Brand Identity System v1.0 - August 2026</metadata>
+  <g transform="translate(10 10) scale(0.34)">
+    <rect x="16" y="16" width="56" height="56" rx="2" fill="#FFFFFF"/>
+    <rect x="16" y="88" width="56" height="56" rx="2" fill="#FFFFFF"/>
+    <rect x="16" y="160" width="56" height="56" rx="2" fill="#FFFFFF"/>
+    <path fill="#FFFFFF" d="M84 16h64c46 0 76 25 76 64s-30 64-76 64v-48c18 0 28-6 28-16s-10-16-28-16H84V16Z"/>
+    <rect x="84" y="88" width="56" height="56" rx="2" fill="#4BC6D8"/>
+    <path fill="#FFFFFF" d="M84 160h59l81 80h-66l-74-73v-7Z"/>
+  </g>
+  <text x="112" y="53" fill="#FFFFFF" font-family="URW Gothic" font-size="44" font-weight="600" letter-spacing="3">RYTHM</text>
+  <text x="114" y="78" fill="#AAB3C5" font-family="Nimbus Sans" font-size="13" font-weight="700" letter-spacing="5">COMPANY OS</text>
+</svg>

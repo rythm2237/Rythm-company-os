@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import RythmBrandLogo from "@/components/brand/RythmBrandLogo";
+import RythmBrandMark from "@/components/brand/RythmBrandMark";
 import { PUBLIC_NAVIGATION } from "@/lib/public-experience/content";
 
 const GUIDE_STORAGE_KEY = "rythm-public-guide-v2";
@@ -168,8 +170,7 @@ export default function PublicShell({ children }: PublicShellProps) {
       <aside className="marketing-sidebar" data-guide-id="nav-overview" id="public-navigation">
         <div className="marketing-sidebar-topline">
           <Link className="marketing-brand" href="/" aria-label="RYTHM home">
-            <span aria-hidden="true">R</span>
-            <span className="marketing-brand-wordmark"><strong>RYTHM</strong><small>Company OS</small></span>
+            <RythmBrandLogo priority variant="inverse" />
           </Link>
           <button className="marketing-sidebar-close" type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation">×</button>
         </div>
@@ -213,7 +214,7 @@ export default function PublicShell({ children }: PublicShellProps) {
 
       <div className="marketing-stage">
         <header className="marketing-mobile-header">
-          <Link className="marketing-brand" href="/" aria-label="RYTHM home"><span aria-hidden="true">R</span><strong>RYTHM</strong></Link>
+          <Link className="marketing-brand" href="/" aria-label="RYTHM home"><RythmBrandLogo variant="primary" /></Link>
           <div>
             <Link href="/login">Sign in</Link>
             <button type="button" aria-expanded={mobileOpen} aria-controls="public-navigation" onClick={() => setMobileOpen(true)}>
@@ -224,7 +225,7 @@ export default function PublicShell({ children }: PublicShellProps) {
 
         <div className="marketing-page-transition" key={pathname}>{children}</div>
         <footer className="marketing-footer">
-          <div><strong>RYTHM</strong><p>Governed AI companies under Human CEO authority.</p></div>
+          <div><RythmBrandLogo variant="primary" /><p>Governed AI companies under Human CEO authority.</p></div>
           <div><Link href="/product">Product</Link><Link href="/demo">Demo</Link><Link href="/templates">Templates</Link><Link href="/pricing">Pricing</Link><Link href="/enterprise">Enterprise Beta</Link><Link href="/login">Customer sign in</Link></div>
         </footer>
       </div>
@@ -242,7 +243,7 @@ export default function PublicShell({ children }: PublicShellProps) {
           >
             {!guideStarted ? (
               <>
-                <div className="marketing-guide-orbit" aria-hidden="true"><span>R</span><i /><i /></div>
+                <div className="marketing-guide-orbit" aria-hidden="true"><span><RythmBrandMark variant="inverse" /></span><i /><i /></div>
                 <p className="marketing-kicker">OPTIONAL · ABOUT 60 SECONDS</p>
                 <h2 id="marketing-guide-title">Want a quick tour of RYTHM?</h2>
                 <p>We will show you where to experience the product, understand the options, and begin when you are ready.</p>

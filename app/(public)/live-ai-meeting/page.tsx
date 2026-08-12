@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { createPublicMetadata } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Live AI Meeting",
-  description: "Try RYTHM with your own business problem in a bounded, governed AI and human meeting experience.",
-};
+export const metadata: Metadata = createPublicMetadata("/live-ai-meeting");
 
 const ROLES = ["CEO Advisor", "Strategy Advisor", "Operations Manager", "Finance Analyst", "Marketing Strategist", "Research Analyst", "Process Specialist"];
 
@@ -21,4 +19,3 @@ export default function LiveAiMeetingPage() {
     </main>
   );
 }
-

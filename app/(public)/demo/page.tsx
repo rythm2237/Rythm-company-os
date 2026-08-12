@@ -2,11 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import DemoWorkspace from "../_components/DemoWorkspace";
 import { NOVA_COMMERCE_DEMO, type DemoSurfaceId } from "@/lib/demo/nova-commerce";
+import { createPublicMetadata } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Interactive Demo",
-  description: "Explore Nova Commerce, a synthetic read-only RYTHM Company OS workspace with governed AI Agents, projects, meetings, decisions, and traceability.",
-};
+export const metadata: Metadata = createPublicMetadata("/demo");
 
 type Props = { searchParams: Promise<{ surface?: string }> };
 
@@ -36,4 +34,3 @@ export default async function DemoPage({ searchParams }: Props) {
     </main>
   );
 }
-

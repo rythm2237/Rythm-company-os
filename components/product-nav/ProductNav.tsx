@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { switchOrganization } from "@/app/organization-context/actions";
+import RythmBrandLogo from "@/components/brand/RythmBrandLogo";
 import { logout } from "@/components/app-shell/actions";
 
 const groups = [
@@ -104,8 +105,7 @@ export default function ProductNav({ access, organization }: Props) {
         <div className="product-nav-inner">
           <div className="product-nav-topline">
             <Link className="product-brand" href="/command-center" aria-label="RYTHM Command Center">
-              <span className="product-brand-mark" aria-hidden="true">R</span>
-              <span className="product-brand-wordmark"><strong>RYTHM</strong><small>Company OS</small></span>
+              <RythmBrandLogo priority variant="inverse" />
             </Link>
             <button className="product-nav-close" type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation">×</button>
           </div>
@@ -176,7 +176,7 @@ export default function ProductNav({ access, organization }: Props) {
 
       <header className="app-mobile-header">
         <Link className="product-brand" href="/command-center" aria-label="RYTHM Command Center">
-          <span className="product-brand-mark" aria-hidden="true">R</span><strong>RYTHM</strong>
+          <RythmBrandLogo variant="primary" />
         </Link>
         <button type="button" aria-expanded={mobileOpen} aria-controls="workspace-navigation" onClick={() => setMobileOpen(true)}>
           <span>Menu</span><i aria-hidden="true" /><i aria-hidden="true" />

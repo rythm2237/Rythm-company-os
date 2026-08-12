@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ProductStructuredData from "@/components/brand/ProductStructuredData";
+import { createPublicMetadata } from "@/lib/seo/site";
 import ProductTourShelf from "../_components/ProductTourShelf";
 
-export const metadata: Metadata = {
-  title: "Product",
-  description: "See how RYTHM connects a governed AI workforce, Company Memory, meetings, decisions, approvals, actions, and traceability.",
-};
+export const metadata: Metadata = createPublicMetadata("/product");
 
 const OPERATING_SYSTEM = [
   { step: "01", title: "Intent", detail: "Ideas, objectives, issues, and company context enter with a clear human owner." },
@@ -17,7 +16,9 @@ const OPERATING_SYSTEM = [
 
 export default function ProductPage() {
   return (
-    <main>
+    <>
+      <ProductStructuredData />
+      <main>
       <section className="public-page-hero product-page-hero">
         <div>
           <p className="marketing-kicker">THE GOVERNED COMPANY OPERATING SYSTEM</p>
@@ -67,7 +68,7 @@ export default function ProductPage() {
         <h2>Explore the operating environment, then compare the right company model.</h2>
         <div className="hero-actions"><Link className="marketing-button" href="/demo">Explore Nova Commerce</Link><Link href="/pricing">Compare products</Link></div>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
-

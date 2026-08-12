@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCommercialCatalog } from "@/lib/commercial/catalog";
+import { createPublicMetadata } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Enterprise AI Workforce",
-  description: "Plan a governed AI workforce deployment across departments, human managers, AI roles, knowledge boundaries, and executive oversight.",
-};
+export const metadata: Metadata = createPublicMetadata("/enterprise");
 
 type Props = { searchParams: Promise<{ offer?: string }> };
 
@@ -42,4 +40,3 @@ export default async function EnterprisePage({ searchParams }: Props) {
     </main>
   );
 }
-

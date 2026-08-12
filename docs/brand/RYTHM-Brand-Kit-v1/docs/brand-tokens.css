@@ -1,0 +1,13 @@
+:root {
+  --rythm-authority-navy: #0b1220;
+  --rythm-governance-indigo: #6472e8;
+  --rythm-decision-cyan: #4bc6d8;
+  --rythm-system-cloud: #f5f7fb;
+  --rythm-operational-slate: #667085;
+  --rythm-system-border: #d9dfea;
+  --rythm-success: #2fb878;
+  --rythm-attention: #e2a13d;
+
+  --rythm-font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --rythm-font-technical: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+}
