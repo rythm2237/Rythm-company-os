@@ -269,8 +269,8 @@
 .demo-page-intro > div:last-child > p { color: var(--mk-muted); font-size: 1.05rem; line-height: 1.7; }
 .demo-safety { display: flex; flex-wrap: wrap; gap: 7px; }
 .demo-safety span { padding: 7px 9px; border: 1px solid var(--mk-border); border-radius: 999px; color: #606b80; background: rgba(255,255,255,.75); font-size: .7rem; font-weight: 800; }
-.demo-workspace { max-width: 1500px; margin: 0 auto; border: 1px solid #cfd6e3; border-radius: 26px; overflow: hidden; background: #fff; box-shadow: 0 40px 100px rgba(17,24,39,.14); }
-.demo-topbar { min-height: 86px; padding: 16px 22px; display: flex; justify-content: space-between; gap: 20px; align-items: center; border-bottom: 1px solid #dfe4ed; background: rgba(255,255,255,.96); }
+.demo-workspace { max-width: 1500px; margin: 0 auto; border: 1px solid #cfd6e3; border-radius: 26px; background: #fff; box-shadow: 0 40px 100px rgba(17,24,39,.14); }
+.demo-topbar { min-height: 86px; padding: 16px 22px; display: flex; justify-content: space-between; gap: 20px; align-items: center; border-bottom: 1px solid #dfe4ed; border-radius: 26px 26px 0 0; background: rgba(255,255,255,.96); }
 .demo-org-title { margin-top: 7px; display: flex; align-items: center; gap: 10px; }
 .demo-org-title > div { display: grid; gap: 2px; }
 .demo-org-title small { color: #7b8496; font-size: .7rem; }
@@ -281,13 +281,13 @@
 .demo-boundary button, .demo-navigation button, .demo-agent-grid button, .demo-panel-close { font: inherit; }
 .demo-boundary button { padding: 9px 11px; border: 1px solid #d9deE8; border-radius: 9px; color: #3d485e; background: #fff; cursor: pointer; font-size: .75rem; font-weight: 800; }
 .demo-frame { position: relative; min-height: 760px; display: grid; grid-template-columns: 220px minmax(0,1fr); background: #f4f6f9; }
-.demo-navigation { padding: 22px 14px; display: block !important; border-right: 1px solid rgba(255,255,255,.08); background: #111827; }
+.demo-navigation { padding: 22px 14px; display: block !important; border-right: 1px solid rgba(255,255,255,.08); border-radius: 0 0 0 26px; background: #111827; }
 .demo-navigation-group { margin-bottom: 20px; display: grid; gap: 3px; }
 .demo-navigation-group > span { margin: 0 10px 7px; color: #77839a; font-size: .63rem; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
 .demo-navigation button { width: 100%; padding: 10px; border: 0; border-radius: 9px; color: #aeb8cc; background: transparent; cursor: pointer; text-align: left; font-size: .78rem; font-weight: 750; }
 .demo-navigation button:hover { color: #fff; background: rgba(255,255,255,.06); }
 .demo-navigation button.is-active { color: #fff; background: #33405c; box-shadow: inset 3px 0 #94a3ff; }
-.demo-main { min-width: 0; padding: 40px; }
+.demo-main { min-width: 0; padding: 40px; border-radius: 0 0 26px 0; overflow: hidden; }
 .demo-main-heading { display: flex; justify-content: space-between; gap: 28px; align-items: flex-start; }
 .demo-main-heading h2 { max-width: 850px; margin: 10px 0 12px; font-size: clamp(2rem,3.8vw,4rem); line-height: .98; letter-spacing: -.055em; }
 .demo-main-heading > div > p:last-child { max-width: 780px; color: #687286; line-height: 1.6; }
@@ -361,10 +361,11 @@
   .meeting-roles-section { grid-template-columns: 1fr; margin-left: 24px; margin-right: 24px; }
   .demo-workspace { margin-left: 18px; margin-right: 18px; }
   .demo-frame { grid-template-columns: 1fr; }
-  .demo-navigation { padding: 12px; display: flex !important; gap: 8px; overflow-x: auto; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .demo-navigation { padding: 12px; display: flex !important; gap: 8px; overflow-x: auto; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.08); border-radius: 0; }
   .demo-navigation-group { min-width: 160px; margin: 0; }
   .demo-metric-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .demo-conversion-section { margin-left: 24px; margin-right: 24px; }
+  .demo-main { border-radius: 0 0 26px 26px; }
 }
 
 @media (max-width: 760px) {
