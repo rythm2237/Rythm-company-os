@@ -605,6 +605,8 @@
 .hero-system-card > footer i { height: 1px; background: linear-gradient(90deg, #5362d4, rgba(75,198,216,.5)); }
 
 .experience-entry-section { max-width: 1450px; margin: -18px auto 70px; }
+.demo-page-intro { padding-top: clamp(58px, 6vw, 78px); padding-bottom: clamp(38px, 4vw, 52px); }
+.demo-page-intro h1 { font-size: clamp(3.25rem, 5.4vw, 5.8rem); }
 .public-page-hero { max-width: 1500px; padding: clamp(70px, 8vw, 120px) clamp(32px, 5vw, 76px) clamp(54px, 6vw, 90px); gap: clamp(42px, 6vw, 90px); }
 .public-page-hero h1 { font-size: clamp(3.25rem, 5.6vw, 6.4rem); text-wrap: balance; }
 .marketing-section { max-width: 1500px; padding-right: clamp(30px, 5vw, 76px); padding-left: clamp(30px, 5vw, 76px); }
@@ -721,7 +723,7 @@
   .marketing-sidebar .marketing-brand-wordmark strong { display: block; }
   .marketing-hero, .marketing-section { padding: 50px 20px; }
   .marketing-hero { gap: 38px; }
-  .hero-copy h1, .marketing-section-heading h1 { margin-top: 12px; font-size: clamp(2.8rem, 13.8vw, 4.55rem); line-height: .92; }
+  .hero-copy h1, .marketing-section-heading h1 { margin-top: 12px; font-size: clamp(2.5rem, 11.5vw, 4.2rem); line-height: .92; }
   .hero-copy > p:not(.marketing-kicker) { font-size: .96rem; line-height: 1.58; }
   .trust-row { display: grid; justify-items: start; }
   .hero-system-card { padding: 18px; border-radius: 21px; }
