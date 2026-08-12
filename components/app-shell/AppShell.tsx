@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import DecisionDraftGuard from "@/components/decision-draft-guard/DecisionDraftGuard";
-import OrganizationSwitcher from "@/components/organization-switcher/OrganizationSwitcher";
 import ProductNav from "@/components/product-nav/ProductNav";
 import ProjectPulse from "@/components/project-pulse/ProjectPulse";
 import {
@@ -65,28 +64,27 @@ export default async function AppShell({ children }: Readonly<{ children: React.
     companyBuilder: Boolean(commercialAccess && organizationContext?.entitlement?.company_builder_enabled),
   };
 
+  const organizationNavigation = organizationContext ? {
+    activeOrganizationId: organizationContext.organizationId,
+    activeOrganizationName: organizationContext.organization.name,
+    activeRole: organizationContext.role,
+    productCode: organizationContext.entitlement?.product_code,
+    entitlementStatus: organizationContext.entitlement?.status,
+    organizations: organizationContext.memberships.map((membership) => ({
+      id: membership.organization_id,
+      name: membership.organization.name,
+      role: membership.role,
+    })),
+  } : null;
+
   return (
-    <>
-      <ProductNav access={navigationAccess} />
-      {organizationContext ? (
-        <OrganizationSwitcher
-          activeOrganizationId={organizationContext.organizationId}
-          activeOrganizationName={organizationContext.organization.name}
-          activeRole={organizationContext.role}
-          productCode={organizationContext.entitlement?.product_code}
-          entitlementStatus={organizationContext.entitlement?.status}
-          organizations={organizationContext.memberships.map((membership) => ({
-            id: membership.organization_id,
-            name: membership.organization.name,
-            role: membership.role,
-          }))}
-        />
-      ) : null}
+    <div className="app-workspace">
+      <ProductNav access={navigationAccess} organization={organizationNavigation} />
       <Suspense fallback={null}><DecisionDraftGuard /></Suspense>
-      {children}
+      <div className="app-stage"><div className="app-page-transition">{children}</div></div>
       <Suspense fallback={null}>
         <ProjectPulse event={pulseEvent} nodes={pulseNodes} project={pulseProject} />
       </Suspense>
-    </>
+    </div>
   );
 }

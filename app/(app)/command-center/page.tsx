@@ -206,7 +206,6 @@ export default async function CommandCenterPage({ searchParams }: CommandCenterP
           <h1>Human CEO control plane</h1>
           <p className="subtitle">Authenticated as {user.email}. Consequential authority remains under your control.</p>
         </div>
-        <form action={logout}><button className="secondary-button" type="submit">Sign out</button></form>
       </header>
 
       <section className="organization-banner">
