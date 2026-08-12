@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { updateAgent } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -16,9 +16,20 @@ type DepartmentRow = { id:string; name:string };
 type ManagerRow = { id:string; name:string; role_title:string; agent_status:string };
 
 export default async function AgentEditPage({ params, searchParams }: PageProps) {
-  const context = await requireOwnerOrganizationContext();
+  const context = await requireActiveOwnerOrganizationContext();
   const { id } = await params;
   const query = await searchParams;
+
+  if (!context.entitlement.agent_builder_enabled) {
+    return (
+      <main className="page-shell"><section className="panel">
+        <p className="eyebrow">RYTHM COMPANY STUDIO</p>
+        <h1>Agent Studio</h1>
+        <p>Agent Builder is not enabled for this organization&apos;s entitlement.</p>
+        <Link href="/command-center">Return to Command Center</Link>
+      </section></main>
+    );
+  }
 
   const [{ data: agentData }, { data: departmentData }, { data: managerData }] = await Promise.all([
     context.supabase.from("agents").select("id,name,role_title,purpose,department_id,reports_to_agent_id,authority_level,risk_ceiling,language,responsibilities,skills,kpis,human_approval_requirements,allowed_tools,agent_status,external_actions_allowed").eq("id", id).eq("organization_id", context.organizationId).maybeSingle(),

@@ -4,13 +4,23 @@ import { provisionCompany } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: Promise<{ error?: string }> };
+type Props = { searchParams: Promise<{ error?: string; product?: string }> };
+
+const selfServeProducts = new Set(["ready_company", "company_studio"]);
 
 export default async function CompanySetupPage({ searchParams }: Props) {
   const params = await searchParams;
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/setup/company");
+
+  const metadataProduct = typeof user.user_metadata?.selected_product_code === "string"
+    ? user.user_metadata.selected_product_code
+    : "";
+  const requestedProduct = params.product ?? metadataProduct;
+  const selectedProduct = selfServeProducts.has(requestedProduct)
+    ? requestedProduct
+    : "company_studio";
 
   const { data: memberships } = await supabase
     .from("organization_members")
@@ -32,10 +42,9 @@ export default async function CompanySetupPage({ searchParams }: Props) {
         <form action={provisionCompany} className="auth-form">
           <label>Company name<input name="companyName" required minLength={2} maxLength={120} autoComplete="organization"/></label>
           <label>Product
-            <select name="productCode" defaultValue="company_studio">
-              <option value="ready_company">RYTHM Ready Company — €249/month + AI usage</option>
-              <option value="custom_company">RYTHM Custom Company — from €2,500 setup + €399/month + AI usage</option>
-              <option value="company_studio">RYTHM Company Studio — €699/month + AI usage</option>
+            <select name="productCode" defaultValue={selectedProduct}>
+              <option value="ready_company">Ready AI Company — €249/month + AI usage</option>
+              <option value="company_studio">Custom AI Company with Company Studio — €699/month + AI usage</option>
             </select>
           </label>
           <button type="submit">Provision company workspace</button>

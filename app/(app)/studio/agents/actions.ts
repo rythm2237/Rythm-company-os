@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 
 function list(value: FormDataEntryValue | null) {
   return String(value ?? "")
@@ -13,12 +13,12 @@ function list(value: FormDataEntryValue | null) {
 
 function safeError(error: unknown) {
   const message = error instanceof Error ? error.message : "The Agent request could not be completed.";
-  if (/not enabled|limit reached|owner authority|invalid|cannot|not found/i.test(message)) return message;
+  if (/not active|not enabled|limit reached|owner authority|invalid|cannot|not found/i.test(message)) return message;
   return "The Agent request could not be completed. Refresh and retry.";
 }
 
 export async function createAgent(formData: FormData) {
-  const context = await requireOwnerOrganizationContext();
+  const context = await requireActiveOwnerOrganizationContext();
   const { error } = await context.supabase.rpc("create_agent_v1", {
     target_org_id: context.organizationId,
     target_name: String(formData.get("name") ?? ""),
@@ -42,7 +42,7 @@ export async function createAgent(formData: FormData) {
 }
 
 export async function updateAgent(formData: FormData) {
-  const context = await requireOwnerOrganizationContext();
+  const context = await requireActiveOwnerOrganizationContext();
   const agentId = String(formData.get("agentId") ?? "");
   const { error } = await context.supabase.rpc("update_agent_v1", {
     target_agent_id: agentId,
@@ -68,10 +68,9 @@ export async function updateAgent(formData: FormData) {
 }
 
 export async function setAgentStatus(formData: FormData) {
-  await requireOwnerOrganizationContext();
   const agentId = String(formData.get("agentId") ?? "");
   const status = String(formData.get("status") ?? "paused");
-  const context = await requireOwnerOrganizationContext();
+  const context = await requireActiveOwnerOrganizationContext();
   const { error } = await context.supabase.rpc("set_agent_status_v1", {
     target_agent_id: agentId,
     target_status: status,
@@ -83,7 +82,7 @@ export async function setAgentStatus(formData: FormData) {
 }
 
 export async function cloneAgent(formData: FormData) {
-  const context = await requireOwnerOrganizationContext();
+  const context = await requireActiveOwnerOrganizationContext();
   const agentId = String(formData.get("agentId") ?? "");
   const { error } = await context.supabase.rpc("clone_agent_v1", { target_agent_id: agentId });
   if (error) redirect(`/studio/agents?error=${encodeURIComponent(safeError(error))}`);

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
 export const ACTIVE_ORGANIZATION_COOKIE = "rythm_active_org";
@@ -31,6 +32,8 @@ export type OrganizationEntitlement = {
   product_code: "ready_company" | "custom_company" | "company_studio";
   plan_code: string;
   status: string;
+  starts_at: string | null;
+  ends_at: string | null;
   ai_budget_limit: number;
   company_template_access: boolean;
   company_builder_enabled: boolean;
@@ -45,6 +48,19 @@ export type OrganizationEntitlement = {
   max_projects: number;
   support_tier: string;
 };
+
+export function isOrganizationEntitlementActive(
+  entitlement: OrganizationEntitlement | null | undefined,
+  now = new Date(),
+) {
+  if (!entitlement || entitlement.status !== "active") return false;
+
+  const startsAt = entitlement.starts_at ? new Date(entitlement.starts_at) : null;
+  const endsAt = entitlement.ends_at ? new Date(entitlement.ends_at) : null;
+  if (startsAt && Number.isFinite(startsAt.valueOf()) && startsAt > now) return false;
+  if (endsAt && Number.isFinite(endsAt.valueOf()) && endsAt <= now) return false;
+  return true;
+}
 
 export type OrganizationContext = {
   supabase: Awaited<ReturnType<typeof createAuthServerClient>>;
@@ -86,7 +102,7 @@ async function legacyMembershipFallback(
     .filter((value): value is MembershipRow & { organization: OrganizationRow; isActive: boolean } => Boolean(value));
 }
 
-export async function resolveOrganizationContext(): Promise<OrganizationContext | null> {
+async function resolveOrganizationContextUncached(): Promise<OrganizationContext | null> {
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -122,7 +138,9 @@ export async function resolveOrganizationContext(): Promise<OrganizationContext 
     memberships[0];
 
   const { data: entitlementData, error: entitlementError } = await supabase
-    .rpc("resolve_organization_entitlement", { target_org_id: selectedMembership.organization_id })
+    .from("organization_entitlements")
+    .select("organization_id,product_code,plan_code,status,starts_at,ends_at,ai_budget_limit,company_template_access,company_builder_enabled,agent_builder_enabled,agent_create_enabled,agent_clone_enabled,agent_archive_enabled,agent_structure_edit_enabled,workflow_edit_enabled,max_active_agents,max_departments,max_projects,support_tier")
+    .eq("organization_id", selectedMembership.organization_id)
     .maybeSingle();
 
   if (entitlementError && !organizationListError) {
@@ -140,6 +158,8 @@ export async function resolveOrganizationContext(): Promise<OrganizationContext 
   };
 }
 
+export const resolveOrganizationContext = cache(resolveOrganizationContextUncached);
+
 export async function requireOrganizationContext(): Promise<OrganizationContext> {
   const context = await resolveOrganizationContext();
   if (!context) redirect("/setup/company");
@@ -151,4 +171,14 @@ export async function requireOwnerOrganizationContext(): Promise<OrganizationCon
   if (!context) redirect("/setup/company");
   if (context.role !== "owner") redirect("/command-center?error=Owner%20authorization%20required.");
   return context;
+}
+
+export async function requireActiveOwnerOrganizationContext(): Promise<
+  OrganizationContext & { entitlement: OrganizationEntitlement }
+> {
+  const context = await requireOwnerOrganizationContext();
+  if (!isOrganizationEntitlementActive(context.entitlement)) {
+    redirect("/activation?reason=entitlement_inactive");
+  }
+  return context as OrganizationContext & { entitlement: OrganizationEntitlement };
 }

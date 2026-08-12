@@ -39,15 +39,38 @@ const groups = [
   },
 ] as const;
 
+type Props = {
+  access: {
+    active: boolean;
+    agentStudio: boolean;
+    templates: boolean;
+    companyBuilder: boolean;
+  };
+};
+
 function active(pathname: string, href: string) {
   if (href === "/command-center") return pathname === href;
   if (href === "/projects") return pathname === "/projects" || pathname.startsWith("/projects/");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export default function ProductNav() {
+function canShowItem(href: string, access: Props["access"]) {
+  if (href === "/studio/agents") return access.agentStudio;
+  if (href === "/studio/templates") return access.templates;
+  if (href === "/studio/builder") return access.companyBuilder;
+  return true;
+}
+
+export default function ProductNav({ access }: Props) {
   const pathname = usePathname();
-  if (!pathname || pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname.startsWith("/setup/") || pathname.startsWith("/forgot-password") || pathname.startsWith("/reset-password") || pathname.startsWith("/auth/")) return null;
+  if (!pathname) return null;
+
+  const visibleGroups = groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(([, href]) => canShowItem(href, access)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <nav className="product-nav" aria-label="RYTHM primary navigation">
@@ -58,7 +81,7 @@ export default function ProductNav() {
         </Link>
 
         <div className="product-nav-groups">
-          {groups.map((group) => (
+          {visibleGroups.map((group) => (
             <div className="product-nav-group" key={group.label}>
               <span className="product-nav-label">{group.label}</span>
               <div className="product-nav-links">
@@ -77,7 +100,12 @@ export default function ProductNav() {
           ))}
         </div>
 
-        <Link className="product-onboarding-link" href="/onboarding">MVP Guide</Link>
+        <Link
+          className="product-onboarding-link"
+          href={access.active ? "/onboarding" : "/activation"}
+        >
+          {access.active ? "MVP Guide" : "Activation"}
+        </Link>
       </div>
     </nav>
   );

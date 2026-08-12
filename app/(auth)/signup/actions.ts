@@ -31,6 +31,8 @@ export async function signup(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
   const fullName = String(formData.get("fullName") ?? "").trim();
+  const requestedProduct = String(formData.get("productCode") ?? "company_studio");
+  const productCode = requestedProduct === "ready_company" ? "ready_company" : "company_studio";
 
   if (!email || !password || fullName.length < 2) {
     redirect(`/signup?error=${encodeURIComponent("Name, email, and password are required.")}`);
@@ -51,7 +53,7 @@ export async function signup(formData: FormData) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName } },
+    options: { data: { full_name: fullName, selected_product_code: productCode } },
   });
 
   if (error) {
@@ -70,7 +72,7 @@ export async function signup(formData: FormData) {
       onboarding_status: "company_pending",
       updated_at: new Date().toISOString(),
     });
-    redirect("/setup/company");
+    redirect(`/setup/company?product=${encodeURIComponent(productCode)}`);
   }
 
   redirect(`/login?message=${encodeURIComponent("Account created. Confirm your email if required, then sign in to provision your company.")}`);

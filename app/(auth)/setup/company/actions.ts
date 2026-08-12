@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/lib/auth/organization-context";
 
-const productCodes = new Set(["ready_company", "custom_company", "company_studio"]);
+const productCodes = new Set(["ready_company", "company_studio"]);
 
 export async function provisionCompany(formData: FormData) {
   const companyName = String(formData.get("companyName") ?? "").trim();

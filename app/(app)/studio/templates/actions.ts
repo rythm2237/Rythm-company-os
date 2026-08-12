@@ -1,14 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 
 export async function provisionCompanyTemplate(formData: FormData) {
-  const context = await requireOwnerOrganizationContext();
+  const context = await requireActiveOwnerOrganizationContext();
   const templateKey = String(formData.get("templateKey") ?? "").trim();
   const templateVersion = String(formData.get("templateVersion") ?? "1.0").trim();
 
-  if (!context.entitlement?.company_template_access) {
+  if (!context.entitlement.company_template_access) {
     redirect("/studio/templates?error=Company%20Template%20Library%20is%20not%20enabled%20for%20this%20organization.");
   }
 

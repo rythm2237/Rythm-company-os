@@ -4,10 +4,15 @@ import { signup, signOutForSignup } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: Promise<{ error?: string }> };
+type Props = { searchParams: Promise<{ error?: string; product?: string }> };
+
+const selfServeProducts = new Set(["ready_company", "company_studio"]);
 
 export default async function SignupPage({ searchParams }: Props) {
   const params = await searchParams;
+  const selectedProduct = selfServeProducts.has(params.product ?? "")
+    ? params.product
+    : "company_studio";
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -34,6 +39,7 @@ export default async function SignupPage({ searchParams }: Props) {
           </div>
         ) : (
           <form action={signup} className="auth-form">
+            <input type="hidden" name="productCode" value={selectedProduct} />
             <label>Full name<input name="fullName" autoComplete="name" required minLength={2} maxLength={120}/></label>
             <label>Work email<input name="email" type="email" autoComplete="email" required/></label>
             <label>Password<input name="password" type="password" autoComplete="new-password" required minLength={8}/></label>

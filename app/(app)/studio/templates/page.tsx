@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { provisionCompanyTemplate } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -25,10 +25,10 @@ type CompanyTemplateRow = {
 };
 
 export default async function CompanyTemplateLibraryPage({ searchParams }: TemplatePageProps) {
-  const context = await requireOwnerOrganizationContext();
+  const context = await requireActiveOwnerOrganizationContext();
   const params = await searchParams;
 
-  if (!context.entitlement?.company_template_access) {
+  if (!context.entitlement.company_template_access) {
     return (
       <main className="page-shell">
         <section className="panel">
