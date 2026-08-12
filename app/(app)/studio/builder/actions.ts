@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 
 type ProposedDepartment = {
   key: string;
@@ -97,10 +97,10 @@ function createProposal(companyType: string, services: string[], capabilities: s
 }
 
 export async function createCompanyBuilderDraft(formData: FormData) {
-  const context = await requireOwnerOrganizationContext();
+  const context = await requireActiveOwnerOrganizationContext();
   const entitlement = context.entitlement;
 
-  if (!entitlement?.company_builder_enabled) {
+  if (!entitlement.company_builder_enabled) {
     redirect("/studio/builder?error=Company%20Builder%20is%20not%20enabled%20for%20this%20organization.");
   }
 
@@ -147,7 +147,7 @@ export async function createCompanyBuilderDraft(formData: FormData) {
 }
 
 export async function buildCompanyFromDraft(formData: FormData) {
-  const context = await requireOwnerOrganizationContext();
+  const context = await requireActiveOwnerOrganizationContext();
   const draftId = String(formData.get("draftId") ?? "").trim();
 
   if (!draftId) redirect("/studio/builder?error=Builder%20draft%20is%20required.");

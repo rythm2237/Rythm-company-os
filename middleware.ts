@@ -25,6 +25,36 @@ const INTERNAL_ERROR_PATTERNS = [
 const SAFE_OPERATIONAL_ERROR =
   "The request could not be completed. Refresh and retry. If the problem persists, check Operations Health.";
 
+const PROTECTED_ROUTE_PREFIXES = [
+  "/actions",
+  "/activation",
+  "/agents",
+  "/approvals",
+  "/attention",
+  "/command-center",
+  "/decisions",
+  "/executive-review",
+  "/ideas",
+  "/meetings",
+  "/onboarding",
+  "/operations",
+  "/orchestrator",
+  "/projects",
+  "/readiness",
+  "/runtime",
+  "/setup/company",
+  "/studio",
+  "/workflow",
+] as const;
+
+function routeMatches(pathname: string, prefix: string) {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function isProtectedRoute(pathname: string) {
+  return PROTECTED_ROUTE_PREFIXES.some((prefix) => routeMatches(pathname, prefix));
+}
+
 function sanitizeInternalError(request: NextRequest) {
   const rawError = request.nextUrl.searchParams.get("error");
   if (!rawError) return null;
@@ -47,8 +77,21 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const isProtected = isProtectedRoute(request.nextUrl.pathname);
+  const isLogin = request.nextUrl.pathname === "/login";
 
-  if (!url || !publishableKey) return response;
+  if (!url || !publishableKey) {
+    if (!isProtected) return response;
+
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.searchParams.set("error", "Authentication service is not configured in this environment.");
+    loginUrl.searchParams.set(
+      "next",
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    );
+    return NextResponse.redirect(loginUrl);
+  }
 
   const supabase = createServerClient(url, publishableKey, {
     cookies: {
@@ -69,13 +112,13 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isProtected = request.nextUrl.pathname.startsWith("/command-center");
-  const isLogin = request.nextUrl.pathname === "/login";
-
   if (isProtected && !user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("next", request.nextUrl.pathname);
+    loginUrl.searchParams.set(
+      "next",
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    );
     return NextResponse.redirect(loginUrl);
   }
 
@@ -92,6 +135,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/login",
+    "/activation/:path*",
     "/command-center/:path*",
     "/decisions/:path*",
     "/approvals/:path*",
@@ -103,5 +147,12 @@ export const config = {
     "/attention/:path*",
     "/executive-review/:path*",
     "/operations/:path*",
+    "/agents/:path*",
+    "/onboarding/:path*",
+    "/orchestrator/:path*",
+    "/readiness/:path*",
+    "/runtime/:path*",
+    "/setup/company/:path*",
+    "/studio/:path*",
   ],
 };

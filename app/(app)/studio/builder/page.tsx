@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { buildCompanyFromDraft, createCompanyBuilderDraft } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -26,10 +26,10 @@ type DraftRow = {
 };
 
 export default async function CompanyBuilderPage({ searchParams }: BuilderPageProps) {
-  const context = await requireOwnerOrganizationContext();
+  const context = await requireActiveOwnerOrganizationContext();
   const params = await searchParams;
 
-  if (!context.entitlement?.company_builder_enabled) {
+  if (!context.entitlement.company_builder_enabled) {
     return (
       <main className="page-shell">
         <section className="panel">

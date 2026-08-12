@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { cloneAgent, createAgent, setAgentStatus } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -23,10 +23,10 @@ type DepartmentRow = { id: string; name: string };
 type PageProps = { searchParams: Promise<{ error?: string; message?: string }> };
 
 export default async function AgentStudioPage({ searchParams }: PageProps) {
-  const context = await requireOwnerOrganizationContext();
+  const context = await requireActiveOwnerOrganizationContext();
   const params = await searchParams;
 
-  if (!context.entitlement?.agent_builder_enabled) {
+  if (!context.entitlement.agent_builder_enabled) {
     return <main className="page-shell"><section className="panel"><p className="eyebrow">RYTHM COMPANY STUDIO</p><h1>Agent Studio</h1><p>Agent Builder is not enabled for this organization&apos;s entitlement.</p><Link href="/command-center">Return to Command Center</Link></section></main>;
   }
 
