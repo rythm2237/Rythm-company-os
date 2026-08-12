@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCommercialCatalog } from "@/lib/commercial/catalog";
+import ProductTourShelf from "./_components/ProductTourShelf";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +8,12 @@ export default async function HomePage() {
   const offers = await getCommercialCatalog();
   const primaryOffers = offers.filter((offer) => offer.category !== "service");
   const assistedBuild = offers.find((offer) => offer.offer_code === "assisted_build");
+
+  function discoveryHref(offerCode: string) {
+    if (offerCode === "ready_ai_company") return "/templates";
+    if (offerCode === "custom_ai_company") return "/product#custom-company";
+    return "/enterprise";
+  }
 
   return (
     <main>
@@ -19,8 +26,8 @@ export default async function HomePage() {
             decisions, approvals, actions, and traceability in one governed operating system.
           </p>
           <div className="hero-actions">
-            <Link className="marketing-button marketing-button-large" href="/signup?product=company_studio">Build your AI company</Link>
-            <Link className="marketing-text-link" href="/#how-it-works">See how RYTHM works</Link>
+            <Link className="marketing-button marketing-button-large" href="/product">Explore the Company OS</Link>
+            <Link className="marketing-text-link" href="/demo">Open the interactive Demo</Link>
           </div>
           <div className="trust-row" aria-label="RYTHM governance principles">
             <span>Human CEO authority</span><span>AI identity disclosed</span><span>External actions locked by default</span>
@@ -35,40 +42,19 @@ export default async function HomePage() {
         </aside>
       </section>
 
-      <section className="marketing-section" id="products">
-        <div className="marketing-section-heading">
-          <p className="marketing-kicker">CHOOSE YOUR PATH</p>
-          <h2>Start ready-made. Build your own. Scale with control.</h2>
-          <p>Every path runs on the same Human CEO governance foundation.</p>
-        </div>
-        <div className="offer-grid">
-          {primaryOffers.map((offer) => (
-            <article className="offer-card" key={offer.offer_code}>
-              <p className="offer-category">{offer.category}</p>
-              <h3>{offer.name}</h3>
-              <p className="offer-audience">{offer.audience}</p>
-              <p>{offer.summary}</p>
-              <strong className="offer-price">{offer.price_label}</strong>
-              <ul>{offer.features.map((feature) => <li key={feature}>{feature}</li>)}</ul>
-              <Link className="offer-link" href={offer.cta_href}>{offer.cta_label}</Link>
-            </article>
-          ))}
-        </div>
-        {assistedBuild ? (
-          <article className="assisted-strip">
-            <div><p className="marketing-kicker">OPTIONAL SERVICE</p><h3>{assistedBuild.name}</h3><p>{assistedBuild.summary}</p></div>
-            <div><strong>{assistedBuild.price_label}</strong><Link href={assistedBuild.cta_href}>{assistedBuild.cta_label}</Link></div>
-          </article>
-        ) : null}
+      <section className="experience-entry-section" aria-label="Ways to experience RYTHM">
+        <Link href="/demo"><span>INTERACTIVE DEMO</span><strong>Enter Nova Commerce</strong><small>Explore a synthetic Company OS workspace <i aria-hidden="true">→</i></small></Link>
+        <Link href="/product"><span>PRODUCT EXPLAINER</span><strong>Understand the operating loop</strong><small>Workforce, memory, meetings, governance <i aria-hidden="true">→</i></small></Link>
+        <Link href="/live-ai-meeting"><span>LIVE AI MEETING</span><strong>Try RYTHM with your problem</strong><small>Preview the governed Boardroom experience <i aria-hidden="true">→</i></small></Link>
       </section>
 
       <section className="marketing-section how-section" id="how-it-works">
-        <div className="marketing-section-heading"><p className="marketing-kicker">HOW IT WORKS</p><h2>From business intent to governed execution.</h2></div>
+        <div className="marketing-section-heading"><p className="marketing-kicker">HOW IT WORKS</p><h2>From business intent to governed execution.</h2><p>See the operating model before comparing commercial paths.</p></div>
         <div className="how-grid">
-          <article><span>01</span><h3>Choose or design</h3><p>Start with a Ready AI Company or define your own structure in Company Studio.</p></article>
-          <article><span>02</span><h3>Govern the workforce</h3><p>Set roles, authority, risk ceilings, approval rules, and budget boundaries.</p></article>
-          <article><span>03</span><h3>Run the operating loop</h3><p>Turn ideas into meetings, decisions, approvals, and accountable actions.</p></article>
-          <article><span>04</span><h3>Review every trace</h3><p>Keep the Human CEO in control with company context and auditable history.</p></article>
+          <article><span>01</span><h3>Give work organizational context</h3><p>Agents have roles, departments, managers, authority, risk, and explicit AI identity.</p></article>
+          <article><span>02</span><h3>Deliberate with evidence</h3><p>Humans and relevant AI specialists meet around an agenda, context, and decision boundary.</p></article>
+          <article><span>03</span><h3>Keep authority human</h3><p>Recommendations become consequential work only through the required approval path.</p></article>
+          <article><span>04</span><h3>Preserve the operating trace</h3><p>Intent, meetings, decisions, approvals, actions, and outcomes remain connected.</p></article>
         </div>
       </section>
 
@@ -82,11 +68,39 @@ export default async function HomePage() {
         </ul>
       </section>
 
+      <div className="marketing-section"><ProductTourShelf compact /></div>
+
+      <section className="marketing-section" id="products">
+        <div className="marketing-section-heading">
+          <p className="marketing-kicker">COMPARE AFTER YOU EXPLORE</p>
+          <h2>Three paths. One governed operating foundation.</h2>
+          <p>Start ready-made, design your own company, or plan an enterprise workforce deployment.</p>
+        </div>
+        <div className="offer-grid">
+          {primaryOffers.map((offer) => (
+            <article className="offer-card" key={offer.offer_code}>
+              <p className="offer-category">{offer.category}</p>
+              <h3>{offer.name}</h3>
+              <p className="offer-audience">{offer.audience}</p>
+              <p>{offer.summary}</p>
+              <ul>{offer.features.map((feature) => <li key={feature}>{feature}</li>)}</ul>
+              <Link className="offer-link" href={discoveryHref(offer.offer_code)}>Explore this path</Link>
+            </article>
+          ))}
+        </div>
+        {assistedBuild ? (
+          <article className="assisted-strip">
+            <div><p className="marketing-kicker">OPTIONAL SERVICE</p><h3>{assistedBuild.name}</h3><p>{assistedBuild.summary}</p></div>
+            <div><Link href="/enterprise?offer=assisted_build">Understand Assisted Build</Link></div>
+          </article>
+        ) : null}
+      </section>
+
       <section className="marketing-cta">
-        <p className="marketing-kicker">BUILD THE COMPANY AROUND YOUR IDEA</p>
-        <h2>Your first AI company can be ready before your first hire.</h2>
-        <p>Begin with a governed workspace. Commercial capabilities activate only after the selected entitlement is confirmed.</p>
-        <div className="hero-actions"><Link className="marketing-button marketing-button-large" href="/signup">Create your Human CEO account</Link><Link href="/pricing">Compare products</Link></div>
+        <p className="marketing-kicker">EXPERIENCE BEFORE ADMINISTRATION</p>
+        <h2>Enter the operating environment before you create an account.</h2>
+        <p>The public Demo is synthetic and read-only. A persistent company begins only after signup, guided solution selection, provisioning, and active commercial entitlement.</p>
+        <div className="hero-actions"><Link className="marketing-button marketing-button-large" href="/demo">Explore Nova Commerce</Link><Link href="/pricing">Compare products</Link></div>
       </section>
     </main>
   );
