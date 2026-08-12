@@ -20,10 +20,10 @@ export default async function HomePage() {
       <section className="marketing-hero">
         <div className="hero-copy">
           <p className="marketing-kicker">GOVERNED AI COMPANY PLATFORM</p>
-          <h1>Build a company that can think, coordinate, and operate—with you in control.</h1>
+          <h1>Build a company that thinks and operates—with you in control.</h1>
           <p>
-            RYTHM gives a Human CEO a specialized AI workforce, company memory, meetings,
-            decisions, approvals, actions, and traceability in one governed operating system.
+            Give a Human CEO a specialized AI workforce, company memory, meetings,
+            approvals, and traceable action in one governed operating system.
           </p>
           <div className="hero-actions">
             <Link className="marketing-button marketing-button-large" href="/product">Explore the Company OS</Link>
@@ -34,11 +34,12 @@ export default async function HomePage() {
           </div>
         </div>
         <aside className="hero-system-card" aria-label="RYTHM company operating loop">
-          <p>YOUR AI COMPANY</p>
-          <div><strong>Human CEO</strong><span>Final authority</span></div>
-          <div><strong>B-001 Executive Orchestrator</strong><span>Coordinates specialized Agents</span></div>
+          <header><p>YOUR AI COMPANY</p><span className="hero-system-live"><i aria-hidden="true" /> Operating</span></header>
+          <div className="hero-system-node is-human"><span className="hero-node-index">H</span><span><strong>Human CEO</strong><small>Final authority</small></span><i aria-hidden="true">Final review</i></div>
+          <div className="hero-system-connector" aria-hidden="true"><span /><i /><span /></div>
+          <div className="hero-system-node"><span className="hero-node-index">B</span><span><strong>B-001 Executive Orchestrator</strong><small>Coordinates specialized Agents</small></span><i aria-hidden="true">Active</i></div>
           <div className="agent-mini-grid"><span>Strategy</span><span>Operations</span><span>Analytics</span><span>Delivery</span></div>
-          <footer>Idea → Meeting → Decision → Approval → Action</footer>
+          <footer><span>Intent</span><i aria-hidden="true" /><span>Meeting</span><i aria-hidden="true" /><span>Approval</span><i aria-hidden="true" /><span>Action</span></footer>
         </aside>
       </section>
 
