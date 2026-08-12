@@ -30,6 +30,8 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
     return <main className="page-shell"><section className="panel"><p className="eyebrow">RYTHM COMPANY STUDIO</p><h1>Agent Studio</h1><p>Agent Builder is not enabled for this organization&apos;s entitlement.</p><Link href="/command-center">Return to Command Center</Link></section></main>;
   }
 
+  const entitlement = context.entitlement;
+
   const [{ data: agentData }, { data: departmentData }] = await Promise.all([
     context.supabase.from("agents").select("id,agent_code,name,role_title,purpose,authority_level,risk_ceiling,language,agent_status,external_actions_allowed,department_id").eq("organization_id", context.organizationId).order("agent_code"),
     context.supabase.from("departments").select("id,name").eq("organization_id", context.organizationId).eq("status", "active").order("name"),
@@ -38,7 +40,7 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
   const agents = (agentData ?? []) as AgentRow[];
   const departments = (departmentData ?? []) as DepartmentRow[];
   const activeAgents = agents.filter((agent) => agent.agent_status !== "archived");
-  const canCreate = Boolean(context.entitlement.agent_create_enabled && activeAgents.length < context.entitlement.max_active_agents);
+  const canCreate = Boolean(entitlement.agent_create_enabled && activeAgents.length < entitlement.max_active_agents);
 
   return (
     <main className="page-shell">
@@ -46,7 +48,7 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
         <p className="eyebrow">RYTHM COMPANY STUDIO</p>
         <h1>Agent Studio</h1>
         <p>Create and govern AI Agents for <strong>{context.organization.name}</strong>. Every Agent is explicitly AI, starts Paused, and cannot perform external actions in Public Beta.</p>
-        <p><strong>Agent capacity:</strong> {activeAgents.length} / {context.entitlement.max_active_agents}</p>
+        <p><strong>Agent capacity:</strong> {activeAgents.length} / {entitlement.max_active_agents}</p>
         <p><Link href="/studio/templates">Template Library</Link> · <Link href="/studio/builder">Company Builder</Link> · <Link href="/agents">Workforce directory</Link></p>
       </section>
 
@@ -90,8 +92,8 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
                 <p><Link href={`/studio/agents/${agent.id}`}>Edit Agent</Link></p>
                 {agent.agent_status !== "archived" ? <div>
                   <form action={setAgentStatus}><input type="hidden" name="agentId" value={agent.id} /><input type="hidden" name="status" value={agent.agent_status === "enabled" ? "paused" : "enabled"} /><button type="submit">{agent.agent_status === "enabled" ? "Pause" : "Enable"}</button></form>
-                  {context.entitlement.agent_clone_enabled ? <form action={cloneAgent}><input type="hidden" name="agentId" value={agent.id} /><button type="submit">Clone</button></form> : null}
-                  {context.entitlement.agent_archive_enabled ? <form action={setAgentStatus}><input type="hidden" name="agentId" value={agent.id} /><input type="hidden" name="status" value="archived" /><button type="submit">Archive</button></form> : null}
+                  {entitlement.agent_clone_enabled ? <form action={cloneAgent}><input type="hidden" name="agentId" value={agent.id} /><button type="submit">Clone</button></form> : null}
+                  {entitlement.agent_archive_enabled ? <form action={setAgentStatus}><input type="hidden" name="agentId" value={agent.id} /><input type="hidden" name="status" value="archived" /><button type="submit">Archive</button></form> : null}
                 </div> : null}
               </article>
             ))}
