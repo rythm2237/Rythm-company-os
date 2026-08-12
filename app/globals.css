@@ -9,6 +9,21 @@
 body { margin: 0; background: #f3f5f8; }
 a { color: inherit; }
 button, input { font: inherit; }
+
+.rythm-brand-logo {
+  display: block;
+  width: 176px;
+  max-width: 100%;
+  height: auto;
+}
+
+.rythm-brand-mark {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.auth-home-link .rythm-brand-logo { width: 150px; }
 button { cursor: pointer; }
 .shell { min-height: 100vh; padding: 42px 28px 28px; max-width: 1440px; margin: 0 auto; }
 .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; margin-bottom: 28px; }

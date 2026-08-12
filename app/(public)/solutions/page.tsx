@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SOLUTION_PATHS } from "@/lib/public-experience/content";
+import { createPublicMetadata } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Solutions",
-  description: "Compare Ready AI Company, Custom AI Company, and Enterprise AI Workforce paths by the way your organization needs to operate.",
-};
+export const metadata: Metadata = createPublicMetadata("/solutions");
 
 export default function SolutionsPage() {
   return (
@@ -27,4 +25,3 @@ export default function SolutionsPage() {
     </main>
   );
 }
-

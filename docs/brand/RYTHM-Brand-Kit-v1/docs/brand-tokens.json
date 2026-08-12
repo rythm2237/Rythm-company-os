@@ -1,0 +1,19 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "rythm": {
+    "color": {
+      "authorityNavy": { "$type": "color", "$value": "#0B1220" },
+      "governanceIndigo": { "$type": "color", "$value": "#6472E8" },
+      "decisionCyan": { "$type": "color", "$value": "#4BC6D8" },
+      "systemCloud": { "$type": "color", "$value": "#F5F7FB" },
+      "operationalSlate": { "$type": "color", "$value": "#667085" },
+      "systemBorder": { "$type": "color", "$value": "#D9DFEA" },
+      "success": { "$type": "color", "$value": "#2FB878" },
+      "attention": { "$type": "color", "$value": "#E2A13D" }
+    },
+    "typography": {
+      "ui": { "$type": "fontFamily", "$value": ["Inter", "ui-sans-serif", "system-ui"] },
+      "technical": { "$type": "fontFamily", "$value": ["Geist Mono", "SFMono-Regular", "monospace"] }
+    }
+  }
+}

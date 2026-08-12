@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import OrganizationStructuredData from "@/components/brand/OrganizationStructuredData";
 import { getCommercialCatalog } from "@/lib/commercial/catalog";
+import { createPublicMetadata } from "@/lib/seo/site";
 import ProductTourShelf from "./_components/ProductTourShelf";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = createPublicMetadata("/");
 
 export default async function HomePage() {
   const offers = await getCommercialCatalog();
@@ -16,7 +20,9 @@ export default async function HomePage() {
   }
 
   return (
-    <main>
+    <>
+      <OrganizationStructuredData />
+      <main>
       <section className="marketing-hero">
         <div className="hero-copy">
           <p className="marketing-kicker">GOVERNED AI COMPANY PLATFORM</p>
@@ -103,6 +109,7 @@ export default async function HomePage() {
         <p>The public Demo is synthetic and read-only. A persistent company begins only after signup, guided solution selection, provisioning, and active commercial entitlement.</p>
         <div className="hero-actions"><Link className="marketing-button marketing-button-large" href="/demo">Explore Nova Commerce</Link><Link href="/pricing">Compare products</Link></div>
       </section>
-    </main>
+      </main>
+    </>
   );
 }

@@ -284,6 +284,7 @@ summary { border-radius: 8px; }
 
 .product-nav-topline { display: flex; align-items: center; justify-content: space-between; }
 .product-brand { position: relative; display: inline-flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; letter-spacing: .13em; }
+.product-nav-topline .rythm-brand-logo { width: 176px; }
 .product-brand-mark {
   width: 42px;
   height: 42px;
@@ -422,6 +423,7 @@ summary { border-radius: 8px; }
   .app-navigation.is-open .app-nav-backdrop { pointer-events: auto; opacity: 1; }
   .app-mobile-header { position: fixed; z-index: 220; inset: 0 0 auto 0; min-height: 68px; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(220,227,237,.8); background: rgba(250,252,254,.91); backdrop-filter: blur(18px); }
   .app-mobile-header .product-brand { color: var(--app-ink); }
+  .app-mobile-header .rythm-brand-logo { width: 132px; }
   .app-mobile-header .product-brand-mark { width: 38px; height: 38px; background: #10192a; }
   .app-mobile-header .product-brand strong { font-size: .76rem; letter-spacing: .15em; }
   .app-mobile-header > button { min-width: 78px; height: 40px; min-height: 0; padding: 0 12px; display: grid; grid-template-columns: 1fr 16px; grid-template-rows: 1fr 1fr; align-items: center; column-gap: 8px; border: 1px solid #d8dfea; border-radius: 11px; color: #263249; background: #fff; font-size: .7rem; font-weight: 850; }

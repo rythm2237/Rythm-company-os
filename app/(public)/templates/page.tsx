@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PUBLIC_TEMPLATES } from "@/lib/public-experience/content";
+import { createPublicMetadata } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Company Templates",
-  description: "Explore public RYTHM company and workforce patterns without creating an account or receiving provisioning access.",
-};
+export const metadata: Metadata = createPublicMetadata("/templates");
 
 export default function PublicTemplatesPage() {
   return (
@@ -30,4 +28,3 @@ export default function PublicTemplatesPage() {
     </main>
   );
 }
-

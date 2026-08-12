@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getCommercialCatalog } from "@/lib/commercial/catalog";
+import { createPublicMetadata } from "@/lib/seo/site";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = createPublicMetadata("/pricing");
 
 export default async function PricingPage() {
   const offers = await getCommercialCatalog();
