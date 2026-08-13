@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type FocusEvent,
   type KeyboardEvent,
@@ -88,6 +89,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
   const [meaningfulInteractions, setMeaningfulInteractions] = useState<Set<string>>(() => new Set());
   const [conversionDismissed, setConversionDismissed] = useState(false);
   const [conversionExpanded, setConversionExpanded] = useState(true);
+  const suppressFocusExplanationRef = useRef(false);
   const activeSurface: DemoSurface =
     NOVA_COMMERCE_DEMO.surfaces.find((surface) => surface.id === surfaceId) ?? NOVA_COMMERCE_DEMO.surfaces[0];
   const selectedAgent = NOVA_COMMERCE_DEMO.agents.find((agent) => agent.id === selectedAgentId) ?? null;
@@ -133,7 +135,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
   }, []);
 
   const openExplanation = useCallback((element: HTMLElement) => {
-    if (!explainMode || tourState !== "closed") return;
+    if (suppressFocusExplanationRef.current || !explainMode || tourState !== "closed") return;
     const key = explainKeyFromElement(element);
     if (!key) return;
     setExplanation({ key, anchor: element, rect: element.getBoundingClientRect() });
@@ -146,7 +148,13 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
   function closeExplanation({ restoreFocus = false } = {}) {
     const anchor = explanation?.anchor;
     setExplanation(null);
-    if (restoreFocus) window.setTimeout(() => anchor?.focus(), 0);
+    if (restoreFocus) {
+      suppressFocusExplanationRef.current = true;
+      window.setTimeout(() => {
+        anchor?.focus();
+        window.requestAnimationFrame(() => { suppressFocusExplanationRef.current = false; });
+      }, 0);
+    }
   }
 
   function selectSurface(nextSurface: DemoSurfaceId) {
