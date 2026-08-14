@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
+const SITE_ORIGIN = "https://company.rythm-os.com";
+
 function signupErrorMessage(error: { message?: string; code?: string; status?: number }) {
   const message = String(error.message ?? "").toLowerCase();
   const code = String(error.code ?? "").toLowerCase();
@@ -50,10 +52,14 @@ export async function signup(formData: FormData) {
     redirect(`/signup?error=${encodeURIComponent(`You are already signed in as ${currentUser.email ?? "another account"}. Sign out before creating a separate customer account.`)}`);
   }
 
+  const confirmationRedirect = `${SITE_ORIGIN}/auth/callback?next=${encodeURIComponent("/setup/company")}`;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName, selected_product_code: productCode } },
+    options: {
+      data: { full_name: fullName, selected_product_code: productCode },
+      emailRedirectTo: confirmationRedirect,
+    },
   });
 
   if (error) {
@@ -75,5 +81,5 @@ export async function signup(formData: FormData) {
     redirect(`/setup/company?product=${encodeURIComponent(productCode)}`);
   }
 
-  redirect(`/login?message=${encodeURIComponent("Account created. Confirm your email if required, then sign in to provision your company.")}`);
+  redirect(`/signup/check-email?product=${encodeURIComponent(productCode)}`);
 }

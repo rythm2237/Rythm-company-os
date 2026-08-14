@@ -6,15 +6,24 @@ function safeInternalPath(value: string | null) {
   return value;
 }
 
+function authFailureUrl(origin: string, next: string) {
+  const message = "This email link is invalid, expired, or has already been used. Request a fresh link and use the newest email.";
+  if (next.startsWith("/reset-password")) {
+    return `${origin}/forgot-password?error=${encodeURIComponent(message)}`;
+  }
+  if (next.startsWith("/setup/company")) {
+    return `${origin}/signup/check-email?error=${encodeURIComponent(message)}`;
+  }
+  return `${origin}/login?error=${encodeURIComponent(message)}`;
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const next = safeInternalPath(request.nextUrl.searchParams.get("next"));
   const origin = request.nextUrl.origin;
 
   if (!code) {
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent("Authentication link is invalid or expired.")}`,
-    );
+    return NextResponse.redirect(authFailureUrl(origin, next));
   }
 
   const supabase = await createAuthServerClient();
@@ -26,9 +35,7 @@ export async function GET(request: NextRequest) {
       code: error.code,
       message: error.message,
     });
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent("Authentication link is invalid or expired. Request a new link.")}`,
-    );
+    return NextResponse.redirect(authFailureUrl(origin, next));
   }
 
   return NextResponse.redirect(`${origin}${next}`);
