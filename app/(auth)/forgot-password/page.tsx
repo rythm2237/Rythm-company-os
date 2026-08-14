@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requestPasswordReset } from "./actions";
+import { ForgotPasswordForm } from "./ForgotPasswordForm";
 
 export const dynamic = "force-dynamic";
 
@@ -22,12 +22,10 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
         {params.message ? <p className="form-success" role="status">{params.message}</p> : null}
         {params.error ? <p className="form-error" role="alert">{params.error}</p> : null}
 
-        <form action={requestPasswordReset} className="auth-form">
-          <label>Email<input name="email" type="email" autoComplete="email" required /></label>
-          <button type="submit">Send reset link</button>
-        </form>
+        <ForgotPasswordForm />
 
         <p className="security-note">For security, this page does not disclose whether an email is registered.</p>
+        <p className="security-note">For the secure PKCE recovery flow, open the reset email in the same browser where you requested it.</p>
         <p className="security-note"><Link href="/login">Back to sign in</Link></p>
       </section>
     </main>
