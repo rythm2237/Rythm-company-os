@@ -1,14 +1,16 @@
 export type PublicExperienceEventName =
   | "tour_prompt_seen"
   | "tour_started"
+  | "tour_language_selected"
+  | "tour_step_viewed"
   | "tour_skipped"
   | "tour_completed"
-  | "tour_language_changed"
-  | "explain_mode_started"
-  | "explain_mode_closed"
-  | "explanation_opened"
-  | "experience_mode_started"
-  | "experience_mode_closed"
+  | "explain_mode_enabled"
+  | "explain_mode_disabled"
+  | "explanation_viewed"
+  | "experience_mode_discovered"
+  | "experience_mode_entered"
+  | "experience_mode_exited"
   | "demo_get_started_clicked"
   | "demo_sign_in_clicked";
 

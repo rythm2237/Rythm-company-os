@@ -12,10 +12,15 @@ export default function LanguageSelector({ compact = false, className = "" }: Pr
   const { copy, locale, setLocale } = usePublicEducation();
 
   return (
-    <label className={`education-language-selector${compact ? " is-compact" : ""}${className ? ` ${className}` : ""}`} dir="ltr">
+    <label
+      className={`education-language-selector${compact ? " is-compact" : ""}${className ? ` ${className}` : ""}`}
+      dir={copy.direction}
+      lang={locale}
+    >
       <span>{copy.ui.languageLabel}</span>
       <select
         aria-label={copy.ui.languageLabel}
+        dir="ltr"
         value={locale}
         onChange={(event) => void setLocale(event.target.value as SupportedLocale)}
       >

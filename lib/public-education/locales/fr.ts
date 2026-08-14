@@ -34,6 +34,7 @@ const copy = {
     exitExplainMode: "Quitter le mode explication",
     experienceMode: "Entrer en mode Expérience",
     exitExperienceMode: "Quitter le mode Expérience",
+    experienceDiscoveryHint: "Masquez la navigation publique et vivez la démo comme un espace Company OS focalisé.",
     resetDemo: "Réinitialiser la démo",
     whatIsThis: "Qu’est-ce que c’est ?",
     whyItMatters: "Pourquoi est-ce important ?",
@@ -54,7 +55,8 @@ const copy = {
     accountableWork: { eyebrow: "05 · EXÉCUTION RESPONSABLE", title: "Les recommandations deviennent des actions attribuées et encadrées.", description: "Chaque action conserve son origine, son responsable, son statut et sa limite d’approbation : l’aide de l’IA ne devient jamais une exécution invisible." },
     boardroom: { eyebrow: "06 · DÉLIBÉRATION GOUVERNÉE", title: "Humains et spécialistes IA délibèrent dans une même trace de décision.", description: "Ordre du jour, contexte, contributions, interventions, décisions, approbations et actions restent liés." },
     traceability: { eyebrow: "07 · TRACE OPÉRATIONNELLE", title: "Vous savez toujours pourquoi un travail existe.", description: "RYTHM relie l’intention aux preuves, réunions, décisions, approbations et exécution sans perdre le responsable humain." },
-    build: { eyebrow: "08 · CONCEVOIR L’ENTREPRISE", title: "Les Templates accélèrent ; Company Builder adapte.", description: "Partez d’un modèle gouverné ou concevez vos services et rôles. Rien ne devient opérationnel sans un provisionnement autorisé." },
+    executiveControl: { eyebrow: "08 · CONTRÔLE EXÉCUTIF", title: "Attention, revue, économie et santé opérationnelle restent visibles.", description: "Executive Review transforme les exceptions en décisions ; Attention, Economics et Operations Health montrent ce qui exige un jugement, son coût et l’état du système opérationnel." },
+    build: { eyebrow: "09 · CONCEVOIR L’ENTREPRISE", title: "Les Templates accélèrent ; Company Builder adapte.", description: "Partez d’un modèle gouverné ou concevez vos services et rôles. Rien ne devient opérationnel sans un provisionnement autorisé." },
   },
   explanations: {
     humanCeo: { title: "Human CEO", what: "La personne responsable qui détient l’autorité finale sur les décisions importantes de l’entreprise.", why: "L’IA peut coordonner et recommander, mais la responsabilité ne peut être confiée à un système opaque.", real: "Le CEO examine les escalades, approuve les actions encadrées et peut suspendre ou réorienter le système." },

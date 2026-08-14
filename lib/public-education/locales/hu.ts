@@ -34,6 +34,7 @@ const copy = {
     exitExplainMode: "Magyarázó mód bezárása",
     experienceMode: "Belépés Experience módba",
     exitExperienceMode: "Kilépés Experience módból",
+    experienceDiscoveryHint: "Rejtse el a nyilvános navigációt, és használja a Demót fókuszált Company OS munkatérként.",
     resetDemo: "Demo alaphelyzetbe",
     whatIsThis: "Mi ez?",
     whyItMatters: "Miért fontos?",
@@ -54,7 +55,8 @@ const copy = {
     accountableWork: { eyebrow: "05 · FELELŐS VÉGREHAJTÁS", title: "Az ajánlások kijelölt és korlátozott feladatokká válnak.", description: "Minden feladat megőrzi eredetét, felelősét, állapotát és jóváhagyási határát, így az AI-segítség nem válik láthatatlan végrehajtássá." },
     boardroom: { eyebrow: "06 · IRÁNYÍTOTT DÖNTÉSHOZATAL", title: "Emberek és AI-szakértők egy közös döntési nyomban dolgoznak.", description: "A napirend, kontextus, hozzászólások, beavatkozások, döntések, jóváhagyások és következő lépések összekapcsolva maradnak." },
     traceability: { eyebrow: "07 · MŰKÖDÉSI NYOM", title: "Mindig látható, miért létezik egy feladat.", description: "A RYTHM összeköti a szándékot a bizonyítékokkal, meetingekkel, döntésekkel, jóváhagyásokkal és végrehajtással." },
-    build: { eyebrow: "08 · A VÁLLALAT TERVEZÉSE", title: "A Templates gyorsít, a Company Builder személyre szab.", description: "Induljon irányított mintából, vagy tervezzen saját részlegeket és szerepeket. Engedélyezett provisionálás nélkül semmi nem válik működővé." },
+    executiveControl: { eyebrow: "08 · VEZETŐI KONTROLL", title: "A figyelem, felülvizsgálat, gazdaságosság és működési állapot látható marad.", description: "Az Executive Review döntéssé alakítja a kivételeket; az Attention, Economics és Operations Health megmutatja, mi igényel ítéletet, mennyibe kerül, és egészséges-e a működési rendszer." },
+    build: { eyebrow: "09 · A VÁLLALAT TERVEZÉSE", title: "A Templates gyorsít, a Company Builder személyre szab.", description: "Induljon irányított mintából, vagy tervezzen saját részlegeket és szerepeket. Engedélyezett provisionálás nélkül semmi nem válik működővé." },
   },
   explanations: {
     humanCeo: { title: "Human CEO", what: "A felelős ember, aki a jelentős vállalati döntések végső jogosultja.", why: "Az AI koordinálhat és javasolhat, de a felelősség nem adható át átláthatatlan rendszernek.", real: "A CEO felülvizsgálja az eszkalációkat, jóváhagyja a korlátozott lépéseket, és megállíthatja vagy átirányíthatja a rendszert." },

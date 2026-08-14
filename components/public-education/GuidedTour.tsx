@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import RythmBrandMark from "@/components/brand/RythmBrandMark";
@@ -97,35 +96,49 @@ export default function GuidedTour() {
     acceptSuggestedLocale,
     tourState,
     tourStep,
+    experienceMode,
     setTourStep,
     startTour,
     dismissTour,
     completeTour,
-    closeCompletedTour,
   } = usePublicEducation();
   const dialogRef = useRef<HTMLDivElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const lastStepEventRef = useRef<string | null>(null);
   const [dialogPosition, setDialogPosition] = useState<CSSProperties | undefined>();
   const [spotlightRect, setSpotlightRect] = useState<SpotlightRect | null>(null);
   const activeDefinition = getActiveTourStep(tourStep);
   const activeCopy = copy.tour[activeDefinition.id];
-  const nextArrow = "→";
-  const backArrow = "←";
+  const nextArrow = copy.direction === "rtl" ? "←" : "→";
+  const backArrow = copy.direction === "rtl" ? "→" : "←";
+  const numberFormatter = new Intl.NumberFormat(locale, { useGrouping: false, minimumIntegerDigits: 2 });
 
   useEffect(() => {
     if (tourState === "active" && pathname !== "/demo") router.push("/demo");
   }, [pathname, router, tourState]);
 
   useEffect(() => {
+    if (tourState !== "closed") {
+      if (!returnFocusRef.current) returnFocusRef.current = document.activeElement as HTMLElement | null;
+      return;
+    }
+
+    const returnTarget = returnFocusRef.current;
+    returnFocusRef.current = null;
+    const restoreTimer = window.setTimeout(() => {
+      if (returnTarget?.isConnected) returnTarget.focus();
+    }, 0);
+    return () => window.clearTimeout(restoreTimer);
+  }, [tourState]);
+
+  useEffect(() => {
     if (tourState === "closed") return;
 
-    returnFocusRef.current = document.activeElement as HTMLElement | null;
     const focusTimer = window.setTimeout(() => dialogRef.current?.focus(), 60);
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        if (tourState === "complete") closeCompletedTour();
-        else dismissTour();
+        dismissTour();
         return;
       }
       if (event.key !== "Tab" || !dialogRef.current) return;
@@ -149,9 +162,22 @@ export default function GuidedTour() {
     return () => {
       window.clearTimeout(focusTimer);
       window.removeEventListener("keydown", handleKeyDown);
-      window.setTimeout(() => returnFocusRef.current?.focus(), 0);
     };
-  }, [closeCompletedTour, dismissTour, tourState]);
+  }, [dismissTour, tourState]);
+
+  useEffect(() => {
+    if (tourState !== "active") {
+      lastStepEventRef.current = null;
+      return;
+    }
+    const signature = `${tourStep}:${activeDefinition.id}:${locale}`;
+    if (lastStepEventRef.current === signature) return;
+    lastStepEventRef.current = signature;
+    trackPublicExperienceEvent({
+      name: "tour_step_viewed",
+      properties: { locale, step: tourStep + 1, step_id: activeDefinition.id },
+    });
+  }, [activeDefinition.id, locale, tourState, tourStep]);
 
   useEffect(() => {
     document.querySelectorAll(".is-guide-target").forEach((element) => element.classList.remove("is-guide-target"));
@@ -205,11 +231,11 @@ export default function GuidedTour() {
       window.removeEventListener("scroll", syncFloatingElements, true);
       target?.classList.remove("is-guide-target");
     };
-  }, [activeDefinition.target, pathname, tourState]);
+  }, [activeDefinition.target, experienceMode, pathname, tourState]);
 
   if (!ready || tourState === "closed") return null;
 
-  const close = tourState === "complete" ? closeCompletedTour : dismissTour;
+  const close = dismissTour;
 
   return (
     <>
@@ -263,13 +289,20 @@ export default function GuidedTour() {
           <>
             <div
               className="marketing-guide-progress"
-              aria-label={formatTemplate(copy.ui.stepProgress, { current: tourStep + 1, total: TOUR_STEPS.length })}
+              role="progressbar"
+              aria-label={formatTemplate(copy.ui.stepProgress, {
+                current: numberFormatter.format(tourStep + 1),
+                total: numberFormatter.format(TOUR_STEPS.length),
+              })}
+              aria-valuemin={1}
+              aria-valuemax={TOUR_STEPS.length}
+              aria-valuenow={tourStep + 1}
             >
-              <span>{String(tourStep + 1).padStart(2, "0")}</span>
-              <div style={{ gridTemplateColumns: `repeat(${TOUR_STEPS.length}, 1fr)` }}>
+              <span aria-hidden="true">{numberFormatter.format(tourStep + 1)}</span>
+              <div aria-hidden="true" style={{ gridTemplateColumns: `repeat(${TOUR_STEPS.length}, 1fr)` }}>
                 {TOUR_STEPS.map((step, index) => <i className={index <= tourStep ? "is-complete" : undefined} key={step.id} />)}
               </div>
-              <small>{String(TOUR_STEPS.length).padStart(2, "0")}</small>
+              <small aria-hidden="true">{numberFormatter.format(TOUR_STEPS.length)}</small>
             </div>
             <LanguageSelector compact className="marketing-guide-language" />
             <p className="marketing-kicker">{activeCopy.eyebrow}</p>
@@ -295,36 +328,6 @@ export default function GuidedTour() {
           </>
         ) : null}
 
-        {tourState === "complete" ? (
-          <>
-            <p className="marketing-kicker">{copy.ui.completedEyebrow}</p>
-            <h2 id="marketing-guide-title">{copy.ui.completedTitle}</h2>
-            <p>{copy.ui.completedDescription}</p>
-            <div className="education-completion-links">
-              <Link
-                href="/pricing"
-                onClick={() => {
-                  closeCompletedTour();
-                  trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "pricing", locale } });
-                }}
-              >
-                {copy.ui.explorePlans}
-              </Link>
-              <Link href="/live-ai-meeting" onClick={closeCompletedTour}>{copy.ui.tryMeeting}</Link>
-              <Link
-                className="marketing-button"
-                href="/signup"
-                onClick={() => {
-                  closeCompletedTour();
-                  trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "signup", locale } });
-                }}
-              >
-                {copy.ui.buildCompany}
-              </Link>
-            </div>
-            <button className="education-continue-button" type="button" onClick={closeCompletedTour}>{copy.ui.continueExploring}</button>
-          </>
-        ) : null}
       </div>
     </>
   );

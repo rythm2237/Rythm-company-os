@@ -44,6 +44,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const {
+    copy,
     locale,
     tourState,
     experienceMode,
@@ -106,9 +107,15 @@ function PublicShellFrame({ children }: PublicShellProps) {
         </nav>
 
         <div className="marketing-sidebar-footer">
-          <button className="marketing-guide-launcher" type="button" onClick={openTour}>
+          <button
+            className="marketing-guide-launcher"
+            type="button"
+            onClick={openTour}
+            dir={copy.direction}
+            lang={locale}
+          >
             <span aria-hidden="true">?</span>
-            <span><strong>Learn RYTHM</strong><small>Tour and contextual help</small></span>
+            <span><strong>{copy.ui.guideLauncherTitle}</strong><small>{copy.ui.guideLauncherDetail}</small></span>
           </button>
           <div className="marketing-system-state"><i aria-hidden="true" /><span>Public experience</span><strong>Safe to explore</strong></div>
           <div className="marketing-sidebar-actions">
