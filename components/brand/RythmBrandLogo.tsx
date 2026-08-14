@@ -13,8 +13,7 @@ export default function RythmBrandLogo({
 }: Props) {
   return (
     <Image
-      alt=""
-      aria-hidden="true"
+      alt="RYTHM Company OS"
       className={["rythm-brand-logo", className].filter(Boolean).join(" ")}
       height={104}
       priority={priority}
