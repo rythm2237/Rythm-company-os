@@ -151,6 +151,9 @@ function PublicShellFrame({ children }: PublicShellProps) {
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
             <Link href="/cookies">Cookies & Storage</Link>
+            <Link href="/dpa">DPA</Link>
+            <Link href="/subprocessors">Subprocessors</Link>
+            <Link href="/data-requests">Data Requests</Link>
             <Link href="/login">Customer sign in</Link>
           </div>
         </footer>
