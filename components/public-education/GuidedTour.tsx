@@ -301,9 +301,26 @@ export default function GuidedTour() {
             <h2 id="marketing-guide-title">{copy.ui.completedTitle}</h2>
             <p>{copy.ui.completedDescription}</p>
             <div className="education-completion-links">
-              <Link href="/pricing" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "pricing", locale } })}>{copy.ui.explorePlans}</Link>
-              <Link href="/live-ai-meeting">{copy.ui.tryMeeting}</Link>
-              <Link className="marketing-button" href="/signup" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "signup", locale } })}>{copy.ui.buildCompany}</Link>
+              <Link
+                href="/pricing"
+                onClick={() => {
+                  closeCompletedTour();
+                  trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "pricing", locale } });
+                }}
+              >
+                {copy.ui.explorePlans}
+              </Link>
+              <Link href="/live-ai-meeting" onClick={closeCompletedTour}>{copy.ui.tryMeeting}</Link>
+              <Link
+                className="marketing-button"
+                href="/signup"
+                onClick={() => {
+                  closeCompletedTour();
+                  trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "signup", locale } });
+                }}
+              >
+                {copy.ui.buildCompany}
+              </Link>
             </div>
             <button className="education-continue-button" type="button" onClick={closeCompletedTour}>{copy.ui.continueExploring}</button>
           </>
