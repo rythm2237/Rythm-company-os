@@ -19,9 +19,10 @@ export default function LegalNoticePage() {
           <ul>
             <li>Legal form: individual entrepreneur (egyéni vállalkozó / e.v.), Hungary</li>
             <li>Business address: 1143 Budapest, Gizella út 35, Hungary</li>
+            <li>Registration number (Nyilvántartási szám): 58642889</li>
             <li>Hungarian tax number: 48332376-1-42</li>
             <li>Registration authority: Hungarian National Tax and Customs Administration (NAV), Individual Entrepreneurs Register</li>
-            <li>Public registry records may be verified through NAV using the tax number above.</li>
+            <li>Public registry records may be verified through NAV using the registration or tax number above.</li>
           </ul>
         </div>
         <div className="enterprise-capabilities">
