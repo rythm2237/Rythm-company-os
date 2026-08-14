@@ -78,6 +78,30 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
     changeFrequency: "monthly",
     priority: 0.8,
   },
+  {
+    path: "/trust",
+    title: "Trust Center",
+    description:
+      "Review RYTHM Company OS governance boundaries, tenant isolation, Human CEO authority, authentication controls, and Public Beta trust disclosures.",
+    changeFrequency: "monthly",
+    priority: 0.7,
+  },
+  {
+    path: "/security",
+    title: "Security",
+    description:
+      "Review the current RYTHM Company OS Public Beta security posture for identity, tenant-aware data access, AI governance, and responsible security reporting.",
+    changeFrequency: "monthly",
+    priority: 0.7,
+  },
+  {
+    path: "/support",
+    title: "Support",
+    description:
+      "Find the correct RYTHM Public Beta path for account recovery, product help, commercial questions, enterprise review, and security reports.",
+    changeFrequency: "monthly",
+    priority: 0.65,
+  },
 ] as const;
 
 export function absoluteUrl(path: string) {
