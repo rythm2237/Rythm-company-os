@@ -134,6 +134,30 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
     changeFrequency: "monthly",
     priority: 0.45,
   },
+  {
+    path: "/dpa",
+    title: "Data Processing Addendum",
+    description:
+      "Review RYTHM Company OS GDPR processor terms, processing details, security measures, subprocessors, data-subject assistance, and incident obligations.",
+    changeFrequency: "monthly",
+    priority: 0.45,
+  },
+  {
+    path: "/subprocessors",
+    title: "Subprocessor Register",
+    description:
+      "Review the current infrastructure providers that may process customer personal data for the RYTHM Company OS Public Beta.",
+    changeFrequency: "monthly",
+    priority: 0.45,
+  },
+  {
+    path: "/data-requests",
+    title: "Privacy Data Requests",
+    description:
+      "Request access, correction, deletion, restriction, objection, portability, or a customer-data export from RYTHM Company OS.",
+    changeFrequency: "monthly",
+    priority: 0.45,
+  },
 ] as const;
 
 export function absoluteUrl(path: string) {
