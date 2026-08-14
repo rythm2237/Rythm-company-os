@@ -139,7 +139,16 @@ function PublicShellFrame({ children }: PublicShellProps) {
         <div className="marketing-page-transition" key={pathname}>{children}</div>
         <footer className="marketing-footer">
           <div><RythmBrandLogo variant="primary" /><p>Governed AI companies under Human CEO authority.</p></div>
-          <div><Link href="/product">Product</Link><Link href="/demo">Demo</Link><Link href="/templates">Templates</Link><Link href="/pricing">Pricing</Link><Link href="/enterprise">Enterprise Beta</Link><Link href="/login">Customer sign in</Link></div>
+          <div>
+            <Link href="/product">Product</Link>
+            <Link href="/demo">Demo</Link>
+            <Link href="/pricing">Pricing</Link>
+            <Link href="/enterprise">Enterprise Beta</Link>
+            <Link href="/trust">Trust Center</Link>
+            <Link href="/security">Security</Link>
+            <Link href="/support">Support</Link>
+            <Link href="/login">Customer sign in</Link>
+          </div>
         </footer>
       </div>
 
