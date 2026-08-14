@@ -12,7 +12,13 @@ export type PublicExperienceEventName =
   | "experience_mode_entered"
   | "experience_mode_exited"
   | "demo_get_started_clicked"
-  | "demo_sign_in_clicked";
+  | "demo_sign_in_clicked"
+  | "solution_finder_started"
+  | "solution_finder_dismissed"
+  | "solution_finder_answered"
+  | "solution_finder_recommended"
+  | "solution_finder_primary_clicked"
+  | "solution_finder_meeting_clicked";
 
 export type PublicExperienceEvent = {
   name: PublicExperienceEventName;

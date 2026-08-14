@@ -1,0 +1,109 @@
+.launcher {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 85;
+  width: min(360px, calc(100vw - 32px));
+  border: 1px solid color-mix(in srgb, var(--marketing-line, #cbd5e1) 72%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--marketing-surface, #ffffff) 90%, transparent);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, .18);
+  backdrop-filter: blur(18px);
+  padding: 16px;
+  animation: finder-enter 240ms ease-out;
+}
+
+.launcherTop { display: flex; gap: 12px; align-items: flex-start; }
+.launcherIcon {
+  display: grid; place-items: center; flex: 0 0 36px; height: 36px; border-radius: 12px;
+  background: #111827; color: #fff; font-weight: 800;
+}
+.launcher h3 { margin: 0 0 4px; font-size: 1rem; }
+.launcher p { margin: 0; color: var(--marketing-muted, #64748b); font-size: .86rem; line-height: 1.45; }
+.launcherActions { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+.primary, .secondary, .closeButton, .option, .back, .startOver {
+  font: inherit; cursor: pointer;
+}
+.primary {
+  border: 0; border-radius: 10px; background: #111827; color: #fff; padding: 10px 14px; font-weight: 700;
+}
+.secondary, .back, .startOver {
+  border: 1px solid #cbd5e1; border-radius: 10px; background: transparent; color: inherit; padding: 9px 12px;
+}
+.closeButton { margin-left: auto; border: 0; background: transparent; color: #64748b; font-size: 1.2rem; line-height: 1; }
+
+.backdrop {
+  position: fixed; inset: 0; z-index: 110; display: grid; place-items: center; padding: 20px;
+  background: rgba(5, 10, 20, .58); backdrop-filter: blur(10px); animation: finder-fade 180ms ease-out;
+}
+.dialog {
+  width: min(920px, 100%); max-height: min(820px, calc(100vh - 40px)); overflow: auto;
+  border: 1px solid rgba(148, 163, 184, .38); border-radius: 24px; background: #f8fafc; color: #0f172a;
+  box-shadow: 0 30px 90px rgba(2, 6, 23, .35); padding: 24px;
+}
+.header { display: flex; align-items: flex-start; gap: 16px; }
+.headerText { flex: 1; }
+.eyebrow { margin: 0 0 6px; color: #64748b; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.header h2 { margin: 0; font-size: clamp(1.45rem, 2.5vw, 2.1rem); letter-spacing: -.025em; }
+.header p { margin: 8px 0 0; max-width: 700px; color: #64748b; line-height: 1.55; }
+.progress { height: 5px; margin: 20px 0 22px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.progress > span { display: block; height: 100%; border-radius: inherit; background: #0f172a; transition: width 220ms ease; }
+.question { max-width: 760px; margin: 0 auto; }
+.question h3 { margin: 0; font-size: clamp(1.2rem, 2vw, 1.55rem); }
+.question > p { color: #64748b; margin: 8px 0 18px; }
+.options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.option {
+  min-height: 78px; text-align: left; border: 1px solid #d8e0ea; border-radius: 14px; background: #fff;
+  padding: 14px 15px; transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.option:hover, .option:focus-visible { transform: translateY(-1px); border-color: #64748b; box-shadow: 0 8px 24px rgba(15,23,42,.08); outline: none; }
+.option strong { display: block; margin-bottom: 4px; }
+.option span { display: block; color: #64748b; font-size: .82rem; line-height: 1.4; }
+.navigation { margin-top: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.stepLabel { color: #64748b; font-size: .78rem; }
+
+.result { display: grid; gap: 18px; }
+.resultHero {
+  display: grid; grid-template-columns: 1.2fr .8fr; gap: 22px; padding: 22px; border-radius: 20px;
+  color: #e5eefb; background: radial-gradient(circle at 90% 10%, rgba(74,222,128,.16), transparent 32%), #0b1220;
+}
+.resultHero h2 { margin: 3px 0 8px; color: #fff; }
+.resultHero p { margin: 0; color: #a9b6c8; line-height: 1.55; }
+.fitScore { align-self: center; justify-self: end; min-width: 150px; text-align: center; border: 1px solid rgba(148,163,184,.3); border-radius: 16px; padding: 18px; }
+.fitScore strong { display: block; color: #fff; font-size: 2rem; }
+.fitScore span { color: #a9b6c8; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; }
+.resultGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.resultCard { border: 1px solid #dbe3ec; border-radius: 16px; background: #fff; padding: 17px; }
+.resultCard h3 { margin: 0 0 9px; font-size: 1rem; }
+.resultCard p, .resultCard li { color: #526174; line-height: 1.5; font-size: .88rem; }
+.resultCard ul { margin: 0; padding-left: 18px; }
+
+.blueprint { border: 1px solid #dbe3ec; border-radius: 18px; background: #fff; padding: 18px; }
+.blueprint h3 { margin: 0 0 14px; }
+.blueprintFlow { display: flex; align-items: stretch; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.node { min-width: 140px; max-width: 190px; flex: 1; border: 1px solid #d7e0e9; border-radius: 14px; padding: 13px; background: #f8fafc; }
+.node small { display: block; color: #64748b; margin-top: 4px; line-height: 1.35; }
+.arrow { display: grid; place-items: center; color: #94a3b8; font-weight: 800; }
+.agentRow { margin-top: 12px; display: flex; gap: 7px; flex-wrap: wrap; }
+.agentRow span { border-radius: 999px; background: #e8eef5; padding: 6px 9px; color: #334155; font-size: .75rem; }
+.resultActions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.resultActions a { text-decoration: none; }
+.privacy { margin: 0; color: #64748b; font-size: .75rem; }
+
+@keyframes finder-enter { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes finder-fade { from { opacity: 0; } to { opacity: 1; } }
+
+@media (max-width: 720px) {
+  .launcher { right: 16px; bottom: 16px; }
+  .backdrop { align-items: end; padding: 0; }
+  .dialog { width: 100%; max-height: 88vh; border-radius: 22px 22px 0 0; padding: 18px; }
+  .options, .resultGrid, .resultHero { grid-template-columns: 1fr; }
+  .fitScore { justify-self: stretch; }
+  .blueprintFlow { display: grid; grid-template-columns: 1fr; }
+  .arrow { transform: rotate(90deg); min-height: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launcher, .backdrop { animation: none; }
+  .option, .progress > span { transition: none; }
+}
