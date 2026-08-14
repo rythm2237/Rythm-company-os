@@ -102,6 +102,38 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
     changeFrequency: "monthly",
     priority: 0.65,
   },
+  {
+    path: "/legal",
+    title: "Legal Notice",
+    description:
+      "Legal and business identity for the Hungarian individual entrepreneur operating RYTHM Company OS, with official contact channels.",
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    path: "/privacy",
+    title: "Privacy Policy",
+    description:
+      "Learn how RYTHM Company OS processes account, workspace, support, security, billing, and AI-related data during the Public Beta.",
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    path: "/terms",
+    title: "Terms of Service",
+    description:
+      "Review the Public Beta terms governing professional and organizational use of RYTHM Company OS, including AI, accounts, content, and commercial access.",
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    path: "/cookies",
+    title: "Cookie & Storage Notice",
+    description:
+      "Review the essential cookies, authentication state, and local browser preferences used by the current RYTHM Company OS Public Beta.",
+    changeFrequency: "monthly",
+    priority: 0.45,
+  },
 ] as const;
 
 export function absoluteUrl(path: string) {
@@ -154,8 +186,24 @@ export const ORGANIZATION_GRAPH = {
       "@type": "Organization",
       "@id": `${SITE_ORIGIN}/#organization`,
       name: SITE_NAME,
+      legalName: "Tayyebialashti Yaser E.V.",
       alternateName: ["RYTHM", "RYTHM OS"],
       url: SITE_ORIGIN,
+      taxID: "48332376-1-42",
+      email: "hello@rythm-os.com",
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: "Gizella út 35",
+        postalCode: "1143",
+        addressLocality: "Budapest",
+        addressCountry: "HU",
+      },
+      contactPoint: [
+        { "@type": "ContactPoint", contactType: "customer support", email: "support@rythm-os.com" },
+        { "@type": "ContactPoint", contactType: "sales", email: "sales@rythm-os.com" },
+        { "@type": "ContactPoint", contactType: "privacy", email: "privacy@rythm-os.com" },
+        { "@type": "ContactPoint", contactType: "security", email: "security@rythm-os.com" },
+      ],
       logo: {
         "@type": "ImageObject",
         url: absoluteUrl("/brand/rythm-mark-primary-1024.png"),
