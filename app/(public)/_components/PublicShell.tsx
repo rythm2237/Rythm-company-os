@@ -145,6 +145,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
             <Link href="/pricing">Pricing</Link>
             <Link href="/enterprise">Enterprise Beta</Link>
             <Link href="/trust">Trust Center</Link>
+            <Link href="/ai-transparency">AI Transparency</Link>
             <Link href="/security">Security</Link>
             <Link href="/support">Support</Link>
             <Link href="/legal">Legal Notice</Link>
