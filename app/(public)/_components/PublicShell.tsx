@@ -147,6 +147,10 @@ function PublicShellFrame({ children }: PublicShellProps) {
             <Link href="/trust">Trust Center</Link>
             <Link href="/security">Security</Link>
             <Link href="/support">Support</Link>
+            <Link href="/legal">Legal Notice</Link>
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/terms">Terms</Link>
+            <Link href="/cookies">Cookies & Storage</Link>
             <Link href="/login">Customer sign in</Link>
           </div>
         </footer>

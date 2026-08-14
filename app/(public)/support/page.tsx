@@ -5,7 +5,7 @@ import { createPublicMetadata } from "@/lib/seo/site";
 export const metadata: Metadata = createPublicMetadata("/support");
 
 export default function SupportPage() {
-  const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
+  const supportEmail = "support@rythm-os.com";
 
   return (
     <main>
@@ -21,7 +21,7 @@ export default function SupportPage() {
 
       <section className="enterprise-contact-section">
         <div><p className="marketing-kicker">BETA SUPPORT</p><h2>Need help that the self-service paths do not solve?</h2><p>Include the page URL, what you attempted, the exact message shown, and the approximate time of the issue. Never send a password, one-time authentication link, API key, or access token.</p></div>
-        <div className="enterprise-contact-card"><h3>Contact path</h3>{supportEmail ? <a className="marketing-button" href={`mailto:${supportEmail}?subject=${encodeURIComponent("RYTHM Public Beta support")}`}>Email Support</a> : <p className="contact-notice">A dedicated support mailbox is being finalized. Until it is published, use the Enterprise contact path for manual Public Beta assistance.</p>}<div className="hero-actions"><Link href="/enterprise">Contact RYTHM</Link><Link href="/security">Security issue?</Link></div></div>
+        <div className="enterprise-contact-card"><h3>Contact path</h3><a className="marketing-button" href={`mailto:${supportEmail}?subject=${encodeURIComponent("RYTHM Public Beta support")}`}>Email Support</a><p className="contact-notice">{supportEmail}</p><div className="hero-actions"><a href="mailto:sales@rythm-os.com">Sales</a><Link href="/security">Security issue?</Link></div></div>
       </section>
     </main>
   );
