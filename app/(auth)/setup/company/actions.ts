@@ -19,6 +19,9 @@ export async function provisionCompany(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/setup/company");
 
+  // This RPC creates only the isolated customer organization shell, Owner membership,
+  // and a PENDING commercial entitlement. Active commercial capabilities remain
+  // fail-closed until RYTHM confirms payment/invoice status and activates entitlement.
   const { data: organizationId, error } = await supabase.rpc("provision_customer_organization", {
     target_company_name: companyName,
     target_product_code: productCode,
@@ -27,7 +30,7 @@ export async function provisionCompany(formData: FormData) {
 
   if (error || !organizationId) {
     console.error("customer_organization_provision_failed", { userId: user.id, error });
-    redirect(`/setup/company?error=${encodeURIComponent("Company provisioning could not be completed. No commercial activation was performed.")}`);
+    redirect(`/setup/company?error=${encodeURIComponent("Company setup could not be completed. No commercial activation was performed.")}`);
   }
 
   const organizationIdString = String(organizationId);
@@ -41,7 +44,7 @@ export async function provisionCompany(formData: FormData) {
       organizationId: organizationIdString,
       error: contextError,
     });
-    redirect(`/setup/company?error=${encodeURIComponent("Company was provisioned, but its active context could not be selected. Contact RYTHM support before continuing.")}`);
+    redirect(`/setup/company?error=${encodeURIComponent("Company setup was created, but its active context could not be selected. Contact RYTHM support before continuing.")}`);
   }
 
   const cookieStore = await cookies();
@@ -53,5 +56,5 @@ export async function provisionCompany(formData: FormData) {
     maxAge: 60 * 60 * 24 * 365,
   });
 
-  redirect("/command-center?message=Company%20workspace%20provisioned.%20Commercial%20entitlement%20is%20pending%20activation.");
+  redirect("/activation?stage=payment_pending");
 }
