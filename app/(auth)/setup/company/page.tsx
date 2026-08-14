@@ -28,15 +28,18 @@ export default async function CompanySetupPage({ searchParams }: Props) {
     .eq("user_id", user.id)
     .limit(1);
 
-  if (memberships?.length) redirect("/command-center");
+  if (memberships?.length) redirect("/activation");
 
   return (
     <main className="auth-shell">
       <section className="auth-card" aria-labelledby="company-setup-title">
         <div>
-          <p className="eyebrow">COMPANY PROVISIONING</p>
-          <h1 id="company-setup-title" className="auth-title">Create your RYTHM company workspace</h1>
-          <p className="auth-copy">This creates an isolated Organization owned by your Human CEO account. Commercial activation remains separately controlled during Public Beta.</p>
+          <p className="eyebrow">COMMERCIAL SETUP</p>
+          <h1 id="company-setup-title" className="auth-title">Reserve your RYTHM company</h1>
+          <p className="auth-copy">
+            This creates an isolated organization shell and a locked product entitlement. Product
+            capabilities are provisioned only after commercial and payment / invoice confirmation.
+          </p>
         </div>
         {params.error ? <p className="form-error" role="alert">{params.error}</p> : null}
         <form action={provisionCompany} className="auth-form">
@@ -47,9 +50,12 @@ export default async function CompanySetupPage({ searchParams }: Props) {
               <option value="company_studio">Custom AI Company with Company Studio — €699/month + AI usage</option>
             </select>
           </label>
-          <button type="submit">Provision company workspace</button>
+          <button type="submit">Continue to commercial activation</button>
         </form>
-        <p className="security-note">Provisioning does not activate autonomous external actions, publish content, spend money, or bypass Human CEO approvals.</p>
+        <p className="security-note">
+          No Agent, template, Company Builder capability, autonomous external action, publishing,
+          or spending is activated by this step.
+        </p>
       </section>
     </main>
   );
