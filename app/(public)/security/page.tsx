@@ -5,7 +5,7 @@ import { createPublicMetadata } from "@/lib/seo/site";
 export const metadata: Metadata = createPublicMetadata("/security");
 
 export default function SecurityPage() {
-  const securityEmail = process.env.NEXT_PUBLIC_SECURITY_EMAIL;
+  const securityEmail = "security@rythm-os.com";
 
   return (
     <main>
@@ -26,7 +26,7 @@ export default function SecurityPage() {
 
       <section className="enterprise-contact-section">
         <div><p className="marketing-kicker">SECURITY REPORTING</p><h2>Found a security issue?</h2><p>Do not include passwords, access tokens, private keys, or unrelated customer data in an initial report. Provide the affected URL, reproduction steps, expected behavior, and observed behavior.</p></div>
-        <div className="enterprise-contact-card"><h3>Report responsibly</h3>{securityEmail ? <a className="marketing-button" href={`mailto:${securityEmail}?subject=${encodeURIComponent("RYTHM security report")}`}>Email Security</a> : <p className="contact-notice">A dedicated security mailbox is not yet published. Use the controlled Enterprise contact path and identify the message as a security report.</p>}<div className="hero-actions"><Link href="/enterprise">Contact RYTHM</Link><Link href="/trust">Trust Center</Link></div></div>
+        <div className="enterprise-contact-card"><h3>Report responsibly</h3><a className="marketing-button" href={`mailto:${securityEmail}?subject=${encodeURIComponent("RYTHM security report")}`}>Email Security</a><p className="contact-notice">{securityEmail}</p><div className="hero-actions"><Link href="/trust">Trust Center</Link><Link href="/legal">Legal Notice</Link></div></div>
       </section>
     </main>
   );
