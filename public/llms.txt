@@ -1,0 +1,47 @@
+# RYTHM Company OS
+
+> RYTHM Company OS is a governed AI company operating system that gives a Human CEO a specialized AI workforce, Company Memory, meetings, approvals, projects, actions, and traceable execution in one operating environment.
+
+Canonical site: https://company.rythm-os.com
+Product status: Public Beta
+Operator: Tayyebialashti Yaser E.V. (Hungarian individual entrepreneur)
+Registration number (Nyilvántartási szám): 58642889
+Hungarian tax number: 48332376-1-42
+Business address: 1143 Budapest, Gizella út 35, Hungary
+
+## Core operating principles
+
+- Human CEO authority: consequential authority remains human.
+- AI identity is explicit: AI Agents are represented as organizational members with defined roles and boundaries.
+- External actions are locked by default: publishing, spending, deploying, or messaging externally requires an authorized path.
+- Tenant-aware data boundaries and traceable operating events are part of the product model.
+- The public Demo is synthetic and read-only.
+
+## Primary public pages
+
+- Product: https://company.rythm-os.com/product
+- Interactive Demo: https://company.rythm-os.com/demo
+- Solutions: https://company.rythm-os.com/solutions
+- Templates: https://company.rythm-os.com/templates
+- Pricing: https://company.rythm-os.com/pricing
+- Enterprise AI Workforce: https://company.rythm-os.com/enterprise
+- Live AI Meeting: https://company.rythm-os.com/live-ai-meeting
+- Trust Center: https://company.rythm-os.com/trust
+- Security: https://company.rythm-os.com/security
+- Support: https://company.rythm-os.com/support
+- Legal Notice: https://company.rythm-os.com/legal
+- Privacy Policy: https://company.rythm-os.com/privacy
+- Terms of Service: https://company.rythm-os.com/terms
+- Cookie & Storage Notice: https://company.rythm-os.com/cookies
+
+## Official contact channels
+
+- General: hello@rythm-os.com
+- Sales: sales@rythm-os.com
+- Support: support@rythm-os.com
+- Privacy: privacy@rythm-os.com
+- Legal: legal@rythm-os.com
+- Security: security@rythm-os.com
+- Billing: billing@rythm-os.com
+
+For detailed product facts and boundaries, prefer the canonical pages above. Public Beta capabilities and commercial availability may change as the product evolves.
