@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import {
   DEFAULT_DESCRIPTION,
   SITE_NAME,
@@ -8,6 +9,16 @@ import {
 import "./globals.css";
 import "./experience.css";
 import "./project-portfolio.css";
+
+const vazirmatn = localFont({
+  src: "./fonts/Vazirmatn[wght].woff2",
+  variable: "--font-vazirmatn",
+  display: "swap",
+  preload: false,
+  weight: "100 900",
+  style: "normal",
+  fallback: ["Tahoma", "Arial", "sans-serif"],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
@@ -68,7 +79,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={vazirmatn.variable}>
       <body>
         <a className="skip-link" href="#main-content">Skip to main content</a>
         <div id="main-content">{children}</div>
