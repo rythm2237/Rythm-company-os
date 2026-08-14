@@ -190,6 +190,11 @@ export const ORGANIZATION_GRAPH = {
       alternateName: ["RYTHM", "RYTHM OS"],
       url: SITE_ORIGIN,
       taxID: "48332376-1-42",
+      identifier: {
+        "@type": "PropertyValue",
+        propertyID: "Hungarian individual entrepreneur registration number",
+        value: "58642889",
+      },
       email: "hello@rythm-os.com",
       address: {
         "@type": "PostalAddress",
