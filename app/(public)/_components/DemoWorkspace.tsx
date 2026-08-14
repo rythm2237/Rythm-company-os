@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type FocusEvent,
@@ -11,7 +12,6 @@ import {
   type MouseEvent,
   type PointerEvent,
 } from "react";
-import LanguageSelector from "@/components/public-education/LanguageSelector";
 import {
   getActiveTourStep,
   usePublicEducation,
@@ -35,7 +35,12 @@ type Props = {
 type ExplanationState = {
   key: ExplainKey;
   anchor: HTMLElement;
-  rect: DOMRect;
+  point: { x: number; y: number } | null;
+};
+
+type FloatingPosition = {
+  top: number;
+  left: number;
 };
 
 const GROUPS = ["Operate", "Build", "Govern", "Review"] as const;
@@ -70,6 +75,65 @@ function closestExplainTarget(target: EventTarget | null) {
   return target.closest("[data-explain-key]") as HTMLElement | null;
 }
 
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
+}
+
+function overlapArea(
+  first: { top: number; right: number; bottom: number; left: number },
+  second: { top: number; right: number; bottom: number; left: number },
+) {
+  const width = Math.max(0, Math.min(first.right, second.right) - Math.max(first.left, second.left));
+  const height = Math.max(0, Math.min(first.bottom, second.bottom) - Math.max(first.top, second.top));
+  return width * height;
+}
+
+function getExplanationPosition(
+  anchor: DOMRect,
+  point: { x: number; y: number } | null,
+  popoverWidth: number,
+  popoverHeight: number,
+): FloatingPosition {
+  const margin = 12;
+  const gap = 16;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const origin = point ?? { x: anchor.left + (anchor.width / 2), y: anchor.top + (anchor.height / 2) };
+  const candidates = [
+    { left: origin.x + gap, top: origin.y + gap },
+    { left: origin.x - popoverWidth - gap, top: origin.y + gap },
+    { left: origin.x + gap, top: origin.y - popoverHeight - gap },
+    { left: origin.x - popoverWidth - gap, top: origin.y - popoverHeight - gap },
+    { left: anchor.right + gap, top: origin.y - (popoverHeight / 2) },
+    { left: anchor.left - popoverWidth - gap, top: origin.y - (popoverHeight / 2) },
+    { left: origin.x - (popoverWidth / 2), top: anchor.bottom + gap },
+    { left: origin.x - (popoverWidth / 2), top: anchor.top - popoverHeight - gap },
+  ];
+  const paddedAnchor = {
+    top: anchor.top - 8,
+    right: anchor.right + 8,
+    bottom: anchor.bottom + 8,
+    left: anchor.left - 8,
+  };
+
+  return candidates.map((candidate, index) => {
+    const left = clamp(candidate.left, margin, viewportWidth - popoverWidth - margin);
+    const top = clamp(candidate.top, margin, viewportHeight - popoverHeight - margin);
+    const rectangle = {
+      top,
+      right: left + popoverWidth,
+      bottom: top + popoverHeight,
+      left,
+    };
+    const displacement = Math.abs(left - candidate.left) + Math.abs(top - candidate.top);
+    return {
+      left,
+      top,
+      score: (overlapArea(rectangle, paddedAnchor) * 100) + displacement + index,
+    };
+  }).sort((first, second) => first.score - second.score)[0];
+}
+
 export default function DemoWorkspace({ initialSurface = "command" }: Props) {
   const {
     copy,
@@ -90,6 +154,8 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
   const [conversionDismissed, setConversionDismissed] = useState(false);
   const [conversionExpanded, setConversionExpanded] = useState(true);
   const suppressFocusExplanationRef = useRef(false);
+  const explanationRef = useRef<HTMLElement>(null);
+  const [explanationPosition, setExplanationPosition] = useState<FloatingPosition | undefined>();
   const activeSurface: DemoSurface =
     NOVA_COMMERCE_DEMO.surfaces.find((surface) => surface.id === surfaceId) ?? NOVA_COMMERCE_DEMO.surfaces[0];
   const selectedAgent = NOVA_COMMERCE_DEMO.agents.find((agent) => agent.id === selectedAgentId) ?? null;
@@ -112,16 +178,34 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
     setExplanation(null);
   }, [explainMode]);
 
-  useEffect(() => {
-    if (!explanation) return;
-    function closeOnViewportChange() {
-      setExplanation(null);
+  useLayoutEffect(() => {
+    if (!explanation || !explanationRef.current) return;
+
+    const currentExplanation = explanation;
+    let frame = 0;
+    function updatePosition() {
+      if (!explanationRef.current) return;
+      const anchorRect = currentExplanation.anchor.getBoundingClientRect();
+      const popoverRect = explanationRef.current.getBoundingClientRect();
+      setExplanationPosition(getExplanationPosition(
+        anchorRect,
+        currentExplanation.point,
+        popoverRect.width,
+        popoverRect.height,
+      ));
     }
-    window.addEventListener("resize", closeOnViewportChange);
-    window.addEventListener("scroll", closeOnViewportChange, true);
+    function schedulePositionUpdate() {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(updatePosition);
+    }
+
+    updatePosition();
+    window.addEventListener("resize", schedulePositionUpdate);
+    window.addEventListener("scroll", schedulePositionUpdate, true);
     return () => {
-      window.removeEventListener("resize", closeOnViewportChange);
-      window.removeEventListener("scroll", closeOnViewportChange, true);
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", schedulePositionUpdate);
+      window.removeEventListener("scroll", schedulePositionUpdate, true);
     };
   }, [explanation]);
 
@@ -134,11 +218,13 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
     });
   }, []);
 
-  const openExplanation = useCallback((element: HTMLElement) => {
+  const openExplanation = useCallback((element: HTMLElement, point: { x: number; y: number } | null = null) => {
     if (suppressFocusExplanationRef.current || !explainMode || tourState !== "closed") return;
     const key = explainKeyFromElement(element);
     if (!key) return;
-    setExplanation({ key, anchor: element, rect: element.getBoundingClientRect() });
+    const rect = element.getBoundingClientRect();
+    setExplanation({ key, anchor: element, point });
+    setExplanationPosition(getExplanationPosition(rect, point, Math.min(380, window.innerWidth - 24), Math.min(400, window.innerHeight - 24)));
     trackPublicExperienceEvent({
       name: "explanation_opened",
       properties: { concept: key, locale },
@@ -178,7 +264,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
   function handlePointerOver(event: PointerEvent<HTMLElement>) {
     if (event.pointerType === "touch") return;
     const target = closestExplainTarget(event.target);
-    if (target && target !== explanation?.anchor) openExplanation(target);
+    if (target && target !== explanation?.anchor) openExplanation(target, { x: event.clientX, y: event.clientY });
   }
 
   function handleFocus(event: FocusEvent<HTMLElement>) {
@@ -192,7 +278,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
     if (!target) return;
     event.preventDefault();
     event.stopPropagation();
-    openExplanation(target);
+    openExplanation(target, { x: event.clientX, y: event.clientY });
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -216,11 +302,6 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
   }
 
   const explanationCopy = explanation ? copy.explanations[explanation.key] : null;
-  const explanationPosition = explanation && typeof window !== "undefined" ? {
-    top: Math.max(16, Math.min(explanation.rect.bottom + 12, window.innerHeight - 430)),
-    left: Math.max(16, Math.min(explanation.rect.left, window.innerWidth - 396)),
-  } : undefined;
-
   return (
     <section
       className={`demo-workspace${explainMode ? " is-explain-mode" : ""}${experienceMode ? " is-immersive" : ""}`}
@@ -240,11 +321,11 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
         </div>
         <div className="demo-boundary">
           <span data-explain-key="readOnlyDemo" tabIndex={explainMode ? 0 : undefined}><i aria-hidden="true" /> Read only</span>
-          <button type="button" onClick={resetDemo}>{copy.ui.resetDemo}</button>
+          <button type="button" onClick={resetDemo}>Reset Demo</button>
         </div>
       </header>
 
-      <div className="demo-education-toolbar" role="toolbar" aria-label={copy.ui.learningControls} dir={copy.direction} lang={locale}>
+      <div className="demo-education-toolbar" role="toolbar" aria-label="Product learning controls">
         <div>
           <button
             className={experienceMode ? "is-active" : undefined}
@@ -253,7 +334,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
             onClick={() => setExperienceMode(!experienceMode)}
           >
             <span aria-hidden="true">⌗</span>
-            {experienceMode ? copy.ui.exitExperienceMode : copy.ui.experienceMode}
+            {experienceMode ? "Exit Experience Mode" : "Enter Experience Mode"}
           </button>
           <button
             className={explainMode ? "is-active" : undefined}
@@ -263,13 +344,12 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
             onClick={() => explainMode ? closeExplainMode() : startExplainMode()}
           >
             <span aria-hidden="true">?</span>
-            {explainMode ? copy.ui.exitExplainMode : copy.ui.explainMode}
+            {explainMode ? "Exit Explain mode" : "Explain RYTHM"}
           </button>
-          <button type="button" onClick={openTour}><span aria-hidden="true">✦</span>{copy.ui.restartTour}</button>
+          <button type="button" onClick={openTour}><span aria-hidden="true">✦</span>Restart tour</button>
         </div>
         <div>
-          {explainMode ? <span className="demo-explain-hint">{copy.ui.explainHint}</span> : null}
-          <LanguageSelector compact />
+          {explainMode ? <span className="demo-explain-hint">Hover, focus, or tap a highlighted concept.</span> : null}
         </div>
       </div>
 
@@ -387,6 +467,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
 
       {explanation && explanationCopy ? (
         <aside
+          ref={explanationRef}
           className="demo-explanation-popover"
           role="dialog"
           aria-modal="false"
@@ -407,18 +488,18 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
       ) : null}
 
       {showConversion ? (
-        <aside className={`demo-contextual-conversion${conversionDismissed || !conversionExpanded ? " is-minimized" : ""}`} dir={copy.direction} lang={locale}>
+        <aside className={`demo-contextual-conversion${conversionDismissed || !conversionExpanded ? " is-minimized" : ""}`}>
           {conversionDismissed || !conversionExpanded ? (
-            <button type="button" onClick={() => { setConversionDismissed(false); setConversionExpanded(true); }}>{copy.ui.buildCompany} <span aria-hidden="true">✦</span></button>
+            <button type="button" onClick={() => { setConversionDismissed(false); setConversionExpanded(true); }}>Build with RYTHM <span aria-hidden="true">✦</span></button>
           ) : (
             <>
-              <button className="demo-conversion-dismiss" type="button" onClick={dismissConversion} aria-label={copy.ui.dismiss}>×</button>
-              <p className="marketing-kicker">{copy.ui.conversionEyebrow}</p>
-              <h3>{copy.ui.conversionTitle}</h3>
-              <p>{copy.ui.conversionDescription}</p>
+              <button className="demo-conversion-dismiss" type="button" onClick={dismissConversion} aria-label="Dismiss">×</button>
+              <p className="marketing-kicker">YOU HAVE SEEN THE OPERATING MODEL</p>
+              <h3>Ready to build with RYTHM?</h3>
+              <p>Keep exploring, compare company models, or start when you want to make the experience persistent.</p>
               <div>
-                <Link href="/pricing" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "pricing", locale } })}>{copy.ui.explorePlans}</Link>
-                <Link className="marketing-button" href="/signup" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "signup", locale } })}>{copy.ui.buildCompany}</Link>
+                <Link href="/pricing" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "pricing", locale } })}>Explore plans</Link>
+                <Link className="marketing-button" href="/signup" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "signup", locale } })}>Build your company</Link>
               </div>
             </>
           )}

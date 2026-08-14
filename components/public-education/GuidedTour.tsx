@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import RythmBrandMark from "@/components/brand/RythmBrandMark";
 import { trackPublicExperienceEvent } from "@/lib/analytics/public-events";
 import { TOUR_STEPS } from "@/lib/public-education/types";
@@ -18,6 +18,72 @@ function formatTemplate(template: string, values: Record<string, string | number
     (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
     template,
   );
+}
+
+type SpotlightRect = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
+}
+
+function intersectionArea(
+  first: { top: number; right: number; bottom: number; left: number },
+  second: { top: number; right: number; bottom: number; left: number },
+) {
+  const width = Math.max(0, Math.min(first.right, second.right) - Math.max(first.left, second.left));
+  const height = Math.max(0, Math.min(first.bottom, second.bottom) - Math.max(first.top, second.top));
+  return width * height;
+}
+
+function getGuidePosition(target: DOMRect, dialog: DOMRect): CSSProperties {
+  const margin = 16;
+  const gap = 20;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const centeredTop = target.top + ((target.height - dialog.height) / 2);
+  const centeredLeft = target.left + ((target.width - dialog.width) / 2);
+  const candidates = [
+    { left: target.right + gap, top: centeredTop },
+    { left: target.left - dialog.width - gap, top: centeredTop },
+    { left: centeredLeft, top: target.bottom + gap },
+    { left: centeredLeft, top: target.top - dialog.height - gap },
+  ];
+
+  const paddedTarget = {
+    top: target.top - 10,
+    right: target.right + 10,
+    bottom: target.bottom + 10,
+    left: target.left - 10,
+  };
+
+  const ranked = candidates.map((candidate, index) => {
+    const left = clamp(candidate.left, margin, viewportWidth - dialog.width - margin);
+    const top = clamp(candidate.top, margin, viewportHeight - dialog.height - margin);
+    const rectangle = {
+      top,
+      right: left + dialog.width,
+      bottom: top + dialog.height,
+      left,
+    };
+    const displacement = Math.abs(left - candidate.left) + Math.abs(top - candidate.top);
+    return {
+      left,
+      top,
+      score: (intersectionArea(rectangle, paddedTarget) * 100) + displacement + index,
+    };
+  }).sort((first, second) => first.score - second.score);
+
+  return {
+    top: ranked[0].top,
+    left: ranked[0].left,
+    right: "auto",
+    bottom: "auto",
+  };
 }
 
 export default function GuidedTour() {
@@ -39,10 +105,12 @@ export default function GuidedTour() {
   } = usePublicEducation();
   const dialogRef = useRef<HTMLDivElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const [dialogPosition, setDialogPosition] = useState<CSSProperties | undefined>();
+  const [spotlightRect, setSpotlightRect] = useState<SpotlightRect | null>(null);
   const activeDefinition = getActiveTourStep(tourStep);
   const activeCopy = copy.tour[activeDefinition.id];
-  const nextArrow = copy.direction === "rtl" ? "←" : "→";
-  const backArrow = copy.direction === "rtl" ? "→" : "←";
+  const nextArrow = "→";
+  const backArrow = "←";
 
   useEffect(() => {
     if (tourState === "active" && pathname !== "/demo") router.push("/demo");
@@ -87,11 +155,27 @@ export default function GuidedTour() {
 
   useEffect(() => {
     document.querySelectorAll(".is-guide-target").forEach((element) => element.classList.remove("is-guide-target"));
+    setSpotlightRect(null);
+    setDialogPosition(undefined);
     if (tourState !== "active" || pathname !== "/demo") return;
 
     let frame = 0;
     let attempts = 0;
     let target: HTMLElement | null = null;
+    const timers: number[] = [];
+
+    function syncFloatingElements() {
+      if (!target || !dialogRef.current) return;
+      const rect = target.getBoundingClientRect();
+      const padding = 9;
+      setSpotlightRect({
+        top: clamp(rect.top - padding, 0, window.innerHeight),
+        right: clamp(rect.right + padding, 0, window.innerWidth),
+        bottom: clamp(rect.bottom + padding, 0, window.innerHeight),
+        left: clamp(rect.left - padding, 0, window.innerWidth),
+      });
+      setDialogPosition(getGuidePosition(rect, dialogRef.current.getBoundingClientRect()));
+    }
 
     function findTarget() {
       target = document.querySelector<HTMLElement>(`[data-tour-id="${activeDefinition.target}"]`);
@@ -106,11 +190,19 @@ export default function GuidedTour() {
         inline: "nearest",
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
       });
+      frame = window.requestAnimationFrame(syncFloatingElements);
+      timers.push(window.setTimeout(syncFloatingElements, 240));
+      timers.push(window.setTimeout(syncFloatingElements, 560));
     }
 
     findTarget();
+    window.addEventListener("resize", syncFloatingElements);
+    window.addEventListener("scroll", syncFloatingElements, true);
     return () => {
       window.cancelAnimationFrame(frame);
+      timers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener("resize", syncFloatingElements);
+      window.removeEventListener("scroll", syncFloatingElements, true);
       target?.classList.remove("is-guide-target");
     };
   }, [activeDefinition.target, pathname, tourState]);
@@ -121,7 +213,20 @@ export default function GuidedTour() {
 
   return (
     <>
-      <button className="marketing-guide-scrim" type="button" aria-label={copy.ui.close} onClick={close} />
+      <button
+        className={`marketing-guide-scrim${tourState === "active" && spotlightRect ? " has-spotlight" : ""}`}
+        type="button"
+        aria-label={copy.ui.close}
+        onClick={close}
+      />
+      {tourState === "active" && spotlightRect ? (
+        <div className="marketing-guide-spotlight-mask" aria-hidden="true">
+          <span style={{ inset: `0 0 auto 0`, height: spotlightRect.top }} />
+          <span style={{ inset: `${spotlightRect.bottom}px 0 0 0` }} />
+          <span style={{ top: spotlightRect.top, left: 0, width: spotlightRect.left, height: spotlightRect.bottom - spotlightRect.top }} />
+          <span style={{ top: spotlightRect.top, right: 0, width: window.innerWidth - spotlightRect.right, height: spotlightRect.bottom - spotlightRect.top }} />
+        </div>
+      ) : null}
       <div
         className="marketing-guide-dialog"
         ref={dialogRef}
@@ -131,6 +236,7 @@ export default function GuidedTour() {
         dir={copy.direction}
         lang={locale}
         tabIndex={-1}
+        style={tourState === "active" ? dialogPosition : undefined}
       >
         <button className="marketing-guide-close" type="button" onClick={close} aria-label={copy.ui.close}>×</button>
 

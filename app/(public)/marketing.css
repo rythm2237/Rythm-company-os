@@ -625,8 +625,11 @@
 .marketing-footer { max-width: 1500px; margin-top: 0; }
 
 .marketing-guide-scrim, .marketing-mobile-backdrop { position: fixed; inset: 0; border: 0; }
-.marketing-guide-scrim { z-index: 390; background: rgba(6,11,20,.62); backdrop-filter: blur(5px); animation: marketing-scrim-in .24s ease both; }
-.is-guide-open .marketing-sidebar { z-index: 410; }
+.marketing-guide-scrim { z-index: 390; background: rgba(6,11,20,.36); animation: marketing-scrim-in .24s ease both; }
+.marketing-guide-scrim.has-spotlight { background: transparent; }
+.marketing-guide-spotlight-mask { position: fixed; z-index: 391; inset: 0; pointer-events: none; }
+.marketing-guide-spotlight-mask > span { position: fixed; display: block; background: rgba(6,11,20,.34); animation: marketing-scrim-in .2s ease both; }
+.is-guide-open .marketing-sidebar { z-index: 300; }
 .marketing-guide-dialog {
   position: fixed;
   z-index: 430;
@@ -848,12 +851,15 @@
 }
 .marketing-guide-dialog[dir="rtl"] .marketing-guide-close { right: auto; left: 15px; }
 .marketing-guide-dialog[lang="fa"],
-.demo-education-toolbar[lang="fa"],
-.demo-explanation-popover[lang="fa"],
-.demo-contextual-conversion[lang="fa"] {
-  font-family: "Noto Sans Arabic", Tahoma, Arial, sans-serif;
+.demo-explanation-popover[lang="fa"] {
+  font-family: var(--font-vazirmatn), Tahoma, Arial, sans-serif;
   letter-spacing: normal;
 }
+.marketing-guide-dialog[lang="fa"] h2,
+.demo-explanation-popover[lang="fa"] h3 { font-weight: 760; line-height: 1.48; }
+.marketing-guide-dialog[lang="fa"] > p:not(.marketing-kicker),
+.demo-explanation-popover[lang="fa"] > p:not(.marketing-kicker),
+.demo-explanation-popover[lang="fa"] dd { line-height: 1.9; }
 .marketing-guide-dialog[dir="rtl"] .marketing-kicker { letter-spacing: 0; }
 .marketing-guide-dialog[dir="rtl"] .marketing-guide-progress { direction: ltr; }
 .marketing-guide-dialog[dir="rtl"] .marketing-guide-actions,
@@ -906,9 +912,9 @@
 .demo-education-toolbar .education-language-selector select { height: 38px; color: #354158; border-color: #d9e0eb; background: #fff; color-scheme: light; }
 .demo-explain-hint { max-width: 260px; overflow: hidden; color: #667289; font-size: .64rem; text-overflow: ellipsis; white-space: nowrap; }
 
-.demo-workspace.is-explain-mode [data-explain-key] { cursor: help; outline: 1px dashed rgba(90,104,232,.42); outline-offset: 3px; transition: outline-color .18s ease, background .18s ease, box-shadow .18s ease; }
+.demo-workspace.is-explain-mode [data-explain-key] { cursor: help; outline: 1px solid rgba(90,104,232,.2); outline-offset: 3px; transition: outline-color .18s ease, background .18s ease, box-shadow .18s ease; }
 .demo-workspace.is-explain-mode [data-explain-key]:hover,
-.demo-workspace.is-explain-mode [data-explain-key]:focus-visible { outline-color: #5a68e8; box-shadow: 0 0 0 5px rgba(90,104,232,.07); }
+.demo-workspace.is-explain-mode [data-explain-key]:focus-visible { outline-color: rgba(90,104,232,.8); background: rgba(90,104,232,.025); box-shadow: 0 0 0 5px rgba(90,104,232,.07), 0 12px 34px rgba(24,35,67,.08); }
 .demo-explanation-popover {
   position: fixed;
   z-index: 520;
@@ -920,8 +926,10 @@
   border-radius: 18px;
   color: #eef2f8;
   background:
-    radial-gradient(circle at 90% 0, rgba(75,198,216,.11), transparent 12rem),
-    linear-gradient(145deg, #111c30, #0b1424);
+    radial-gradient(circle at 90% 0, rgba(75,198,216,.12), transparent 12rem),
+    linear-gradient(145deg, rgba(17,28,48,.9), rgba(8,17,31,.86));
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: blur(18px) saturate(130%);
   box-shadow: 0 28px 72px rgba(5,10,19,.35), inset 0 1px rgba(255,255,255,.07);
   animation: demo-explanation-in .2s cubic-bezier(.2,.8,.2,1) both;
 }
@@ -1004,11 +1012,10 @@
   .demo-education-toolbar button { flex: 0 0 auto; }
   .demo-education-toolbar .education-language-selector { width: 150px; }
   .demo-explanation-popover {
-    inset: auto 8px 8px !important;
-    width: auto;
-    max-height: min(70svh, 540px);
-    border-radius: 20px;
-    animation-name: demo-bottom-sheet-in;
+    width: min(360px, calc(100vw - 24px));
+    max-height: min(58svh, 500px);
+    padding: 19px;
+    border-radius: 18px;
   }
   .demo-contextual-conversion, .demo-contextual-conversion[dir="rtl"] { right: 10px; bottom: 10px; left: 10px; width: auto; }
   .demo-contextual-conversion.is-minimized, .demo-contextual-conversion.is-minimized[dir="rtl"] { right: 10px; left: auto; width: auto; }

@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import RythmBrandLogo from "@/components/brand/RythmBrandLogo";
 import GuidedTour from "@/components/public-education/GuidedTour";
-import LanguageSelector from "@/components/public-education/LanguageSelector";
 import PublicEducationProvider, {
   usePublicEducation,
 } from "@/components/public-education/PublicEducationProvider";
@@ -45,7 +44,6 @@ function PublicShellFrame({ children }: PublicShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const {
-    copy,
     locale,
     tourState,
     experienceMode,
@@ -110,9 +108,8 @@ function PublicShellFrame({ children }: PublicShellProps) {
         <div className="marketing-sidebar-footer">
           <button className="marketing-guide-launcher" type="button" onClick={openTour}>
             <span aria-hidden="true">?</span>
-            <span><strong>{copy.ui.guideLauncherTitle}</strong><small>{copy.ui.guideLauncherDetail}</small></span>
+            <span><strong>Learn RYTHM</strong><small>Tour and contextual help</small></span>
           </button>
-          <LanguageSelector compact />
           <div className="marketing-system-state"><i aria-hidden="true" /><span>Public experience</span><strong>Safe to explore</strong></div>
           <div className="marketing-sidebar-actions">
             <Link href="/login" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_sidebar", locale } })}>Sign in</Link>
