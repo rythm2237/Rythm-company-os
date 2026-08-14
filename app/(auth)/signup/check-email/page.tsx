@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: Promise<{ product?: string }> };
+type Props = { searchParams: Promise<{ product?: string; error?: string }> };
 
 export default async function SignupCheckEmailPage({ searchParams }: Props) {
   const params = await searchParams;
@@ -19,6 +19,8 @@ export default async function SignupCheckEmailPage({ searchParams }: Props) {
             confirmation link. After verification, RYTHM will bring you back securely to company setup.
           </p>
         </div>
+
+        {params.error ? <p className="form-error" role="alert">{params.error}</p> : null}
 
         <div className="auth-form" style={{ marginTop: 18 }}>
           <p className="security-note" style={{ margin: 0 }}>
