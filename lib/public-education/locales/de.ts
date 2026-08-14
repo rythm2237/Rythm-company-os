@@ -34,6 +34,7 @@ const copy = {
     exitExplainMode: "Erklärmodus beenden",
     experienceMode: "Experience Mode öffnen",
     exitExperienceMode: "Experience Mode beenden",
+    experienceDiscoveryHint: "Blenden Sie die öffentliche Navigation aus und erleben Sie die Demo als fokussierten Company-OS-Arbeitsbereich.",
     resetDemo: "Demo zurücksetzen",
     whatIsThis: "Was ist das?",
     whyItMatters: "Warum ist das wichtig?",
@@ -54,7 +55,8 @@ const copy = {
     accountableWork: { eyebrow: "05 · VERANTWORTLICHE AUSFÜHRUNG", title: "Empfehlungen werden zu verantworteten, begrenzten Aktionen.", description: "Jede Aktion behält Ursprung, Eigentümer, Status und Freigabegrenze – KI-Unterstützung wird nie zu unsichtbarer Ausführung." },
     boardroom: { eyebrow: "06 · GESTEUERTE BERATUNG", title: "Menschen und KI-Spezialisten beraten in einer gemeinsamen Entscheidungsspur.", description: "Agenda, Kontext, Beiträge, Eingriffe, Entscheidungen, Freigaben und Folgeaktionen bleiben verbunden." },
     traceability: { eyebrow: "07 · OPERATIVE SPUR", title: "Sie sehen jederzeit, warum Arbeit existiert.", description: "RYTHM verbindet Absicht mit Evidenz, Meetings, Entscheidungen, Freigaben und Ausführung, ohne die menschliche Verantwortung zu verlieren." },
-    build: { eyebrow: "08 · UNTERNEHMEN GESTALTEN", title: "Templates beschleunigen, Company Builder passt an.", description: "Starten Sie mit einem gesteuerten Muster oder entwerfen Sie eigene Abteilungen und Rollen. Ohne autorisierte Bereitstellung wird nichts operativ." },
+    executiveControl: { eyebrow: "08 · EXECUTIVE CONTROL", title: "Aufmerksamkeit, Review, Wirtschaftlichkeit und Betriebszustand bleiben sichtbar.", description: "Executive Review überführt Ausnahmen in Entscheidungen; Attention, Economics und Operations Health zeigen Urteilsbedarf, Kosten und den Zustand des Betriebssystems." },
+    build: { eyebrow: "09 · UNTERNEHMEN GESTALTEN", title: "Templates beschleunigen, Company Builder passt an.", description: "Starten Sie mit einem gesteuerten Muster oder entwerfen Sie eigene Abteilungen und Rollen. Ohne autorisierte Bereitstellung wird nichts operativ." },
   },
   explanations: {
     humanCeo: { title: "Human CEO", what: "Die verantwortliche Person mit letzter Autorität über folgenreiche Unternehmensentscheidungen.", why: "KI kann koordinieren und empfehlen, Verantwortung darf aber nicht an ein intransparentes System delegiert werden.", real: "Der CEO prüft Eskalationen, genehmigt begrenzte Aktionen und kann das Betriebssystem anhalten oder neu ausrichten." },

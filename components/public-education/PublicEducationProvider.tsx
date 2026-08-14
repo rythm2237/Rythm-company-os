@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { trackPublicExperienceEvent } from "@/lib/analytics/public-events";
@@ -25,7 +26,7 @@ const LOCALE_STORAGE_KEY = "rythm-public-education-locale-v1";
 const TOUR_STORAGE_KEY = "rythm-public-guide-v3";
 const EXPERIENCE_STORAGE_KEY = "rythm-demo-experience-v1";
 
-export type TourState = "closed" | "prompt" | "active" | "complete";
+export type TourState = "closed" | "prompt" | "active";
 
 type PublicEducationContextValue = {
   ready: boolean;
@@ -42,7 +43,6 @@ type PublicEducationContextValue = {
   startTour: () => void;
   dismissTour: () => void;
   completeTour: () => void;
-  closeCompletedTour: () => void;
   setTourStep: React.Dispatch<React.SetStateAction<number>>;
   startExplainMode: () => void;
   closeExplainMode: () => void;
@@ -60,6 +60,13 @@ function detectSupportedBrowserLocale() {
   return null;
 }
 
+function readTourPreference() {
+  const stored = window.localStorage.getItem(TOUR_STORAGE_KEY);
+  if (stored === "completed" || stored === "dismissed") return stored;
+  if (stored !== null) window.localStorage.removeItem(TOUR_STORAGE_KEY);
+  return null;
+}
+
 export default function PublicEducationProvider({ children }: Readonly<{ children: React.ReactNode }>) {
   const [ready, setReady] = useState(false);
   const [copy, setCopy] = useState<PublicEducationCopy>(DEFAULT_PUBLIC_EDUCATION_COPY);
@@ -69,29 +76,38 @@ export default function PublicEducationProvider({ children }: Readonly<{ childre
   const [tourStep, setTourStep] = useState(0);
   const [explainMode, setExplainMode] = useState(false);
   const [experienceMode, setExperienceModeState] = useState(false);
+  const localeRequestRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
 
     async function initialize() {
-      const storedLocale = normalizeLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
+      const storedLocaleValue = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+      const storedLocale = normalizeLocale(storedLocaleValue);
       const detectedLocale = detectSupportedBrowserLocale();
+      const initialLocale = storedLocale ?? detectedLocale ?? "en";
 
-      if (storedLocale) {
-        const storedCopy = await loadPublicEducationCopy(storedLocale);
-        if (cancelled) return;
-        setCopy(storedCopy);
-        setActiveLocale(storedLocale);
-      } else if (detectedLocale && detectedLocale !== "en") {
-        setSuggestedLocale(detectedLocale);
+      if (storedLocaleValue && !storedLocale) {
+        window.localStorage.removeItem(LOCALE_STORAGE_KEY);
       }
 
-      setExperienceModeState(window.sessionStorage.getItem(EXPERIENCE_STORAGE_KEY) === "active");
+      if (initialLocale !== "en") {
+        const storedCopy = await loadPublicEducationCopy(initialLocale);
+        if (cancelled) return;
+        setCopy(storedCopy);
+        setActiveLocale(initialLocale);
+      }
+
+      const storedExperienceMode = window.sessionStorage.getItem(EXPERIENCE_STORAGE_KEY);
+      setExperienceModeState(storedExperienceMode === "active");
+      if (storedExperienceMode !== null && storedExperienceMode !== "active") {
+        window.sessionStorage.removeItem(EXPERIENCE_STORAGE_KEY);
+      }
       setReady(true);
 
-      if (!window.localStorage.getItem(TOUR_STORAGE_KEY)) {
+      if (!readTourPreference()) {
         setTourState("prompt");
-        trackPublicExperienceEvent({ name: "tour_prompt_seen", properties: { locale: storedLocale ?? "en" } });
+        trackPublicExperienceEvent({ name: "tour_prompt_seen", properties: { locale: initialLocale } });
       }
     }
 
@@ -100,12 +116,14 @@ export default function PublicEducationProvider({ children }: Readonly<{ childre
   }, []);
 
   const selectLocale = useCallback(async (nextLocale: SupportedLocale) => {
+    const requestId = ++localeRequestRef.current;
     const nextCopy = await loadPublicEducationCopy(nextLocale);
+    if (requestId !== localeRequestRef.current) return;
     setCopy(nextCopy);
     setActiveLocale(nextLocale);
     setSuggestedLocale(null);
     window.localStorage.setItem(LOCALE_STORAGE_KEY, nextLocale);
-    trackPublicExperienceEvent({ name: "tour_language_changed", properties: { locale: nextLocale } });
+    trackPublicExperienceEvent({ name: "tour_language_selected", properties: { locale: nextLocale } });
   }, []);
 
   const acceptSuggestedLocale = useCallback(async () => {
@@ -135,35 +153,33 @@ export default function PublicEducationProvider({ children }: Readonly<{ childre
 
   const completeTour = useCallback(() => {
     window.localStorage.setItem(TOUR_STORAGE_KEY, "completed");
-    setTourState("complete");
+    setTourState("closed");
+    setTourStep(0);
     trackPublicExperienceEvent({ name: "tour_completed", properties: { locale } });
   }, [locale]);
 
-  const closeCompletedTour = useCallback(() => {
-    setTourState("closed");
-    setTourStep(0);
-  }, []);
-
   const startExplainMode = useCallback(() => {
-    if (tourState === "active" || tourState === "complete") return;
+    if (tourState !== "closed" || explainMode) return;
     setExplainMode(true);
-    trackPublicExperienceEvent({ name: "explain_mode_started", properties: { locale } });
-  }, [locale, tourState]);
+    trackPublicExperienceEvent({ name: "explain_mode_enabled", properties: { locale } });
+  }, [explainMode, locale, tourState]);
 
   const closeExplainMode = useCallback(() => {
+    if (!explainMode) return;
     setExplainMode(false);
-    trackPublicExperienceEvent({ name: "explain_mode_closed", properties: { locale } });
-  }, [locale]);
+    trackPublicExperienceEvent({ name: "explain_mode_disabled", properties: { locale } });
+  }, [explainMode, locale]);
 
   const setExperienceMode = useCallback((active: boolean) => {
+    if (active === experienceMode) return;
     setExperienceModeState(active);
     if (active) window.sessionStorage.setItem(EXPERIENCE_STORAGE_KEY, "active");
     else window.sessionStorage.removeItem(EXPERIENCE_STORAGE_KEY);
     trackPublicExperienceEvent({
-      name: active ? "experience_mode_started" : "experience_mode_closed",
+      name: active ? "experience_mode_entered" : "experience_mode_exited",
       properties: { locale },
     });
-  }, [locale]);
+  }, [experienceMode, locale]);
 
   const value = useMemo<PublicEducationContextValue>(() => ({
     ready,
@@ -180,14 +196,12 @@ export default function PublicEducationProvider({ children }: Readonly<{ childre
     startTour,
     dismissTour,
     completeTour,
-    closeCompletedTour,
     setTourStep,
     startExplainMode,
     closeExplainMode,
     setExperienceMode,
   }), [
     acceptSuggestedLocale,
-    closeCompletedTour,
     closeExplainMode,
     completeTour,
     copy,

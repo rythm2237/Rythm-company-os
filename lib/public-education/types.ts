@@ -12,6 +12,7 @@ export const TOUR_STEPS = [
   { id: "accountableWork", target: "demo-actions", surface: "actions" },
   { id: "boardroom", target: "demo-boardroom", surface: "boardroom" },
   { id: "traceability", target: "demo-traceability", surface: "traceability" },
+  { id: "executiveControl", target: "demo-executive-review", surface: "executive-review" },
   { id: "build", target: "demo-builder", surface: "builder" },
 ] as const;
 
@@ -93,6 +94,7 @@ export type PublicEducationCopy = {
     exitExplainMode: string;
     experienceMode: string;
     exitExperienceMode: string;
+    experienceDiscoveryHint: string;
     resetDemo: string;
     whatIsThis: string;
     whyItMatters: string;

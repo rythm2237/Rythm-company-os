@@ -16,6 +16,7 @@ import {
   getActiveTourStep,
   usePublicEducation,
 } from "@/components/public-education/PublicEducationProvider";
+import LanguageSelector from "@/components/public-education/LanguageSelector";
 import { trackPublicExperienceEvent } from "@/lib/analytics/public-events";
 import {
   NOVA_COMMERCE_DEMO,
@@ -44,6 +45,7 @@ type FloatingPosition = {
 };
 
 const GROUPS = ["Operate", "Build", "Govern", "Review"] as const;
+const EXPERIENCE_DISCOVERY_STORAGE_KEY = "rythm-demo-experience-discovered-v1";
 
 const SURFACE_EXPLANATIONS: Record<DemoSurfaceId, ExplainKey> = {
   command: "operatingContext",
@@ -73,6 +75,10 @@ function explainKeyFromElement(element: HTMLElement) {
 function closestExplainTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return null;
   return target.closest("[data-explain-key]") as HTMLElement | null;
+}
+
+function isInteractiveExplainTarget(target: HTMLElement) {
+  return target.matches("button, a[href], input, select, textarea, [role='button'], [role='link']");
 }
 
 function clamp(value: number, minimum: number, maximum: number) {
@@ -153,18 +159,50 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
   const [meaningfulInteractions, setMeaningfulInteractions] = useState<Set<string>>(() => new Set());
   const [conversionDismissed, setConversionDismissed] = useState(false);
   const [conversionExpanded, setConversionExpanded] = useState(true);
+  const [experienceHintVisible, setExperienceHintVisible] = useState(false);
   const suppressFocusExplanationRef = useRef(false);
+  const lastPointerTypeRef = useRef("mouse");
   const explanationRef = useRef<HTMLElement>(null);
   const [explanationPosition, setExplanationPosition] = useState<FloatingPosition | undefined>();
   const activeSurface: DemoSurface =
     NOVA_COMMERCE_DEMO.surfaces.find((surface) => surface.id === surfaceId) ?? NOVA_COMMERCE_DEMO.surfaces[0];
   const selectedAgent = NOVA_COMMERCE_DEMO.agents.find((agent) => agent.id === selectedAgentId) ?? null;
   const activeTour = getActiveTourStep(tourStep);
-  const showConversion = meaningfulInteractions.size >= 4 && tourState === "closed";
+  const showConversion = meaningfulInteractions.size >= 4
+    && tourState === "closed"
+    && !explainMode
+    && !experienceMode;
 
   useEffect(() => {
     setConversionDismissed(window.sessionStorage.getItem("rythm-demo-conversion-dismissed-v1") === "true");
   }, []);
+
+  useEffect(() => {
+    if (tourState !== "closed" || experienceMode) {
+      setExperienceHintVisible(false);
+      return;
+    }
+
+    const storedDiscovery = window.localStorage.getItem(EXPERIENCE_DISCOVERY_STORAGE_KEY);
+    if (storedDiscovery === "seen") return;
+    if (storedDiscovery !== null) window.localStorage.removeItem(EXPERIENCE_DISCOVERY_STORAGE_KEY);
+
+    let dismissTimer = 0;
+    const revealTimer = window.setTimeout(() => {
+      setExperienceHintVisible(true);
+      window.localStorage.setItem(EXPERIENCE_DISCOVERY_STORAGE_KEY, "seen");
+      trackPublicExperienceEvent({
+        name: "experience_mode_discovered",
+        properties: { locale },
+      });
+      dismissTimer = window.setTimeout(() => setExperienceHintVisible(false), 7000);
+    }, 700);
+
+    return () => {
+      window.clearTimeout(revealTimer);
+      window.clearTimeout(dismissTimer);
+    };
+  }, [experienceMode, locale, tourState]);
 
   useEffect(() => {
     if (tourState !== "active") return;
@@ -185,6 +223,10 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
     let frame = 0;
     function updatePosition() {
       if (!explanationRef.current) return;
+      if (!currentExplanation.anchor.isConnected) {
+        setExplanation(null);
+        return;
+      }
       const anchorRect = currentExplanation.anchor.getBoundingClientRect();
       const popoverRect = explanationRef.current.getBoundingClientRect();
       setExplanationPosition(getExplanationPosition(
@@ -226,7 +268,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
     setExplanation({ key, anchor: element, point });
     setExplanationPosition(getExplanationPosition(rect, point, Math.min(380, window.innerWidth - 24), Math.min(400, window.innerHeight - 24)));
     trackPublicExperienceEvent({
-      name: "explanation_opened",
+      name: "explanation_viewed",
       properties: { concept: key, locale },
     });
   }, [explainMode, locale, tourState]);
@@ -244,12 +286,14 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
   }
 
   function selectSurface(nextSurface: DemoSurfaceId) {
+    setExplanation(null);
     setSurfaceId(nextSurface);
     setSelectedAgentId(null);
     registerInteraction(`surface:${nextSurface}`);
   }
 
   function selectAgent(agentId: string) {
+    setExplanation(null);
     setSelectedAgentId(agentId);
     registerInteraction(`agent:${agentId}`);
   }
@@ -261,6 +305,10 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
     setMeaningfulInteractions(new Set());
   }
 
+  function handlePointerDown(event: PointerEvent<HTMLElement>) {
+    lastPointerTypeRef.current = event.pointerType;
+  }
+
   function handlePointerOver(event: PointerEvent<HTMLElement>) {
     if (event.pointerType === "touch") return;
     const target = closestExplainTarget(event.target);
@@ -268,6 +316,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
   }
 
   function handleFocus(event: FocusEvent<HTMLElement>) {
+    if (lastPointerTypeRef.current === "touch") return;
     const target = closestExplainTarget(event.target);
     if (target) openExplanation(target);
   }
@@ -275,13 +324,33 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
   function handleClick(event: MouseEvent<HTMLElement>) {
     if (!explainMode || tourState !== "closed") return;
     const target = closestExplainTarget(event.target);
-    if (!target) return;
+    if (!target) {
+      if (
+        explanation
+        && event.target instanceof Node
+        && !explanationRef.current?.contains(event.target)
+      ) closeExplanation();
+      return;
+    }
+
+    if (explanation?.anchor === target) {
+      if (isInteractiveExplainTarget(target)) {
+        setExplanation(null);
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      closeExplanation({ restoreFocus: lastPointerTypeRef.current === "keyboard" });
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     openExplanation(target, { x: event.clientX, y: event.clientY });
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+    lastPointerTypeRef.current = "keyboard";
     if (event.key === "Escape") {
       if (explanation) closeExplanation({ restoreFocus: true });
       else if (explainMode) closeExplainMode();
@@ -291,6 +360,13 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
     if (!explainMode || !["Enter", " "].includes(event.key)) return;
     const target = closestExplainTarget(event.target);
     if (!target) return;
+    lastPointerTypeRef.current = "keyboard";
+    if (explanation?.anchor === target) {
+      if (isInteractiveExplainTarget(target)) return;
+      event.preventDefault();
+      closeExplanation({ restoreFocus: true });
+      return;
+    }
     event.preventDefault();
     openExplanation(target);
   }
@@ -307,6 +383,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
       className={`demo-workspace${explainMode ? " is-explain-mode" : ""}${experienceMode ? " is-immersive" : ""}`}
       aria-label="Nova Commerce synthetic Demo Workspace"
       onPointerOver={handlePointerOver}
+      onPointerDownCapture={handlePointerDown}
       onFocusCapture={handleFocus}
       onClickCapture={handleClick}
       onKeyDownCapture={handleKeyDown}
@@ -321,36 +398,55 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
         </div>
         <div className="demo-boundary">
           <span data-explain-key="readOnlyDemo" tabIndex={explainMode ? 0 : undefined}><i aria-hidden="true" /> Read only</span>
-          <button type="button" onClick={resetDemo}>Reset Demo</button>
+          <button type="button" onClick={resetDemo}>{copy.ui.resetDemo}</button>
         </div>
       </header>
 
-      <div className="demo-education-toolbar" role="toolbar" aria-label="Product learning controls">
+      <div
+        className="demo-education-toolbar"
+        role="toolbar"
+        aria-label={copy.ui.learningControls}
+        dir={copy.direction}
+        lang={locale}
+      >
         <div>
-          <button
-            className={experienceMode ? "is-active" : undefined}
-            type="button"
-            aria-pressed={experienceMode}
-            onClick={() => setExperienceMode(!experienceMode)}
-          >
-            <span aria-hidden="true">⌗</span>
-            {experienceMode ? "Exit Experience Mode" : "Enter Experience Mode"}
-          </button>
+          <span className="demo-experience-control">
+            <button
+              className={experienceMode ? "is-active" : undefined}
+              type="button"
+              aria-pressed={experienceMode}
+              onClick={() => {
+                setExperienceHintVisible(false);
+                setExperienceMode(!experienceMode);
+              }}
+            >
+              <span aria-hidden="true">⌗</span>
+              {experienceMode ? copy.ui.exitExperienceMode : copy.ui.experienceMode}
+            </button>
+          </span>
           <button
             className={explainMode ? "is-active" : undefined}
             type="button"
             aria-pressed={explainMode}
-            disabled={tourState === "active" || tourState === "complete"}
+            aria-label={explainMode ? copy.ui.exitExplainMode : copy.ui.explainMode}
+            disabled={tourState === "active"}
             onClick={() => explainMode ? closeExplainMode() : startExplainMode()}
           >
             <span aria-hidden="true">?</span>
-            {explainMode ? "Exit Explain mode" : "Explain RYTHM"}
+            {explainMode ? copy.ui.explainModeActive : copy.ui.explainMode}
           </button>
-          <button type="button" onClick={openTour}><span aria-hidden="true">✦</span>Restart tour</button>
+          <button type="button" onClick={openTour}><span aria-hidden="true">✦</span>{copy.ui.restartTour}</button>
         </div>
         <div>
-          {explainMode ? <span className="demo-explain-hint">Hover, focus, or tap a highlighted concept.</span> : null}
+          {explainMode ? <span className="demo-explain-hint">{copy.ui.explainHint}</span> : null}
+          <LanguageSelector compact />
         </div>
+        {experienceHintVisible ? (
+          <span className="demo-experience-discovery" role="status">
+            {copy.ui.experienceDiscoveryHint}
+            <button type="button" onClick={() => setExperienceHintVisible(false)} aria-label={copy.ui.dismiss}>×</button>
+          </span>
+        ) : null}
       </div>
 
       <div className="demo-frame">
@@ -445,7 +541,15 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
 
         {selectedAgent ? (
           <aside className="demo-agent-panel" aria-label={`${selectedAgent.name} Agent profile`}>
-            <button className="demo-panel-close" type="button" onClick={() => setSelectedAgentId(null)} aria-label="Close Agent profile">×</button>
+            <button
+              className="demo-panel-close"
+              type="button"
+              onClick={() => {
+                setExplanation(null);
+                setSelectedAgentId(null);
+              }}
+              aria-label="Close Agent profile"
+            >×</button>
             <p className="marketing-kicker">AI ORGANIZATIONAL MEMBER</p>
             <div className="demo-agent-profile-heading" data-explain-key="aiAgents" tabIndex={explainMode ? 0 : undefined}>
               <span className="demo-agent-avatar" aria-hidden="true">{selectedAgent.name.slice(0, 1)}</span>
@@ -471,6 +575,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
           className="demo-explanation-popover"
           role="dialog"
           aria-modal="false"
+          aria-live="polite"
           aria-labelledby="demo-explanation-title"
           dir={copy.direction}
           lang={locale}
