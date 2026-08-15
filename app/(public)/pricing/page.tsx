@@ -28,7 +28,10 @@ export default async function PricingPage() {
           </article>
         ))}
       </div>
-      <p className="pricing-note">Public Beta prices are configurable commercial hypotheses. Taxes, AI usage, complex integrations, and separately scoped implementation work may apply.</p>
+      <div className="pricing-note">
+        <p>Displayed Public Beta catalog prices are commercial starting points and are not yet a consumer checkout total. For a consumer purchase, the final checkout must display the full amount payable including applicable VAT/taxes, mandatory charges, billing interval, duration, renewal and cancellation conditions before any payment obligation is created.</p>
+        <p>Online consumer payment remains disabled until that calculation and invoicing flow is connected. Read <Link href="/consumer-rights">Consumer Rights</Link> and <Link href="/consumer-terms">Consumer Terms</Link>.</p>
+      </div>
     </main>
   );
 }
