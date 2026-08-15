@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { createPublicMetadata } from "@/lib/seo/site";
 
-export const metadata: Metadata = createPublicMetadata("/consumer-rights");
+export const metadata: Metadata = {
+  title: "Consumer Rights | RYTHM Company OS",
+  description: "Mandatory consumer information for RYTHM digital services, complaints, withdrawal, conformity remedies, and alternative dispute resolution.",
+  alternates: { canonical: "/consumer-rights" },
+};
 
 export default function ConsumerRightsPage() {
   return (
@@ -11,32 +14,26 @@ export default function ConsumerRightsPage() {
         <div><p className="marketing-kicker">CONSUMER RIGHTS</p><h1>Consumer information for RYTHM digital services and distance contracts.</h1></div>
         <p>Effective 15 August 2026. This page applies when you contract with Tayyebialashti Yaser E.V. / RYTHM Company OS as a consumer, meaning for purposes outside your trade, business, craft, or profession.</p>
       </section>
-
       <section className="marketing-section enterprise-model">
         <div className="enterprise-capabilities"><p className="marketing-kicker">TRADER</p><h2>Who you contract with.</h2><ul><li>Tayyebialashti Yaser E.V. / RYTHM Company OS.</li><li>Registered address: 1143 Budapest, Gizella út 35, Hungary.</li><li>Hungarian tax number: 48332376-1-42.</li><li>Individual entrepreneur registration number: 58642889.</li><li>Consumer/legal email: <a href="mailto:legal@rythm-os.com">legal@rythm-os.com</a>.</li><li>Support email: <a href="mailto:support@rythm-os.com">support@rythm-os.com</a>.</li></ul></div>
         <div className="enterprise-capabilities"><p className="marketing-kicker">BEFORE YOU ORDER</p><h2>The checkout must show the essential contract information.</h2><ul><li>Main characteristics and scope of the digital service or one-off AI meeting.</li><li>Total price payable by the consumer, including applicable taxes and mandatory charges.</li><li>Billing period, contract duration, renewal mechanics, minimum commitment and termination conditions where applicable.</li><li>Accepted payment method and any geographic or technical restrictions.</li><li>When access or performance begins.</li><li>Withdrawal information and, where immediate performance is requested, the consequences for withdrawal rights.</li></ul></div>
       </section>
-
       <section className="marketing-section enterprise-model">
         <div className="enterprise-capabilities"><p className="marketing-kicker">ORDERING</p><h2>An online order must clearly create a payment obligation.</h2><ul><li>RYTHM will not treat a consumer checkout as complete unless the final ordering control states unambiguously that placing the order creates an obligation to pay.</li><li>Directly before that control, the checkout must repeat the essential service, total price, duration and any minimum commitment.</li><li>Payment integration remains disabled until the commercial price, VAT and invoicing configuration can populate those disclosures correctly.</li></ul></div>
         <div className="enterprise-capabilities"><p className="marketing-kicker">CONTRACT CONFIRMATION</p><h2>Keep the contract confirmation you receive.</h2><ul><li>After a paid consumer contract is concluded, RYTHM must provide confirmation on a durable medium containing the applicable contractual information and any express request/acknowledgement concerning early performance or digital content.</li><li>Keep order confirmations, invoices and withdrawal acknowledgements for your records.</li></ul></div>
       </section>
-
       <section className="marketing-section enterprise-model">
         <div className="enterprise-capabilities"><p className="marketing-kicker">14-DAY WITHDRAWAL</p><h2>Eligible distance contracts normally carry a 14-day withdrawal period.</h2><ul><li>For a service contract, the period generally starts when the contract is concluded.</li><li>You may exercise the right without giving a reason unless a statutory exception applies.</li><li>If you expressly ask for a paid service to start during the withdrawal period and later withdraw before full performance, you may owe a proportionate amount for what was supplied up to withdrawal where the legal conditions are met.</li><li>Once a service has been fully performed after the required express request and acknowledgement, the statutory withdrawal right can be lost in the circumstances provided by law.</li><li>For digital content supplied without a tangible medium, different statutory consent/acknowledgement rules can apply before the withdrawal right is lost.</li></ul><p><Link href="/withdrawal">Use the online withdrawal function →</Link></p></div>
         <div className="enterprise-capabilities"><p className="marketing-kicker">REFUNDS</p><h2>Eligible withdrawal refunds follow mandatory law.</h2><ul><li>Where a refund is due following withdrawal, reimbursement is made without undue delay and, where the statutory rule applies, no later than 14 days after RYTHM is informed of the withdrawal.</li><li>The original payment method is used unless the consumer expressly agrees otherwise and incurs no fee as a result.</li><li>No contractual term on this site limits a refund or remedy that mandatory consumer law requires.</li></ul></div>
       </section>
-
       <section className="marketing-section enterprise-model">
         <div className="enterprise-capabilities"><p className="marketing-kicker">DIGITAL SERVICE CONFORMITY</p><h2>Paid digital services must conform to the consumer contract.</h2><ul><li>RYTHM must provide the contracted digital service without undue delay unless a different supply time is agreed.</li><li>Necessary updates, including security updates, must be made available for the period required by applicable consumer law.</li><li>If a digital service does not conform to the contract, statutory remedies can include bringing it into conformity, a proportionate price reduction, or termination where the legal conditions are met.</li><li>On qualifying termination, non-personal content supplied or created by the consumer must be made available where required by law in a commonly used, machine-readable format.</li><li>GDPR rights remain separate and continue to apply to personal data.</li></ul></div>
         <div className="enterprise-capabilities"><p className="marketing-kicker">CHANGES TO DIGITAL SERVICES</p><h2>Material changes are governed, not unlimited.</h2><ul><li>For continuous digital services, changes beyond what is necessary to maintain conformity require a valid contractual basis and must respect mandatory consumer rules.</li><li>Where applicable, consumers must receive clear information about material changes and available termination rights.</li><li>RYTHM Public Beta wording does not override statutory consumer conformity rights.</li></ul></div>
       </section>
-
       <section className="marketing-section enterprise-model">
         <div className="enterprise-capabilities"><p className="marketing-kicker">COMPLAINTS</p><h2>How to make a consumer complaint.</h2><ul><li>Write to <a href="mailto:support@rythm-os.com">support@rythm-os.com</a> or <a href="mailto:legal@rythm-os.com">legal@rythm-os.com</a>, or send a written complaint to 1143 Budapest, Gizella út 35, Hungary.</li><li>Please include your name, contact email, order/contract reference, the issue, and the remedy you are requesting.</li><li>Written consumer complaints are handled substantively in writing within the statutory deadline; under the current Hungarian baseline this is generally 30 days.</li><li>If an electronic complaint form is introduced, receipt will be acknowledged electronically without delay as required by law.</li><li>Complaint records and the substantive reply are retained for the legally required period.</li></ul></div>
         <div className="enterprise-capabilities"><p className="marketing-kicker">ALTERNATIVE DISPUTE RESOLUTION</p><h2>You may use the competent Hungarian conciliation body.</h2><ul><li>Consumers may contact the conciliation body competent for their residence or stay where applicable.</li><li>For Budapest, the Budapest Conciliation Board (Budapesti Békéltető Testület) is operated by the Budapest Chamber of Commerce and Industry.</li><li>Seat: 1016 Budapest, Krisztina krt. 99.</li><li>Postal address: 1253 Budapest, Pf. 10.</li><li>Telephone: +36 1 488 2131.</li><li>Email: <a href="mailto:bekelteto.testulet@bkik.hu">bekelteto.testulet@bkik.hu</a>.</li><li>Consumers can also seek assistance from the competent consumer-protection authority. RYTHM does not direct consumers to the discontinued former EU ODR platform.</li></ul></div>
       </section>
-
       <section className="enterprise-contact-section"><div><p className="marketing-kicker">RELATED TERMS</p><h2>Consumer-specific terms sit alongside mandatory law.</h2><p>Mandatory consumer protections prevail over any inconsistent contractual wording.</p></div><div className="enterprise-contact-card"><h3>Consumer resources</h3><div className="hero-actions"><Link href="/consumer-terms">Consumer Terms</Link><Link href="/withdrawal">Withdraw from contract</Link><Link href="/privacy">Privacy</Link></div></div></section>
     </main>
   );
