@@ -1,6 +1,6 @@
 # RYTHM Company OS — Record of Processing Activities (ROPA)
 
-Status: Production compliance baseline for B2B Public Beta
+Status: Production compliance baseline for B2B Public Beta and B2C legal foundation
 Controller / Operator: Tayyebialashti Yaser E.V.
 Registered address: 1143 Budapest, Gizella út 35, Hungary
 Tax number: 48332376-1-42
@@ -31,6 +31,15 @@ This record is maintained under Article 30 GDPR and covers both activities where
 - Recipients / processors: Supabase; Vercel.
 - Retention: organization/account lifecycle plus documented retention periods for security and legal claims.
 - Security: tenant-scoped RLS, owner/member authorization checks, entitlement controls and audit trails.
+
+### Consumer contracting, withdrawal and complaints
+- Data subjects: individual consumers, prospective consumers, persons exercising withdrawal or complaint rights.
+- Personal data: name, email/contact details, order/contract/invoice reference, contract status, purchase/service details, withdrawal statement and timestamp, complaint correspondence, requested remedy, refund/termination status, and evidence required to handle the request.
+- Purposes: take steps toward and perform consumer contracts; provide mandatory pre-contract information; record and administer statutory withdrawal rights; handle refunds, complaints and dispute-resolution obligations; preserve evidence of legal compliance and legal claims.
+- Legal basis: performance of contract and pre-contract steps; compliance with legal obligations under applicable consumer law; legitimate interests in establishing, exercising or defending legal claims where applicable.
+- Recipients / processors: Supabase for the withdrawal register; Vercel for application runtime; configured email infrastructure for correspondence; payment/invoicing providers only after separately approved and disclosed.
+- Retention: withdrawal/complaint/contract records are retained only for the applicable statutory/accounting/legal-claim periods. Hungarian consumer complaint records and substantive replies are retained for the legally required period; minimisation applies after expiry.
+- Security: server-only submission path; RLS; no direct public/anon/authenticated grants to the withdrawal register; bounded input fields; unique receipt identifier; no raw payment-card data stored by RYTHM.
 
 ### Support, commercial and privacy communications
 - Data subjects: prospects, customers, users, privacy requesters, security reporters.
@@ -90,12 +99,13 @@ When a customer determines the purposes and means of processing personal data pl
 - Vercel — web hosting, deployment and runtime infrastructure.
 - OpenAI — model inference only for features that invoke AI processing.
 - Cloudflare — domain/DNS/network or configured email-routing functions where applicable.
-- Authorities or professional advisers only where legally required or necessary for legal claims/compliance.
+- Future payment/invoicing provider — only after approval, contract/privacy review and addition to the applicable public disclosures.
+- Authorities, conciliation bodies or professional advisers only where legally required or necessary for legal claims/compliance.
 
 ## Data-subject rights and operational controls
 
-RYTHM maintains an electronic privacy-request channel, authenticated privacy-request intake, organization-owner export capability, retention/deletion workflow and incident-response procedure. Requests are verified for identity and authority before disclosure or deletion.
+RYTHM maintains an electronic privacy-request channel, authenticated privacy-request intake, organization-owner export capability, retention/deletion workflow, incident-response procedure, and a consumer online withdrawal function. Requests are verified as appropriate before disclosure, deletion, refund or contract action.
 
 ## Review and change control
 
-This ROPA must be reviewed whenever a material processor, data category, purpose, legal basis, retention period, transfer mechanism, AI use case, authentication architecture or customer data flow changes, and at least annually while the service is commercially active.
+This ROPA must be reviewed whenever a material processor, data category, purpose, legal basis, retention period, transfer mechanism, AI use case, authentication architecture, payment provider, consumer checkout, or customer data flow changes, and at least annually while the service is commercially active.
