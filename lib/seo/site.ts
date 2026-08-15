@@ -158,6 +158,14 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
     changeFrequency: "monthly",
     priority: 0.45,
   },
+  {
+    path: "/ai-transparency",
+    title: "AI Transparency & Governance",
+    description:
+      "Review how RYTHM identifies AI interactions, limits model data, preserves Human CEO authority, and gates consequential or regulated AI use cases.",
+    changeFrequency: "monthly",
+    priority: 0.55,
+  },
 ] as const;
 
 export function absoluteUrl(path: string) {
