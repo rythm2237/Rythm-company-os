@@ -3,7 +3,7 @@
 Status: operational checklist for the Hungarian/EU B2B SaaS baseline
 Owner: Tayyebialashti Yaser E.V.
 
-This gate separates controls already implemented in the product/repository from external government, tax/accounting and platform-account actions that must be verified before accepting commercial B2B revenue.
+This gate separates controls already implemented in the product/repository from external government and tax/accounting actions that must be verified before accepting commercial B2B revenue. Security improvements that are valuable but not general legal launch conditions are tracked separately.
 
 ## Product / website legal baseline — implemented
 
@@ -26,7 +26,7 @@ This gate separates controls already implemented in the product/repository from 
 - API abuse/rate-limit controls for sensitive meeting endpoints.
 - Public Trust Center and Security disclosures without false certification claims.
 
-## External B2B launch gates — must be verified before first commercial revenue
+## External B2B legal/fiscal launch gates — must be verified before first commercial revenue
 
 ### 1. Hungarian individual-enterprise activity registration
 
@@ -66,16 +66,24 @@ Evidence to retain:
 - accountant-approved tax/VAT matrix;
 - tax status and any relevant EU VAT registration/verification procedure.
 
-### 4. Supabase authentication hardening
+## Security uplifts — high impact, not general B2B legal blockers
 
-Before unrestricted commercial B2B launch:
-- enable leaked-password protection if supported by the active Supabase plan;
-- establish the MFA policy for privileged/owner/operator accounts;
-- do not enforce AAL2 globally until enrollment/recovery paths are tested, to avoid locking out legitimate users.
+### Supabase leaked-password protection
 
-Evidence to retain:
-- Supabase Auth configuration screenshot/export;
-- tested owner/operator MFA enrollment and recovery flow if MFA is enforced.
+Current platform status: the connected Supabase organization is on the Free plan. Supabase leaked-password protection is only available on Pro and above. Do not represent the absence of this paid feature as a legal compliance failure by itself.
+
+Recommended future action:
+- enable leaked-password protection when/if the project is upgraded to Pro for commercial/security reasons;
+- maintain strong password requirements and account recovery controls in the meantime.
+
+### MFA
+
+MFA is a strong security best practice and should be prioritized for privileged/operator accounts. It is not treated here as a universal statutory prerequisite for this ordinary B2B SaaS baseline.
+
+Before enforcing MFA in the customer application:
+- implement and test enrollment, challenge, unenrollment and recovery flows;
+- avoid globally requiring AAL2 until legitimate existing users can safely enroll/recover;
+- consider stricter MFA requirements for privileged/owner/operator functions first.
 
 ## Change gates that require re-review
 
@@ -92,4 +100,4 @@ Re-run the legal/privacy/security launch review before:
 
 ## Release classification rule
 
-B2B may be classified as `B2B LEGAL BASELINE READY` only when the repository/product controls above are deployed and the four external launch gates have documented evidence. Until then the correct commercial classification is `B2B CONDITIONALLY READY`.
+B2B may be classified as `B2B LEGAL BASELINE READY` when the repository/product controls above are deployed and the three external legal/fiscal launch gates have documented evidence. Security uplifts should continue according to risk and commercial maturity but do not, by themselves, prevent this legal baseline classification.
