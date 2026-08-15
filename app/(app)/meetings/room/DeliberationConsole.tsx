@@ -1,222 +1,73 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import {useEffect,useMemo,useRef,useState} from "react";
+import {useRouter} from "next/navigation";
+import {AgentPortrait} from "@/app/components/agent-portrait";
+import styles from "./boardroom.module.css";
 
-type TranscriptMessage = {
-  id?: string;
-  turnIndex: number;
-  roundNo: number;
-  messageType: string;
-  content: string;
-  speakerCode: string;
-  speakerName: string;
-  speakerRole?: string;
-};
+type TranscriptMessage={id?:string;turnIndex:number;roundNo:number;messageType:string;content:string;speakerCode:string;speakerName:string;speakerRole?:string};
+type Participant={id:string;agentCode:string;name:string;roleTitle:string;avatarUrl:string|null;enabled:boolean};
+type LegalReview={id?:string;status?:string;outcome?:string|null;executive_note?:string|null;risk_summary?:string|null;conditions?:unknown;jurisdictions?:unknown;licensed_counsel_required?:boolean;estimated_cost_usd?:number;error_message?:string|null};
+type Props={sessionId:string;meetingStatus:string;initialStatus:string;initialMessages:TranscriptMessage[];initialError?:string|null;meetingTitle:string;decisionQuestion:string;maxRounds:number;budgetCapUsd:number;participants:Participant[]};
+const delay=(ms:number)=>new Promise(r=>setTimeout(r,ms));
 
-type LegalReview = {
-  id?: string;
-  status?: string;
-  outcome?: string|null;
-  executive_note?: string|null;
-  risk_summary?: string|null;
-  conditions?: unknown;
-  jurisdictions?: unknown;
-  licensed_counsel_required?: boolean;
-  estimated_cost_usd?: number;
-  error_message?: string|null;
-};
+async function jsonPost(path:string,body:Record<string,unknown>){const response=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},credentials:"same-origin",cache:"no-store",body:JSON.stringify(body)});const raw=await response.text();let payload:Record<string,any>={};if(raw){try{payload=JSON.parse(raw);}catch{throw new Error(`Meeting runtime returned HTTP ${response.status} with a non-JSON response.`);}}if(!response.ok||!payload.ok)throw new Error(String(payload.error??`Request failed with HTTP ${response.status}.`));return payload;}
+async function jsonGet(path:string){const response=await fetch(path,{headers:{Accept:"application/json"},credentials:"same-origin",cache:"no-store"});const raw=await response.text();let payload:Record<string,any>={};if(raw){try{payload=JSON.parse(raw);}catch{throw new Error(`Meeting runtime returned HTTP ${response.status} with a non-JSON response.`);}}if(!response.ok||!payload.ok)throw new Error(String(payload.error??`Request failed with HTTP ${response.status}.`));return payload;}
+async function postMeetingTurn(sessionId:string){let last:unknown=null;for(let attempt=1;attempt<=3;attempt+=1){try{return await jsonPost("/api/meetings/deliberate",{sessionId});}catch(cause){last=cause;const network=cause instanceof TypeError||(cause instanceof Error&&cause.message==="Failed to fetch");if(!network||attempt===3)throw cause;await delay(900*attempt);}}throw last instanceof Error?last:new Error("Meeting runtime could not be reached.");}
 
-type Props = {
-  sessionId: string;
-  meetingStatus: string;
-  initialStatus: string;
-  initialMessages: TranscriptMessage[];
-  initialError?: string | null;
-};
+export default function DeliberationConsole({sessionId,meetingStatus,initialStatus,initialMessages,initialError,meetingTitle,decisionQuestion,maxRounds,budgetCapUsd,participants}:Props){
+  const router=useRouter();const pauseRef=useRef(false);
+  const [meetingState,setMeetingState]=useState(meetingStatus);const [status,setStatus]=useState(initialStatus);const [messages,setMessages]=useState(initialMessages);const [running,setRunning]=useState(false);const [error,setError]=useState(initialError??"");const [progressText,setProgressText]=useState("");const [activeSpeaker,setActiveSpeaker]=useState("");const [paused,setPaused]=useState(false);const [ceoMode,setCeoMode]=useState<"contribution"|"direction">("contribution");const [ceoOpen,setCeoOpen]=useState(false);const [ceoText,setCeoText]=useState("");const [ceoSending,setCeoSending]=useState(false);const [chairClosing,setChairClosing]=useState(false);const [summary,setSummary]=useState("");const [summarizing,setSummarizing]=useState(false);const [showTranscript,setShowTranscript]=useState(true);const [summaryLanguage,setSummaryLanguage]=useState("__meeting__");const [customSummaryLanguage,setCustomSummaryLanguage]=useState("");const [legalTriage,setLegalTriage]=useState<"pending"|"recommended"|"not_indicated">("pending");const [legalTriageReason,setLegalTriageReason]=useState("");const [legalReview,setLegalReview]=useState<LegalReview|null>(null);const [legalReviewRunning,setLegalReviewRunning]=useState(false);
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  useEffect(()=>{try{const saved=localStorage.getItem(`rythm:boardroom:ceo:${sessionId}`);if(saved)setCeoText(saved);}catch{}},[sessionId]);
+  useEffect(()=>{try{if(ceoText)localStorage.setItem(`rythm:boardroom:ceo:${sessionId}`,ceoText);else localStorage.removeItem(`rythm:boardroom:ceo:${sessionId}`);}catch{}},[ceoText,sessionId]);
+  useEffect(()=>{if(status!=="completed"||meetingState!=="completed")return;let cancelled=false;(async()=>{try{const triage=await jsonGet(`/api/meetings/legal-triage?sessionId=${encodeURIComponent(sessionId)}`);if(cancelled)return;let triageStatus=(triage.status??"pending") as "pending"|"recommended"|"not_indicated";let reason=String(triage.reason??"");if(triageStatus==="pending"){const completed=await jsonPost("/api/meetings/legal-triage",{sessionId});triageStatus=(completed.status??"pending") as typeof triageStatus;reason=String(completed.reason??"");}if(!cancelled){setLegalTriage(triageStatus);setLegalTriageReason(reason);}const reviewPayload=await jsonGet(`/api/meetings/legal-review?sessionId=${encodeURIComponent(sessionId)}`);if(!cancelled)setLegalReview((reviewPayload.review??null) as LegalReview|null);}catch(cause){if(!cancelled)setError(cause instanceof Error?cause.message:"Legal governance status could not be loaded.");}})();return()=>{cancelled=true;};},[sessionId,status,meetingState]);
 
-async function jsonPost(path:string,body:Record<string,unknown>){
-  const response=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},credentials:"same-origin",cache:"no-store",body:JSON.stringify(body)});
-  const raw=await response.text();
-  let payload:Record<string,any>={};
-  if(raw){try{payload=JSON.parse(raw) as Record<string,any>;}catch{throw new Error(`Meeting runtime returned HTTP ${response.status} with a non-JSON response.`);}}
-  if(!response.ok||!payload.ok) throw new Error(String(payload.error??`Request failed with HTTP ${response.status}.`));
-  return payload;
-}
+  const agentTurns=useMemo(()=>messages.filter(m=>m.speakerCode!=="CEO"&&m.speakerCode!=="SYSTEM"&&["position","challenge","synthesis","chair_follow_up"].includes(m.messageType)).length,[messages]);
+  const expectedSpeaker=()=>{const last=messages.at(-1);if(last?.speakerCode==="CEO"&&agentTurns>=participants.length*maxRounds)return participants.find(p=>p.agentCode==="B-001")?.agentCode??"B-001";return participants.length?participants[agentTurns%participants.length]?.agentCode??"":"";};
 
-async function jsonGet(path:string){
-  const response=await fetch(path,{method:"GET",headers:{Accept:"application/json"},credentials:"same-origin",cache:"no-store"});
-  const raw=await response.text();
-  let payload:Record<string,any>={};
-  if(raw){try{payload=JSON.parse(raw) as Record<string,any>;}catch{throw new Error(`Meeting runtime returned HTTP ${response.status} with a non-JSON response.`);}}
-  if(!response.ok||!payload.ok) throw new Error(String(payload.error??`Request failed with HTTP ${response.status}.`));
-  return payload;
-}
+  const runMeeting=async()=>{if(running)return;pauseRef.current=false;setPaused(false);setRunning(true);setError("");setProgressText("Opening governed Agent deliberation…");try{for(let step=0;step<40;step+=1){if(pauseRef.current){setPaused(true);setProgressText("Agents are paused by the Human CEO. Continue when you are ready.");return;}setActiveSpeaker(expectedSpeaker());const payload=await postMeetingTurn(sessionId);if(payload.content){const next={turnIndex:Number(payload.turnIndex??0),roundNo:Number(payload.roundNo??1),messageType:String(payload.phase??"position"),content:String(payload.content),speakerCode:String(payload.speaker?.code??"B-001"),speakerName:String(payload.speaker?.name??"Executive Orchestrator"),speakerRole:String(payload.speaker?.role??"Meeting synthesis")};setMessages(current=>[...current,next]);setActiveSpeaker(next.speakerCode);}setStatus(String(payload.status??"running"));if(payload.status==="completed"){setProgressText("Agent synthesis is complete. The meeting remains open under Human CEO control.");setActiveSpeaker("");router.refresh();return;}setProgressText(`${payload.speaker?.code??"Agent"} completed ${payload.phase??"turn"}. ${Number(payload.remainingTurns??0)} deliberation turns remain.`);await delay(700);if(pauseRef.current){setPaused(true);setActiveSpeaker("");setProgressText("Human CEO has the floor. Agents are waiting for your instruction.");return;}}throw new Error("Meeting exceeded the maximum client orchestration steps.");}catch(cause){setError(cause instanceof Error?cause.message:"Meeting execution failed.");setProgressText("");router.refresh();}finally{setRunning(false);if(!pauseRef.current)setActiveSpeaker("");}};
 
-async function postMeetingTurn(sessionId: string) {
-  let lastNetworkError: unknown = null;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try { return await jsonPost("/api/meetings/deliberate",{sessionId}); }
-    catch (cause) {
-      lastNetworkError = cause;
-      const isNetworkFailure = cause instanceof TypeError || (cause instanceof Error && cause.message === "Failed to fetch");
-      if (!isNetworkFailure || attempt === 3) throw cause;
-      await delay(900 * attempt);
-    }
-  }
-  throw lastNetworkError instanceof Error ? lastNetworkError : new Error("Meeting runtime could not be reached.");
-}
+  const takeFloor=(mode:"contribution"|"direction")=>{pauseRef.current=true;setPaused(true);setCeoMode(mode);setCeoOpen(true);setProgressText(mode==="direction"?"Human CEO is redirecting the meeting. Agents will wait after the current safe turn.":"Human CEO requested the floor. Agents will wait after the current safe turn.");};
+  const pauseAgents=()=>{pauseRef.current=true;setPaused(true);setProgressText("Pause requested by Human CEO. Any in-flight Agent turn will finish, then all Agents will wait.");};
+  const continueDiscussion=()=>{pauseRef.current=false;setPaused(false);setCeoOpen(false);setProgressText("Human CEO released the floor. Continuing governed deliberation…");void runMeeting();};
+  const sendCeoContribution=async()=>{const text=ceoText.trim();if(text.length<2)return;setCeoSending(true);setError("");try{const content=ceoMode==="direction"?`CHAIR DIRECTION CHANGE — ${text}`:text;const payload=await jsonPost("/api/meetings/ceo-contribute",{sessionId,content});setMessages(current=>[...current,{turnIndex:Number(payload.turnIndex??current.length+1),roundNo:Number(payload.roundNo??1),messageType:"ceo_contribution",content:String(payload.content??content),speakerCode:"CEO",speakerName:"Human CEO",speakerRole:"Meeting Chair"}]);setStatus(String(payload.sessionStatus??status));setCeoText("");setCeoOpen(false);setPaused(true);pauseRef.current=true;setActiveSpeaker("CEO");setProgressText(ceoMode==="direction"?"New chair direction is now part of the trace. Agents remain paused until you continue.":"CEO contribution recorded. Agents remain paused until you continue.");}catch(cause){setError(cause instanceof Error?cause.message:"CEO contribution could not be added.");}finally{setCeoSending(false);}};
+  const closeMeeting=async()=>{setChairClosing(true);setError("");try{await jsonPost("/api/meetings/close",{sessionId});setMeetingState("completed");setActiveSpeaker("");setPaused(true);setProgressText("Meeting closed by Human CEO. Decision governance is now available.");router.refresh();}catch(cause){setError(cause instanceof Error?cause.message:"Meeting could not be closed.");}finally{setChairClosing(false);}};
+  const requestSummary=async()=>{const requested=summaryLanguage==="__meeting__"?"":summaryLanguage==="__other__"?customSummaryLanguage.trim():summaryLanguage;if(summaryLanguage==="__other__"&&requested.length<2){setError("Enter the summary language.");return;}setSummarizing(true);setError("");try{const payload=await jsonPost("/api/meetings/summarize",{sessionId,summaryLanguage:requested});setSummary(String(payload.summary??""));setShowTranscript(false);}catch(cause){setError(cause instanceof Error?cause.message:"Meeting summary failed.");}finally{setSummarizing(false);}};
+  const requestLegalReview=async()=>{setLegalReviewRunning(true);setError("");try{const payload=await jsonPost("/api/meetings/legal-review",{sessionId});setLegalReview((payload.review??null) as LegalReview|null);router.refresh();}catch(cause){setError(cause instanceof Error?cause.message:"AI legal review failed.");}finally{setLegalReviewRunning(false);}};
 
-export default function DeliberationConsole({ sessionId, meetingStatus, initialStatus, initialMessages, initialError }: Props) {
-  const router = useRouter();
-  const [meetingState,setMeetingState]=useState(meetingStatus);
-  const [status, setStatus] = useState(initialStatus);
-  const [messages, setMessages] = useState(initialMessages);
-  const [running, setRunning] = useState(false);
-  const [error, setError] = useState(initialError ?? "");
-  const [progressText, setProgressText] = useState("");
-  const [summary,setSummary]=useState("");
-  const [summarizing,setSummarizing]=useState(false);
-  const [showTranscript,setShowTranscript]=useState(true);
-  const [summaryLanguageChoice,setSummaryLanguageChoice]=useState("__meeting__");
-  const [customSummaryLanguage,setCustomSummaryLanguage]=useState("");
-  const [summaryLanguageUsed,setSummaryLanguageUsed]=useState("");
-  const [ceoOpen,setCeoOpen]=useState(false);
-  const [ceoText,setCeoText]=useState("");
-  const [ceoSending,setCeoSending]=useState(false);
-  const [chairClosing,setChairClosing]=useState(false);
-  const [legalTriage,setLegalTriage]=useState<"pending"|"recommended"|"not_indicated">("pending");
-  const [legalTriageReason,setLegalTriageReason]=useState("");
-  const [legalTriageRunning,setLegalTriageRunning]=useState(false);
-  const [legalReview,setLegalReview]=useState<LegalReview|null>(null);
-  const [legalReviewRunning,setLegalReviewRunning]=useState(false);
+  const canRun=meetingState==="running"&&["ready","running"].includes(status);const canChair=meetingState==="running"&&["ready","running","completed"].includes(status);const awaitingChairClose=meetingState==="running"&&status==="completed";const latest=[...messages].slice(-10).reverse();
+  return <section className={styles.consoleShell}>
+    <div className={styles.boardroomHeader}><div><p className={styles.kicker}>LIVE GOVERNED BOARDROOM</p><h2>{meetingTitle}</h2><p>{decisionQuestion}</p></div><div className={styles.runtimeBadges}><span>{maxRounds} rounds</span><span>${budgetCapUsd.toFixed(2)} cap</span><span className={meetingState==="running"?styles.liveBadge:styles.closedBadge}>{meetingState==="running"?"● Live":"Closed"}</span></div></div>
+    {error?<p className={styles.runtimeError} role="alert">{error}</p>:null}{progressText?<p className={styles.runtimeStatus}>{progressText}</p>:null}
 
-  useEffect(()=>{
-    if(status!=="completed"||meetingState!=="completed") return;
-    let cancelled=false;
-    const load=async()=>{
-      try{
-        const triage=await jsonGet(`/api/meetings/legal-triage?sessionId=${encodeURIComponent(sessionId)}`);
-        if(cancelled) return;
-        setLegalTriage((triage.status??"pending") as "pending"|"recommended"|"not_indicated");
-        setLegalTriageReason(String(triage.reason??""));
-        if(triage.status==="pending"){
-          setLegalTriageRunning(true);
-          const completed=await jsonPost("/api/meetings/legal-triage",{sessionId});
-          if(!cancelled){setLegalTriage((completed.status??"pending") as "pending"|"recommended"|"not_indicated");setLegalTriageReason(String(completed.reason??""));}
-          setLegalTriageRunning(false);
-        }
-        const reviewPayload=await jsonGet(`/api/meetings/legal-review?sessionId=${encodeURIComponent(sessionId)}`);
-        if(!cancelled) setLegalReview((reviewPayload.review??null) as LegalReview|null);
-      }catch(cause){
-        if(!cancelled){setLegalTriageRunning(false);setError(cause instanceof Error?cause.message:"Legal governance status could not be loaded.");}
-      }
-    };
-    void load();
-    return()=>{cancelled=true;};
-  },[sessionId,status,meetingState]);
+    <div className={styles.experienceGrid}>
+      <div className={styles.roomV2}>
+        <div className={styles.ambientRing}/><div className={styles.digitalTable}><div><small>RYTHM</small><strong>{paused?"Chair has the floor":status==="completed"?"Awaiting Chair":"Executive Round Table"}</strong><span>Governed · Secure · Traceable</span></div></div>
+        <div className={styles.agentRing}>{participants.map((agent,index)=>{const speaking=activeSpeaker===agent.agentCode;return <article key={agent.id} className={`${styles.agentSeatV2} ${speaking?styles.agentSpeaking:""} ${paused&&!speaking?styles.agentWaiting:""}`} style={{"--seat-index":index} as React.CSSProperties}><AgentPortrait agentCode={agent.agentCode} avatarUrl={agent.avatarUrl} alt={agent.name} className={styles.avatarV2}/><div><strong>{agent.agentCode} · {agent.name}</strong><span>{agent.roleTitle}</span><b>{speaking?"Speaking":paused?"Waiting":"Listening"}</b></div></article>;})}</div>
+        <div className={`${styles.ceoSeatV2} ${activeSpeaker==="CEO"?styles.ceoSpeaking:""}`}><div className={styles.ceoAvatarV2}>YOU</div><div><strong>Human CEO / Chair</strong><span>Final authority · Live control</span></div></div>
+        {participants.length===0?<div className={styles.roomEmpty}>No Agent participants were authorized for this session.</div>:null}
+      </div>
 
-  const runMeeting = async () => {
-    setRunning(true);setError("");setProgressText("Opening governed agent deliberation…");
-    try {
-      for (let step = 0; step < 40; step += 1) {
-        const payload = await postMeetingTurn(sessionId);
-        if (payload.content) {
-          const nextMessage={turnIndex:Number(payload.turnIndex??messages.length+1),roundNo:Number(payload.roundNo??1),messageType:String(payload.phase??"position"),content:String(payload.content),speakerCode:String(payload.speaker?.code??"B-001"),speakerName:String(payload.speaker?.name??"Executive Orchestrator"),speakerRole:String(payload.speaker?.role??"Meeting synthesis")};
-          setMessages(current=>[...current,nextMessage]);
-        }
-        setStatus(String(payload.status ?? "running"));
-        if (payload.status === "completed") {
-          setProgressText("Agent synthesis is complete. The meeting remains open for the Human CEO / Chair. Ask a follow-up or confirm meeting closure.");
-          router.refresh();
-          return;
-        }
-        const remaining = Number(payload.remainingTurns ?? 0);
-        setProgressText(payload.phase==="chair_follow_up"?"B-001 responded to the Human CEO. Refreshing the executive synthesis next…":`${payload.speaker?.code ?? "Agent"} completed ${payload.phase ?? "turn"}. ${remaining} deliberation turns remain before synthesis.`);
-        await delay(500);
-      }
-      throw new Error("Meeting exceeded the maximum client orchestration steps.");
-    } catch (cause) {
-      const message = cause instanceof Error ? cause.message : "Meeting execution failed.";
-      setError(message === "Failed to fetch" ? "The meeting runtime could not be reached after three attempts. Check the Production runtime configuration or serverless function logs." : message);
-      setProgressText("");router.refresh();
-    } finally { setRunning(false); }
-  };
-
-  const requestSummary=async()=>{
-    const requestedLanguage=summaryLanguageChoice==="__meeting__"?"":summaryLanguageChoice==="__other__"?customSummaryLanguage.trim():summaryLanguageChoice;
-    if(summaryLanguageChoice==="__other__"&&requestedLanguage.length<2){setError("Enter the language you want for the meeting summary.");return;}
-    setSummarizing(true);setError("");
-    try{const payload=await jsonPost("/api/meetings/summarize",{sessionId,summaryLanguage:requestedLanguage});setSummary(String(payload.summary??""));setSummaryLanguageUsed(String((payload.language??requestedLanguage)||"Meeting language"));setShowTranscript(false);}
-    catch(cause){setError(cause instanceof Error?cause.message:"Meeting summary failed.");}
-    finally{setSummarizing(false);}
-  };
-
-  const sendCeoContribution=async()=>{
-    if(!ceoText.trim()) return;
-    setCeoSending(true);setError("");
-    try{
-      const payload=await jsonPost("/api/meetings/ceo-contribute",{sessionId,content:ceoText});
-      setMessages(current=>[...current,{turnIndex:Number(payload.turnIndex??current.length+1),roundNo:Number(payload.roundNo??1),messageType:"ceo_contribution",content:String(payload.content??ceoText),speakerCode:"CEO",speakerName:"Human CEO",speakerRole:"Meeting Chair"}]);
-      setStatus(String(payload.sessionStatus??status));setCeoText("");setCeoOpen(false);setLegalTriage("pending");setLegalTriageReason("");
-      setProgressText("Human CEO contribution added. Select Continue agent meeting so B-001 can answer and refresh the synthesis before closure.");
-    }catch(cause){setError(cause instanceof Error?cause.message:"CEO contribution could not be added.");}
-    finally{setCeoSending(false);}
-  };
-
-  const closeMeeting=async()=>{
-    setChairClosing(true);setError("");
-    try{await jsonPost("/api/meetings/close",{sessionId});setMeetingState("completed");setProgressText("Meeting closure confirmed by Human CEO / Chair. Legal relevance triage may now proceed.");router.refresh();}
-    catch(cause){setError(cause instanceof Error?cause.message:"Meeting could not be closed.");}
-    finally{setChairClosing(false);}
-  };
-
-  const requestLegalReview=async()=>{
-    setLegalReviewRunning(true);setError("");
-    try{const payload=await jsonPost("/api/meetings/legal-review",{sessionId});setLegalReview((payload.review??null) as LegalReview|null);setProgressText("A-106 legal review completed and attached to the meeting decision package.");router.refresh();}
-    catch(cause){setError(cause instanceof Error?cause.message:"AI legal review failed.");}
-    finally{setLegalReviewRunning(false);}
-  };
-
-  const canRun = meetingState === "running" && ["ready", "running"].includes(status);
-  const canCeoContribute=meetingState==="running"&&["ready","running","completed"].includes(status);
-  const awaitingChairClose=meetingState==="running"&&status==="completed";
-  const conditions=Array.isArray(legalReview?.conditions)?legalReview?.conditions.map(String):[];
-  const jurisdictions=Array.isArray(legalReview?.jurisdictions)?legalReview?.jurisdictions.map(String):[];
-
-  return <section style={{marginTop:20,maxWidth:"100%",minWidth:0,overflowX:"hidden"}}>
-    <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap",minWidth:0}}>
-      <div style={{minWidth:0}}><p className="label">Live transcript</p><h2 style={{margin:0}}>Multi-Agent Deliberation</h2></div>
-      <div className="row-meta"><span>Session: {status}</span><b className={status==="completed"?"state-active":"state-paused"}>{running?"Agents speaking…":status}</b></div>
+      <aside className={styles.transcriptRail}><div className={styles.transcriptTabs}><strong>Transcript</strong><span>{messages.length} entries</span></div><div className={styles.transcriptList}>{latest.length?latest.map((m,index)=><article key={`${m.turnIndex}-${index}`} className={`${styles.transcriptCard} ${m.speakerCode===activeSpeaker?styles.transcriptActive:""} ${m.speakerCode==="CEO"?styles.transcriptCeo:""}`}><div><strong>{m.speakerCode} · {m.speakerName}</strong><small>Round {m.roundNo}</small></div><p>{m.content}</p></article>):<p className={styles.transcriptEmpty}>The transcript will appear here as the meeting starts.</p>}</div></aside>
     </div>
 
-    <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"12px 0",alignItems:"end",minWidth:0}}>
-      {messages.length>1?<div style={{display:"grid",gap:5,minWidth:0,width:180,maxWidth:"100%"}}><label htmlFor="summary-language" style={{fontSize:".78rem",color:"#5d687b",fontWeight:700}}>Summary language</label><select id="summary-language" value={summaryLanguageChoice} onChange={e=>setSummaryLanguageChoice(e.target.value)} disabled={summarizing} style={{padding:"9px 10px",border:"1px solid #cfd6e2",borderRadius:8,maxWidth:"100%"}}><option value="__meeting__">Meeting language</option><option value="Persian">فارسی — Persian</option><option value="English">English</option><option value="German">Deutsch — German</option><option value="Hungarian">Magyar — Hungarian</option><option value="__other__">Other…</option></select></div>:null}
-      {messages.length>1&&summaryLanguageChoice==="__other__"?<div style={{display:"grid",gap:5,minWidth:0,width:180,maxWidth:"100%"}}><label htmlFor="summary-language-other" style={{fontSize:".78rem",color:"#5d687b",fontWeight:700}}>Other language</label><input id="summary-language-other" value={customSummaryLanguage} onChange={e=>setCustomSummaryLanguage(e.target.value)} maxLength={80} placeholder="e.g. French, Arabic" disabled={summarizing} style={{padding:"9px 10px",border:"1px solid #cfd6e2",borderRadius:8,maxWidth:"100%",boxSizing:"border-box"}}/></div>:null}
-      {messages.length>1?<button type="button" className="secondary-button" onClick={requestSummary} disabled={summarizing}>{summarizing?"Summarizing…":summary?"Regenerate summary":"Summarize meeting"}</button>:null}
-      {summary?<button type="button" className="secondary-button" onClick={()=>setShowTranscript(v=>!v)}>{showTranscript?"Hide full transcript":"Open full transcript"}</button>:null}
-      {canCeoContribute?<button type="button" className="secondary-button" onClick={()=>setCeoOpen(v=>!v)} disabled={running}>{ceoOpen?"Close CEO contribution":"Join meeting as Human CEO"}</button>:null}
-    </div>
+    {canChair?<div className={styles.chairControls}>
+      <button type="button" onClick={()=>takeFloor("contribution")} className={styles.primaryChair}>🎙 Take the floor<span>Pause Agents and speak</span></button>
+      <button type="button" onClick={pauseAgents} disabled={paused}>Ⅱ Pause Agents<span>Safe-turn pause</span></button>
+      <button type="button" onClick={()=>takeFloor("direction")}>↗ Change direction<span>Redirect the discussion</span></button>
+      <button type="button" onClick={continueDiscussion} disabled={!canRun||running||!paused}>▶ Continue discussion<span>Release the floor</span></button>
+      <button type="button" onClick={closeMeeting} disabled={!awaitingChairClose||chairClosing} className={styles.endMeeting}>End meeting<span>{awaitingChairClose?"Close & finalize":"Available after synthesis"}</span></button>
+    </div>:null}
 
-    <p className="security-note">Human CEO is invited by default and is the meeting chair. Agent synthesis never closes the meeting. External actions remain disabled.</p>
-    {ceoOpen?<div style={{border:"1px solid #dfe4ec",borderRadius:12,padding:14,marginBottom:14,maxWidth:"100%",minWidth:0,boxSizing:"border-box",overflow:"hidden"}}><p className="label">Human CEO contribution</p><textarea value={ceoText} onChange={e=>setCeoText(e.target.value)} maxLength={4000} rows={5} placeholder="Add a question, challenge, instruction, or viewpoint for the agents…" style={{display:"block",width:"100%",maxWidth:"100%",minWidth:0,boxSizing:"border-box",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10,overflowWrap:"anywhere"}}/><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginTop:8,flexWrap:"wrap",minWidth:0}}><small>{ceoText.length}/4000</small><button type="button" onClick={sendCeoContribution} disabled={ceoSending||running||ceoText.trim().length<2}>{ceoSending?"Adding…":"Add to meeting transcript"}</button></div></div>:null}
+    {ceoOpen?<div className={styles.ceoComposer}><div><p className="label">{ceoMode==="direction"?"Chair direction change":"Human CEO contribution"}</p><h3>{ceoMode==="direction"?"Change the path of the meeting":"Speak to the room"}</h3></div><textarea value={ceoText} onChange={e=>setCeoText(e.target.value)} maxLength={4000} rows={5} placeholder={ceoMode==="direction"?"State the new focus, constraint, question or direction. This instruction becomes part of the governed trace and subsequent Agents receive it.":"Add your question, challenge, instruction or viewpoint…"}/><div className={styles.composerFooter}><small>{ceoText.length}/4000 · draft auto-saved</small><div><button type="button" className="secondary-button" onClick={()=>setCeoOpen(false)}>Keep paused</button><button type="button" onClick={sendCeoContribution} disabled={ceoSending||ceoText.trim().length<2}>{ceoSending?"Recording…":ceoMode==="direction"?"Record new direction":"Add to meeting"}</button></div></div></div>:null}
 
-    {awaitingChairClose?<article style={{border:"1px solid #e4c86b",borderRadius:14,padding:18,background:"#fff9e8",margin:"14px 0 18px",maxWidth:"100%",boxSizing:"border-box"}}><div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap"}}><div style={{minWidth:0}}><p className="label">Chair closure gate</p><h3 style={{margin:"0 0 6px"}}>Agent synthesis complete — meeting remains open</h3></div><span className="pill">AWAITING CHAIR CLOSE</span></div><p style={{color:"#596579",lineHeight:1.65}}>The Human CEO may ask another question or add a correction. If a contribution is added, continue the agent meeting so B-001 responds and refreshes the synthesis. Close the meeting only when the chair is satisfied.</p><div style={{display:"flex",gap:10,flexWrap:"wrap"}}><button type="button" className="secondary-button" onClick={()=>setCeoOpen(true)}>Add CEO contribution</button><button type="button" onClick={closeMeeting} disabled={chairClosing}>{chairClosing?"Closing…":"End meeting · Chair confirm"}</button></div></article>:null}
+    <div className={styles.secondaryTools}><div><select value={summaryLanguage} onChange={e=>setSummaryLanguage(e.target.value)}><option value="__meeting__">Meeting language</option><option value="Persian">فارسی — Persian</option><option value="English">English</option><option value="German">Deutsch — German</option><option value="Hungarian">Magyar — Hungarian</option><option value="__other__">Other…</option></select>{summaryLanguage==="__other__"?<input value={customSummaryLanguage} onChange={e=>setCustomSummaryLanguage(e.target.value)} placeholder="Other language"/>:null}<button type="button" className="secondary-button" onClick={requestSummary} disabled={summarizing||messages.length<2}>{summarizing?"Summarizing…":"Summarize meeting"}</button>{summary?<button type="button" className="secondary-button" onClick={()=>setShowTranscript(v=>!v)}>{showTranscript?"Hide full transcript":"Open full transcript"}</button>:null}</div>{canRun&&!paused?<button type="button" onClick={()=>void runMeeting()} disabled={running}>{running?"Agents deliberating…":status==="ready"?"Start Agent deliberation":"Continue Agent meeting"}</button>:null}</div>
+    {summary?<article className={styles.summaryCard}><p className="label">Executive summary</p><div style={{whiteSpace:"pre-wrap"}}>{summary}</div></article>:null}
+    {showTranscript&&messages.length?<section className={styles.fullTranscript}>{messages.map((m,index)=><article key={`${m.turnIndex}-${index}`}><div><strong>{m.speakerCode} · {m.speakerName}</strong><span>Round {m.roundNo} · {m.messageType}</span></div><p>{m.content}</p></article>)}</section>:null}
 
-    {meetingState!=="running"&&["ready","running"].includes(status)?<p className="security-note">Start the governed meeting first. Agent deliberation cannot execute while the meeting is {meetingState}.</p>:null}
-    {error?<p className="form-error" role="alert">{error}</p>:null}
-    {progressText?<p className="form-success" role="status">{progressText}</p>:null}
-
-    {summary?<article style={{border:"1px solid #cfd6e2",borderRadius:14,padding:18,background:"#f6f8fc",margin:"14px 0 18px",maxWidth:"100%",minWidth:0,boxSizing:"border-box"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><div style={{minWidth:0}}><p className="label">Executive summary</p><h3 style={{marginTop:0}}>Decision-focused meeting brief</h3></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{summaryLanguageUsed?<span className="pill">{summaryLanguageUsed}</span>:null}<span className="pill">AI summary · advisory</span></div></div><p style={{whiteSpace:"pre-wrap",lineHeight:1.7,color:"#46536a",marginBottom:0,overflowWrap:"anywhere"}}>{summary}</p></article>:null}
-
-    {status==="completed"&&meetingState==="completed"?<article style={{border:"1px solid #d9dee8",borderRadius:14,padding:18,background:legalTriage==="recommended"?"#fff8e8":"#f7f9fc",margin:"14px 0 18px",maxWidth:"100%",boxSizing:"border-box"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><div><p className="label">Legal relevance check</p><h3 style={{margin:"0 0 6px"}}>B-001 Legal Review Trigger</h3></div><span className="pill">{legalTriageRunning?"Checking…":legalTriage==="recommended"?"Legal review recommended":legalTriage==="not_indicated"?"Not indicated":"Pending"}</span></div><p style={{color:"#596579",lineHeight:1.65,marginBottom:12}}>{legalTriageRunning?"B-001 is checking whether the chair-approved meeting package has plausible legal or regulatory implications.":legalTriageReason||"Legal relevance triage is pending."}</p><button type="button" className="secondary-button" onClick={requestLegalReview} disabled={legalReviewRunning||legalTriageRunning}>{legalReviewRunning?"A-106 reviewing…":legalReview?.status==="completed"?"Legal review completed":"Request AI Legal Review"}</button><p className="security-note" style={{marginBottom:0}}>AI legal review is advisory and is not a substitute for licensed jurisdiction-specific counsel.</p></article>:null}
-
-    {legalReview?.status==="completed"?<article style={{border:"1px solid #cfd6e2",borderRadius:14,padding:18,background:"#f5f7fb",margin:"14px 0 18px",maxWidth:"100%",boxSizing:"border-box"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap"}}><div><p className="label">A-106 · Legal & Regulatory Counsel</p><h3 style={{margin:"0 0 6px"}}>AI Legal Review</h3></div><span className="pill">{legalReview.outcome??"Review completed"}</span></div><p style={{whiteSpace:"pre-wrap",lineHeight:1.65,color:"#46536a",overflowWrap:"anywhere"}}>{legalReview.executive_note}</p>{legalReview.risk_summary?<><p className="label">Risk summary</p><p style={{color:"#596579",lineHeight:1.65,overflowWrap:"anywhere"}}>{legalReview.risk_summary}</p></>:null}{conditions.length?<><p className="label">Conditions</p><ul style={{color:"#596579",lineHeight:1.65}}>{conditions.map((item,index)=><li key={`${item}-${index}`}>{item}</li>)}</ul></>:null}{jurisdictions.length?<p className="security-note">Jurisdiction context: {jurisdictions.join(", ")}</p>:null}{legalReview.licensed_counsel_required?<p className="form-error">Licensed counsel review required before execution of the legally sensitive decision.</p>:null}<p className="security-note" style={{marginBottom:0}}>Advisory AI legal issue-spotting only. This does not constitute formal legal advice or legal approval.</p></article>:null}
-
-    {canRun?<button type="button" onClick={runMeeting} disabled={running} style={{margin:"12px 0 18px"}}>{running?"Running governed deliberation…":status==="running"?"Continue agent meeting":"Start agent deliberation"}</button>:null}
-
-    {showTranscript?<div style={{display:"grid",gap:12,maxHeight:720,overflowY:"auto",overflowX:"hidden",paddingRight:4,minWidth:0,maxWidth:"100%"}} aria-live="polite">{messages.length?messages.map((message,index)=><article key={`${message.turnIndex}-${index}`} style={{border:"1px solid #dfe4ec",borderRadius:14,padding:16,background:message.messageType==="synthesis"?"#f3f6fb":message.messageType.startsWith("ceo_")?"#fff9ea":"#fff",minWidth:0,maxWidth:"100%",boxSizing:"border-box",overflow:"hidden"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap",minWidth:0}}><div style={{minWidth:0}}><strong>{message.speakerCode} · {message.speakerName}</strong><span style={{display:"block",color:"#717b8e",fontSize:".82rem",marginTop:3}}>{message.speakerRole}</span></div><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><span className="pill">{message.messageType} · round {message.roundNo}</span></div></div><p style={{whiteSpace:"pre-wrap",lineHeight:1.65,color:"#46536a",marginBottom:0,overflowWrap:"anywhere",wordBreak:"break-word"}}>{message.content}</p></article>):<p className="empty-state">No agent has spoken yet.</p>}</div>:null}
+    {awaitingChairClose?<article className={styles.chairGate}><p className="label">Chair closure gate</p><h3>Agent synthesis complete — the meeting is still yours</h3><p>Ask another question, change direction, or close only when you are satisfied. Agents cannot close the meeting.</p></article>:null}
+    {meetingState==="completed"&&status==="completed"?<article className={styles.legalCard}><p className="label">Legal governance</p><h3>{legalTriage==="pending"?"Checking legal relevance…":legalTriage==="recommended"?"AI Legal Review recommended":"No dedicated legal review indicated"}</h3>{legalTriageReason?<p>{legalTriageReason}</p>:null}{legalTriage==="recommended"&&!legalReview?<button type="button" onClick={requestLegalReview} disabled={legalReviewRunning}>{legalReviewRunning?"Running A-106…":"Run A-106 AI Legal Review"}</button>:null}{legalReview?<div><strong>{legalReview.outcome}</strong><p>{legalReview.executive_note}</p><p>{legalReview.risk_summary}</p></div>:null}</article>:null}
+    <p className="security-note">Human CEO remains final authority. “Pause” stops at a safe turn boundary; “Change direction” is append-only and traceable rather than silently rewriting the original decision mandate. External actions remain disabled.</p>
   </section>;
 }
