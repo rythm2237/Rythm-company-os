@@ -60,15 +60,16 @@ async function resolveCanonicalEvaluationOrganizationId(preferredOrganizationId:
 async function runEvaluation() {
   "use server";
   const { user, organizationId } = await ownerContext();
+  let result: Awaited<ReturnType<typeof runAgentEvaluationFleet>>;
   try {
     const evaluationOrganizationId = await resolveCanonicalEvaluationOrganizationId(organizationId);
-    const result = await runAgentEvaluationFleet({ organizationId: evaluationOrganizationId, requestedBy: user.id });
-    revalidatePath("/evaluations");
-    redirect(`/evaluations?message=${encodeURIComponent(`Evaluation completed: ${result.summary.pass} PASS, ${result.summary.conditional_pass} conditional, ${result.summary.fail} FAIL.`)}`);
+    result = await runAgentEvaluationFleet({ organizationId: evaluationOrganizationId, requestedBy: user.id });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     redirect(`/evaluations?error=${encodeURIComponent(message)}`);
   }
+  revalidatePath("/evaluations");
+  redirect(`/evaluations?message=${encodeURIComponent(`Evaluation completed: ${result.summary.pass} PASS, ${result.summary.conditional_pass} conditional, ${result.summary.fail} FAIL.`)}`);
 }
 
 export default async function EvaluationsPage({ searchParams }: Props) {
