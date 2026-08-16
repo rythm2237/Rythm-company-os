@@ -5,23 +5,36 @@ import styles from "./agents.module.css";
 
 export const dynamic = "force-dynamic";
 
-type Agent = { id:string; agent_code:string; display_name:string|null; name:string; role_title:string; department:string|null; avatar_url:string|null; presence_status:string; enabled:boolean; risk_ceiling:string; work_style:string|null; agent_status:string };
+type AssetProfile = { current_level:string; level_score:number|null; certification_status:string; valuation_status:string; marketplace_eligible:boolean };
+type Agent = { id:string; agent_code:string; display_name:string|null; name:string; role_title:string; department:string|null; avatar_url:string|null; presence_status:string; enabled:boolean; risk_ceiling:string; work_style:string|null; agent_status:string; agent_asset_profiles?:AssetProfile|AssetProfile[]|null };
+
+function assetOf(agent:Agent){
+  const value=agent.agent_asset_profiles;
+  return Array.isArray(value)?value[0]??null:value??null;
+}
+function levelLabel(level?:string|null){
+  if(!level)return "Unclassified";
+  return level.charAt(0).toUpperCase()+level.slice(1);
+}
 
 export default async function AgentDirectory(){
   const context = await requireOrganizationContext();
-  const {data}=await context.supabase.from("agents").select("id, agent_code, display_name, name, role_title, department, avatar_url, presence_status, enabled, risk_ceiling, work_style, agent_status").eq("organization_id",context.organizationId).neq("agent_status","archived").order("agent_code");
+  const {data}=await context.supabase.from("agents").select("id, agent_code, display_name, name, role_title, department, avatar_url, presence_status, enabled, risk_ceiling, work_style, agent_status, agent_asset_profiles(current_level,level_score,certification_status,valuation_status,marketplace_eligible)").eq("organization_id",context.organizationId).neq("agent_status","archived").order("agent_code");
   const agents=(data??[]) as Agent[];
   return <main className="command-shell">
-    <header className="command-header"><div><p className="eyebrow">RYTHM DIGITAL WORKFORCE</p><h1>Agent organization</h1><p className="subtitle">AI workforce for the active organization only. Roles, presence and governed authority remain tenant-scoped.</p></div><div><Link className="secondary-button" href="/meetings/room">Open boardroom</Link>{context.entitlement?.agent_builder_enabled ? <Link className="secondary-button" href="/studio/agents">Agent Studio</Link> : null}</div></header>
-    <section className="organization-banner"><div><span>Organization</span><strong>{context.organization.name}</strong></div><div><span>Human authority</span><strong>Human CEO governed</strong></div><div><span>External actions</span><strong>Disabled by default</strong></div></section>
+    <header className="command-header"><div><p className="eyebrow">RYTHM DIGITAL WORKFORCE</p><h1>Agent organization</h1><p className="subtitle">Persistent AI identities with evidence-based professional levels. A score measures performance inside a level; it never substitutes for the level itself.</p></div><div><Link className="secondary-button" href="/meetings/room">Open boardroom</Link>{context.entitlement?.agent_builder_enabled ? <Link className="secondary-button" href="/studio/agents">Agent Studio</Link> : null}</div></header>
+    <section className="organization-banner"><div><span>Organization</span><strong>{context.organization.name}</strong></div><div><span>Human authority</span><strong>Human CEO governed</strong></div><div><span>Level model</span><strong>Evidence-based · RYTHM verified</strong></div></section>
+    <section className={styles.frameworkNote}><strong>Professional ladder</strong><span>Associate → Specialist → Senior → Lead → Principal → Director</span><small>Higher levels require more independent evaluations and validated experience. A Specialist 96/100 remains below a Senior 80/100.</small></section>
     {agents.length === 0 ? <section className="panel"><p>No AI Agents exist in this organization yet.</p>{context.entitlement?.company_builder_enabled ? <p><Link href="/studio/builder">Build company structure</Link> · <Link href="/studio/templates">Install a template</Link> · <Link href="/studio/agents">Create an Agent</Link></p> : null}</section> : <section className={styles.directoryGrid}>
-      {agents.map(agent=><Link key={agent.id} href={`/agents/${agent.agent_code.toLowerCase()}`} className={styles.agentCard}>
+      {agents.map(agent=>{const asset=assetOf(agent);return <Link key={agent.id} href={`/agents/${agent.agent_code.toLowerCase()}`} className={styles.agentCard}>
         <div className={styles.portraitWrap}>
           <AgentPortrait agentCode={agent.agent_code} avatarUrl={agent.avatar_url} alt={agent.display_name??agent.name} className={styles.portrait}/>
           <span className={styles.presence}>{agent.presence_status.replace("_"," ")}</span>
         </div>
-        <div className={styles.cardBody}><p className="label">{agent.department??"Executive Office"}</p><h2>{agent.display_name??agent.name}</h2><p className={styles.role}>{agent.role_title}</p><p className={styles.workStyle}>{agent.work_style}</p><div className={`row-meta ${styles.meta}`}><span>{agent.agent_code}</span><span>{agent.risk_ceiling} risk ceiling</span><b className={agent.enabled?"state-active":"state-paused"}>{agent.agent_status === "enabled" ? "Enabled" : "Paused"}</b></div></div>
-      </Link>)}
+        <div className={styles.cardBody}><p className="label">{agent.department??"Executive Office"}</p><h2>{agent.display_name??agent.name}</h2><p className={styles.role}>{agent.role_title}</p>
+          <div className={styles.levelRow}><span className={styles.levelBadge}>{levelLabel(asset?.current_level)}</span>{asset?.level_score!=null?<span className={styles.scoreBadge}>{asset.level_score}/100</span>:null}{asset?.certification_status==="verified"?<span className={styles.verifiedBadge}>RYTHM Verified</span>:<span className={styles.unverifiedBadge}>{asset?.certification_status??"unverified"}</span>}</div>
+          <p className={styles.workStyle}>{agent.work_style}</p><div className={`row-meta ${styles.meta}`}><span>{agent.agent_code}</span><span>{agent.risk_ceiling} risk ceiling</span><b className={agent.enabled?"state-active":"state-paused"}>{agent.agent_status === "enabled" ? "Enabled" : "Paused"}</b></div></div>
+      </Link>})}
     </section>}
   </main>;
 }
