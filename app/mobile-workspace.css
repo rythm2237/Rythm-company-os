@@ -1,0 +1,224 @@
+/* Authenticated workspace mobile hardening.
+   This file is intentionally scoped to .app-workspace and contains no business logic. */
+
+.app-workspace,
+.app-workspace .app-stage,
+.app-workspace .app-page-transition,
+.app-workspace main,
+.app-workspace section,
+.app-workspace article,
+.app-workspace form,
+.app-workspace fieldset {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-workspace .auth-form,
+.app-workspace .auth-form label,
+.app-workspace .auth-form input,
+.app-workspace .auth-form select,
+.app-workspace .auth-form textarea {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.app-workspace .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 14px;
+}
+
+.app-workspace .kpi-card {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Agent Studio card actions: compact, predictable and touch-friendly. */
+.app-workspace .kpi-card form {
+  display: inline-flex;
+  max-width: 100%;
+  margin: 6px 6px 0 0;
+  vertical-align: top;
+}
+
+.app-workspace .kpi-card form button {
+  width: auto;
+  min-width: 88px;
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid #d8dfeb;
+  border-radius: 10px;
+  color: #172033;
+  background: #fff;
+  box-shadow: none;
+  font-weight: 800;
+}
+
+.app-workspace .kpi-card form button:hover {
+  border-color: #bdc7dc;
+  background: #f7f9fc;
+}
+
+/* Company Memory has an inline desktop grid. Override the rendered kebab-case style on small screens. */
+@media (max-width: 900px) {
+  .app-workspace #company-memory > div[style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100%;
+  }
+
+  .app-workspace #company-memory .memory-filter {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .app-workspace #company-memory .memory-record > summary {
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .app-workspace #company-memory .memory-record > summary > div {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-workspace #company-memory .row-meta {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .app-workspace .app-stage {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: clip;
+  }
+
+  .app-workspace .command-shell,
+  .app-workspace .shell,
+  .app-workspace .page-shell {
+    width: 100%;
+    max-width: 100%;
+    padding-left: 16px;
+    padding-right: 16px;
+    overflow-x: clip;
+  }
+
+  .app-workspace .command-header,
+  .app-workspace .topbar {
+    width: 100%;
+    max-width: 100%;
+    align-items: flex-start;
+  }
+
+  .app-workspace .command-header h1,
+  .app-workspace .topbar h1,
+  .app-workspace h1 {
+    max-width: 100%;
+    font-size: clamp(2.15rem, 10.5vw, 3.05rem);
+    line-height: .98;
+    letter-spacing: -.045em;
+    overflow-wrap: normal;
+    word-break: normal;
+    text-wrap: balance;
+  }
+
+  .app-workspace .subtitle {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .app-workspace .organization-banner,
+  .app-workspace .metrics-grid,
+  .app-workspace .executive-grid,
+  .app-workspace .control-grid,
+  .app-workspace .contentGrid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100%;
+  }
+
+  .app-workspace .panel,
+  .app-workspace .metric-card,
+  .app-workspace .control-card,
+  .app-workspace .moduleArea,
+  .app-workspace .checklist,
+  .app-workspace .organization-banner {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .app-workspace .data-row,
+  .app-workspace .panel-heading,
+  .app-workspace .sectionHeading {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-workspace .data-row > *,
+  .app-workspace .panel-heading > *,
+  .app-workspace .sectionHeading > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .app-workspace .kpi-card form {
+    display: inline-flex;
+    margin-top: 8px;
+  }
+
+  .app-workspace .kpi-card form button {
+    min-width: 82px;
+    padding-inline: 12px;
+  }
+
+  .app-workspace .product-nav {
+    width: min(318px, calc(100vw - 44px));
+    max-width: calc(100vw - 44px);
+  }
+
+  .app-workspace .product-nav-inner {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .app-workspace .workspace-context-card,
+  .app-workspace .product-onboarding-link,
+  .app-workspace .product-signout {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .app-workspace .command-shell,
+  .app-workspace .shell,
+  .app-workspace .page-shell {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .app-workspace .command-header h1,
+  .app-workspace .topbar h1,
+  .app-workspace h1 {
+    font-size: clamp(2rem, 10vw, 2.7rem);
+  }
+
+  .app-workspace .panel,
+  .app-workspace .metric-card,
+  .app-workspace .control-card {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .app-workspace .kpi-card form button {
+    min-height: 44px;
+  }
+}
