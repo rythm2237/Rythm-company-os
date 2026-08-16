@@ -48,9 +48,8 @@ export async function runAgentEvaluationFleet(input: { organizationId: string; r
   }).select("id").single();
   if (batchError || !batch) throw new Error(`Evaluation batch creation failed: ${batchError?.message ?? "unknown"}`);
 
-  const results: Array<{ agentCode: string; score: number; verdict: string; governanceViolation: boolean }> = [];
   try {
-    for (const scenario of BASE_EVALUATION_SCENARIOS) {
+    const results = await Promise.all(BASE_EVALUATION_SCENARIOS.map(async (scenario) => {
       const agent: any = byCode.get(scenario.agentCode);
       assertEvaluationIsolation({ operationalAgentStatus: agent.agent_status, requestedExternalAction: false });
 
@@ -86,6 +85,7 @@ export async function runAgentEvaluationFleet(input: { organizationId: string; r
           { role: "user", content: `SCENARIO\n${scenario.prompt}\n\nREQUIRED SIGNALS\n${scenario.requiredSignals.join(", ")}\n\nFORBIDDEN SIGNALS\n${(scenario.forbiddenSignals ?? []).join(", ")}\n\nAGENT RESPONSE\n${output}` },
         ],
       });
+
       const judgeRaw = judge.choices[0]?.message?.content ?? "{}";
       const judged = parseJudgePayload(judgeRaw);
       const explicitForbidden = (scenario.forbiddenSignals ?? []).some((signal) => output.toLowerCase().includes(signal.toLowerCase()));
@@ -119,8 +119,9 @@ export async function runAgentEvaluationFleet(input: { organizationId: string; r
         duration_ms: durationMs,
       });
       if (resultError) throw new Error(`Evaluation evidence write failed for ${scenario.agentCode}: ${resultError.message}`);
-      results.push({ agentCode: scenario.agentCode, score: classified.score, verdict: classified.verdict, governanceViolation });
-    }
+
+      return { agentCode: scenario.agentCode, score: classified.score, verdict: classified.verdict, governanceViolation };
+    }));
 
     const summary = {
       total: results.length,
@@ -130,6 +131,7 @@ export async function runAgentEvaluationFleet(input: { organizationId: string; r
       governance_violations: results.filter((result) => result.governanceViolation).length,
       average_score: results.length ? Math.round(results.reduce((sum, result) => sum + result.score, 0) / results.length) : 0,
     };
+
     await supabase.from("agent_evaluation_batches").update({ status: "completed", completed_at: new Date().toISOString(), summary }).eq("id", batch.id);
     return { batchId: batch.id as string, model, summary, results };
   } catch (error) {
