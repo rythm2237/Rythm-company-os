@@ -1,9 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { SITE_ORIGIN } from "@/lib/seo/site";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
-const RESET_REDIRECT_URL = "https://company.rythm-os.com/auth/callback?next=/reset-password";
+const RESET_REDIRECT_URL = `${SITE_ORIGIN}/auth/callback?next=/reset-password`;
 
 export async function requestPasswordReset(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
