@@ -2,7 +2,7 @@
 
 > RYTHM Company OS is a governed AI company operating system that gives a Human CEO a specialized AI workforce, Company Memory, meetings, approvals, projects, actions, and traceable execution in one operating environment.
 
-Canonical site: https://company.rythm-os.com
+Canonical site: https://rythm-os.com
 Product status: Public Beta
 Operator: Tayyebialashti Yaser E.V. (Hungarian individual entrepreneur)
 Registration number (Nyilvántartási szám): 58642889
@@ -19,20 +19,20 @@ Business address: 1143 Budapest, Gizella út 35, Hungary
 
 ## Primary public pages
 
-- Product: https://company.rythm-os.com/product
-- Interactive Demo: https://company.rythm-os.com/demo
-- Solutions: https://company.rythm-os.com/solutions
-- Templates: https://company.rythm-os.com/templates
-- Pricing: https://company.rythm-os.com/pricing
-- Enterprise AI Workforce: https://company.rythm-os.com/enterprise
-- Live AI Meeting: https://company.rythm-os.com/live-ai-meeting
-- Trust Center: https://company.rythm-os.com/trust
-- Security: https://company.rythm-os.com/security
-- Support: https://company.rythm-os.com/support
-- Legal Notice: https://company.rythm-os.com/legal
-- Privacy Policy: https://company.rythm-os.com/privacy
-- Terms of Service: https://company.rythm-os.com/terms
-- Cookie & Storage Notice: https://company.rythm-os.com/cookies
+- Product: https://rythm-os.com/product
+- Interactive Demo: https://rythm-os.com/demo
+- Solutions: https://rythm-os.com/solutions
+- Templates: https://rythm-os.com/templates
+- Pricing: https://rythm-os.com/pricing
+- Enterprise AI Workforce: https://rythm-os.com/enterprise
+- Live AI Meeting: https://rythm-os.com/live-ai-meeting
+- Trust Center: https://rythm-os.com/trust
+- Security: https://rythm-os.com/security
+- Support: https://rythm-os.com/support
+- Legal Notice: https://rythm-os.com/legal
+- Privacy Policy: https://rythm-os.com/privacy
+- Terms of Service: https://rythm-os.com/terms
+- Cookie & Storage Notice: https://rythm-os.com/cookies
 
 ## Official contact channels
 
