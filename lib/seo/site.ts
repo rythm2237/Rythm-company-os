@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const SITE_ORIGIN = "https://company.rythm-os.com";
+export const SITE_ORIGIN = "https://rythm-os.com";
 export const SITE_NAME = "RYTHM Company OS";
 export const DEFAULT_DESCRIPTION =
   "Build and operate a governed AI company with a Human CEO, specialized AI Agents, Company Memory, meetings, approvals, and traceable execution.";
