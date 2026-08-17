@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { createPublicMetadata } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Consumer Terms | RYTHM Company OS",
-  description: "Consumer-specific terms for RYTHM digital services, one-off AI meetings, subscriptions, payment, withdrawal, and statutory remedies.",
-  alternates: { canonical: "/consumer-terms" },
-};
+export const metadata: Metadata = createPublicMetadata("/consumer-terms");
 
 export default function ConsumerTermsPage() {
   return (
