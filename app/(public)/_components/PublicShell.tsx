@@ -14,6 +14,50 @@ const NAVIGATION_GROUPS = [
   { label: "Choose", items: PUBLIC_NAVIGATION.filter((item) => ["/pricing", "/enterprise", "/live-ai-meeting"].includes(item.href)) },
 ] as const;
 
+const FOOTER_GROUPS = [
+  {
+    label: "Explore",
+    links: [
+      ["Product", "/product"],
+      ["Demo", "/demo"],
+      ["Pricing", "/pricing"],
+      ["Enterprise", "/enterprise"],
+      ["Templates", "/templates"],
+    ],
+  },
+  {
+    label: "Trust",
+    links: [
+      ["Trust Center", "/trust"],
+      ["Security", "/security"],
+      ["AI Transparency", "/ai-transparency"],
+      ["Subprocessors", "/subprocessors"],
+    ],
+  },
+  {
+    label: "Legal",
+    links: [
+      ["Legal Notice", "/legal"],
+      ["Privacy", "/privacy"],
+      ["Terms", "/terms"],
+      ["Consumer Terms", "/consumer-terms"],
+      ["Consumer Rights", "/consumer-rights"],
+      ["Withdrawal", "/withdrawal"],
+      ["Cookies & Storage", "/cookies"],
+      ["DPA", "/dpa"],
+      ["Data Requests", "/data-requests"],
+    ],
+  },
+  {
+    label: "Help",
+    links: [
+      ["Support", "/support"],
+      ["Contact", "/contact"],
+      ["Customer sign in", "/login"],
+    ],
+  },
+] as const;
+
 const NAVIGATION_ICONS: Record<string, string> = {
   "/product": "⌁", "/demo": "✦", "/solutions": "⌘", "/templates": "◇", "/pricing": "€", "/enterprise": "▦", "/live-ai-meeting": "◉",
 };
@@ -69,10 +113,22 @@ function PublicShellFrame({ children }: PublicShellProps) {
           <div><Link href="/login" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_mobile_header", locale } })}>Sign in</Link><button type="button" aria-expanded={mobileOpen} aria-controls="public-navigation" onClick={() => setMobileOpen(true)}><span>Menu</span><i aria-hidden="true" /><i aria-hidden="true" /></button></div>
         </header>
         <div className="marketing-page-transition" key={pathname}>{children}</div>
-        <footer className="marketing-footer">
-          <div><RythmBrandLogo variant="primary" /><p>Governed AI companies under Human CEO authority.</p></div>
-          <div>
-            <Link href="/product">Product</Link><Link href="/demo">Demo</Link><Link href="/pricing">Pricing</Link><Link href="/enterprise">Enterprise Beta</Link><Link href="/trust">Trust Center</Link><Link href="/ai-transparency">AI Transparency</Link><Link href="/security">Security</Link><Link href="/support">Support</Link><Link href="/legal">Legal Notice</Link><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/consumer-terms">Consumer Terms</Link><Link href="/consumer-rights">Consumer Rights</Link><Link href="/withdrawal">Withdraw from contract</Link><Link href="/cookies">Cookies & Storage</Link><Link href="/dpa">DPA</Link><Link href="/subprocessors">Subprocessors</Link><Link href="/data-requests">Data Requests</Link><Link href="/login">Customer sign in</Link>
+        <footer className="marketing-footer marketing-footer-structured" aria-label="RYTHM public footer">
+          <div className="marketing-footer-brand">
+            <RythmBrandLogo variant="primary" />
+            <p>Governed AI companies under Human CEO authority.</p>
+          </div>
+          <nav className="marketing-footer-groups" aria-label="Footer navigation">
+            {FOOTER_GROUPS.map((group) => (
+              <section className="marketing-footer-group" key={group.label}>
+                <h2>{group.label}</h2>
+                <div>{group.links.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}</div>
+              </section>
+            ))}
+          </nav>
+          <div className="marketing-footer-bottom">
+            <span>© 2026 RYTHM Company OS</span>
+            <span>Human authority · governed AI · privacy by design</span>
           </div>
         </footer>
       </div>
