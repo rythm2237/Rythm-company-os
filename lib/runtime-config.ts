@@ -1,6 +1,8 @@
 export type RuntimeConfig = {
   supabaseConfigured: boolean;
   openAIConfigured: boolean;
+  anthropicConfigured: boolean;
+  geminiConfigured: boolean;
   agentExecutionEnabled: boolean;
   externalActionsEnabled: boolean;
   monthlyAiBudgetUsd: number;
@@ -29,6 +31,8 @@ export function getRuntimeConfig(): RuntimeConfig {
       process.env.NEXT_PUBLIC_SUPABASE_URL && supabasePublicKey,
     ),
     openAIConfigured: Boolean(process.env.OPENAI_API_KEY),
+    anthropicConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
+    geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
     agentExecutionEnabled: enabled(process.env.RYTHM_AGENT_EXECUTION_ENABLED),
     externalActionsEnabled: enabled(process.env.RYTHM_EXTERNAL_ACTIONS_ENABLED),
     monthlyAiBudgetUsd: boundedNumber(process.env.RYTHM_MONTHLY_AI_BUDGET_USD, 25, 0, 100000),
