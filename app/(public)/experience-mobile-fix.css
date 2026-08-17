@@ -1,0 +1,77 @@
+/* Experience Mode on narrow touch viewports: keep navigation compact so the selected surface stays visible. */
+@media (max-width: 760px) {
+  .demo-workspace.is-immersive .demo-frame {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .demo-workspace.is-immersive .demo-navigation {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    padding: 9px 10px 10px;
+    display: flex !important;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    background: #111827;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+
+  .demo-workspace.is-immersive .demo-navigation::-webkit-scrollbar { display: none; }
+
+  .demo-workspace.is-immersive .demo-navigation-group {
+    min-width: max-content;
+    width: auto;
+    margin: 0;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .demo-workspace.is-immersive .demo-navigation-group > span {
+    width: auto;
+    margin: 0 2px 0 0;
+    padding: 0 5px;
+    align-self: center;
+    color: #8793aa;
+    background: #111827;
+    font-size: .55rem;
+    line-height: 38px;
+    letter-spacing: .11em;
+    white-space: nowrap;
+  }
+
+  .demo-workspace.is-immersive .demo-navigation button {
+    width: auto;
+    min-width: max-content;
+    min-height: 40px;
+    padding: 9px 12px;
+    flex: 0 0 auto;
+    border-radius: 10px;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    font-size: .72rem;
+  }
+
+  .demo-workspace.is-immersive .demo-navigation button.is-active {
+    background: #3b4968;
+    box-shadow: inset 0 -3px #94a3ff;
+  }
+
+  .demo-workspace.is-immersive .demo-main {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-top: 22px;
+    overflow: visible;
+  }
+}
