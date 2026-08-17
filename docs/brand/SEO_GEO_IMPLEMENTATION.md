@@ -15,6 +15,7 @@ This release installs the production brand identity and the technical discovery 
 - PWA manifest, theme colors, favicon, SVG icon, Apple Touch icon, and 192/512 icons
 - Explicit `noindex, nofollow` boundaries on authentication and tenant application layouts
 - Semantic public content and crawlable internal navigation
+- Brand assets with fixed dimensions to avoid layout shift
 - Permanent redirects from legacy `company` and `www` hostnames to the canonical apex hostname
 
 ## Indexable public routes
