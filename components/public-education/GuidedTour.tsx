@@ -187,17 +187,18 @@ export default function GuidedTour() {
     if (tourState === "prompt" && pathname === "/") {
       const target = document.querySelector<HTMLElement>(".hero-system-card");
       if (!target) return;
+      const promptTarget = target;
 
-      const previousVisibility = target.style.visibility;
-      const previousPointerEvents = target.style.pointerEvents;
-      const previousAriaHidden = target.getAttribute("aria-hidden");
+      const previousVisibility = promptTarget.style.visibility;
+      const previousPointerEvents = promptTarget.style.pointerEvents;
+      const previousAriaHidden = promptTarget.getAttribute("aria-hidden");
       let frame = 0;
 
       function restoreTarget() {
-        target.style.visibility = previousVisibility;
-        target.style.pointerEvents = previousPointerEvents;
-        if (previousAriaHidden === null) target.removeAttribute("aria-hidden");
-        else target.setAttribute("aria-hidden", previousAriaHidden);
+        promptTarget.style.visibility = previousVisibility;
+        promptTarget.style.pointerEvents = previousPointerEvents;
+        if (previousAriaHidden === null) promptTarget.removeAttribute("aria-hidden");
+        else promptTarget.setAttribute("aria-hidden", previousAriaHidden);
       }
 
       function syncPromptPosition() {
@@ -209,7 +210,7 @@ export default function GuidedTour() {
           return;
         }
 
-        const targetRect = target.getBoundingClientRect();
+        const targetRect = promptTarget.getBoundingClientRect();
         const dialogRect = dialogRef.current.getBoundingClientRect();
         const margin = 16;
         const left = clamp(
@@ -223,9 +224,9 @@ export default function GuidedTour() {
           window.innerHeight - dialogRect.height - margin,
         );
 
-        target.style.visibility = "hidden";
-        target.style.pointerEvents = "none";
-        target.setAttribute("aria-hidden", "true");
+        promptTarget.style.visibility = "hidden";
+        promptTarget.style.pointerEvents = "none";
+        promptTarget.setAttribute("aria-hidden", "true");
         setDialogPosition({ top, left, right: "auto", bottom: "auto" });
       }
 
