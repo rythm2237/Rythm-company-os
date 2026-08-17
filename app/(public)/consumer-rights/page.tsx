@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { createPublicMetadata } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Consumer Rights | RYTHM Company OS",
-  description: "Mandatory consumer information for RYTHM digital services, complaints, withdrawal, conformity remedies, and alternative dispute resolution.",
-  alternates: { canonical: "/consumer-rights" },
-};
+export const metadata: Metadata = createPublicMetadata("/consumer-rights");
 
 export default function ConsumerRightsPage() {
   return (
