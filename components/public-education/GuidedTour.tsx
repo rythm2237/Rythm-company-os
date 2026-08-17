@@ -183,6 +183,64 @@ export default function GuidedTour() {
     document.querySelectorAll(".is-guide-target").forEach((element) => element.classList.remove("is-guide-target"));
     setSpotlightRect(null);
     setDialogPosition(undefined);
+
+    if (tourState === "prompt" && pathname === "/") {
+      const target = document.querySelector<HTMLElement>(".hero-system-card");
+      if (!target) return;
+      const promptTarget = target;
+
+      const previousVisibility = promptTarget.style.visibility;
+      const previousPointerEvents = promptTarget.style.pointerEvents;
+      const previousAriaHidden = promptTarget.getAttribute("aria-hidden");
+      let frame = 0;
+
+      function restoreTarget() {
+        promptTarget.style.visibility = previousVisibility;
+        promptTarget.style.pointerEvents = previousPointerEvents;
+        if (previousAriaHidden === null) promptTarget.removeAttribute("aria-hidden");
+        else promptTarget.setAttribute("aria-hidden", previousAriaHidden);
+      }
+
+      function syncPromptPosition() {
+        if (!dialogRef.current) return;
+
+        if (window.innerWidth <= 900) {
+          restoreTarget();
+          setDialogPosition(undefined);
+          return;
+        }
+
+        const targetRect = promptTarget.getBoundingClientRect();
+        const dialogRect = dialogRef.current.getBoundingClientRect();
+        const margin = 16;
+        const left = clamp(
+          targetRect.left + ((targetRect.width - dialogRect.width) / 2),
+          margin,
+          window.innerWidth - dialogRect.width - margin,
+        );
+        const top = clamp(
+          targetRect.top + ((targetRect.height - dialogRect.height) / 2),
+          margin,
+          window.innerHeight - dialogRect.height - margin,
+        );
+
+        promptTarget.style.visibility = "hidden";
+        promptTarget.style.pointerEvents = "none";
+        promptTarget.setAttribute("aria-hidden", "true");
+        setDialogPosition({ top, left, right: "auto", bottom: "auto" });
+      }
+
+      frame = window.requestAnimationFrame(syncPromptPosition);
+      window.addEventListener("resize", syncPromptPosition);
+      window.addEventListener("scroll", syncPromptPosition, true);
+      return () => {
+        window.cancelAnimationFrame(frame);
+        window.removeEventListener("resize", syncPromptPosition);
+        window.removeEventListener("scroll", syncPromptPosition, true);
+        restoreTarget();
+      };
+    }
+
     if (tourState !== "active" || pathname !== "/demo") return;
 
     let frame = 0;
@@ -262,7 +320,7 @@ export default function GuidedTour() {
         dir={copy.direction}
         lang={locale}
         tabIndex={-1}
-        style={tourState === "active" ? dialogPosition : undefined}
+        style={dialogPosition}
       >
         <button className="marketing-guide-close" type="button" onClick={close} aria-label={copy.ui.close}>×</button>
 
