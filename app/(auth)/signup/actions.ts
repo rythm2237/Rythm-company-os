@@ -1,9 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { SITE_ORIGIN } from "@/lib/seo/site";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
-
-const SITE_ORIGIN = "https://company.rythm-os.com";
 
 function signupErrorMessage(error: { message?: string; code?: string; status?: number }) {
   const message = String(error.message ?? "").toLowerCase();
