@@ -34,12 +34,16 @@ Tenant, authentication, provisioning, and commercial mutation routes are intenti
 
 Google states that AI Overviews and AI Mode do not require a special AI file or dedicated schema. Eligibility depends on normal Search indexing, accessible textual content, internal links, page experience, and structured data that matches visible content. For that reason, this implementation does not add speculative `llms.txt` claims or unsupported AI-specific markup.
 
+## Canonical domain
+
+The production canonical origin is `https://rythm-os.com`. Legacy traffic from `https://company.rythm-os.com` and `https://www.rythm-os.com` should permanently redirect to the apex domain.
+
 ## Post-deployment operational steps
 
 These actions require the relevant external webmaster account and are not code changes:
 
-1. Verify `https://company.rythm-os.com` in Google Search Console.
-2. Submit `https://company.rythm-os.com/sitemap.xml`.
+1. Verify `https://rythm-os.com` in Google Search Console.
+2. Submit `https://rythm-os.com/sitemap.xml`.
 3. Run URL Inspection for `/`, `/product`, `/demo`, and `/pricing` and request indexing.
 4. Validate the homepage and Product page with Google Rich Results Test and Schema Markup Validator.
 5. Import the verified site into Bing Webmaster Tools and submit the same sitemap.
