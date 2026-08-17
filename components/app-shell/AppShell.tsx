@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import DecisionDraftGuard from "@/components/decision-draft-guard/DecisionDraftGuard";
 import ProductNav from "@/components/product-nav/ProductNav";
@@ -14,6 +15,44 @@ type PulseNode = {
   weight_percent: number;
   node_type: string;
 };
+
+const footerGroups = [
+  {
+    label: "Workspace",
+    links: [
+      ["Command", "/command-center"],
+      ["Projects", "/projects"],
+      ["Agent Studio", "/studio/agents"],
+      ["Boardroom", "/meetings/room"],
+    ],
+  },
+  {
+    label: "Trust",
+    links: [
+      ["Security", "/security"],
+      ["Trust center", "/trust"],
+      ["AI transparency", "/ai-transparency"],
+      ["Subprocessors", "/subprocessors"],
+    ],
+  },
+  {
+    label: "Legal",
+    links: [
+      ["Privacy", "/privacy"],
+      ["Terms", "/terms"],
+      ["DPA", "/dpa"],
+      ["Data requests", "/data-requests"],
+    ],
+  },
+  {
+    label: "Help",
+    links: [
+      ["Support", "/support"],
+      ["Contact", "/contact"],
+      ["Workspace guide", "/onboarding"],
+    ],
+  },
+] as const;
 
 export default async function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {
   let pulseEvent = null;
@@ -81,7 +120,31 @@ export default async function AppShell({ children }: Readonly<{ children: React.
     <div className="app-workspace">
       <ProductNav access={navigationAccess} organization={organizationNavigation} />
       <Suspense fallback={null}><DecisionDraftGuard /></Suspense>
-      <div className="app-stage"><div className="app-page-transition">{children}</div></div>
+      <div className="app-stage">
+        <div className="app-page-transition">{children}</div>
+        <footer className="workspace-footer" aria-label="RYTHM workspace footer">
+          <div className="workspace-footer-inner">
+            <div className="workspace-footer-brand">
+              <strong>RYTHM Company OS</strong>
+              <span>Human-led AI company operating system.</span>
+            </div>
+            <nav className="workspace-footer-links" aria-label="Footer navigation">
+              {footerGroups.map((group) => (
+                <section className="workspace-footer-group" key={group.label}>
+                  <h2>{group.label}</h2>
+                  <div>
+                    {group.links.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}
+                  </div>
+                </section>
+              ))}
+            </nav>
+          </div>
+          <div className="workspace-footer-bottom">
+            <span>© 2026 RYTHM Company OS</span>
+            <span>Human authority · tenant isolation · governed AI</span>
+          </div>
+        </footer>
+      </div>
       <Suspense fallback={null}>
         <ProjectPulse event={pulseEvent} nodes={pulseNodes} project={pulseProject} />
       </Suspense>
