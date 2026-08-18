@@ -4,159 +4,62 @@ import { useMemo, useState } from "react";
 import type { ChartSpec } from "./actions";
 import { saveAgentArtifact } from "./artifact-actions";
 
-type Props = {
-  agentId: string;
-  agentName: string;
-  content: string;
-  responseType?: "text" | "image" | "chart";
-  resolvedOutput?: string;
-  imageDataUrl?: string;
-  chartSpec?: ChartSpec;
-};
+type Props = { agentId:string; agentName:string; content:string; responseType?:"text"|"image"|"chart"; resolvedOutput?:string; imageDataUrl?:string; chartSpec?:ChartSpec };
+type Format = "txt"|"md"|"pdf"|"png"|"jpg"|"svg"|"csv"|"xlsx"|"json";
 
-type Format = "txt" | "md" | "pdf" | "png" | "jpg" | "svg" | "csv" | "xlsx" | "json";
+function slug(value:string){return value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,70)||"agent-output";}
+function today(){return new Date().toISOString().slice(0,10);}
+function titleFor(agentName:string,content:string,chartSpec?:ChartSpec){return chartSpec?.title||content.replace(/[#*_`]/g,"").split(/[.!?\n]/)[0].trim().slice(0,90)||`${agentName} output`;}
+function downloadBlob(blob:Blob,filename:string){const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function withTimeout<T>(promise:Promise<T>,ms:number){return Promise.race<T>([promise,new Promise<T>((_,reject)=>window.setTimeout(()=>reject(new Error("Save timed out. Please try again.")),ms))]);}
 
-function slug(value: string) {
-  return value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70) || "agent-output";
+function chartSvg(spec:ChartSpec){
+  const width=1200,height=620,left=100,right=55,top=90,bottom=110;const values=spec.points.map((p)=>p.value);const min=Math.min(0,...values),max=Math.max(0,...values),range=max-min||1;const plotWidth=width-left-right,plotHeight=height-top-bottom;
+  const y=(value:number)=>top+plotHeight-((value-min)/range)*plotHeight;const x=(index:number)=>left+(spec.points.length===1?plotWidth/2:(index/(spec.points.length-1))*plotWidth);const baseline=y(0),slot=plotWidth/spec.points.length,barWidth=Math.max(16,Math.min(70,slot*.58));
+  const esc=(value:string)=>value.replace(/[&<>]/g,"");
+  const grid=[0,.25,.5,.75,1].map((ratio)=>{const value=min+range*ratio,yy=y(value);return `<line x1="${left}" x2="${width-right}" y1="${yy}" y2="${yy}" stroke="#d9dee8"/><text x="${left-14}" y="${yy+5}" text-anchor="end" font-size="18" fill="#5d6676">${Number(value.toFixed(1)).toLocaleString()}</text>`;}).join("");
+  const plot=spec.type==="line"?`<polyline points="${spec.points.map((p,i)=>`${x(i)},${y(p.value)}`).join(" ")}" fill="none" stroke="#3747d8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>${spec.points.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.value)}" r="7" fill="#3747d8"/>`).join("")}`:spec.points.map((p,i)=>{const yy=y(Math.max(p.value,0)),h=Math.abs(y(p.value)-baseline);return `<rect x="${left+i*slot+(slot-barWidth)/2}" y="${p.value>=0?yy:baseline}" width="${barWidth}" height="${Math.max(3,h)}" rx="7" fill="#3747d8"/>`;}).join("");
+  const labels=spec.points.map((p,i)=>{const xx=spec.type==="bar"?left+i*slot+slot/2:x(i);return `<text x="${xx}" y="${height-68}" text-anchor="middle" font-size="16" fill="#5d6676">${esc(String(p.label)).slice(0,18)}</text>`;}).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="white"/><text x="${left}" y="45" font-family="Arial,sans-serif" font-size="30" font-weight="700" fill="#101828">${esc(spec.title)}</text>${grid}<line x1="${left}" x2="${width-right}" y1="${baseline}" y2="${baseline}" stroke="#9aa3b2"/>${plot}${labels}${spec.xLabel?`<text x="${left+plotWidth/2}" y="${height-22}" text-anchor="middle" font-size="17" fill="#5d6676">${esc(spec.xLabel)}</text>`:""}${spec.insight?`<text x="${left}" y="${height-88}" font-size="16" fill="#101828">${esc(spec.insight).slice(0,115)}</text>`:""}</svg>`;
 }
+async function svgToPngDataUrl(svg:string){const blob=new Blob([svg],{type:"image/svg+xml;charset=utf-8"});const url=URL.createObjectURL(blob);try{const image=new Image();await new Promise<void>((resolve,reject)=>{image.onload=()=>resolve();image.onerror=reject;image.src=url;});const canvas=document.createElement("canvas");canvas.width=image.naturalWidth||1200;canvas.height=image.naturalHeight||620;const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Canvas is unavailable.");ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0);return canvas.toDataURL("image/png",1);}finally{URL.revokeObjectURL(url);}}
+async function convertImage(dataUrl:string,mime:"image/png"|"image/jpeg"){const image=new Image();await new Promise<void>((resolve,reject)=>{image.onload=()=>resolve();image.onerror=reject;image.src=dataUrl;});const canvas=document.createElement("canvas");canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Canvas is unavailable.");if(mime==="image/jpeg"){ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);}ctx.drawImage(image,0,0);return canvas.toDataURL(mime,.94);}
+function dataUrlBlob(value:string){const [head,body]=value.split(",");const mime=/data:([^;]+)/.exec(head)?.[1]||"application/octet-stream";const bytes=atob(body);const out=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)out[i]=bytes.charCodeAt(i);return new Blob([out],{type:mime});}
 
-function today() { return new Date().toISOString().slice(0, 10); }
+export default function ArtifactActionBar(props:Props){
+  const [busy,setBusy]=useState("");const [saved,setSaved]=useState(false);const [notice,setNotice]=useState("");const [exportOpen,setExportOpen]=useState(false);
+  const title=useMemo(()=>titleFor(props.agentName,props.content,props.chartSpec),[props.agentName,props.content,props.chartSpec]);const base=`${slug(props.agentName)}-${slug(title)}-${today()}`;
+  const formats:Format[]=props.responseType==="image"?["png","jpg","pdf"]:props.responseType==="chart"?["png","svg","pdf","csv","xlsx","json"]:["txt","md","pdf"];
 
-function titleFor(agentName: string, content: string, chartSpec?: ChartSpec) {
-  return chartSpec?.title || content.replace(/[#*_`]/g, "").split(/[.!?\n]/)[0].trim().slice(0, 90) || `${agentName} output`;
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function chartSvg(spec: ChartSpec) {
-  const width = 1200, height = 620, left = 100, right = 55, top = 90, bottom = 110;
-  const values = spec.points.map((point) => point.value);
-  const min = Math.min(0, ...values), max = Math.max(0, ...values), range = max - min || 1;
-  const plotWidth = width - left - right, plotHeight = height - top - bottom;
-  const y = (value: number) => top + plotHeight - ((value - min) / range) * plotHeight;
-  const x = (index: number) => left + (spec.points.length === 1 ? plotWidth / 2 : (index / (spec.points.length - 1)) * plotWidth);
-  const baseline = y(0), slot = plotWidth / spec.points.length, barWidth = Math.max(16, Math.min(70, slot * .58));
-  const grid = [0, .25, .5, .75, 1].map((ratio) => {
-    const value = min + range * ratio, yy = y(value);
-    return `<line x1="${left}" x2="${width-right}" y1="${yy}" y2="${yy}" stroke="#d9dee8"/><text x="${left-14}" y="${yy+5}" text-anchor="end" font-size="18" fill="#5d6676">${Number(value.toFixed(1)).toLocaleString()}</text>`;
-  }).join("");
-  const plot = spec.type === "line"
-    ? `<polyline points="${spec.points.map((p,i)=>`${x(i)},${y(p.value)}`).join(" ")}" fill="none" stroke="#3747d8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>${spec.points.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.value)}" r="7" fill="#3747d8"/>`).join("")}`
-    : spec.points.map((p,i)=>{ const yy=y(Math.max(p.value,0)), h=Math.abs(y(p.value)-baseline); return `<rect x="${left+i*slot+(slot-barWidth)/2}" y="${p.value>=0?yy:baseline}" width="${barWidth}" height="${Math.max(3,h)}" rx="7" fill="#3747d8"/>`; }).join("");
-  const labels = spec.points.map((p,i)=>{ const xx=spec.type==="bar"?left+i*slot+slot/2:x(i); return `<text x="${xx}" y="${height-68}" text-anchor="middle" font-size="16" fill="#5d6676">${String(p.label).replace(/[&<>]/g, "") .slice(0,18)}</text>`; }).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="white"/><text x="${left}" y="45" font-family="Arial,sans-serif" font-size="30" font-weight="700" fill="#101828">${spec.title.replace(/[&<>]/g, "")}</text>${grid}<line x1="${left}" x2="${width-right}" y1="${baseline}" y2="${baseline}" stroke="#9aa3b2"/>${plot}${labels}${spec.xLabel?`<text x="${left+plotWidth/2}" y="${height-22}" text-anchor="middle" font-size="17" fill="#5d6676">${spec.xLabel.replace(/[&<>]/g, "")}</text>`:""}${spec.insight?`<text x="${left}" y="${height-88}" font-size="16" fill="#101828">${spec.insight.replace(/[&<>]/g, "").slice(0,115)}</text>`:""}</svg>`;
-}
-
-async function svgToPngDataUrl(svg: string) {
-  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  try {
-    const image = new Image();
-    await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = reject; image.src = url; });
-    const canvas = document.createElement("canvas");
-    canvas.width = image.naturalWidth || 1200; canvas.height = image.naturalHeight || 620;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas is unavailable.");
-    ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.drawImage(image,0,0);
-    return canvas.toDataURL("image/png", 1);
-  } finally { URL.revokeObjectURL(url); }
-}
-
-async function convertImage(dataUrl: string, mime: "image/png" | "image/jpeg") {
-  const image = new Image();
-  await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = reject; image.src = dataUrl; });
-  const canvas = document.createElement("canvas"); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
-  const ctx = canvas.getContext("2d"); if (!ctx) throw new Error("Canvas is unavailable.");
-  if (mime === "image/jpeg") { ctx.fillStyle = "#fff"; ctx.fillRect(0,0,canvas.width,canvas.height); }
-  ctx.drawImage(image,0,0); return canvas.toDataURL(mime, .94);
-}
-
-function dataUrlBlob(value: string) {
-  const [head, body] = value.split(",");
-  const mime = /data:([^;]+)/.exec(head)?.[1] || "application/octet-stream";
-  const bytes = atob(body); const out = new Uint8Array(bytes.length);
-  for (let i=0;i<bytes.length;i++) out[i]=bytes.charCodeAt(i);
-  return new Blob([out], { type: mime });
-}
-
-export default function ArtifactActionBar(props: Props) {
-  const [busy, setBusy] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [notice, setNotice] = useState("");
-  const title = useMemo(() => titleFor(props.agentName, props.content, props.chartSpec), [props.agentName, props.content, props.chartSpec]);
-  const base = `${slug(props.agentName)}-${slug(title)}-${today()}`;
-  const formats: Format[] = props.responseType === "image" ? ["png","jpg","pdf"] : props.responseType === "chart" ? ["png","svg","pdf","csv","xlsx","json"] : ["txt","md","pdf"];
-
-  async function save() {
-    if (busy) return; setBusy("save"); setNotice("");
-    const result = await saveAgentArtifact({
-      agentId: props.agentId,
-      artifactType: props.responseType === "image" ? "image" : props.responseType === "chart" ? "chart" : props.resolvedOutput === "report" ? "report" : "text",
-      title,
-      sourceOutputType: props.resolvedOutput,
-      textContent: props.content,
-      chartSpec: props.chartSpec,
-      imageDataUrl: props.imageDataUrl,
-      metadata: { exportedFormats: formats },
-    });
-    if (result.ok) { setSaved(true); setNotice("Saved to Workspace"); } else setNotice(result.error);
-    setBusy("");
+  async function save(){
+    if(busy)return;setBusy("save");setNotice("");
+    try{
+      const result=await withTimeout(saveAgentArtifact({agentId:props.agentId,artifactType:props.responseType==="image"?"image":props.responseType==="chart"?"chart":props.resolvedOutput==="report"?"report":"text",title,sourceOutputType:props.resolvedOutput,textContent:props.content,chartSpec:props.chartSpec,imageDataUrl:props.imageDataUrl,metadata:{exportedFormats:formats}}),25000);
+      if(result.ok){setSaved(true);setNotice("Saved to Workspace");}else setNotice(result.error);
+    }catch(error){setNotice(error instanceof Error?error.message:"Save failed. Please try again.");}
+    finally{setBusy("");}
+  }
+  async function copy(){try{await navigator.clipboard.writeText(props.content);setNotice("Copied");window.setTimeout(()=>setNotice(""),1800);}catch{setNotice("Copy failed.");}}
+  async function exportAs(format:Format){
+    if(busy)return;setBusy(format);setNotice("");
+    try{
+      if(format==="txt"||format==="md")downloadBlob(new Blob([props.content],{type:"text/plain;charset=utf-8"}),`${base}.${format}`);
+      else if(format==="csv"&&props.chartSpec){const rows=[["Label","Value"],...props.chartSpec.points.map((p)=>[p.label,String(p.value)])];const csv=rows.map((row)=>row.map((v)=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");downloadBlob(new Blob([csv],{type:"text/csv;charset=utf-8"}),`${base}-data.csv`);}
+      else if(format==="json"&&props.chartSpec)downloadBlob(new Blob([JSON.stringify(props.chartSpec,null,2)],{type:"application/json"}),`${base}-data.json`);
+      else if(format==="svg"&&props.chartSpec)downloadBlob(new Blob([chartSvg(props.chartSpec)],{type:"image/svg+xml;charset=utf-8"}),`${base}.svg`);
+      else if(format==="xlsx"&&props.chartSpec){const XLSX=await import("xlsx");const ws=XLSX.utils.json_to_sheet(props.chartSpec.points.map((p)=>({Label:p.label,Value:p.value})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Data");XLSX.writeFile(wb,`${base}-data.xlsx`);}
+      else if(format==="png"){const data=props.responseType==="chart"&&props.chartSpec?await svgToPngDataUrl(chartSvg(props.chartSpec)):props.imageDataUrl?await convertImage(props.imageDataUrl,"image/png"):"";if(!data)throw new Error("PNG export is unavailable.");downloadBlob(dataUrlBlob(data),`${base}.png`);}
+      else if(format==="jpg"){if(!props.imageDataUrl)throw new Error("JPG export is unavailable.");const data=await convertImage(props.imageDataUrl,"image/jpeg");downloadBlob(dataUrlBlob(data),`${base}.jpg`);}
+      else if(format==="pdf"){const {jsPDF}=await import("jspdf");const pdf=new jsPDF({orientation:props.responseType==="text"?"portrait":"landscape",unit:"pt",format:"a4"});if(props.responseType==="text"||(!props.imageDataUrl&&!props.chartSpec)){pdf.setFontSize(16);pdf.text(title,44,52);pdf.setFontSize(10.5);const lines=pdf.splitTextToSize(props.content,510);let y=78;for(const line of lines){if(y>790){pdf.addPage();y=48;}pdf.text(line,44,y);y+=14;}}else{const data=props.chartSpec?await svgToPngDataUrl(chartSvg(props.chartSpec)):props.imageDataUrl!;pdf.setFontSize(15);pdf.text(title,40,42);pdf.addImage(data,"PNG",40,60,760,420,undefined,"FAST");if(props.content){pdf.setFontSize(9);pdf.text(pdf.splitTextToSize(props.content,760),40,500);}}pdf.save(`${base}.pdf`);}
+      setNotice(`${format.toUpperCase()} exported`);setExportOpen(false);window.setTimeout(()=>setNotice(""),1800);
+    }catch(error){setNotice(error instanceof Error?error.message:"Export failed.");}
+    finally{setBusy("");}
   }
 
-  async function copy() {
-    await navigator.clipboard.writeText(props.content); setNotice("Copied"); window.setTimeout(()=>setNotice(""),1800);
-  }
-
-  async function exportAs(format: Format) {
-    if (busy) return; setBusy(format); setNotice("");
-    try {
-      if (format === "txt" || format === "md") downloadBlob(new Blob([props.content], { type: "text/plain;charset=utf-8" }), `${base}.${format}`);
-      else if (format === "csv" && props.chartSpec) {
-        const rows = [["Label","Value"], ...props.chartSpec.points.map(p=>[p.label,String(p.value)])];
-        const csv = rows.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-        downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${base}-data.csv`);
-      } else if (format === "json" && props.chartSpec) downloadBlob(new Blob([JSON.stringify(props.chartSpec,null,2)], { type: "application/json" }), `${base}-data.json`);
-      else if (format === "svg" && props.chartSpec) downloadBlob(new Blob([chartSvg(props.chartSpec)], { type: "image/svg+xml;charset=utf-8" }), `${base}.svg`);
-      else if (format === "xlsx" && props.chartSpec) {
-        const XLSX = await import("xlsx");
-        const ws = XLSX.utils.json_to_sheet(props.chartSpec.points.map(p=>({ Label:p.label, Value:p.value })));
-        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Data");
-        XLSX.writeFile(wb, `${base}-data.xlsx`);
-      } else if (format === "png") {
-        const data = props.responseType === "chart" && props.chartSpec ? await svgToPngDataUrl(chartSvg(props.chartSpec)) : props.imageDataUrl ? await convertImage(props.imageDataUrl,"image/png") : "";
-        if (!data) throw new Error("PNG export is unavailable."); downloadBlob(dataUrlBlob(data), `${base}.png`);
-      } else if (format === "jpg") {
-        if (!props.imageDataUrl) throw new Error("JPG export is unavailable."); const data = await convertImage(props.imageDataUrl,"image/jpeg"); downloadBlob(dataUrlBlob(data), `${base}.jpg`);
-      } else if (format === "pdf") {
-        const { jsPDF } = await import("jspdf"); const pdf = new jsPDF({ orientation: props.responseType === "text" ? "portrait" : "landscape", unit: "pt", format: "a4" });
-        if (props.responseType === "text" || (!props.imageDataUrl && !props.chartSpec)) {
-          pdf.setFontSize(16); pdf.text(title, 44, 52); pdf.setFontSize(10.5); const lines = pdf.splitTextToSize(props.content, 510); let y=78;
-          for (const line of lines) { if (y>790) { pdf.addPage(); y=48; } pdf.text(line,44,y); y+=14; }
-        } else {
-          const data = props.chartSpec ? await svgToPngDataUrl(chartSvg(props.chartSpec)) : props.imageDataUrl!;
-          pdf.setFontSize(15); pdf.text(title, 40, 42); pdf.addImage(data, "PNG", 40, 60, 760, 420, undefined, "FAST");
-          if (props.content) { pdf.setFontSize(9); pdf.text(pdf.splitTextToSize(props.content,760),40,500); }
-        }
-        pdf.save(`${base}.pdf`);
-      }
-      setNotice(`${format.toUpperCase()} exported`); window.setTimeout(()=>setNotice(""),1800);
-    } catch (error) { setNotice(error instanceof Error ? error.message : "Export failed."); }
-    setBusy("");
-  }
-
-  return <div style={{ marginTop: ".8rem", paddingTop: ".65rem", borderTop: "1px solid rgba(110,120,140,.16)", display: "flex", alignItems: "center", gap: ".45rem", flexWrap: "wrap" }}>
-    <button type="button" onClick={save} disabled={Boolean(busy)||saved}>{saved ? "✓ Saved" : busy==="save" ? "Saving…" : "Save"}</button>
-    {props.responseType !== "image" ? <button type="button" onClick={copy}>Copy</button> : null}
-    <details style={{ position: "relative" }}><summary style={{ cursor: "pointer", listStyle: "none", border: "1px solid rgba(110,120,140,.28)", borderRadius: 8, padding: ".42rem .65rem" }}>Export ▾</summary><div style={{ position: "absolute", zIndex: 20, top: "calc(100% + 6px)", left: 0, minWidth: 155, padding: ".35rem", border: "1px solid rgba(110,120,140,.25)", borderRadius: 10, background: "white", boxShadow: "0 12px 30px rgba(20,30,50,.14)", display: "grid", gap: ".2rem" }}>{formats.map(format=><button key={format} type="button" onClick={()=>exportAs(format)} disabled={Boolean(busy)} style={{ textAlign: "left" }}>{busy===format?"Preparing…":format.toUpperCase()}</button>)}</div></details>
-    {notice ? <span style={{ fontSize: ".78rem", opacity: .68 }}>{notice}</span> : null}
+  return <div style={{marginTop:".8rem",paddingTop:".65rem",borderTop:"1px solid rgba(110,120,140,.16)",display:"flex",alignItems:"flex-start",gap:".45rem",flexWrap:"wrap",overflow:"visible",position:"relative"}}>
+    <button type="button" onClick={save} disabled={Boolean(busy)||saved}>{saved?"✓ Saved":busy==="save"?"Saving…":"Save"}</button>
+    {props.responseType!=="image"?<button type="button" onClick={copy}>Copy</button>:null}
+    <div style={{display:"grid",gap:".3rem"}}><button type="button" onClick={()=>setExportOpen((value)=>!value)} aria-expanded={exportOpen}>Export ▾</button>{exportOpen?<div style={{display:"flex",gap:".3rem",flexWrap:"wrap",padding:".45rem",border:"1px solid rgba(110,120,140,.25)",borderRadius:10,background:"#fff",boxShadow:"0 8px 24px rgba(20,30,50,.10)",minWidth:210}}>{formats.map((format)=><button key={format} type="button" onClick={()=>exportAs(format)} disabled={Boolean(busy)}>{busy===format?"Preparing…":format.toUpperCase()}</button>)}</div>:null}</div>
+    {notice?<span style={{fontSize:".78rem",opacity:.75,paddingTop:".45rem"}}>{notice}</span>:null}
   </div>;
 }
