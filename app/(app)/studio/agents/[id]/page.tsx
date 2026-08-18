@@ -48,6 +48,7 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
       <h1>Edit {agent.name}</h1>
       <p>Status: <strong>{agent.agent_status}</strong> · External actions: <strong>{agent.external_actions_allowed ? "Allowed" : "Disabled"}</strong></p>
       <p>Governance rule: external actions remain disabled in Public Beta regardless of profile edits.</p>
+      {agent.agent_status !== "archived" ? <p><Link href={`/studio/agents/${agent.id}/run`}><strong>Open Chat / Run Console</strong></Link></p> : null}
     </section>
 
     {query.message ? <p className="form-success" role="status">{query.message}</p> : null}
