@@ -68,17 +68,59 @@ function transcript(messages: ConsoleMessage[] = []) {
   return messages.slice(-10).map((message) => `${message.role === "user" ? "User" : "Agent"}: ${message.content.slice(0, 6000)}`).join("\n\n").slice(0, 30000);
 }
 
-function inferOutputPreference(prompt: string, roleTitle: string, mode: "chat" | "task"): OutputPreference {
+function containsAny(value: string, terms: string[]) {
+  const lower = value.toLowerCase();
+  return terms.some((term) => lower.includes(term.toLowerCase()));
+}
+
+function inferOutputPreference(prompt: string, roleTitle: string, mode: "chat" | "task", attachments: AgentAttachmentInput[]): OutputPreference {
   if (mode === "chat") return "text";
-  const value = `${roleTitle} ${prompt}`.toLowerCase();
-  const asksImage = /\b(image|photo|picture|poster|visual|illustration|render|mockup|mock-up|hero design|ui design|screen design|طرح|عکس|تصویر|پوستر|موکاپ|رندر|طراحی)\b/i.test(value);
-  const asksChart = /\b(chart|graph|trend|growth|over time|time series|line chart|bar chart|visuali[sz]e|نمودار|چارت|روند|رشد)\b/i.test(value);
-  const analystRole = /analyst|analytics|finance|cfo|data|business intelligence|تحلیل|آنالیز/i.test(roleTitle);
-  const designerRole = /design|designer|creative|brand|ui|ux|art|طراح/i.test(roleTitle);
-  if (designerRole && asksImage) return /mockup|mock-up|ui|screen|landing|hero|موکاپ|لندینگ|رابط/i.test(prompt) ? "mockup" : "image";
-  if (asksImage) return "image";
-  if (asksChart || (analystRole && /sales|revenue|margin|forecast|kpi|month|week|quarter|فروش|درآمد|حاشیه|پیش.?بینی|ماه|هفته/i.test(prompt))) return "line-chart";
-  if (/report|memo|brief|executive summary|گزارش|خلاصه اجرایی/i.test(prompt)) return "report";
+
+  const p = prompt.toLowerCase();
+  const role = roleTitle.toLowerCase();
+  const designerRole = containsAny(role, ["design", "designer", "creative", "brand", "ui", "ux", "art", "graphic", "طراح", "گرافیک"]);
+  const analystRole = containsAny(role, ["analyst", "analytics", "finance", "cfo", "data", "business intelligence", "تحلیل", "آنالیز"]);
+  const hasImageAttachment = attachments.some((file) => file.mimeType.startsWith("image/"));
+  const hasSpreadsheet = attachments.some((file) => /\.(xlsx|xls|xlsm|csv)$/i.test(file.filename));
+
+  const visualAction = containsAny(p, [
+    "design ", "design a", "design me", "create a design", "make a design", "show me the design", "actual design",
+    "generate an image", "create an image", "make an image", "show me an image", "generate a visual", "render", "mockup", "mock-up",
+    "طراحی کن", "طرح بزن", "طرح بده", "طرح بساز", "عکس بساز", "تصویر بساز", "تصویر بده", "رندر کن", "موکاپ", "یه طرح", "یک طرح",
+  ]);
+  const uiContext = containsAny(p, [
+    "landing page", "landing-page", "hero", "website", "web page", "homepage", "app screen", "dashboard", "interface", "ui ", "ux ",
+    "لندینگ", "هیرو", "وبسایت", "وب سایت", "صفحه اصلی", "رابط کاربری", "داشبورد",
+  ]);
+  const imageContext = containsAny(p, [
+    "image", "photo", "picture", "poster", "illustration", "visual", "artwork", "banner", "cover", "thumbnail",
+    "عکس", "تصویر", "پوستر", "بنر", "کاور", "تصویرسازی",
+  ]);
+  const referenceLanguage = containsAny(p, [
+    "inspired by", "based on this", "use this reference", "reference image", "similar to this",
+    "با الهام", "از این تصویر", "از این عکس", "نمونه", "رفرنس",
+  ]);
+
+  const explicitLineChart = containsAny(p, ["line chart", "line graph", "نمودار خطی", "چارت خطی"]);
+  const explicitBarChart = containsAny(p, ["bar chart", "bar graph", "نمودار میله", "چارت میله"]);
+  const chartIntent = containsAny(p, ["chart", "graph", "visualize", "visualise", "trend", "over time", "growth", "نمودار", "چارت", "روند", "رشد"]);
+  const reportIntent = containsAny(p, ["report", "memo", "brief", "executive summary", "گزارش", "خلاصه اجرایی"]);
+
+  if (explicitBarChart) return "bar-chart";
+  if (explicitLineChart) return "line-chart";
+
+  if (designerRole && visualAction && uiContext) return "mockup";
+  if (designerRole && visualAction && (imageContext || hasImageAttachment || referenceLanguage)) return "image";
+  if (designerRole && visualAction) return uiContext ? "mockup" : "image";
+
+  if (visualAction && uiContext) return "mockup";
+  if (visualAction || imageContext) return "image";
+
+  if (chartIntent) return "line-chart";
+  if (analystRole && hasSpreadsheet && containsAny(p, ["analyze", "analyse", "trend", "growth", "compare", "sales", "revenue", "forecast", "kpi", "تحلیل", "روند", "رشد", "مقایسه", "فروش", "درآمد", "پیش بینی", "پیش‌بینی"])) return "line-chart";
+  if (analystRole && containsAny(p, ["sales", "revenue", "margin", "forecast", "kpi", "month", "week", "quarter", "فروش", "درآمد", "حاشیه", "پیش بینی", "پیش‌بینی", "ماه", "هفته"])) return "line-chart";
+  if (reportIntent) return "report";
+
   return "text";
 }
 
@@ -119,21 +161,12 @@ export async function uploadAgentAttachment(formData: FormData) {
     const storagePath = `${context.organizationId}/${agentId}/${randomUUID()}-${filename}`;
     const bytes = Buffer.from(await file.arrayBuffer());
 
-    const { error: storageError } = await context.supabase.storage
-      .from("agent-attachments")
-      .upload(storagePath, bytes, { contentType: mimeType, upsert: false });
+    const { error: storageError } = await context.supabase.storage.from("agent-attachments").upload(storagePath, bytes, { contentType: mimeType, upsert: false });
     if (storageError) throw new Error(`File upload failed: ${storageError.message}`);
 
     const { data, error } = await context.supabase
       .from("agent_attachments")
-      .insert({
-        organization_id: context.organizationId,
-        agent_id: agentId,
-        filename: file.name.slice(0, 240),
-        mime_type: mimeType,
-        size_bytes: file.size,
-        storage_path: storagePath,
-      })
+      .insert({ organization_id: context.organizationId, agent_id: agentId, filename: file.name.slice(0, 240), mime_type: mimeType, size_bytes: file.size, storage_path: storagePath })
       .select("id,filename,mime_type,size_bytes")
       .single();
 
@@ -151,10 +184,7 @@ export async function uploadAgentAttachment(formData: FormData) {
       content: `A user supplied ${data.filename} (${data.mime_type}, ${data.size_bytes} bytes) as a reference for this Agent. The original file remains available in the Agent attachment library.`,
     });
 
-    return {
-      ok: true as const,
-      attachment: { id: data.id, filename: data.filename, mimeType: data.mime_type, sizeBytes: data.size_bytes } satisfies UploadedAttachment,
-    };
+    return { ok: true as const, attachment: { id: data.id, filename: data.filename, mimeType: data.mime_type, sizeBytes: data.size_bytes } satisfies UploadedAttachment };
   } catch (error) {
     return { ok: false as const, error: safeMessage(error) };
   }
@@ -163,13 +193,7 @@ export async function uploadAgentAttachment(formData: FormData) {
 async function loadAttachments(context: Awaited<ReturnType<typeof requireActiveOwnerOrganizationContext>>, agentId: string, ids: string[]) {
   const uniqueIds = Array.from(new Set(ids.filter(Boolean))).slice(0, MAX_FILES_PER_MESSAGE);
   if (!uniqueIds.length) return [] as AgentAttachmentInput[];
-  const { data, error } = await context.supabase
-    .from("agent_attachments")
-    .select("id,filename,mime_type,size_bytes,storage_path")
-    .eq("organization_id", context.organizationId)
-    .eq("agent_id", agentId)
-    .eq("status", "active")
-    .in("id", uniqueIds);
+  const { data, error } = await context.supabase.from("agent_attachments").select("id,filename,mime_type,size_bytes,storage_path").eq("organization_id", context.organizationId).eq("agent_id", agentId).eq("status", "active").in("id", uniqueIds);
   if (error) throw new Error("Attached files could not be loaded.");
 
   const files: AgentAttachmentInput[] = [];
@@ -183,33 +207,14 @@ async function loadAttachments(context: Awaited<ReturnType<typeof requireActiveO
 }
 
 async function loadMemoryContext(context: Awaited<ReturnType<typeof requireActiveOwnerOrganizationContext>>, agentId: string) {
-  const { data } = await context.supabase
-    .from("agent_memories")
-    .select("title,content,created_at")
-    .eq("organization_id", context.organizationId)
-    .eq("agent_id", agentId)
-    .order("created_at", { ascending: false })
-    .limit(12);
+  const { data } = await context.supabase.from("agent_memories").select("title,content,created_at").eq("organization_id", context.organizationId).eq("agent_id", agentId).order("created_at", { ascending: false }).limit(12);
   if (!data?.length) return "";
   return `Agent memory from prior work:\n${data.map((item) => `- ${item.title}: ${String(item.content).slice(0, 900)}`).join("\n")}`.slice(0, 10000);
 }
 
-async function rememberExperience(
-  context: Awaited<ReturnType<typeof requireActiveOwnerOrganizationContext>>,
-  agentId: string,
-  prompt: string,
-  response: string,
-  outputType: string,
-  attachmentIds: string[],
-) {
+async function rememberExperience(context: Awaited<ReturnType<typeof requireActiveOwnerOrganizationContext>>, agentId: string, prompt: string, response: string, outputType: string, attachmentIds: string[]) {
   const content = `User request: ${prompt.slice(0, 1800)}\nOutput type: ${outputType}\nAgent result: ${response.slice(0, 2200)}${attachmentIds.length ? `\nReferenced attachment IDs: ${attachmentIds.join(", ")}` : ""}`;
-  await context.supabase.from("agent_memories").insert({
-    organization_id: context.organizationId,
-    agent_id: agentId,
-    memory_type: "experience",
-    title: `Work experience — ${outputType}`,
-    content,
-  });
+  await context.supabase.from("agent_memories").insert({ organization_id: context.organizationId, agent_id: agentId, memory_type: "experience", title: `Work experience — ${outputType}`, content });
 }
 
 async function generateImage(prompt: string, agent: AgentRuntimeRow, style: "image" | "mockup") {
@@ -219,12 +224,7 @@ async function generateImage(prompt: string, agent: AgentRuntimeRow, style: "ima
   const visualInstruction = style === "mockup"
     ? "Create a polished high-fidelity product/UI mockup as the final visual deliverable. Make the interface legible, coherent, premium, and presentation-ready."
     : "Create the requested final visual/image deliverable. Prioritize visual fidelity and direct fulfillment of the brief over explaining the design.";
-  const response = await client.images.generate({
-    model: process.env.RYTHM_IMAGE_MODEL || "gpt-image-1",
-    size: "1536x1024",
-    quality: "high",
-    prompt: `${visualInstruction}\n\nYou are producing work for ${agent.name}, ${agent.role_title}.\n\nVisual brief:\n${prompt.slice(0, 12000)}`,
-  });
+  const response = await client.images.generate({ model: process.env.RYTHM_IMAGE_MODEL || "gpt-image-1", size: "1536x1024", quality: "high", prompt: `${visualInstruction}\n\nYou are producing work for ${agent.name}, ${agent.role_title}.\n\nVisual brief:\n${prompt.slice(0, 12000)}` });
   const encoded = response.data?.[0]?.b64_json;
   if (!encoded) throw new Error("Image generation returned no image.");
   return `data:image/png;base64,${encoded}`;
@@ -262,11 +262,11 @@ export async function runAgentConsole(input: RunConsoleInput) {
     if (!(["openai", "anthropic", "gemini"] as string[]).includes(provider)) return { ok: false as const, error: "This Agent uses an unsupported runtime provider." };
 
     const started = Date.now();
-    const requested = input.outputPreference ?? "auto";
-    const resolvedOutput = requested === "auto" ? inferOutputPreference(prompt, agent.role_title, input.mode) : requested;
     const history = transcript(input.messages);
     const attachmentIds = (input.attachmentIds ?? []).slice(0, MAX_FILES_PER_MESSAGE);
     const attachments = await loadAttachments(context, agent.id, attachmentIds);
+    const requested = input.outputPreference ?? "auto";
+    const resolvedOutput = requested === "auto" ? inferOutputPreference(prompt, agent.role_title, input.mode, attachments) : requested;
     const memory = await loadMemoryContext(context, agent.id);
     const conversationContext = [memory, history].filter(Boolean).join("\n\n");
 
@@ -281,7 +281,7 @@ export async function runAgentConsole(input: RunConsoleInput) {
           provider,
           model: agent.runtime_model,
           systemInstructions: agent.system_instructions,
-          prompt: `Inspect every attached reference file/image. Convert the user's request and references into a precise visual generation brief. Preserve important visual details, layout cues, brand elements, and constraints. Return only the generation brief.\n\nUser request:\n${prompt}`,
+          prompt: `Inspect every attached reference file/image. Convert the user's request and references into a precise visual generation brief. Preserve important visual details, layout cues, brand elements, and constraints. Do not return SVG, HTML, CSS, code, or an explanation. Return only a concise image-generation brief.\n\nUser request:\n${prompt}`,
           conversation: conversationContext,
           attachments,
           mode: "task",
@@ -305,11 +305,16 @@ export async function runAgentConsole(input: RunConsoleInput) {
       return { ok: true as const, responseType: "chart" as const, response: responseText, chartSpec: chart.spec, resolvedOutput, provider, model: agent.runtime_model, latencyMs: Date.now() - started, agentName: agent.name, roleTitle: agent.role_title, status: agent.agent_status, externalActions: false };
     }
 
+    const chatGuard = input.mode === "chat"
+      ? "Respond as a professional colleague in a normal conversation. Do not output SVG, HTML, CSS, JSX, source code, wireframe code, or pseudo-code unless the user explicitly asks for code. If the user asks you to create a visual while in Chat mode, discuss the direction and recommend using Task with Auto/Image/Mockup rather than simulating an image with code.\n\n"
+      : "";
+    const reportGuard = resolvedOutput === "report" ? "Produce a concise, professional report as the actual deliverable. Read all attached files completely before analyzing them. Use clear sections and decision-relevant conclusions.\n\n" : "";
+
     const response = await runAgent({
       provider,
       model: agent.runtime_model,
       systemInstructions: agent.system_instructions,
-      prompt: resolvedOutput === "report" ? `Produce a concise, professional report as the actual deliverable. Read all attached files completely before analyzing them. Use clear sections and decision-relevant conclusions.\n\n${prompt}` : prompt,
+      prompt: `${chatGuard}${reportGuard}${prompt}`,
       conversation: conversationContext,
       attachments,
       mode: input.mode === "task" ? "task" : "chat",
