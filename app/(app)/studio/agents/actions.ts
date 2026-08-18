@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { buildAgentBlueprint, getAgentProviderOptions, parseList, type AgentProvider } from "@/lib/agent-builder";
+import { generateSystemInstruction } from "@/lib/ai/agent-provider";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
 function list(value: FormDataEntryValue | null) {
   return String(value ?? "")
@@ -13,8 +16,80 @@ function list(value: FormDataEntryValue | null) {
 
 function safeError(error: unknown) {
   const message = error instanceof Error ? error.message : "The Agent request could not be completed.";
-  if (/not active|not enabled|limit reached|owner authority|invalid|cannot|not found/i.test(message)) return message;
+  if (/not active|not enabled|limit reached|owner authority|invalid|cannot|not found|not configured|empty Agent instruction|request failed|incomplete/i.test(message)) return message;
   return "The Agent request could not be completed. Refresh and retry.";
+}
+
+export async function generateAgent(formData: FormData) {
+  const context = await requireActiveOwnerOrganizationContext();
+  if (!context.entitlement.agent_builder_enabled || !context.entitlement.agent_create_enabled) {
+    redirect("/studio/agents?error=Agent%20creation%20is%20not%20enabled%20for%20this%20organization.");
+  }
+
+  const provider = String(formData.get("provider") ?? "openai") as AgentProvider;
+  const providerOption = getAgentProviderOptions().find((option) => option.id === provider);
+  if (!providerOption || !providerOption.configured || !providerOption.model) {
+    redirect(`/studio/agents?error=${encodeURIComponent("The selected AI provider is not configured yet.")}`);
+  }
+
+  const input = {
+    name: String(formData.get("name") ?? "").trim(),
+    roleTitle: String(formData.get("roleTitle") ?? "").trim(),
+    expertise: String(formData.get("expertise") ?? "").trim(),
+    purpose: String(formData.get("purpose") ?? "").trim(),
+    departmentName: String(formData.get("departmentName") ?? "").trim(),
+    responsibilities: parseList(formData.get("responsibilities")),
+    skills: parseList(formData.get("skills")),
+    kpis: parseList(formData.get("kpis")),
+    language: String(formData.get("language") ?? "English").trim() || "English",
+    workStyle: String(formData.get("workStyle") ?? "Evidence-led and concise").trim(),
+    authorityLevel: Number(formData.get("authorityLevel") ?? 1),
+    riskCeiling: String(formData.get("riskCeiling") ?? "medium"),
+    approvalRequirements: parseList(formData.get("approvalRequirements")),
+    allowedTools: parseList(formData.get("allowedTools")),
+  };
+
+  if (input.name.length < 2 || input.roleTitle.length < 2 || input.purpose.length < 10 || input.expertise.length < 2) {
+    redirect(`/studio/agents?error=${encodeURIComponent("Complete the Agent role, expertise, name, and mission before generating.")}`);
+  }
+
+  const blueprint = buildAgentBlueprint(input);
+  let systemInstructions = "";
+  try {
+    systemInstructions = await generateSystemInstruction({
+      provider,
+      model: providerOption.model,
+      blueprint,
+      timeoutMs: getRuntimeConfig().agentTimeoutMs,
+    });
+  } catch (error) {
+    redirect(`/studio/agents?error=${encodeURIComponent(safeError(error))}`);
+  }
+
+  const { error } = await context.supabase.rpc("create_agent_v2", {
+    target_org_id: context.organizationId,
+    target_name: input.name,
+    target_role_title: input.roleTitle,
+    target_purpose: input.purpose,
+    target_system_instructions: systemInstructions,
+    target_runtime_provider: provider,
+    target_runtime_model: providerOption.model,
+    target_department_id: String(formData.get("departmentId") ?? "") || null,
+    target_reports_to_agent_id: String(formData.get("reportsToAgentId") ?? "") || null,
+    target_authority_level: input.authorityLevel,
+    target_risk_ceiling: input.riskCeiling,
+    target_language: input.language,
+    target_work_style: input.workStyle,
+    target_responsibilities: input.responsibilities,
+    target_skills: input.skills,
+    target_kpis: input.kpis,
+    target_human_approval_requirements: input.approvalRequirements,
+    target_allowed_tools: input.allowedTools,
+  });
+  if (error) redirect(`/studio/agents?error=${encodeURIComponent(safeError(error))}`);
+  revalidatePath("/studio/agents");
+  revalidatePath("/agents");
+  redirect(`/studio/agents?message=${encodeURIComponent(`${input.name} generated with ${providerOption.label} and saved in Paused state.`)}`);
 }
 
 export async function createAgent(formData: FormData) {
