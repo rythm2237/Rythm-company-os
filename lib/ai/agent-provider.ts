@@ -8,10 +8,17 @@ Make the instructions operational and unambiguous. Tell the Agent how to reason 
 Return only the final system instruction as plain text. Do not wrap it in markdown fences and do not add commentary.`;
 
 const SAFE_CONSOLE_OVERLAY = `You are operating inside the RYTHM Safe Agent Console for an internal evaluation session.
-You may reason, write, analyze, design, critique, plan, and produce text deliverables within your assigned role.
-You have no external-action authority in this console. Do not claim to have sent messages, changed files, published designs, called tools, contacted people, purchased anything, or modified external systems.
+You may reason, write, analyze, design, critique, plan, inspect user-provided files, and produce deliverables within your assigned role.
+When files are attached, read/inspect them before answering and treat their contents as primary task context. Never pretend you read a file if the provider could not actually receive it.
+You have no external-action authority in this console. Do not claim to have sent messages, changed files, published designs, contacted people, purchased anything, or modified external systems.
 When the user asks for an external action, produce the proposed output or action plan and clearly identify what would require execution or human approval.
 Follow your Agent system instruction and its governance boundaries. If a user request conflicts with those boundaries, explain the constraint and provide the closest permitted output.`;
+
+export type AgentAttachmentInput = {
+  filename: string;
+  mimeType: string;
+  base64: string;
+};
 
 export type GenerateSystemInstructionInput = {
   provider: AgentProvider;
@@ -26,6 +33,7 @@ export type RunAgentInput = {
   systemInstructions: string;
   prompt: string;
   conversation?: string;
+  attachments?: AgentAttachmentInput[];
   mode?: "chat" | "task";
   timeoutMs?: number;
 };
@@ -45,9 +53,12 @@ export async function runAgent(input: RunAgentInput) {
   const modeInstruction = input.mode === "task"
     ? "Treat the latest user message as a concrete work assignment. Produce the actual deliverable or best complete draft you can create now, not merely advice about how to do it."
     : "Respond conversationally and directly to the latest user message while remaining in your assigned professional role.";
+  const attachmentNote = input.attachments?.length
+    ? `\n\nThe user attached ${input.attachments.length} file(s): ${input.attachments.map((file) => file.filename).join(", ")}. Inspect them before answering.`
+    : "";
   const transcript = input.conversation?.trim()
-    ? `Conversation so far:\n${input.conversation.trim()}\n\nLatest user message:\n${input.prompt.trim()}`
-    : `Latest user message:\n${input.prompt.trim()}`;
+    ? `Conversation so far:\n${input.conversation.trim()}\n\nLatest user message:\n${input.prompt.trim()}${attachmentNote}`
+    : `Latest user message:\n${input.prompt.trim()}${attachmentNote}`;
   const prompt = `${modeInstruction}\n\n${transcript}`;
 
   if (input.provider === "openai") return runWithOpenAI({ ...input, systemInstructions: system, prompt });
@@ -78,17 +89,8 @@ async function generateWithAnthropic(input: GenerateSystemInstructionInput) {
   if (!apiKey) throw new Error("Anthropic is not configured.");
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: input.model,
-      max_tokens: 2600,
-      system: OPTIMIZER_SYSTEM,
-      messages: [{ role: "user", content: input.blueprint }],
-    }),
+    headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: input.model, max_tokens: 2600, system: OPTIMIZER_SYSTEM, messages: [{ role: "user", content: input.blueprint }] }),
     signal: timeout(input.timeoutMs),
   });
   if (!response.ok) throw new Error(`Anthropic request failed (${response.status}).`);
@@ -104,10 +106,7 @@ async function generateWithGemini(input: GenerateSystemInstructionInput) {
   const model = encodeURIComponent(input.model);
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-goog-api-key": apiKey,
-    },
+    headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: OPTIMIZER_SYSTEM }] },
       contents: [{ role: "user", parts: [{ text: input.blueprint }] }],
@@ -126,36 +125,49 @@ async function runWithOpenAI(input: RunAgentInput) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OpenAI is not configured.");
   const client = new OpenAI({ apiKey });
+  const userContent: any[] = [{ type: "input_text", text: input.prompt }];
+  for (const file of input.attachments ?? []) {
+    if (file.mimeType.startsWith("image/")) {
+      userContent.push({ type: "input_image", image_url: `data:${file.mimeType};base64,${file.base64}`, detail: "auto" });
+    } else {
+      userContent.push({ type: "input_file", filename: file.filename, file_data: file.base64 });
+    }
+  }
   const response = await client.responses.create({
     model: input.model,
     max_output_tokens: 3200,
     store: false,
     input: [
       { role: "system", content: [{ type: "input_text", text: input.systemInstructions }] },
-      { role: "user", content: [{ type: "input_text", text: input.prompt }] },
-    ],
+      { role: "user", content: userContent },
+    ] as any,
   }, { signal: timeout(input.timeoutMs) });
   const text = response.output_text?.trim();
   if (!text) throw new Error("OpenAI returned an empty Agent response.");
   return text;
 }
 
+function textualAttachmentContext(files: AgentAttachmentInput[] = []) {
+  return files
+    .filter((file) => /^(text\/|application\/(json|xml))/.test(file.mimeType) || /\.(csv|txt|md|json|xml)$/i.test(file.filename))
+    .map((file) => {
+      try {
+        return `\n\nAttachment ${file.filename}:\n${Buffer.from(file.base64, "base64").toString("utf8").slice(0, 18000)}`;
+      } catch {
+        return "";
+      }
+    })
+    .join("");
+}
+
 async function runWithAnthropic(input: RunAgentInput) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("Anthropic is not configured.");
+  const prompt = `${input.prompt}${textualAttachmentContext(input.attachments)}`;
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: input.model,
-      max_tokens: 3200,
-      system: input.systemInstructions,
-      messages: [{ role: "user", content: input.prompt }],
-    }),
+    headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: input.model, max_tokens: 3200, system: input.systemInstructions, messages: [{ role: "user", content: prompt }] }),
     signal: timeout(input.timeoutMs),
   });
   if (!response.ok) throw new Error(`Anthropic request failed (${response.status}).`);
@@ -169,15 +181,20 @@ async function runWithGemini(input: RunAgentInput) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("Gemini is not configured.");
   const model = encodeURIComponent(input.model);
+  const parts: Array<Record<string, unknown>> = [{ text: input.prompt }];
+  for (const file of input.attachments ?? []) {
+    if (file.mimeType.startsWith("image/") || file.mimeType === "application/pdf") {
+      parts.push({ inlineData: { mimeType: file.mimeType, data: file.base64 } });
+    }
+  }
+  const textFallback = textualAttachmentContext(input.attachments);
+  if (textFallback) parts.push({ text: textFallback });
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-goog-api-key": apiKey,
-    },
+    headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: input.systemInstructions }] },
-      contents: [{ role: "user", parts: [{ text: input.prompt }] }],
+      contents: [{ role: "user", parts }],
       generationConfig: { maxOutputTokens: 3200, temperature: 0.35 },
     }),
     signal: timeout(input.timeoutMs),
