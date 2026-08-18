@@ -53,6 +53,7 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
         <h1>Agent Builder</h1>
         <p>Build a governed AI specialist in a few guided steps. RYTHM progressively creates the Agent Blueprint, then the AI provider you select turns it into the final system instruction.</p>
         <p>Every generated Agent is explicitly AI, starts <strong>Paused</strong>, and cannot perform external actions in Public Beta.</p>
+        <p>The Safe Agent Console lets you <strong>Chat</strong> with an Agent or <strong>Run a Task</strong> to evaluate its real output while external actions remain disabled.</p>
         <p><strong>Agent capacity:</strong> {activeAgents.length} / {entitlement.max_active_agents}</p>
         <p><Link href="/studio/templates">Template Library</Link> · <Link href="/studio/builder">Company Builder</Link> · <Link href="/agents">Workforce directory</Link> · <Link href="/meetings">Boardroom</Link></p>
       </section>
@@ -85,7 +86,10 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
                 <p>Brain: <strong>{agent.runtime_provider ?? "OpenAI"}</strong>{agent.runtime_model ? ` · ${agent.runtime_model}` : ""}</p>
                 <p>Status: <strong>{agent.agent_status}</strong></p>
                 <p>External actions: <strong>{agent.external_actions_allowed ? "Allowed" : "Disabled"}</strong></p>
-                <p><Link href={`/studio/agents/${agent.id}`}>Edit Agent</Link></p>
+                <p>
+                  {agent.agent_status !== "archived" ? <><Link href={`/studio/agents/${agent.id}/run`}><strong>Chat / Run</strong></Link> · </> : null}
+                  <Link href={`/studio/agents/${agent.id}`}>Edit Agent</Link>
+                </p>
                 {agent.agent_status !== "archived" ? <div>
                   <form action={setAgentStatus}><input type="hidden" name="agentId" value={agent.id} /><input type="hidden" name="status" value={agent.agent_status === "enabled" ? "paused" : "enabled"} /><button type="submit">{agent.agent_status === "enabled" ? "Pause" : "Enable"}</button></form>
                   {entitlement.agent_clone_enabled ? <form action={cloneAgent}><input type="hidden" name="agentId" value={agent.id} /><button type="submit">Clone</button></form> : null}
