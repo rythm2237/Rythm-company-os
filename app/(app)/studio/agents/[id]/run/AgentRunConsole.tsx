@@ -2,6 +2,7 @@
 
 import { Fragment, useMemo, useRef, useState, useTransition } from "react";
 import { runAgentConsole, uploadAgentAttachment, type ChartSpec, type OutputPreference, type UploadedAttachment } from "./actions";
+import ArtifactActionBar from "./ArtifactActionBar";
 
 type Message = {
   id: string;
@@ -190,6 +191,7 @@ export default function AgentRunConsole({ agentId, agentName, roleTitle, status,
             {message.responseType === "image" && message.imageDataUrl ? <div style={{ display: "grid", gap: ".75rem" }}><img src={message.imageDataUrl} alt={`${agentName} generated visual`} style={{ width: "100%", maxHeight: 720, objectFit: "contain", borderRadius: 14, background: "rgba(0,0,0,.035)" }} /><RichText content={message.content} /></div> :
               message.responseType === "chart" && message.chartSpec ? <div style={{ display: "grid", gap: ".75rem" }}><ChartArtifact spec={message.chartSpec} />{message.content && message.content !== message.chartSpec.insight ? <RichText content={message.content} /> : null}</div> : <RichText content={message.content} />}
             <AttachmentChips files={message.attachments ?? []} />
+            {message.role === "assistant" ? <ArtifactActionBar agentId={agentId} agentName={agentName} content={message.content} responseType={message.responseType} resolvedOutput={message.resolvedOutput} imageDataUrl={message.imageDataUrl} chartSpec={message.chartSpec} /> : null}
             {message.meta ? <p style={{ marginTop: ".8rem", opacity: .6, fontSize: ".8rem" }}>{message.meta}</p> : null}
           </article>)}
         </div>}
