@@ -11,10 +11,12 @@
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.56.0",
+    "jspdf": "^3.0.2",
     "next": "^15.4.6",
     "openai": "^5.12.2",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
