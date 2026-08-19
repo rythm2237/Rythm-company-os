@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
-import { reconnectAgentCompanyKnowledge, retryAgentProvisioning, updateAgent } from "../actions";
+import { retryAgentProvisioning, updateAgent } from "../actions";
+import { reconnectAgentCompanyKnowledge } from "../knowledge-actions";
 
 export const dynamic = "force-dynamic";
 
