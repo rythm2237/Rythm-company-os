@@ -65,6 +65,7 @@ export async function registerCompanyLibraryDocument(input: RegisterCompanyDocum
       allowed_role_keywords: allowedRoleKeywords,
       transferable: false,
       status: "active",
+      created_by: context.user.id,
       ingestion_status: "processing",
       source_filename: fileName,
       file_size_bytes: fileSize,
