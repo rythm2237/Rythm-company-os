@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { signInWithOAuth } from "../oauth-actions";
 import { login } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
+  const next = params.next ?? "/command-center";
 
   return (
     <main className="auth-shell">
@@ -22,8 +24,33 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         {params.message ? <p className="form-success" role="status">{params.message}</p> : null}
         {params.error ? <p className="form-error" role="alert">{params.error}</p> : null}
 
+        <div style={{ display: "grid", gap: 10, marginTop: 24 }} aria-label="Social sign in options">
+          <form action={signInWithOAuth}>
+            <input type="hidden" name="provider" value="google" />
+            <input type="hidden" name="source" value="login" />
+            <input type="hidden" name="next" value={next} />
+            <button className="secondary-button" style={{ width: "100%" }} type="submit">
+              Continue with Google
+            </button>
+          </form>
+          <form action={signInWithOAuth}>
+            <input type="hidden" name="provider" value="azure" />
+            <input type="hidden" name="source" value="login" />
+            <input type="hidden" name="next" value={next} />
+            <button className="secondary-button" style={{ width: "100%" }} type="submit">
+              Continue with Microsoft
+            </button>
+          </form>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 22, color: "#788296", fontSize: ".78rem" }}>
+          <span style={{ height: 1, background: "#e1e5ec", flex: 1 }} />
+          <span>or continue with email</span>
+          <span style={{ height: 1, background: "#e1e5ec", flex: 1 }} />
+        </div>
+
         <form action={login} className="auth-form" autoComplete="on">
-          <input type="hidden" name="next" value={params.next ?? "/command-center"} />
+          <input type="hidden" name="next" value={next} />
           <label htmlFor="login-email">
             Email
             <input
