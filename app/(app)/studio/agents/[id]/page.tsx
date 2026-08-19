@@ -1,18 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
-import { retryAgentProvisioning, updateAgent } from "../actions";
+import { reconnectAgentCompanyKnowledge, retryAgentProvisioning, updateAgent } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; message?: string }> };
-
 type AgentRow = {
   id:string; name:string; role_title:string; purpose:string; department_id:string|null; reports_to_agent_id:string|null;
   authority_level:number; risk_ceiling:string; language:string; responsibilities:string[]; skills:string[]; kpis:string[];
   human_approval_requirements:string[]; allowed_tools:string[]; agent_status:string; external_actions_allowed:boolean;
   canonical_role:string|null; role_family:string|null; specializations:string[]; provisioning_status:string; provisioning_error:string|null;
-  last_knowledge_review_at:string|null; foundation_update_available:boolean;
+  last_knowledge_review_at:string|null; foundation_update_available:boolean; company_knowledge_connected:boolean;
 };
 type DepartmentRow = { id:string; name:string };
 type ManagerRow = { id:string; name:string; role_title:string; agent_status:string };
@@ -31,18 +30,11 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
   const query = await searchParams;
 
   if (!context.entitlement.agent_builder_enabled) {
-    return (
-      <main className="page-shell"><section className="panel">
-        <p className="eyebrow">RYTHM COMPANY STUDIO</p>
-        <h1>Agent Studio</h1>
-        <p>Agent Builder is not enabled for this organization&apos;s entitlement.</p>
-        <Link href="/command-center">Return to Command Center</Link>
-      </section></main>
-    );
+    return <main className="page-shell"><section className="panel"><p className="eyebrow">RYTHM COMPANY STUDIO</p><h1>Agent Studio</h1><p>Agent Builder is not enabled for this organization&apos;s entitlement.</p><Link href="/command-center">Return to Command Center</Link></section></main>;
   }
 
   const [{ data: agentData }, { data: departmentData }, { data: managerData }, { data: bindingData }, { data: specializationBindings }] = await Promise.all([
-    context.supabase.from("agents").select("id,name,role_title,purpose,department_id,reports_to_agent_id,authority_level,risk_ceiling,language,responsibilities,skills,kpis,human_approval_requirements,allowed_tools,agent_status,external_actions_allowed,canonical_role,role_family,specializations,provisioning_status,provisioning_error,last_knowledge_review_at,foundation_update_available").eq("id", id).eq("organization_id", context.organizationId).maybeSingle(),
+    context.supabase.from("agents").select("id,name,role_title,purpose,department_id,reports_to_agent_id,authority_level,risk_ceiling,language,responsibilities,skills,kpis,human_approval_requirements,allowed_tools,agent_status,external_actions_allowed,canonical_role,role_family,specializations,provisioning_status,provisioning_error,last_knowledge_review_at,foundation_update_available,company_knowledge_connected").eq("id", id).eq("organization_id", context.organizationId).maybeSingle(),
     context.supabase.from("departments").select("id,name").eq("organization_id", context.organizationId).eq("status", "active").order("name"),
     context.supabase.from("agents").select("id,name,role_title,agent_status").eq("organization_id", context.organizationId).neq("id", id).neq("agent_status", "archived").order("name"),
     context.supabase.from("agent_role_foundation_bindings").select("role_foundation_id,foundation_version").eq("organization_id", context.organizationId).eq("agent_id", id).eq("status", "active").limit(1).maybeSingle(),
@@ -65,8 +57,14 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
     const { data } = await context.supabase.from("role_specializations").select("id,title,version,last_verified_at,next_review_at").in("id", specializationIds).eq("active", true);
     specializationRows = (data ?? []) as SpecializationRow[];
   }
+
+  let updateAvailable = agent.foundation_update_available;
+  if (agent.provisioning_status === "ready") {
+    const { data: refreshed } = await context.supabase.rpc("refresh_agent_foundation_update_status", { target_agent_id: agent.id });
+    if (typeof refreshed === "boolean") updateAvailable = refreshed;
+  }
   const staleByDate = Boolean(foundation?.next_review_at && Date.parse(foundation.next_review_at) <= Date.now()) || specializationRows.some((item) => item.next_review_at && Date.parse(item.next_review_at) <= Date.now());
-  const updateAvailable = agent.foundation_update_available || staleByDate;
+  updateAvailable = updateAvailable || staleByDate;
   const professionalVerified = agent.provisioning_status === "ready" && Boolean(foundation) && foundation?.status === "active";
 
   return <main className="page-shell">
@@ -91,7 +89,7 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
         <div><small>Canonical Role</small><p><strong>{agent.canonical_role ?? agent.role_title}</strong></p></div>
         <div><small>Specialization</small><p><strong>{specializationRows.length ? specializationRows.map((item) => item.title).join(", ") : "None"}</strong></p></div>
         <div><small>Professional Knowledge</small><p><strong>{professionalVerified ? "Verified" : agent.provisioning_status}</strong></p></div>
-        <div><small>Company Knowledge</small><p><strong>{agent.provisioning_status === "ready" ? "Connected · live / role-filtered" : "Pending"}</strong></p></div>
+        <div><small>Company Knowledge</small><p><strong>{agent.company_knowledge_connected ? (agent.provisioning_status === "ready" ? "Connected · live / role-filtered" : "Pending") : "Detached for transfer"}</strong></p>{!agent.company_knowledge_connected && agent.agent_status !== "archived" ? <form action={reconnectAgentCompanyKnowledge}><input type="hidden" name="agentId" value={agent.id}/><button type="submit">Reconnect Company Knowledge</button></form> : null}</div>
         <div><small>Memory</small><p><strong>Active · transfer scope enforced</strong></p></div>
         <div><small>Last Knowledge Review</small><p><strong>{formatDate(agent.last_knowledge_review_at ?? foundation?.last_verified_at)}</strong></p></div>
         <div><small>Update Available</small><p><strong>{updateAvailable ? "Yes" : "No"}</strong></p></div>
