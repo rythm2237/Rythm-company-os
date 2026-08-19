@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ConsumerWithdrawalForm from "@/components/consumer-withdrawal-form";
+import { createPublicMetadata } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Withdraw from Contract | RYTHM Company OS",
-  description: "Use RYTHM's online withdrawal function for eligible consumer distance contracts and download a durable acknowledgement.",
-  alternates: { canonical: "/withdrawal" },
-};
+export const metadata: Metadata = createPublicMetadata("/withdrawal");
 
 export default function WithdrawalPage() {
   return (
