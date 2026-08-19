@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { signInWithOAuth } from "../oauth-actions";
 import { signup, signOutForSignup } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -38,14 +39,41 @@ export default async function SignupPage({ searchParams }: Props) {
             <Link href="/command-center">Return to current company</Link>
           </div>
         ) : (
-          <form action={signup} className="auth-form">
-            <input type="hidden" name="productCode" value={selectedProduct} />
-            <label>Full name<input name="fullName" autoComplete="name" required minLength={2} maxLength={120}/></label>
-            <label>Work email<input name="email" type="email" autoComplete="email" required/></label>
-            <label>Password<input name="password" type="password" autoComplete="new-password" required minLength={8}/></label>
-            <label>Confirm password<input name="confirmPassword" type="password" autoComplete="new-password" required minLength={8}/></label>
-            <button type="submit">Create account</button>
-          </form>
+          <>
+            <div style={{ display: "grid", gap: 10, marginTop: 24 }} aria-label="Social account options">
+              <form action={signInWithOAuth}>
+                <input type="hidden" name="provider" value="google" />
+                <input type="hidden" name="source" value="signup" />
+                <input type="hidden" name="productCode" value={selectedProduct} />
+                <button className="secondary-button" style={{ width: "100%" }} type="submit">
+                  Continue with Google
+                </button>
+              </form>
+              <form action={signInWithOAuth}>
+                <input type="hidden" name="provider" value="azure" />
+                <input type="hidden" name="source" value="signup" />
+                <input type="hidden" name="productCode" value={selectedProduct} />
+                <button className="secondary-button" style={{ width: "100%" }} type="submit">
+                  Continue with Microsoft
+                </button>
+              </form>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 22, color: "#788296", fontSize: ".78rem" }}>
+              <span style={{ height: 1, background: "#e1e5ec", flex: 1 }} />
+              <span>or create with work email</span>
+              <span style={{ height: 1, background: "#e1e5ec", flex: 1 }} />
+            </div>
+
+            <form action={signup} className="auth-form">
+              <input type="hidden" name="productCode" value={selectedProduct} />
+              <label>Full name<input name="fullName" autoComplete="name" required minLength={2} maxLength={120}/></label>
+              <label>Work email<input name="email" type="email" autoComplete="email" required/></label>
+              <label>Password<input name="password" type="password" autoComplete="new-password" required minLength={8}/></label>
+              <label>Confirm password<input name="confirmPassword" type="password" autoComplete="new-password" required minLength={8}/></label>
+              <button type="submit">Create account</button>
+            </form>
+          </>
         )}
 
         <p className="security-note">B2B Public Beta. AI Agents remain governed by Human CEO authority and external actions remain disabled by default.</p>
