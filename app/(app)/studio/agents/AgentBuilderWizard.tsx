@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { ProviderOption } from "@/lib/agent-builder";
 
@@ -33,6 +33,15 @@ type Draft = {
 };
 
 const steps = ["Role", "Mission", "Behavior", "Governance", "AI & Generate"];
+const provisioningStages = [
+  "Understanding position…",
+  "Preparing professional knowledge…",
+  "Checking trusted sources…",
+  "Building role foundation…",
+  "Connecting company knowledge…",
+  "Configuring capabilities…",
+  "Finalizing Agent…",
+];
 const presets = {
   workStyle: ["Analytical & concise", "Strategic & challenging", "Collaborative & diplomatic", "Creative & exploratory"],
   responsibilities: ["Research and analysis", "Planning and recommendations", "Quality review", "Meeting participation", "Decision support"],
@@ -59,7 +68,13 @@ const initialDraft: Draft = {
 
 function GenerateButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
-  return <button type="submit" disabled={disabled || pending}>{pending ? "RYTHM is generating your Agent…" : "Generate AI Agent"}</button>;
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    if (!pending) { setStage(0); return; }
+    const timer = window.setInterval(() => setStage((current) => Math.min(current + 1, provisioningStages.length - 1)), 1100);
+    return () => window.clearInterval(timer);
+  }, [pending]);
+  return <button type="submit" disabled={disabled || pending}>{pending ? provisioningStages[stage] : "Generate Professional AI Agent"}</button>;
 }
 
 function split(value: string) {
@@ -91,6 +106,8 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
       "KPIs:", ...split(draft.kpis).map((item) => `• ${item}`),
       "",
       `Runtime: ${selectedProvider?.label ?? "Select AI"}${selectedProvider?.model ? ` · ${selectedProvider.model}` : ""}`,
+      "Professional knowledge: RYTHM resolves a verified role foundation and specialization before Ready.",
+      "Company Knowledge: connected live and kept separate from transferable professional knowledge.",
       "Governance: Human CEO final authority · external actions disabled by default.",
     ];
     return lines.join("\n");
@@ -157,7 +174,7 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
           <label>Risk ceiling<select value={draft.riskCeiling} onChange={(e) => update("riskCeiling", e.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
           <label>Must ask the Human CEO before<textarea rows={4} value={draft.approvalRequirements} onChange={(e) => update("approvalRequirements", e.target.value)} /></label>
           <label>Allowed internal tools<textarea rows={4} value={draft.allowedTools} onChange={(e) => update("allowedTools", e.target.value)} /></label>
-          <p><strong>Public Beta safety:</strong> generating an Agent never enables external actions. Every new Agent starts Paused.</p>
+          <p><strong>Public Beta safety:</strong> external actions remain disabled. Professional status becomes Ready only after trusted knowledge provisioning succeeds.</p>
         </div> : null}
 
         {step === 4 ? <div>
@@ -171,7 +188,10 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
               <small>{provider.configured ? provider.description : "Provider API/model must be configured by RYTHM before customers can select it."}</small>
             </label>)}
           </div>
-          <p>When you press Generate, the selected AI receives the structured RYTHM Blueprint, turns it into the final system instruction, and the Agent is saved as a governed, Paused workforce member.</p>
+          <div className="panel" style={{ margin: "1rem 0" }}>
+            <strong>Generate now provisions a professional worker.</strong>
+            <p style={{ marginBottom: 0 }}>RYTHM normalizes the position, resolves or builds trusted professional knowledge, attaches specialization, connects live Company Knowledge, configures QA/governance, and only then marks professional provisioning Ready.</p>
+          </div>
           <GenerateButton disabled={!canGenerate} />
         </div> : null}
 
@@ -183,8 +203,8 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
 
       <aside className="panel" style={{ position: "sticky", top: "1rem", maxHeight: "80vh", overflow: "auto" }}>
         <p className="eyebrow">LIVE AGENT BLUEPRINT</p>
-        <h3>RYTHM is building the prompt</h3>
-        <p style={{ opacity: .72 }}>Updates instantly as you answer. No API cost is incurred until Generate.</p>
+        <h3>RYTHM is preparing the hire</h3>
+        <p style={{ opacity: .72 }}>The live summary is local. Professional knowledge acquisition/provider cost begins only when Generate is pressed.</p>
         <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: ".9rem", lineHeight: 1.55 }}>{blueprint}</pre>
       </aside>
     </div>
