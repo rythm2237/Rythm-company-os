@@ -6,6 +6,13 @@ import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-c
 import { buildAgentBlueprint, getAgentProviderOptions, parseList, type AgentProvider } from "@/lib/agent-builder";
 import { generateSystemInstruction } from "@/lib/ai/agent-provider";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import {
+  acquireMissingFoundation,
+  bindKnowledgePackage,
+  buildKnowledgeInstructionOverlay,
+  normalizeRole,
+  resolveKnowledgePackage,
+} from "@/lib/trusted-agent-knowledge";
 
 function list(value: FormDataEntryValue | null) {
   return String(value ?? "")
@@ -16,7 +23,7 @@ function list(value: FormDataEntryValue | null) {
 
 function safeError(error: unknown) {
   const message = error instanceof Error ? error.message : "The Agent request could not be completed.";
-  if (/not active|not enabled|limit reached|owner authority|invalid|cannot|not found|not configured|empty Agent instruction|request failed|incomplete/i.test(message)) return message;
+  if (/not active|not enabled|limit reached|owner authority|invalid|cannot|not found|not configured|empty Agent instruction|request failed|incomplete|foundation|knowledge|specialization|coverage|provision/i.test(message)) return message;
   return "The Agent request could not be completed. Refresh and retry.";
 }
 
@@ -53,27 +60,20 @@ export async function generateAgent(formData: FormData) {
     redirect(`/studio/agents?error=${encodeURIComponent("Complete the Agent role, expertise, name, and mission before generating.")}`);
   }
 
-  const blueprint = buildAgentBlueprint(input);
-  let systemInstructions = "";
-  try {
-    systemInstructions = await generateSystemInstruction({
-      provider,
-      model: providerOption.model,
-      blueprint,
-      timeoutMs: getRuntimeConfig().agentTimeoutMs,
-    });
-  } catch (error) {
-    redirect(`/studio/agents?error=${encodeURIComponent(safeError(error))}`);
-  }
+  const normalized = normalizeRole(input.roleTitle);
+  let agentId = "";
 
-  const { error } = await context.supabase.rpc("create_agent_v2", {
+  const { data: createdAgentId, error: createError } = await context.supabase.rpc("create_agent_provisioning_v3", {
     target_org_id: context.organizationId,
     target_name: input.name,
     target_role_title: input.roleTitle,
     target_purpose: input.purpose,
-    target_system_instructions: systemInstructions,
     target_runtime_provider: provider,
     target_runtime_model: providerOption.model,
+    target_raw_role_title: normalized.rawRoleTitle,
+    target_canonical_role: normalized.canonicalRole,
+    target_role_family: normalized.roleFamily,
+    target_specializations: normalized.specializations,
     target_department_id: String(formData.get("departmentId") ?? "") || null,
     target_reports_to_agent_id: String(formData.get("reportsToAgentId") ?? "") || null,
     target_authority_level: input.authorityLevel,
@@ -86,10 +86,53 @@ export async function generateAgent(formData: FormData) {
     target_human_approval_requirements: input.approvalRequirements,
     target_allowed_tools: input.allowedTools,
   });
-  if (error) redirect(`/studio/agents?error=${encodeURIComponent(safeError(error))}`);
-  revalidatePath("/studio/agents");
-  revalidatePath("/agents");
-  redirect(`/studio/agents?message=${encodeURIComponent(`${input.name} generated with ${providerOption.label} and saved in Paused state.`)}`);
+  if (createError || !createdAgentId) redirect(`/studio/agents?error=${encodeURIComponent(safeError(createError ?? new Error("Provisioning Agent could not be created.")))}`);
+  agentId = String(createdAgentId);
+
+  try {
+    let knowledge = await resolveKnowledgePackage(context.supabase, normalized);
+
+    if (knowledge.fallbackUsed && normalized.roleFamily !== "general") {
+      await context.supabase.from("agent_knowledge_provisioning_events").insert({ organization_id: context.organizationId, agent_id: agentId, event_type: "acquisition_triggered", role_family: normalized.roleFamily, canonical_role: normalized.canonicalRole, metadata: { reason: "missing_active_foundation" } });
+      const acquiredId = await acquireMissingFoundation({ supabase: context.supabase, normalized, provider, model: providerOption.model });
+      if (acquiredId) knowledge = await resolveKnowledgePackage(context.supabase, normalized);
+      if (knowledge.fallbackUsed) throw new Error("Professional foundation could not be completed. No trusted source coverage was available for this position.");
+    }
+
+    await bindKnowledgePackage(context.supabase, context.organizationId, agentId, knowledge);
+    await context.supabase.from("agent_knowledge_provisioning_events").insert({
+      organization_id: context.organizationId,
+      agent_id: agentId,
+      event_type: "company_knowledge_connected",
+      role_family: normalized.roleFamily,
+      canonical_role: normalized.canonicalRole,
+      metadata: { mode: "live_role_filtered", duplicated_into_foundation: false },
+    });
+
+    const blueprint = buildAgentBlueprint(input, buildKnowledgeInstructionOverlay(knowledge));
+    const systemInstructions = await generateSystemInstruction({
+      provider,
+      model: providerOption.model,
+      blueprint,
+      timeoutMs: getRuntimeConfig().agentTimeoutMs,
+    });
+
+    const { error: completeError } = await context.supabase.rpc("complete_agent_knowledge_provisioning_v1", {
+      target_agent_id: agentId,
+      target_system_instructions: systemInstructions,
+    });
+    if (completeError) throw completeError;
+
+    revalidatePath("/studio/agents");
+    revalidatePath(`/studio/agents/${agentId}`);
+    revalidatePath("/agents");
+    redirect(`/studio/agents/${agentId}?message=${encodeURIComponent(`${input.name} professional provisioning completed. The Agent is knowledge-ready and remains Paused for governance.`)}`);
+  } catch (error) {
+    await context.supabase.rpc("fail_agent_knowledge_provisioning_v1", { target_agent_id: agentId, target_error: safeError(error) });
+    revalidatePath("/studio/agents");
+    revalidatePath(`/studio/agents/${agentId}`);
+    redirect(`/studio/agents/${agentId}?error=${encodeURIComponent(safeError(error))}`);
+  }
 }
 
 export async function createAgent(formData: FormData) {
