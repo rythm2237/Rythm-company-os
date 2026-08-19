@@ -1,4 +1,5 @@
 import type { AgentAttachmentInput } from "@/lib/ai/agent-provider";
+import { loadProfessionalRuntimeContext } from "@/lib/trusted-agent-knowledge";
 
 type KnowledgeAgent = {
   id: string;
@@ -56,6 +57,11 @@ function roleCanUse(item: KnowledgeRow, agent: KnowledgeAgent) {
   }
 
   const hints = CATEGORY_ROLE_HINTS[item.category];
+  if (item.confidentiality === "restricted" || item.confidentiality === "confidential") {
+    if (!hints?.length) return false;
+    return hints.some((hint) => role.includes(hint) || department.includes(hint));
+  }
+
   if (!hints?.length) return true;
   return hints.some((hint) => role.includes(hint) || department.includes(hint));
 }
@@ -89,7 +95,8 @@ async function fileFromKnowledge(context: KnowledgeContext, item: KnowledgeRow):
   }
 }
 
-export async function loadCompanyKnowledgeForAgent(context: KnowledgeContext, agent: KnowledgeAgent) {
+export async function loadCompanyKnowledgeForAgent(context: KnowledgeContext, agent: KnowledgeAgent, currentTask = "") {
+  const professional = await loadProfessionalRuntimeContext(context.supabase, context.organizationId, agent.id, currentTask || agent.role_title);
   const { data } = await context.supabase
     .from("company_knowledge")
     .select("id,title,category,source_type,content,source_url,storage_path,mime_type,confidentiality,allowed_departments,allowed_role_keywords,updated_at")
@@ -113,10 +120,21 @@ export async function loadCompanyKnowledgeForAgent(context: KnowledgeContext, ag
       return `[${item.category.toUpperCase()} · ${item.confidentiality.toUpperCase()}] ${item.title}\n${body}${source}`;
     });
 
-  const contextText = `Current Company Knowledge — use this as authoritative company context. It is live company-scoped knowledge and must not be treated as transferable personal knowledge.\n${baseline}${entries.length ? `\n\n${entries.join("\n\n")}` : ""}`.slice(0, 32000);
+  const companyContext = `LIVE COMPANY KNOWLEDGE — authoritative for current company facts. Company-scoped, role-filtered and non-transferable. Never copy confidential company facts into general professional learning.\n${baseline}${entries.length ? `\n\n${entries.join("\n\n")}` : ""}`.slice(0, 30000);
+  const contextText = [
+    professional.contextText,
+    companyContext,
+  ].filter(Boolean).join("\n\n--- KNOWLEDGE LAYER BOUNDARY ---\n\n").slice(0, 50000);
 
   const attachmentCandidates = relevant.filter((item) => item.storage_path || (item.source_url && item.mime_type && /^(image\/|application\/pdf)/.test(item.mime_type))).slice(0, 5);
   const attachments = (await Promise.all(attachmentCandidates.map((item) => fileFromKnowledge(context, item)))).filter(Boolean) as AgentAttachmentInput[];
 
-  return { contextText, attachments, knowledgeCount: relevant.length };
+  return {
+    contextText,
+    attachments,
+    knowledgeCount: relevant.length,
+    professionalFoundation: professional.foundationTitle,
+    specializationTitles: professional.specializationTitles,
+    professionalQaRules: professional.qaRules,
+  };
 }
