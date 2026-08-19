@@ -121,11 +121,9 @@ async function generateWithGemini(input: GenerateSystemInstructionInput) {
   return text;
 }
 
-async function runWithOpenAI(input: RunAgentInput) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OpenAI is not configured.");
-  const client = new OpenAI({ apiKey });
+function openAIUserContent(input: RunAgentInput, includeBinary: boolean) {
   const userContent: any[] = [{ type: "input_text", text: input.prompt }];
+  if (!includeBinary) return userContent;
   for (const file of input.attachments ?? []) {
     if (file.mimeType.startsWith("image/")) {
       userContent.push({ type: "input_image", image_url: `data:${file.mimeType};base64,${file.base64}`, detail: "auto" });
@@ -133,15 +131,38 @@ async function runWithOpenAI(input: RunAgentInput) {
       userContent.push({ type: "input_file", filename: file.filename, file_data: file.base64 });
     }
   }
-  const response = await client.responses.create({
+  return userContent;
+}
+
+async function runWithOpenAI(input: RunAgentInput) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OpenAI is not configured.");
+  const client = new OpenAI({ apiKey });
+
+  const request = async (includeBinary: boolean) => client.responses.create({
     model: input.model,
     max_output_tokens: 3200,
     store: false,
     input: [
       { role: "system", content: [{ type: "input_text", text: input.systemInstructions }] },
-      { role: "user", content: userContent },
+      { role: "user", content: openAIUserContent(input, includeBinary) },
     ] as any,
   }, { signal: timeout(input.timeoutMs) });
+
+  let response;
+  try {
+    response = await request(true);
+  } catch (error) {
+    if (!(input.attachments?.length)) throw error;
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn("[RYTHM Agent Runtime] Provider rejected binary context; retrying with live text knowledge only.", {
+      model: input.model,
+      attachments: input.attachments.map((file) => ({ filename: file.filename, mimeType: file.mimeType })),
+      error: message.slice(0, 1000),
+    });
+    response = await request(false);
+  }
+
   const text = response.output_text?.trim();
   if (!text) throw new Error("OpenAI returned an empty Agent response.");
   return text;
