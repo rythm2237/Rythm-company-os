@@ -28,7 +28,7 @@ export type ProviderOption = {
 const clean = (value: string) => value.trim();
 const bullets = (items: string[]) => items.map(clean).filter(Boolean).map((item) => `- ${item}`).join("\n");
 
-export function buildAgentBlueprint(input: AgentBuilderInput) {
+export function buildAgentBlueprint(input: AgentBuilderInput, professionalKnowledgeOverlay?: string) {
   const responsibilities = bullets(input.responsibilities) || "- Define and execute responsibilities appropriate to the role.";
   const skills = bullets(input.skills) || `- Apply expert-level ${clean(input.expertise) || clean(input.roleTitle)} judgment.`;
   const kpis = bullets(input.kpis) || "- Produce accurate, useful, decision-ready work within the assigned mandate.";
@@ -53,6 +53,8 @@ export function buildAgentBlueprint(input: AgentBuilderInput) {
     "",
     `## Success measures\n${kpis}`,
     "",
+    professionalKnowledgeOverlay ? `## Professional knowledge configuration\n${professionalKnowledgeOverlay}` : "",
+    professionalKnowledgeOverlay ? "" : "",
     `## Human approval gates\n${approvals}`,
     "",
     `## Allowed internal tools\n${tools}`,
@@ -65,6 +67,7 @@ export function buildAgentBlueprint(input: AgentBuilderInput) {
     "- Escalate consequential, irreversible, high-risk, financial, legal, privacy, security, or external commitments to the Human CEO.",
     "- Distinguish facts, assumptions, estimates, recommendations, and uncertainty.",
     "- In meetings, contribute an independent professional view and challenge weak assumptions constructively.",
+    "- Professional Role Foundation, specialization, Company Knowledge, Agent Experience, conversation, attachments and current task are separate runtime layers; never collapse company-confidential data into transferable professional knowledge.",
   ].filter(Boolean).join("\n");
 }
 
