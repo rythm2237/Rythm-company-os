@@ -25,9 +25,6 @@ const INTERNAL_ERROR_PATTERNS = [
 const SAFE_OPERATIONAL_ERROR =
   "The request could not be completed. Refresh and retry. If the problem persists, check Operations Health.";
 
-const CANONICAL_APP_HOST = "company.rythm-os.com";
-const LEGACY_APP_HOSTS = new Set(["rythm-os.com", "www.rythm-os.com"]);
-
 const PROTECTED_ROUTE_PREFIXES = [
   "/actions",
   "/activation",
@@ -67,23 +64,6 @@ function isProtectedRoute(pathname: string) {
   return PROTECTED_ROUTE_PREFIXES.some((prefix) => routeMatches(pathname, prefix));
 }
 
-function getRequestHostname(request: NextRequest) {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const host = forwardedHost?.split(",")[0]?.trim() || request.headers.get("host") || "";
-  return host.split(":")[0].toLowerCase();
-}
-
-function canonicalAppRedirect(request: NextRequest) {
-  const hostname = getRequestHostname(request);
-  if (!LEGACY_APP_HOSTS.has(hostname)) return null;
-
-  const target = request.nextUrl.clone();
-  target.protocol = "https:";
-  target.hostname = CANONICAL_APP_HOST;
-  target.port = "";
-  return NextResponse.redirect(target, 307);
-}
-
 function sanitizeInternalError(request: NextRequest) {
   const rawError = request.nextUrl.searchParams.get("error");
   if (!rawError) return null;
@@ -114,21 +94,15 @@ function apiError(error: string, status: number, headers?: HeadersInit) {
 }
 
 export async function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
-  const isProtected = isProtectedRoute(pathname);
-  const isLogin = pathname === "/login";
-
-  if (isLogin || isProtected) {
-    const canonicalResponse = canonicalAppRedirect(request);
-    if (canonicalResponse) return canonicalResponse;
-  }
-
   const sanitizedErrorResponse = sanitizeInternalError(request);
   if (sanitizedErrorResponse) return sanitizedErrorResponse;
 
   let response = NextResponse.next({ request });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const pathname = request.nextUrl.pathname;
+  const isProtected = isProtectedRoute(pathname);
+  const isLogin = pathname === "/login";
   const meetingApiLimit = request.method === "POST" ? MEETING_API_LIMITS[pathname] : undefined;
 
   if (!url || !publishableKey) {
