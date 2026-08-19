@@ -25,7 +25,7 @@ const MAX_FILES_PER_MESSAGE=4;
 
 function safeMessage(error: unknown) {
   const message=error instanceof Error?error.message:"Agent execution failed.";
-  if (/not configured|empty Agent response|request failed|timed out|timeout|not available|image generation|file|attachment|provider|knowledge/i.test(message)) return message;
+  if (/not configured|empty Agent response|request failed|timed out|timeout|not available|image generation|file|attachment|provider|knowledge|credit|quota|billing|429/i.test(message)) return message;
   return "Agent execution failed. Refresh and try again.";
 }
 function transcript(messages: ConsoleMessage[] = []) { return messages.slice(-10).map((m)=>`${m.role==="user"?"User":"Agent"}: ${m.content.slice(0,6000)}`).join("\n\n").slice(0,30000); }
@@ -85,14 +85,49 @@ async function loadAttachments(context:Awaited<ReturnType<typeof requireActiveOw
 }
 async function loadMemoryContext(context:Awaited<ReturnType<typeof requireActiveOwnerOrganizationContext>>,agentId:string){const {data}=await context.supabase.from("agent_memories").select("title,content,created_at").eq("organization_id",context.organizationId).eq("agent_id",agentId).order("created_at",{ascending:false}).limit(12);if(!data?.length)return"";return`Agent memory from prior work:\n${data.map((item)=>`- ${item.title}: ${String(item.content).slice(0,900)}`).join("\n")}`.slice(0,10000);}
 async function rememberExperience(context:Awaited<ReturnType<typeof requireActiveOwnerOrganizationContext>>,agentId:string,prompt:string,response:string,outputType:string,attachmentIds:string[]){const content=`User request: ${prompt.slice(0,1800)}\nOutput type: ${outputType}\nAgent result: ${response.slice(0,2200)}${attachmentIds.length?`\nReferenced attachment IDs: ${attachmentIds.join(", ")}`:""}`;await context.supabase.from("agent_memories").insert({organization_id:context.organizationId,agent_id:agentId,memory_type:"experience",title:`Work experience — ${outputType}`,content,source_company_id:context.organizationId,confidentiality_level:"internal",transferable:false});}
-async function generateImage(prompt:string,agent:AgentRuntimeRow,style:"image"|"mockup"){
+
+async function runAgentWithAttachmentFallback(args: Parameters<typeof runAgent>[0]) {
+  try {
+    return await runAgent(args);
+  } catch (error) {
+    if (!(args.attachments?.length)) throw error;
+    console.warn("[RYTHM Agent Runtime] Provider rejected attachment context; retrying with live text knowledge only.", {
+      model: args.model,
+      attachments: args.attachments.map((file)=>({filename:file.filename,mimeType:file.mimeType})),
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return runAgent({ ...args, attachments: [] });
+  }
+}
+
+async function generateImage(prompt:string,agent:AgentRuntimeRow,style:"image"|"mockup",references:AgentAttachmentInput[]){
   const apiKey=process.env.OPENAI_API_KEY;if(!apiKey)throw new Error("OpenAI image generation is not configured.");const client=new OpenAI({apiKey});
-  const visualInstruction=style==="mockup"?"Create a polished high-fidelity product/UI or brand mockup as the final visual deliverable. Make all supplied company identity details, brand assets, names, and contact facts accurate. Never invent missing company facts; omit optional fields if unknown.":"Create the requested final visual/image deliverable. Use supplied company knowledge and reference assets faithfully. Never invent names, contact data, URLs, addresses, or brand details.";
-  const response=await client.images.generate({model:process.env.RYTHM_IMAGE_MODEL||"gpt-image-1",size:"1536x1024",quality:"high",prompt:`${visualInstruction}\n\nYou are producing work for ${agent.name}, ${agent.role_title}.\n\nVisual brief:\n${prompt.slice(0,18000)}`});const encoded=response.data?.[0]?.b64_json;if(!encoded)throw new Error("Image generation returned no image.");return`data:image/png;base64,${encoded}`;
+  const visualInstruction=style==="mockup"
+    ?"Create a polished high-fidelity product/UI or brand mockup as the final visual deliverable. Make all supplied company identity details, brand assets, names, and contact facts accurate. Never invent missing company facts; omit optional fields if unknown."
+    :"Create the requested final visual/image deliverable. Use supplied company knowledge and reference assets faithfully. Never invent names, contact data, URLs, addresses, or brand details.";
+  const imageReferences=references.filter((file)=>file.mimeType.startsWith("image/")).slice(0,4);
+  const fullPrompt=`${visualInstruction}\n\nYou are producing work for ${agent.name}, ${agent.role_title}.\n\nIMPORTANT BRAND RULE: when an official logo or visual identity reference is attached, preserve that supplied asset faithfully. Do not invent or substitute a different logo.\n\nVisual brief:\n${prompt.slice(0,18000)}`;
+
+  if(imageReferences.length){
+    const content:any[]=[{type:"input_text",text:fullPrompt}];
+    for(const file of imageReferences){content.push({type:"input_image",image_url:`data:${file.mimeType};base64,${file.base64}`,detail:"high"});}
+    const response=await client.responses.create({
+      model:process.env.RYTHM_IMAGE_ORCHESTRATOR_MODEL||"gpt-5",
+      input:[{role:"user",content}] as any,
+      tools:[{type:"image_generation",model:process.env.RYTHM_IMAGE_MODEL||"gpt-image-1",quality:"high",size:"1536x1024",input_fidelity:"high"}] as any,
+      tool_choice:{type:"image_generation"} as any,
+    });
+    const imageCall=(response.output as any[]).find((item)=>item?.type==="image_generation_call"&&item?.result);
+    if(imageCall?.result)return`data:image/png;base64,${imageCall.result}`;
+    throw new Error("Image generation returned no image from the reference-aware renderer.");
+  }
+
+  const response=await client.images.generate({model:process.env.RYTHM_IMAGE_MODEL||"gpt-image-1",size:"1536x1024",quality:"high",prompt:fullPrompt});
+  const encoded=response.data?.[0]?.b64_json;if(!encoded)throw new Error("Image generation returned no image.");return`data:image/png;base64,${encoded}`;
 }
 async function generateChart(provider:AgentProvider,model:string,agent:AgentRuntimeRow,prompt:string,conversation:string,chartType:"line"|"bar",attachments:AgentAttachmentInput[]){
   const chartPrompt=`Create the actual data visualization requested by the user as a structured chart specification.\nRead all attached files and Company Knowledge before deciding what data is available. Do not invent numeric values.\nIf there is not enough numeric data to create a truthful chart, return JSON with {"needsData":true,"message":"..."}.\nOtherwise return ONLY valid JSON: {"type":"${chartType}","title":"...","xLabel":"...","yLabel":"...","points":[{"label":"...","value":123}],"insight":"one concise analytical takeaway"}. Use 2-24 points.\n\n${conversation?`Context:\n${conversation}\n\n`:""}Latest user request:\n${prompt}`;
-  const raw=await runAgent({provider,model,systemInstructions:agent.system_instructions||"",prompt:chartPrompt,attachments,mode:"task",timeoutMs:getRuntimeConfig().agentTimeoutMs});const parsed=JSON.parse(extractJsonObject(raw)) as Partial<ChartSpec>&{needsData?:boolean;message?:string};
+  const raw=await runAgentWithAttachmentFallback({provider,model,systemInstructions:agent.system_instructions||"",prompt:chartPrompt,attachments,mode:"task",timeoutMs:getRuntimeConfig().agentTimeoutMs});const parsed=JSON.parse(extractJsonObject(raw)) as Partial<ChartSpec>&{needsData?:boolean;message?:string};
   if(parsed.needsData)return{needsData:true as const,message:parsed.message||"Please provide the numeric data for this chart."}; if(!Array.isArray(parsed.points)||parsed.points.length<2)throw new Error("Agent returned an invalid chart specification.");
   const points=parsed.points.slice(0,24).map((point)=>({label:String(point.label??""),value:Number(point.value)})).filter((point)=>point.label&&Number.isFinite(point.value));if(points.length<2)throw new Error("Agent returned an invalid chart specification.");
   return{needsData:false as const,spec:{type:chartType,title:String(parsed.title||"Analysis"),xLabel:parsed.xLabel?String(parsed.xLabel):undefined,yLabel:parsed.yLabel?String(parsed.yLabel):undefined,insight:parsed.insight?String(parsed.insight):undefined,points} satisfies ChartSpec};
@@ -113,8 +148,8 @@ export async function runAgentConsole(input:RunConsoleInput){
     if(provider!=="openai"&&attachments.some((file)=>/\.(xlsx|xls|xlsm)$/i.test(file.filename)))return{ok:false as const,error:"Excel workbook reading is currently enabled for OpenAI Agents. Choose an OpenAI Agent for this workbook while Claude/Gemini workbook ingestion is being added."};
 
     if(resolvedOutput==="image"||resolvedOutput==="mockup"){
-      const visualBrief=await runAgent({provider,model:agent.runtime_model,systemInstructions:agent.system_instructions,prompt:`Create a precise image-generation brief for the requested deliverable. Use Current Company Knowledge as authoritative: company name, people, website, contact facts, brand rules, colors and attached logo/assets. Inspect every attached company/user reference. Never invent missing company details. Do not return SVG, HTML, CSS or code.\n\nUser request:\n${prompt}`,conversation:conversationContext,attachments,mode:"task",timeoutMs:getRuntimeConfig().agentTimeoutMs});
-      const imageDataUrl=await generateImage(`${companyKnowledge.contextText}\n\n${visualBrief}`,agent,resolvedOutput);const responseText=resolvedOutput==="mockup"?"High-fidelity visual mockup generated using the current Company Knowledge and references.":"Visual generated using the current Company Knowledge and references.";await rememberExperience(context,agent.id,prompt,responseText,resolvedOutput,attachmentIds);
+      const visualBrief=await runAgentWithAttachmentFallback({provider,model:agent.runtime_model,systemInstructions:agent.system_instructions,prompt:`Create a precise image-generation brief for the requested deliverable. Use Current Company Knowledge as authoritative: company name, people, website, contact facts, brand rules, colors and attached logo/assets. Inspect every attached company/user reference. Never invent missing company details. Do not return SVG, HTML, CSS or code.\n\nUser request:\n${prompt}`,conversation:conversationContext,attachments,mode:"task",timeoutMs:getRuntimeConfig().agentTimeoutMs});
+      const imageDataUrl=await generateImage(`${companyKnowledge.contextText}\n\n${visualBrief}`,agent,resolvedOutput,attachments);const responseText=resolvedOutput==="mockup"?"High-fidelity visual mockup generated using the current Company Knowledge and exact visual references.":"Visual generated using the current Company Knowledge and exact visual references.";await rememberExperience(context,agent.id,prompt,responseText,resolvedOutput,attachmentIds);
       return{ok:true as const,responseType:"image" as const,response:responseText,imageDataUrl,resolvedOutput,provider:"openai-image",model:process.env.RYTHM_IMAGE_MODEL||"gpt-image-1",latencyMs:Date.now()-started,agentName:agent.name,roleTitle:agent.role_title,status:agent.agent_status,externalActions:false,knowledgeCount:companyKnowledge.knowledgeCount};
     }
     if(resolvedOutput==="line-chart"||resolvedOutput==="bar-chart"){
@@ -123,7 +158,7 @@ export async function runAgentConsole(input:RunConsoleInput){
     }
     const chatGuard=input.mode==="chat"?"Respond as a professional colleague in a normal conversation. Use Company Knowledge when relevant. Do not output SVG, HTML, CSS, JSX, source code, wireframe code, or pseudo-code unless the user explicitly asks for code.\n\n":"";
     const reportGuard=resolvedOutput==="report"?"Produce a concise professional report as the actual deliverable. Use current Company Knowledge and read relevant attached files before analyzing.\n\n":"";
-    const response=await runAgent({provider,model:agent.runtime_model,systemInstructions:agent.system_instructions,prompt:`${chatGuard}${reportGuard}${prompt}`,conversation:conversationContext,attachments,mode:input.mode==="task"?"task":"chat",timeoutMs:getRuntimeConfig().agentTimeoutMs});await rememberExperience(context,agent.id,prompt,response,resolvedOutput,attachmentIds);
+    const response=await runAgentWithAttachmentFallback({provider,model:agent.runtime_model,systemInstructions:agent.system_instructions,prompt:`${chatGuard}${reportGuard}${prompt}`,conversation:conversationContext,attachments,mode:input.mode==="task"?"task":"chat",timeoutMs:getRuntimeConfig().agentTimeoutMs});await rememberExperience(context,agent.id,prompt,response,resolvedOutput,attachmentIds);
     return{ok:true as const,responseType:"text" as const,response,resolvedOutput,provider,model:agent.runtime_model,latencyMs:Date.now()-started,agentName:agent.name,roleTitle:agent.role_title,status:agent.agent_status,externalActions:false,knowledgeCount:companyKnowledge.knowledgeCount};
-  }catch(executionError){return{ok:false as const,error:safeMessage(executionError)};}
+  }catch(executionError){console.error("[RYTHM Agent Runtime] execution failed",executionError);return{ok:false as const,error:safeMessage(executionError)};}
 }
