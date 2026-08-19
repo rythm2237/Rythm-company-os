@@ -62,6 +62,8 @@ const NAVIGATION_ICONS: Record<string, string> = {
   "/product": "⌁", "/demo": "✦", "/solutions": "⌘", "/templates": "◇", "/pricing": "€", "/enterprise": "▦", "/live-ai-meeting": "◉",
 };
 
+const GUIDE_ENTRY_DELAY_MS = 3000;
+
 function isRouteActive(pathname: string, href: string) {
   return pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
 }
@@ -71,6 +73,7 @@ type PublicShellProps = Readonly<{ children: React.ReactNode }>;
 function PublicShellFrame({ children }: PublicShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const { copy, locale, tourState, experienceMode, openTour, setExperienceMode } = usePublicEducation();
   const demoRoute = pathname === "/demo";
   const immersive = demoRoute && experienceMode;
@@ -78,9 +81,18 @@ function PublicShellFrame({ children }: PublicShellProps) {
   useEffect(() => { setMobileOpen(false); }, [pathname]);
   useEffect(() => { if (experienceMode && !demoRoute) setExperienceMode(false); }, [demoRoute, experienceMode, setExperienceMode]);
   useEffect(() => { if (immersive) setMobileOpen(false); }, [immersive]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowGuide(true), GUIDE_ENTRY_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  function handleOpenTour() {
+    setShowGuide(true);
+    openTour();
+  }
 
   return (
-    <div className={`marketing-shell${mobileOpen ? " is-navigation-open" : ""}${tourState !== "closed" ? " is-guide-open" : ""}${immersive ? " is-experience-mode" : ""}`}>
+    <div className={`marketing-shell${mobileOpen ? " is-navigation-open" : ""}${showGuide && tourState !== "closed" ? " is-guide-open" : ""}${immersive ? " is-experience-mode" : ""}`}>
       <button className="marketing-mobile-backdrop" type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />
       <aside className="marketing-sidebar" id="public-navigation">
         <div className="marketing-sidebar-topline">
@@ -99,7 +111,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
           ))}
         </nav>
         <div className="marketing-sidebar-footer">
-          <button className="marketing-guide-launcher" type="button" onClick={openTour} dir={copy.direction} lang={locale}><span aria-hidden="true">?</span><span><strong>{copy.ui.guideLauncherTitle}</strong><small>{copy.ui.guideLauncherDetail}</small></span></button>
+          <button className="marketing-guide-launcher" type="button" onClick={handleOpenTour} dir={copy.direction} lang={locale}><span aria-hidden="true">?</span><span><strong>{copy.ui.guideLauncherTitle}</strong><small>{copy.ui.guideLauncherDetail}</small></span></button>
           <div className="marketing-system-state"><i aria-hidden="true" /><span>Public experience</span><strong>Safe to explore</strong></div>
           <div className="marketing-sidebar-actions">
             <Link href="/login" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_sidebar", locale } })}>Sign in</Link>
@@ -132,7 +144,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
           </div>
         </footer>
       </div>
-      <GuidedTour />
+      {showGuide ? <GuidedTour /> : null}
     </div>
   );
 }
