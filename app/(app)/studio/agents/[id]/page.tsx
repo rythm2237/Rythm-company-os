@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
-import { retryAgentProvisioning, updateAgent } from "../actions";
+import { updateAgent } from "../actions";
+import { retryMasterAgentProvisioning } from "../master-generate-actions";
 import { reconnectAgentCompanyKnowledge } from "../knowledge-actions";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ type AgentRow = {
   human_approval_requirements:string[]; allowed_tools:string[]; agent_status:string; external_actions_allowed:boolean;
   canonical_role:string|null; role_family:string|null; specializations:string[]; provisioning_status:string; provisioning_error:string|null;
   last_knowledge_review_at:string|null; foundation_update_available:boolean; company_knowledge_connected:boolean;
+  professional_competency_level:string; mastery_status:string; mastery_benchmark_version:string|null; mastery_verified_at:string|null;
 };
 type DepartmentRow = { id:string; name:string };
 type ManagerRow = { id:string; name:string; role_title:string; agent_status:string };
@@ -35,7 +37,7 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
   }
 
   const [{ data: agentData }, { data: departmentData }, { data: managerData }, { data: bindingData }, { data: specializationBindings }] = await Promise.all([
-    context.supabase.from("agents").select("id,name,role_title,purpose,department_id,reports_to_agent_id,authority_level,risk_ceiling,language,responsibilities,skills,kpis,human_approval_requirements,allowed_tools,agent_status,external_actions_allowed,canonical_role,role_family,specializations,provisioning_status,provisioning_error,last_knowledge_review_at,foundation_update_available,company_knowledge_connected").eq("id", id).eq("organization_id", context.organizationId).maybeSingle(),
+    context.supabase.from("agents").select("id,name,role_title,purpose,department_id,reports_to_agent_id,authority_level,risk_ceiling,language,responsibilities,skills,kpis,human_approval_requirements,allowed_tools,agent_status,external_actions_allowed,canonical_role,role_family,specializations,provisioning_status,provisioning_error,last_knowledge_review_at,foundation_update_available,company_knowledge_connected,professional_competency_level,mastery_status,mastery_benchmark_version,mastery_verified_at").eq("id", id).eq("organization_id", context.organizationId).maybeSingle(),
     context.supabase.from("departments").select("id,name").eq("organization_id", context.organizationId).eq("status", "active").order("name"),
     context.supabase.from("agents").select("id,name,role_title,agent_status").eq("organization_id", context.organizationId).neq("id", id).neq("agent_status", "archived").order("name"),
     context.supabase.from("agent_role_foundation_bindings").select("role_foundation_id,foundation_version").eq("organization_id", context.organizationId).eq("agent_id", id).eq("status", "active").limit(1).maybeSingle(),
@@ -67,6 +69,7 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
   const staleByDate = Boolean(foundation?.next_review_at && Date.parse(foundation.next_review_at) <= Date.now()) || specializationRows.some((item) => item.next_review_at && Date.parse(item.next_review_at) <= Date.now());
   updateAvailable = updateAvailable || staleByDate;
   const professionalVerified = agent.provisioning_status === "ready" && Boolean(foundation) && foundation?.status === "active";
+  const masteryVerified = agent.mastery_status === "verified" && agent.professional_competency_level === "master";
 
   return <main className="page-shell">
     <section className="panel">
@@ -75,7 +78,7 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
       <p>Status: <strong>{agent.agent_status}</strong> · Professional provisioning: <strong>{agent.provisioning_status}</strong> · External actions: <strong>{agent.external_actions_allowed ? "Allowed" : "Disabled"}</strong></p>
       <p>Governance rule: external actions remain disabled in Public Beta regardless of profile edits.</p>
       {agent.provisioning_status === "ready" && agent.agent_status !== "archived" ? <p><Link href={`/studio/agents/${agent.id}/run`}><strong>Open Chat / Run Console</strong></Link></p> : null}
-      {agent.provisioning_status === "failed" ? <form action={retryAgentProvisioning}><input type="hidden" name="agentId" value={agent.id} /><button type="submit">Retry professional provisioning</button></form> : null}
+      {agent.provisioning_status === "failed" || agent.mastery_status === "failed" ? <form action={retryMasterAgentProvisioning}><input type="hidden" name="agentId" value={agent.id} /><button type="submit">Retry professional + Master-level provisioning</button></form> : null}
     </section>
 
     {query.message ? <p className="form-success" role="status">{query.message}</p> : null}
@@ -90,11 +93,14 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
         <div><small>Canonical Role</small><p><strong>{agent.canonical_role ?? agent.role_title}</strong></p></div>
         <div><small>Specialization</small><p><strong>{specializationRows.length ? specializationRows.map((item) => item.title).join(", ") : "None"}</strong></p></div>
         <div><small>Professional Knowledge</small><p><strong>{professionalVerified ? "Verified" : agent.provisioning_status}</strong></p></div>
+        <div><small>Professional Competency</small><p><strong>{masteryVerified ? "Master-level verified" : `${agent.professional_competency_level} · ${agent.mastery_status}`}</strong></p></div>
+        <div><small>Mastery Benchmark</small><p><strong>{agent.mastery_benchmark_version ? `v${agent.mastery_benchmark_version} · ${formatDate(agent.mastery_verified_at)}` : "Pending"}</strong></p></div>
         <div><small>Company Knowledge</small><p><strong>{agent.company_knowledge_connected ? (agent.provisioning_status === "ready" ? "Connected · live / role-filtered" : "Pending") : "Detached for transfer"}</strong></p>{!agent.company_knowledge_connected && agent.agent_status !== "archived" ? <form action={reconnectAgentCompanyKnowledge}><input type="hidden" name="agentId" value={agent.id}/><button type="submit">Reconnect Company Knowledge</button></form> : null}</div>
         <div><small>Memory</small><p><strong>Active · transfer scope enforced</strong></p></div>
         <div><small>Last Knowledge Review</small><p><strong>{formatDate(agent.last_knowledge_review_at ?? foundation?.last_verified_at)}</strong></p></div>
         <div><small>Update Available</small><p><strong>{updateAvailable ? "Yes" : "No"}</strong></p></div>
       </div>
+      <p style={{ opacity:.72 }}>“Master-level” is a RYTHM internal professional capability benchmark. It is not an academic degree, professional license, certification, or regulated credential.</p>
       <p style={{ opacity:.72, marginBottom:0 }}>This profile exposes readiness metadata only. Confidential Company Knowledge content is never displayed here.</p>
     </section>
 
