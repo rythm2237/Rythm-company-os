@@ -1,0 +1,14 @@
+/* Guided Tour entry/readability hardening.
+   Loaded after the public responsive styles so the prompt remains legible on every viewport. */
+
+.marketing-guide-dialog {
+  background: rgba(11, 18, 32, .97);
+  border-color: rgba(255, 255, 255, .18);
+  box-shadow: 0 32px 90px rgba(6, 11, 20, .42);
+  -webkit-backdrop-filter: blur(18px) saturate(1.04);
+  backdrop-filter: blur(18px) saturate(1.04);
+}
+
+.marketing-guide-dialog > p:not(.marketing-kicker) {
+  color: #c6cfde;
+}
