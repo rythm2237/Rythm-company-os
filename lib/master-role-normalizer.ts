@@ -1,11 +1,37 @@
 import { normalizeRole, type NormalizedRole } from "@/lib/trusted-agent-knowledge";
 
-const masteryRoleRules: Array<{
+type MasteryRoleRule = {
   test: RegExp;
   family: NormalizedRole["roleFamily"];
   canonical: string;
   specs: string[];
-}> = [
+};
+
+const explicitRoleRules: MasteryRoleRule[] = [
+  {
+    test: /\bfull[-\s]?stack\s+(web\s+)?(developer|engineer)\b/i,
+    family: "technology",
+    canonical: "Full-Stack Web Developer",
+    specs: ["web_development"],
+  },
+  {
+    test: /\bfront[-\s]?end\s+(web\s+)?(developer|engineer)\b/i,
+    family: "technology",
+    canonical: "Front-End Web Developer",
+    specs: ["web_development"],
+  },
+  {
+    test: /\bback[-\s]?end\s+(web\s+)?(developer|engineer)\b/i,
+    family: "technology",
+    canonical: "Back-End Web Developer",
+    specs: ["web_development"],
+  },
+  {
+    test: /\bweb\s+(developer|engineer)\b/i,
+    family: "technology",
+    canonical: "Web Developer",
+    specs: ["web_development"],
+  },
   {
     test: /chief\s+of\s+staff|executive\s+orchestrat|executive\s+office/i,
     family: "general",
@@ -32,30 +58,60 @@ const masteryRoleRules: Array<{
   },
 ];
 
+const ambiguousDeveloper = /\b(software\s+(developer|engineer)|application\s+(developer|engineer)|developer|engineer)\b/i;
+const webExpertiseSignal = /\b(next\.?js|react|typescript|javascript|html5?|css3?|full[-\s]?stack|front[-\s]?end|back[-\s]?end|web\s+app(?:lication)?s?|rest\s+apis?|supabase|vercel)\b/i;
+
+function fromRule(rawRoleTitle: string, rule: MasteryRoleRule): NormalizedRole {
+  return {
+    rawRoleTitle,
+    canonicalRole: rule.canonical,
+    roleFamily: rule.family,
+    specializations: rule.specs,
+    deterministic: true,
+  };
+}
+
 /**
- * Mastery-aware normalization considers both the selected position and the
- * expertise entered in Agent Builder while preserving the raw role title.
- * Unsupported general roles fail closed later at the mastery benchmark gate.
+ * Mastery-aware normalization considers both the selected position and Core
+ * expertise while preserving the raw role title. An explicit recognized
+ * position always wins; expertise is a secondary discriminator for ambiguous
+ * titles such as "Developer" or "Software Engineer".
+ *
+ * Unsupported general roles still fail closed later at the mastery benchmark.
  */
 export function normalizeMasterRole(rawRoleTitle: string, expertise = ""): NormalizedRole {
   const raw = rawRoleTitle.trim().replace(/\s+/g, " ");
-  const combined = `${raw} ${expertise}`.trim().replace(/\s+/g, " ");
-  const masteryRule = masteryRoleRules.find((candidate) => candidate.test.test(combined));
-  if (masteryRule) {
+  const cleanExpertise = expertise.trim().replace(/\s+/g, " ");
+
+  const explicitRule = explicitRoleRules.find((candidate) => candidate.test.test(raw));
+  if (explicitRule) return fromRule(raw, explicitRule);
+
+  const baseFromTitle = normalizeRole(raw);
+  if (baseFromTitle.roleFamily !== "general" || baseFromTitle.specializations.length > 0) {
+    return { ...baseFromTitle, rawRoleTitle: raw };
+  }
+
+  if (ambiguousDeveloper.test(raw) && webExpertiseSignal.test(cleanExpertise)) {
     return {
       rawRoleTitle: raw,
-      canonicalRole: masteryRule.canonical,
-      roleFamily: masteryRule.family,
-      specializations: masteryRule.specs,
+      canonicalRole: "Full-Stack Web Developer",
+      roleFamily: "technology",
+      specializations: ["web_development"],
       deterministic: true,
     };
   }
 
-  const base = normalizeRole(combined || raw);
-  const unsupportedGeneralFallback = base.roleFamily === "general" && base.specializations.length === 0;
+  const expertiseRule = explicitRoleRules.find((candidate) => candidate.test.test(cleanExpertise));
+  if (expertiseRule) return fromRule(raw, expertiseRule);
+
+  const baseFromExpertise = normalizeRole(cleanExpertise);
+  if (baseFromExpertise.roleFamily !== "general" || baseFromExpertise.specializations.length > 0) {
+    return { ...baseFromExpertise, rawRoleTitle: raw };
+  }
+
   return {
-    ...base,
+    ...baseFromTitle,
     rawRoleTitle: raw,
-    canonicalRole: unsupportedGeneralFallback ? (raw || "General Professional") : base.canonicalRole,
+    canonicalRole: raw || "General Professional",
   };
 }
