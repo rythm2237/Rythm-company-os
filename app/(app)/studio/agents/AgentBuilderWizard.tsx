@@ -34,13 +34,14 @@ type Draft = {
 
 const steps = ["Role", "Mission", "Behavior", "Governance", "AI & Generate"];
 const provisioningStages = [
-  "Understanding position…",
-  "Preparing professional knowledge…",
+  "Matching position & expertise…",
+  "Loading professional foundation…",
   "Checking trusted sources…",
-  "Building role foundation…",
-  "Connecting company knowledge…",
-  "Configuring capabilities…",
-  "Finalizing Agent…",
+  "Attaching role specialization…",
+  "Building professional instructions…",
+  "Verifying Master-level benchmark…",
+  "Connecting Company Library…",
+  "Finalizing governed Agent…",
 ];
 const presets = {
   workStyle: ["Analytical & concise", "Strategic & challenging", "Collaborative & diplomatic", "Creative & exploratory"],
@@ -62,7 +63,7 @@ const initialDraft: Draft = {
   authorityLevel: "1",
   riskCeiling: "medium",
   approvalRequirements: "Consequential external actions\nMaterial financial commitments\nLegal, privacy, or security commitments",
-  allowedTools: "company_memory\nprojects\nmeetings\ndecisions\nactions",
+  allowedTools: "company_memory\ncompany_library\nprojects\nmeetings\ndecisions\nactions",
   provider: "openai",
 };
 
@@ -74,7 +75,7 @@ function GenerateButton({ disabled }: { disabled: boolean }) {
     const timer = window.setInterval(() => setStage((current) => Math.min(current + 1, provisioningStages.length - 1)), 1100);
     return () => window.clearInterval(timer);
   }, [pending]);
-  return <button type="submit" disabled={disabled || pending}>{pending ? provisioningStages[stage] : "Generate Professional AI Agent"}</button>;
+  return <button type="submit" disabled={disabled || pending}>{pending ? provisioningStages[stage] : "Generate Master-level AI Agent"}</button>;
 }
 
 function split(value: string) {
@@ -106,8 +107,9 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
       "KPIs:", ...split(draft.kpis).map((item) => `• ${item}`),
       "",
       `Runtime: ${selectedProvider?.label ?? "Select AI"}${selectedProvider?.model ? ` · ${selectedProvider.model}` : ""}`,
-      "Professional knowledge: RYTHM resolves a verified role foundation and specialization before Ready.",
-      "Company Knowledge: connected live and kept separate from transferable professional knowledge.",
+      "Professional knowledge: verified role foundation + position/expertise specialization.",
+      "Competency gate: RYTHM Master-level Professional Competency Benchmark required before Ready.",
+      "Company Library: connected live, task-relevant, tenant-scoped and non-transferable.",
       "Governance: Human CEO final authority · external actions disabled by default.",
     ];
     return lines.join("\n");
@@ -141,6 +143,7 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
           <h3>Define the role</h3>
           <label>Position / role title<input value={draft.roleTitle} onChange={(e) => update("roleTitle", e.target.value)} placeholder="e.g. Senior Market Research Analyst" autoFocus /></label>
           <label>Core expertise<input value={draft.expertise} onChange={(e) => update("expertise", e.target.value)} placeholder="e.g. European B2B SaaS market intelligence" /></label>
+          <p style={{ opacity: .72 }}>Position and expertise are both used to resolve the professional foundation and role specialization. Unsupported roles fail closed rather than being falsely marked Master-level.</p>
           <label>Agent name<input value={draft.name} onChange={(e) => update("name", e.target.value)} placeholder="e.g. Mira" /></label>
           <label>Department<select value={draft.departmentId} onChange={(e) => update("departmentId", e.target.value)}><option value="">Executive Office / unassigned</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>
           <label>Reports to<select value={draft.reportsToAgentId} onChange={(e) => update("reportsToAgentId", e.target.value)}><option value="">Human CEO / no AI manager</option>{existingAgents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} — {agent.role_title}</option>)}</select></label>
@@ -174,7 +177,7 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
           <label>Risk ceiling<select value={draft.riskCeiling} onChange={(e) => update("riskCeiling", e.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
           <label>Must ask the Human CEO before<textarea rows={4} value={draft.approvalRequirements} onChange={(e) => update("approvalRequirements", e.target.value)} /></label>
           <label>Allowed internal tools<textarea rows={4} value={draft.allowedTools} onChange={(e) => update("allowedTools", e.target.value)} /></label>
-          <p><strong>Public Beta safety:</strong> external actions remain disabled. Professional status becomes Ready only after trusted knowledge provisioning succeeds.</p>
+          <p><strong>Public Beta safety:</strong> external actions remain disabled. Professional status becomes Ready only after trusted knowledge provisioning and the Master-level competency gate succeed.</p>
         </div> : null}
 
         {step === 4 ? <div>
@@ -189,8 +192,9 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
             </label>)}
           </div>
           <div className="panel" style={{ margin: "1rem 0" }}>
-            <strong>Generate now provisions a professional worker.</strong>
-            <p style={{ marginBottom: 0 }}>RYTHM normalizes the position, resolves or builds trusted professional knowledge, attaches specialization, connects live Company Knowledge, configures QA/governance, and only then marks professional provisioning Ready.</p>
+            <strong>Generate provisions a knowledge-ready professional Agent.</strong>
+            <p>RYTHM matches position + expertise, resolves or acquires trusted professional knowledge, binds specialization, generates governed instructions, verifies the internal Master-level Professional Competency Benchmark, and connects the live Company Library before Ready.</p>
+            <p style={{ marginBottom: 0 }}><strong>Important:</strong> “Master-level” is an internal capability benchmark, not a university degree, license, certification, or regulated credential.</p>
           </div>
           <GenerateButton disabled={!canGenerate} />
         </div> : null}

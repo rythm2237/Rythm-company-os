@@ -20,6 +20,7 @@ const groups = [
     label: "Build",
     items: [
       { label: "Agent Studio", href: "/studio/agents", icon: "✦" },
+      { label: "Company Library", href: "/company-library", icon: "▤" },
       { label: "Templates", href: "/studio/templates", icon: "▦" },
       { label: "Company Builder", href: "/studio/builder", icon: "⌘" },
     ],
