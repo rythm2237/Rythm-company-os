@@ -22,10 +22,31 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         {params.message ? <p className="form-success" role="status">{params.message}</p> : null}
         {params.error ? <p className="form-error" role="alert">{params.error}</p> : null}
 
-        <form action={login} className="auth-form">
+        <form action={login} className="auth-form" autoComplete="on">
           <input type="hidden" name="next" value={params.next ?? "/command-center"} />
-          <label>Email<input name="email" type="email" autoComplete="email" required /></label>
-          <label>Password<input name="password" type="password" autoComplete="current-password" required /></label>
+          <label htmlFor="login-email">
+            Email
+            <input
+              id="login-email"
+              name="email"
+              type="email"
+              inputMode="email"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              required
+            />
+          </label>
+          <label htmlFor="login-password">
+            Password
+            <input
+              id="login-password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
+          </label>
           <button type="submit">Sign in</button>
         </form>
 
