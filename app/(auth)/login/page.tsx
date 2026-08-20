@@ -33,14 +33,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               Continue with Google
             </button>
           </form>
-          <form action={signInWithOAuth}>
-            <input type="hidden" name="provider" value="azure" />
-            <input type="hidden" name="source" value="login" />
-            <input type="hidden" name="next" value={next} />
-            <button className="secondary-button" style={{ width: "100%" }} type="submit">
-              Continue with Microsoft
-            </button>
-          </form>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 22, color: "#788296", fontSize: ".78rem" }}>
