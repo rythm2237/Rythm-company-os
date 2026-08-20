@@ -12,6 +12,7 @@ const groups = [
     label: "Operate",
     items: [
       { label: "Command", href: "/command-center", icon: "⌁" },
+      { label: "Communication", href: "/communication", icon: "@" },
       { label: "Projects", href: "/projects", icon: "◇" },
       { label: "Actions", href: "/actions", icon: "✓" },
     ],
