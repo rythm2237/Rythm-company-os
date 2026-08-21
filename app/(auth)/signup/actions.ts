@@ -51,7 +51,7 @@ export async function signup(formData: FormData) {
     redirect(`/signup?error=${encodeURIComponent(`You are already signed in as ${currentUser.email ?? "another account"}. Sign out before creating a separate customer account.`)}`);
   }
 
-  const confirmationRedirect = `${SITE_ORIGIN}/auth/callback?next=${encodeURIComponent("/setup/company")}`;
+  const confirmationRedirect = `${SITE_ORIGIN}/auth/callback?next=${encodeURIComponent("/demo")}`;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -77,7 +77,7 @@ export async function signup(formData: FormData) {
       onboarding_status: "company_pending",
       updated_at: new Date().toISOString(),
     });
-    redirect(`/setup/company?product=${encodeURIComponent(productCode)}`);
+    redirect("/demo");
   }
 
   redirect(`/signup/check-email?product=${encodeURIComponent(productCode)}`);
