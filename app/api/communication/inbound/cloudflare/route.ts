@@ -90,7 +90,8 @@ function extractTextPreview(raw: string) {
 }
 
 export async function POST(request: NextRequest) {
-  const expectedSecret = process.env.CLOUDFLARE_EMAIL_INGEST_SECRET;
+  const expectedSecret = process.env.CLOUDFLARE_EMAIL_WORKER_SECRET
+    ?? process.env.CLOUDFLARE_EMAIL_INGEST_SECRET;
   const suppliedSecret = request.headers.get("x-rythm-email-secret") ?? "";
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
