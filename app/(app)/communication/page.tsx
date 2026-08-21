@@ -33,7 +33,6 @@ type ThreadRow = {
   requires_manager_attention: boolean;
   manager_attention_reason: string | null;
   ai_summary: string | null;
-  last_message_at: string;
   updated_at: string;
 };
 
@@ -44,12 +43,7 @@ type MessageRow = {
   sender_name: string | null;
   sender_email: string | null;
   recipients: unknown;
-  subject: string | null;
   body_text: string | null;
-  drafted_by_agent_id: string | null;
-  approved_by_user_id: string | null;
-  approved_at: string | null;
-  sent_at: string | null;
   created_at: string;
 };
 
@@ -59,7 +53,6 @@ type AgentRow = {
   display_name: string | null;
   role_title: string;
   agent_code: string;
-  department: string | null;
   enabled: boolean;
 };
 
@@ -100,7 +93,6 @@ function recipientLabel(recipients: unknown) {
 
 async function createDraft(formData: FormData) {
   "use server";
-
   const { supabase, user, organizationId } = await requireOwnerOrganizationContext();
   const mailboxId = String(formData.get("mailboxId") ?? "").trim();
   const recipient = String(formData.get("recipient") ?? "").trim().toLowerCase();
@@ -167,7 +159,11 @@ async function createDraft(formData: FormData) {
     .single();
 
   if (messageError || !message) {
-    await supabase.from("communication_threads").delete().eq("organization_id", organizationId).eq("id", thread.id);
+    await supabase
+      .from("communication_threads")
+      .delete()
+      .eq("organization_id", organizationId)
+      .eq("id", thread.id);
     redirect(`/communication?compose=1&error=${encodeURIComponent(messageError?.message ?? "Draft message could not be created.")}`);
   }
 
@@ -179,12 +175,7 @@ async function createDraft(formData: FormData) {
     object_type: "communication_thread",
     object_id: thread.id,
     risk_level: "low",
-    payload: {
-      mailbox: mailbox.address,
-      recipient,
-      message_id: message.id,
-      external_delivery_attempted: false,
-    },
+    payload: { mailbox: mailbox.address, recipient, message_id: message.id, external_delivery_attempted: false },
   });
 
   revalidatePath("/communication");
@@ -193,7 +184,6 @@ async function createDraft(formData: FormData) {
 
 async function createReplyDraft(formData: FormData) {
   "use server";
-
   const { supabase, user, organizationId } = await requireOwnerOrganizationContext();
   const threadId = String(formData.get("threadId") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
@@ -248,7 +238,6 @@ async function createReplyDraft(formData: FormData) {
 
 async function submitDraftForApproval(formData: FormData) {
   "use server";
-
   const { supabase, user, organizationId } = await requireOwnerOrganizationContext();
   const threadId = String(formData.get("threadId") ?? "").trim();
   const messageId = String(formData.get("messageId") ?? "").trim();
@@ -256,7 +245,7 @@ async function submitDraftForApproval(formData: FormData) {
 
   const { data: message } = await supabase
     .from("communication_messages")
-    .select("id,status,thread_id")
+    .select("id,status")
     .eq("organization_id", organizationId)
     .eq("thread_id", threadId)
     .eq("id", messageId)
@@ -298,13 +287,11 @@ async function submitDraftForApproval(formData: FormData) {
 
 async function approveDraftForDelivery(formData: FormData) {
   "use server";
-
   const { supabase, user, organizationId } = await requireOwnerOrganizationContext();
   const threadId = String(formData.get("threadId") ?? "").trim();
   const messageId = String(formData.get("messageId") ?? "").trim();
   if (!threadId || !messageId) redirect("/communication?view=approvals&error=Approval%20item%20not%20found.");
 
-  const now = new Date().toISOString();
   const { data: message } = await supabase
     .from("communication_messages")
     .select("id,status")
@@ -317,6 +304,7 @@ async function approveDraftForDelivery(formData: FormData) {
     redirect(`/communication?view=approvals&thread=${threadId}&error=This%20draft%20is%20not%20awaiting%20approval.`);
   }
 
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from("communication_messages")
     .update({
@@ -344,25 +332,20 @@ async function approveDraftForDelivery(formData: FormData) {
     object_type: "communication_message",
     object_id: messageId,
     risk_level: "medium",
-    payload: {
-      thread_id: threadId,
-      delivery_state: "ready_for_delivery",
-      external_delivery_attempted: false,
-      reason: "RYTHM managed transport is not enabled yet",
-    },
+    payload: { thread_id: threadId, delivery_state: "ready_for_delivery", external_delivery_attempted: false },
   });
 
   revalidatePath("/communication");
-  redirect(`/communication?view=waiting&thread=${threadId}&message=Approved.%20Message%20is%20ready%20for%20RYTHM%20delivery%20when%20transport%20is%20enabled.`);
+  redirect(`/communication?view=waiting&thread=${threadId}&message=Approved.%20Waiting%20for%20RYTHM%20internet%20delivery.`);
 }
 
 async function updateThreadAssignment(formData: FormData) {
   "use server";
-
   const { supabase, user, organizationId } = await requireOwnerOrganizationContext();
   const threadId = String(formData.get("threadId") ?? "").trim();
   const assignedAgentId = String(formData.get("assignedAgentId") ?? "").trim() || null;
   const priority = String(formData.get("priority") ?? "normal").trim();
+
   if (!threadId || !["low", "normal", "high", "urgent"].includes(priority)) {
     redirect("/communication?error=Invalid%20conversation%20routing.");
   }
@@ -403,7 +386,6 @@ async function updateThreadAssignment(formData: FormData) {
 
 async function updateMailboxRouting(formData: FormData) {
   "use server";
-
   const { supabase, user, organizationId } = await requireOwnerOrganizationContext();
   const mailboxId = String(formData.get("mailboxId") ?? "").trim();
   const assignedAgentId = String(formData.get("assignedAgentId") ?? "").trim() || null;
@@ -464,6 +446,7 @@ async function resolveThread(formData: FormData) {
     .update({ status: "resolved", updated_at: new Date().toISOString() })
     .eq("organization_id", organizationId)
     .eq("id", threadId);
+
   if (error) redirect(`/communication?error=${encodeURIComponent(error.message)}`);
 
   await supabase.from("audit_events").insert({
@@ -493,7 +476,7 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
   const [settingsResult, providersResult, mailboxesResult, agentsResult] = await Promise.all([
     supabase
       .from("communication_settings")
-      .select("managed_subdomain,managed_domain,communication_manager_agent_id,auto_send_enabled,mailbox_mode,external_integrations_visible")
+      .select("managed_subdomain,managed_domain,communication_manager_agent_id,auto_send_enabled,mailbox_mode")
       .eq("organization_id", organizationId)
       .maybeSingle(),
     supabase
@@ -507,7 +490,7 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
       .order("local_part"),
     supabase
       .from("agents")
-      .select("id,name,display_name,role_title,agent_code,department,enabled")
+      .select("id,name,display_name,role_title,agent_code,enabled")
       .eq("organization_id", organizationId)
       .eq("enabled", true)
       .order("name"),
@@ -529,7 +512,7 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
 
   let threadQuery = supabase
     .from("communication_threads")
-    .select("id,mailbox_id,subject,status,priority,category,sender_name,sender_email,draft_recipient_email,assigned_agent_id,requires_manager_attention,manager_attention_reason,ai_summary,last_message_at,updated_at")
+    .select("id,mailbox_id,subject,status,priority,category,sender_name,sender_email,draft_recipient_email,assigned_agent_id,requires_manager_attention,manager_attention_reason,ai_summary,updated_at")
     .eq("organization_id", organizationId)
     .order("updated_at", { ascending: false })
     .limit(100);
@@ -557,13 +540,13 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
     const [threadResult, messageResult] = await Promise.all([
       supabase
         .from("communication_threads")
-        .select("id,mailbox_id,subject,status,priority,category,sender_name,sender_email,draft_recipient_email,assigned_agent_id,requires_manager_attention,manager_attention_reason,ai_summary,last_message_at,updated_at")
+        .select("id,mailbox_id,subject,status,priority,category,sender_name,sender_email,draft_recipient_email,assigned_agent_id,requires_manager_attention,manager_attention_reason,ai_summary,updated_at")
         .eq("organization_id", organizationId)
         .eq("id", selectedThreadId)
         .maybeSingle(),
       supabase
         .from("communication_messages")
-        .select("id,direction,status,sender_name,sender_email,recipients,subject,body_text,drafted_by_agent_id,approved_by_user_id,approved_at,sent_at,created_at")
+        .select("id,direction,status,sender_name,sender_email,recipients,body_text,created_at")
         .eq("organization_id", organizationId)
         .eq("thread_id", selectedThreadId)
         .order("created_at"),
@@ -587,9 +570,7 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
         <div>
           <p className="eyebrow">RYTHM MAIL</p>
           <h1>Your company mailbox lives inside RYTHM.</h1>
-          <p className="communication-subtitle">
-            Read, compose, route, review, and manage company communication with your AI team from one governed workspace.
-          </p>
+          <p className="communication-subtitle">Read, compose, route, review, and manage company communication with your AI team from one governed workspace.</p>
         </div>
         <div className="communication-hero-state">
           <span className="comm-status is-ready"><i aria-hidden="true" />RYTHM mailbox active</span>
@@ -613,10 +594,7 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
           </div>
         </div>
         {!transportReady ? (
-          <div className="native-transport-note">
-            <strong>Mailbox workflow is live.</strong>
-            <span>External send/receive remains safely blocked until the RYTHM transport adapter is activated.</span>
-          </div>
+          <div className="native-transport-note"><strong>Mailbox workflow is live.</strong><span>External send/receive remains safely blocked until the RYTHM transport adapter is activated.</span></div>
         ) : null}
       </section>
 
@@ -629,80 +607,42 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
 
       {composeOpen ? (
         <section className="communication-panel native-compose-panel">
-          <div className="communication-panel-heading">
-            <div><p className="label">New message</p><h2>Compose inside RYTHM</h2></div>
-            <Link href="/communication?view=inbox">Close</Link>
-          </div>
+          <div className="communication-panel-heading"><div><p className="label">New message</p><h2>Compose inside RYTHM</h2></div><Link href="/communication?view=inbox">Close</Link></div>
           {isOwner ? (
             <form action={createDraft} className="native-compose-form">
-              <label>
-                <span>From</span>
-                <select name="mailboxId" required defaultValue={mailboxes.find((mailbox) => mailbox.local_part === "contact")?.id ?? ""}>
-                  {mailboxes.filter((mailbox) => mailbox.is_active).map((mailbox) => (
-                    <option value={mailbox.id} key={mailbox.id}>{mailbox.address}</option>
-                  ))}
-                </select>
-              </label>
+              <label><span>From</span><select name="mailboxId" required defaultValue={mailboxes.find((mailbox) => mailbox.local_part === "contact")?.id ?? ""}>{mailboxes.filter((mailbox) => mailbox.is_active).map((mailbox) => <option value={mailbox.id} key={mailbox.id}>{mailbox.address}</option>)}</select></label>
               <label><span>To</span><input name="recipient" type="email" autoComplete="off" placeholder="customer@example.com" required /></label>
               <label><span>Subject</span><input name="subject" maxLength={300} required /></label>
               <label className="native-compose-body"><span>Message</span><textarea name="body" rows={10} required placeholder="Write the message or prepare it for an agent to refine." /></label>
-              <div className="native-compose-actions">
-                <button type="submit">Save draft</button>
-                <span>No external message is sent by this action.</span>
-              </div>
+              <div className="native-compose-actions"><button type="submit">Save draft</button><span>No external message is sent by this action.</span></div>
             </form>
           ) : <p className="communication-readonly">Owner access is required to compose external company email in the current beta.</p>}
         </section>
       ) : null}
 
       <section className="communication-manager-card">
-        <div>
-          <span className="communication-manager-avatar" aria-hidden="true">@</span>
-          <div>
-            <p className="label">AI mailbox operator</p>
-            <h2>{communicationManager?.display_name ?? communicationManager?.name ?? "Communication Manager"}</h2>
-            <p>{communicationManager?.role_title ?? "Communication orchestration agent"} · A2 governed authority</p>
-          </div>
-        </div>
-        <div className="communication-capabilities">
-          <span>Read</span><span>Classify</span><span>Assign</span><span>Summarize</span><span>Draft</span><span className="is-locked">Auto-send locked</span>
-        </div>
+        <div><span className="communication-manager-avatar" aria-hidden="true">@</span><div><p className="label">AI mailbox operator</p><h2>{communicationManager?.display_name ?? communicationManager?.name ?? "Communication Manager"}</h2><p>{communicationManager?.role_title ?? "Communication orchestration agent"} · A2 governed authority</p></div></div>
+        <div className="communication-capabilities"><span>Read</span><span>Classify</span><span>Assign</span><span>Summarize</span><span>Draft</span><span className="is-locked">Auto-send locked</span></div>
       </section>
 
       <nav className="communication-tabs" aria-label="Mailbox views">
-        {navigation.map(([key, label]) => (
-          <Link className={view === key ? "is-active" : ""} href={`/communication?view=${key}`} key={key}>{label}</Link>
-        ))}
+        {navigation.map(([key, label]) => <Link className={view === key ? "is-active" : ""} href={`/communication?view=${key}`} key={key}>{label}</Link>)}
       </nav>
 
       {view === "settings" ? (
         <section className="communication-settings-grid">
           <div className="communication-panel communication-panel-wide">
-            <div className="communication-panel-heading">
-              <div><p className="label">RYTHM-native company email</p><h2>Company addresses</h2></div>
-              <span className="comm-status is-ready">Mailbox-first</span>
-            </div>
-            <p className="communication-help">
-              These are the company identities employees and agents work with inside RYTHM. Gmail and Microsoft connections are optional future integrations, not requirements for using the Communication Center.
-            </p>
+            <div className="communication-panel-heading"><div><p className="label">RYTHM-native company email</p><h2>Company addresses</h2></div><span className="comm-status is-ready">Mailbox-first</span></div>
+            <p className="communication-help">These company identities live in RYTHM. Gmail and Microsoft connections are optional future integrations, not requirements.</p>
             <div className="communication-mailbox-settings">
               {mailboxes.map((mailbox) => (
                 <article className="communication-mailbox-card" key={mailbox.id}>
-                  <div className="communication-mailbox-title">
-                    <div><strong>{mailbox.address}</strong><span>{mailbox.purpose}</span></div>
-                    <span className={mailbox.is_active ? "comm-status is-ready" : "comm-status is-off"}>{mailbox.is_active ? "Active" : "Paused"}</span>
-                  </div>
+                  <div className="communication-mailbox-title"><div><strong>{mailbox.address}</strong><span>{mailbox.purpose}</span></div><span className={mailbox.is_active ? "comm-status is-ready" : "comm-status is-off"}>{mailbox.is_active ? "Active" : "Paused"}</span></div>
                   {isOwner ? (
                     <form action={updateMailboxRouting} className="communication-setting-form">
                       <input type="hidden" name="mailboxId" value={mailbox.id} />
-                      <label><span>Responsible agent</span><select name="assignedAgentId" defaultValue={mailbox.assigned_agent_id ?? ""}>
-                        <option value="">Unassigned</option>
-                        {agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.display_name ?? agent.name} — {agent.role_title}</option>)}
-                      </select></label>
-                      <label><span>Outbound governance</span><select name="approvalMode" defaultValue={validApprovalModes.has(mailbox.approval_mode) ? mailbox.approval_mode : "approval_required"}>
-                        <option value="approval_required">Human approval required</option>
-                        <option value="draft_only">Draft only</option>
-                      </select></label>
+                      <label><span>Responsible agent</span><select name="assignedAgentId" defaultValue={mailbox.assigned_agent_id ?? ""}><option value="">Unassigned</option>{agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.display_name ?? agent.name} — {agent.role_title}</option>)}</select></label>
+                      <label><span>Outbound governance</span><select name="approvalMode" defaultValue={validApprovalModes.has(mailbox.approval_mode) ? mailbox.approval_mode : "approval_required"}><option value="approval_required">Human approval required</option><option value="draft_only">Draft only</option></select></label>
                       <label className="communication-checkbox"><input type="checkbox" name="isActive" defaultChecked={mailbox.is_active} /><span>Mailbox active</span></label>
                       <button type="submit">Save</button>
                     </form>
@@ -711,136 +651,73 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
               ))}
             </div>
           </div>
-          <div className="communication-panel">
-            <div className="communication-panel-heading"><div><p className="label">Future option</p><h2>External integrations</h2></div></div>
-            <div className="native-future-integrations">
-              <strong>Not required</strong>
-              <p>Google Workspace, Microsoft 365, personal forwarding, and custom-domain connections will be added later as optional convenience features.</p>
-              <span>The RYTHM mailbox remains the canonical communication record.</span>
-            </div>
-          </div>
+          <div className="communication-panel"><div className="communication-panel-heading"><div><p className="label">Future option</p><h2>External integrations</h2></div></div><div className="native-future-integrations"><strong>Not required</strong><p>Google Workspace, Microsoft 365, personal forwarding, and custom-domain connections can be added later.</p><span>RYTHM remains the canonical communication record.</span></div></div>
         </section>
       ) : (
         <section className="communication-workspace native-mailbox-workspace">
           <div className="communication-inbox-panel">
             <div className="communication-inbox-toolbar">
-              <div>
-                <strong>{navigation.find(([key]) => key === view)?.[1] ?? "Inbox"}</strong>
-                <span>{threads.length} conversation{threads.length === 1 ? "" : "s"}</span>
-              </div>
-              <select aria-label="Filter mailbox" value={selectedMailboxId} onChange={() => undefined} disabled>
-                <option value="">All company addresses</option>
-              </select>
+              <div><strong>{navigation.find(([key]) => key === view)?.[1] ?? "Inbox"}</strong><span>{threads.length} conversation{threads.length === 1 ? "" : "s"}</span></div>
+              <form method="get" action="/communication" className="native-mailbox-filter-form">
+                <input type="hidden" name="view" value={view} />
+                <select aria-label="Filter mailbox" name="mailbox" defaultValue={selectedMailboxId}>
+                  <option value="">All company addresses</option>
+                  {mailboxes.filter((mailbox) => mailbox.is_active).map((mailbox) => <option key={mailbox.id} value={mailbox.id}>{mailbox.address}</option>)}
+                </select>
+                <button type="submit">Filter</button>
+              </form>
             </div>
+
             {threads.length ? threads.map((thread) => {
               const assignedAgent = thread.assigned_agent_id ? agentById.get(thread.assigned_agent_id) : null;
               const mailbox = thread.mailbox_id ? mailboxById.get(thread.mailbox_id) : null;
               return (
                 <Link href={`/communication?view=${view}${selectedMailboxId ? `&mailbox=${selectedMailboxId}` : ""}&thread=${thread.id}`} className={`communication-thread-row${selectedThreadId === thread.id ? " is-active" : ""}`} key={thread.id}>
-                  <div className="communication-thread-topline">
-                    <strong>{thread.status === "draft" ? `To: ${thread.draft_recipient_email ?? "recipient"}` : thread.sender_name ?? thread.sender_email ?? "Unknown sender"}</strong>
-                    <time>{formatDate(thread.updated_at)}</time>
-                  </div>
+                  <div className="communication-thread-topline"><strong>{thread.status === "draft" ? `To: ${thread.draft_recipient_email ?? "recipient"}` : thread.sender_name ?? thread.sender_email ?? "Unknown sender"}</strong><time>{formatDate(thread.updated_at)}</time></div>
                   <h3>{thread.subject}</h3>
                   <p>{thread.ai_summary ?? (thread.status === "draft" ? "Draft prepared inside RYTHM." : "No AI summary yet.")}</p>
-                  <div className="communication-thread-meta">
-                    <span className={`priority-${thread.priority}`}>{priorityLabel(thread.priority)}</span>
-                    <span>{mailbox?.display_name ?? "Mailbox"}</span>
-                    <span>{assignedAgent?.display_name ?? assignedAgent?.name ?? "Unassigned"}</span>
-                    {thread.requires_manager_attention ? <span className="needs-attention">Manager attention</span> : null}
-                  </div>
+                  <div className="communication-thread-meta"><span className={`priority-${thread.priority}`}>{priorityLabel(thread.priority)}</span><span>{mailbox?.display_name ?? "Mailbox"}</span><span>{assignedAgent?.display_name ?? assignedAgent?.name ?? "Unassigned"}</span>{thread.requires_manager_attention ? <span className="needs-attention">Manager attention</span> : null}</div>
                 </Link>
               );
             }) : (
-              <div className="communication-empty-state">
-                <span aria-hidden="true">@</span>
-                <h2>{view === "inbox" ? "Your RYTHM inbox is ready." : "Nothing in this view."}</h2>
-                <p>{view === "inbox" ? "Compose and govern company email here. Incoming internet email will appear in the same inbox once the backend transport adapter is activated." : "Items will appear here as the communication workflow progresses."}</p>
-                {view === "inbox" ? <Link href="/communication?compose=1">Compose first message</Link> : null}
-              </div>
+              <div className="communication-empty-state"><span aria-hidden="true">@</span><h2>{view === "inbox" ? "Your RYTHM inbox is ready." : "Nothing in this view."}</h2><p>{view === "inbox" ? "Compose and govern company email here. Incoming internet email will appear in the same inbox once the backend transport adapter is activated." : "Items will appear here as the communication workflow progresses."}</p>{view === "inbox" ? <Link href="/communication?compose=1">Compose first message</Link> : null}</div>
             )}
           </div>
 
           <aside className="communication-thread-detail">
             {selectedThread ? (
               <>
-                <div className="communication-detail-heading">
-                  <div><p className="label">Conversation</p><h2>{selectedThread.subject}</h2></div>
-                  <span className={`comm-status ${selectedThread.status === "resolved" ? "is-ready" : "is-pending"}`}>{selectedThread.status.replaceAll("_", " ")}</span>
-                </div>
-                <div className="communication-detail-meta">
-                  <div><span>{selectedThread.status === "draft" ? "To" : "From"}</span><strong>{selectedThread.status === "draft" ? selectedThread.draft_recipient_email ?? "—" : selectedThread.sender_name ?? selectedThread.sender_email ?? "Unknown"}</strong></div>
-                  <div><span>Mailbox</span><strong>{selectedThread.mailbox_id ? mailboxById.get(selectedThread.mailbox_id)?.address ?? "—" : "—"}</strong></div>
-                  <div><span>Owner</span><strong>{selectedThread.assigned_agent_id ? agentById.get(selectedThread.assigned_agent_id)?.display_name ?? agentById.get(selectedThread.assigned_agent_id)?.name ?? "Unassigned" : "Unassigned"}</strong></div>
-                  <div><span>Priority</span><strong>{priorityLabel(selectedThread.priority)}</strong></div>
-                </div>
+                <div className="communication-detail-heading"><div><p className="label">Conversation</p><h2>{selectedThread.subject}</h2></div><span className={`comm-status ${selectedThread.status === "resolved" ? "is-ready" : "is-pending"}`}>{selectedThread.status.replaceAll("_", " ")}</span></div>
+                <div className="communication-detail-meta"><div><span>{selectedThread.status === "draft" ? "To" : "From"}</span><strong>{selectedThread.status === "draft" ? selectedThread.draft_recipient_email ?? "—" : selectedThread.sender_name ?? selectedThread.sender_email ?? "Unknown"}</strong></div><div><span>Mailbox</span><strong>{selectedThread.mailbox_id ? mailboxById.get(selectedThread.mailbox_id)?.address ?? "—" : "—"}</strong></div><div><span>Owner</span><strong>{selectedThread.assigned_agent_id ? agentById.get(selectedThread.assigned_agent_id)?.display_name ?? agentById.get(selectedThread.assigned_agent_id)?.name ?? "Unassigned" : "Unassigned"}</strong></div><div><span>Priority</span><strong>{priorityLabel(selectedThread.priority)}</strong></div></div>
 
                 {selectedThread.ai_summary ? <div className="communication-summary"><span>AI summary</span><p>{selectedThread.ai_summary}</p></div> : null}
                 {selectedThread.requires_manager_attention ? <div className="communication-escalation"><strong>Manager attention required</strong><p>{selectedThread.manager_attention_reason ?? "Escalated by the communication workflow."}</p></div> : null}
 
                 {isOwner ? (
-                  <form action={updateThreadAssignment} className="native-routing-form">
-                    <input type="hidden" name="threadId" value={selectedThread.id} />
-                    <label><span>Assign to agent</span><select name="assignedAgentId" defaultValue={selectedThread.assigned_agent_id ?? ""}><option value="">Unassigned</option>{agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.display_name ?? agent.name}</option>)}</select></label>
-                    <label><span>Priority</span><select name="priority" defaultValue={selectedThread.priority}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
-                    <button type="submit">Update routing</button>
-                  </form>
+                  <form action={updateThreadAssignment} className="native-routing-form"><input type="hidden" name="threadId" value={selectedThread.id} /><label><span>Assign to agent</span><select name="assignedAgentId" defaultValue={selectedThread.assigned_agent_id ?? ""}><option value="">Unassigned</option>{agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.display_name ?? agent.name}</option>)}</select></label><label><span>Priority</span><select name="priority" defaultValue={selectedThread.priority}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label><button type="submit">Update routing</button></form>
                 ) : null}
 
                 <div className="communication-message-list">
                   {messages.length ? messages.map((message) => (
                     <article className={`communication-message is-${message.direction}`} key={message.id}>
-                      <header>
-                        <strong>{message.direction === "draft" ? `Draft to ${recipientLabel(message.recipients)}` : message.sender_name ?? message.sender_email ?? "Company"}</strong>
-                        <span>{message.direction} · {message.status.replaceAll("_", " ")} · {formatDate(message.created_at)}</span>
-                      </header>
+                      <header><strong>{message.direction === "draft" ? `Draft to ${recipientLabel(message.recipients)}` : message.sender_name ?? message.sender_email ?? "Company"}</strong><span>{message.direction} · {message.status.replaceAll("_", " ")} · {formatDate(message.created_at)}</span></header>
                       <p>{message.body_text ?? "Message body is not available in plain text."}</p>
-                      {message.status === "draft" && isOwner ? (
-                        <form action={submitDraftForApproval} className="native-inline-action">
-                          <input type="hidden" name="threadId" value={selectedThread.id} />
-                          <input type="hidden" name="messageId" value={message.id} />
-                          <button type="submit">Request approval</button>
-                        </form>
-                      ) : null}
-                      {message.status === "pending_approval" && isOwner ? (
-                        <form action={approveDraftForDelivery} className="native-inline-action is-approval">
-                          <input type="hidden" name="threadId" value={selectedThread.id} />
-                          <input type="hidden" name="messageId" value={message.id} />
-                          <button type="submit">Approve for delivery</button>
-                          <small>Approval does not falsely mark this as sent. It waits for the RYTHM transport adapter.</small>
-                        </form>
-                      ) : null}
+                      {message.status === "draft" && isOwner ? <form action={submitDraftForApproval} className="native-inline-action"><input type="hidden" name="threadId" value={selectedThread.id} /><input type="hidden" name="messageId" value={message.id} /><button type="submit">Request approval</button></form> : null}
+                      {message.status === "pending_approval" && isOwner ? <form action={approveDraftForDelivery} className="native-inline-action is-approval"><input type="hidden" name="threadId" value={selectedThread.id} /><input type="hidden" name="messageId" value={message.id} /><button type="submit">Approve for delivery</button><small>Approval does not mark this as sent until RYTHM transport delivers it.</small></form> : null}
                       {message.status === "ready_for_delivery" ? <div className="communication-approval-note">Approved by Human CEO. Ready for RYTHM delivery; internet transport is currently offline.</div> : null}
                     </article>
                   )) : <p className="communication-empty">No messages are stored for this conversation.</p>}
                 </div>
 
-                {isOwner && selectedThread.status !== "resolved" && selectedThread.status !== "draft" ? (
-                  <form action={createReplyDraft} className="native-reply-form">
-                    <input type="hidden" name="threadId" value={selectedThread.id} />
-                    <label><span>Reply draft</span><textarea name="body" rows={5} required placeholder="Write a reply or hand it to the assigned agent for refinement." /></label>
-                    <button type="submit">Save reply draft</button>
-                  </form>
-                ) : null}
-
-                {isOwner && selectedThread.status !== "resolved" ? (
-                  <form action={resolveThread} className="communication-detail-actions">
-                    <input type="hidden" name="threadId" value={selectedThread.id} />
-                    <button type="submit">Mark resolved</button>
-                  </form>
-                ) : null}
+                {isOwner && selectedThread.status !== "resolved" && selectedThread.status !== "draft" ? <form action={createReplyDraft} className="native-reply-form"><input type="hidden" name="threadId" value={selectedThread.id} /><label><span>Reply draft</span><textarea name="body" rows={5} required placeholder="Write a reply or hand it to the assigned agent for refinement." /></label><button type="submit">Save reply draft</button></form> : null}
+                {isOwner && selectedThread.status !== "resolved" ? <form action={resolveThread} className="communication-detail-actions"><input type="hidden" name="threadId" value={selectedThread.id} /><button type="submit">Mark resolved</button></form> : null}
               </>
-            ) : (
-              <div className="communication-detail-empty"><span aria-hidden="true">↗</span><strong>Select a conversation</strong><p>Read the thread, assign an agent, prepare a response, and move it through human approval without leaving RYTHM.</p></div>
-            )}
+            ) : <div className="communication-detail-empty"><span aria-hidden="true">↗</span><strong>Select a conversation</strong><p>Read the thread, assign an agent, prepare a response, and move it through human approval without leaving RYTHM.</p></div>}
           </aside>
         </section>
       )}
 
-      <section className="communication-governance-note">
-        <strong>RYTHM is the mailbox. Human governance remains the safety boundary.</strong>
-        <p>External Gmail or Microsoft accounts are not required. Agents can operate the communication workflow inside RYTHM; consequential outbound communication still requires explicit human approval, and external delivery remains fail-closed until the managed transport layer is activated.</p>
-      </section>
+      <section className="communication-governance-note"><strong>RYTHM is the mailbox. Human governance remains the safety boundary.</strong><p>External Gmail or Microsoft accounts are not required. Agents can operate the communication workflow inside RYTHM; consequential outbound communication still requires explicit human approval, and external delivery remains fail-closed until the managed transport layer is activated.</p></section>
     </main>
   );
 }
