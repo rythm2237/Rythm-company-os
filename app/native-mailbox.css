@@ -1,0 +1,327 @@
+.native-mailbox-shell {
+  --mail-border: #dfe4ec;
+  --mail-muted: #667184;
+  --mail-ink: #13213a;
+}
+
+.native-mailbox-hero {
+  background:
+    radial-gradient(circle at 92% 12%, rgba(47, 87, 160, 0.10), transparent 32%),
+    linear-gradient(135deg, #ffffff 0%, #f5f7fb 100%);
+}
+
+.native-mailbox-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--mail-border);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.native-mailbox-toolbar > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.native-compose-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: #13213a;
+  color: #fff;
+  font-size: .88rem;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.native-mailbox-identity {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.native-mailbox-identity span,
+.native-transport-note span {
+  color: var(--mail-muted);
+  font-size: .76rem;
+}
+
+.native-mailbox-identity strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.native-transport-note {
+  display: grid;
+  gap: 3px;
+  max-width: 560px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: #fff8e7;
+  color: #77520c;
+  text-align: right;
+}
+
+.native-compose-panel {
+  margin-top: 16px;
+}
+
+.native-compose-panel .communication-panel-heading > a {
+  color: var(--mail-muted);
+  font-size: .82rem;
+  text-decoration: none;
+}
+
+.native-compose-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.native-compose-form label,
+.native-routing-form label,
+.native-reply-form label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.native-compose-form label > span,
+.native-routing-form label > span,
+.native-reply-form label > span {
+  color: #59657a;
+  font-size: .77rem;
+  font-weight: 700;
+}
+
+.native-compose-form input,
+.native-compose-form select,
+.native-compose-form textarea,
+.native-routing-form select,
+.native-reply-form textarea {
+  width: 100%;
+  border: 1px solid #d8dee8;
+  border-radius: 11px;
+  background: #fff;
+  color: #17243b;
+  font: inherit;
+}
+
+.native-compose-form input,
+.native-compose-form select,
+.native-routing-form select {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.native-compose-form textarea,
+.native-reply-form textarea {
+  padding: 12px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.native-compose-body {
+  grid-column: 1 / -1;
+}
+
+.native-compose-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.native-compose-actions button,
+.native-routing-form button,
+.native-reply-form button,
+.native-inline-action button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #13213a;
+  color: #fff;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.native-compose-actions span,
+.native-inline-action small {
+  color: var(--mail-muted);
+  font-size: .75rem;
+}
+
+.native-mailbox-workspace {
+  display: grid;
+  grid-template-columns: minmax(360px, .82fr) minmax(420px, 1.18fr);
+  min-height: 680px;
+  overflow: hidden;
+  border: 1px solid #dde3eb;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 16px 44px rgba(23, 35, 58, .06);
+}
+
+.communication-inbox-panel {
+  min-width: 0;
+  border-right: 1px solid #e3e7ee;
+}
+
+.communication-inbox-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 62px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e8ebf0;
+}
+
+.communication-inbox-toolbar > div {
+  display: grid;
+  gap: 2px;
+}
+
+.communication-inbox-toolbar span {
+  color: var(--mail-muted);
+  font-size: .72rem;
+}
+
+.communication-inbox-toolbar select {
+  max-width: 190px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #dde2ea;
+  border-radius: 9px;
+  background: #f8f9fb;
+  color: #657083;
+}
+
+.native-routing-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px auto;
+  align-items: end;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid #e5e9ef;
+  border-radius: 13px;
+  background: #f8f9fb;
+}
+
+.native-reply-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e4e8ee;
+}
+
+.native-reply-form button {
+  justify-self: start;
+}
+
+.native-inline-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.native-inline-action.is-approval {
+  align-items: flex-start;
+  flex-direction: column;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fff8e7;
+}
+
+.native-inline-action.is-approval button {
+  background: #17633b;
+}
+
+.native-future-integrations {
+  display: grid;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.native-future-integrations p {
+  margin: 0;
+  color: #59657a;
+  line-height: 1.6;
+}
+
+.native-future-integrations span {
+  color: #7a8495;
+  font-size: .78rem;
+}
+
+@media (max-width: 980px) {
+  .native-mailbox-toolbar,
+  .native-mailbox-toolbar > div:first-child {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .native-transport-note {
+    max-width: none;
+    text-align: left;
+  }
+
+  .native-mailbox-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .communication-inbox-panel {
+    border-right: 0;
+    border-bottom: 1px solid #e3e7ee;
+  }
+
+  .native-routing-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .native-routing-form button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .native-compose-form,
+  .native-routing-form {
+    grid-template-columns: 1fr;
+  }
+
+  .native-compose-body,
+  .native-compose-actions,
+  .native-routing-form button {
+    grid-column: auto;
+  }
+
+  .native-compose-actions,
+  .native-inline-action {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .communication-inbox-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
