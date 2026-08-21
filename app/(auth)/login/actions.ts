@@ -25,7 +25,9 @@ export async function login(formData: FormData) {
     .eq("user_id", data.user.id)
     .limit(1);
 
-  if (!memberships?.length) redirect("/setup/company");
+  // Authenticated users without a company can explore the read-only demo first.
+  // Company creation is an explicit choice, not a login prerequisite.
+  if (!memberships?.length) redirect("/demo");
 
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/command-center";
   redirect(safeNext);

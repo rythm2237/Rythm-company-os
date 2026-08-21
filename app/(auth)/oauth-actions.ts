@@ -21,12 +21,8 @@ function providerLabel(provider: SupportedOAuthProvider) {
 export async function signInWithOAuth(formData: FormData) {
   const rawProvider = String(formData.get("provider") ?? "").toLowerCase();
   const source = formData.get("source") === "signup" ? "signup" : "login";
-  const requestedProduct = String(formData.get("productCode") ?? "company_studio");
-  const productCode = requestedProduct === "ready_company" ? "ready_company" : "company_studio";
   const requestedNext = String(formData.get("next") ?? "/command-center");
-  const next = source === "signup"
-    ? `/setup/company?product=${encodeURIComponent(productCode)}`
-    : safeInternalPath(requestedNext);
+  const next = source === "signup" ? "/demo" : safeInternalPath(requestedNext);
 
   if (!SUPPORTED_PROVIDERS.has(rawProvider as SupportedOAuthProvider)) {
     redirect(`/${source}?error=${encodeURIComponent("Unsupported sign-in provider.")}`);

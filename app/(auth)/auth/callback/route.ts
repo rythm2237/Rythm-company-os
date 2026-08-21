@@ -14,9 +14,6 @@ function authFailureUrl(origin: string, next: string, flow: string | null) {
   if (next.startsWith("/reset-password")) {
     return `${origin}/forgot-password?error=${encodeURIComponent(message)}`;
   }
-  if (next.startsWith("/setup/company") && flow !== "oauth") {
-    return `${origin}/signup/check-email?error=${encodeURIComponent(message)}`;
-  }
   return `${origin}/login?error=${encodeURIComponent(message)}`;
 }
 
@@ -78,7 +75,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (memberships?.length) {
-      const destination = next.startsWith("/setup/company") ? "/command-center" : next;
+      const destination = next.startsWith("/setup/company") || next === "/demo"
+        ? "/command-center"
+        : next;
       return NextResponse.redirect(`${origin}${destination}`);
     }
 
@@ -96,8 +95,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const onboardingDestination = next.startsWith("/setup/company") ? next : "/setup/company";
-    return NextResponse.redirect(`${origin}${onboardingDestination}`);
+    // A new authenticated customer can explore RYTHM before deciding to create a company.
+    // Company provisioning remains an explicit user action rather than a first-login requirement.
+    return NextResponse.redirect(`${origin}/demo`);
   }
 
   return NextResponse.redirect(`${origin}${next}`);

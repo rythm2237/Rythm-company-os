@@ -184,8 +184,14 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isLogin && user) {
+    const { data: memberships } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .limit(1);
+
     const target = request.nextUrl.clone();
-    target.pathname = "/command-center";
+    target.pathname = memberships?.length ? "/command-center" : "/demo";
     target.search = "";
     return NextResponse.redirect(target);
   }
