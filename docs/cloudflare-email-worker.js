@@ -1,8 +1,6 @@
 // RYTHM Company OS — Cloudflare Email Worker
-// Replace the placeholder secret before deploying and keep the same value in Vercel as CLOUDFLARE_EMAIL_INGEST_SECRET.
 
 const RYTHM_ENDPOINT = "https://rythm-os.com/api/communication/inbound/cloudflare";
-const INGEST_SECRET = "REPLACE_WITH_THE_SAME_LONG_RANDOM_SECRET";
 
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
@@ -15,12 +13,18 @@ function arrayBufferToBase64(buffer) {
 }
 
 export default {
-  async email(message) {
+  async email(message, env) {
     const recipient = (message.to || "").trim().toLowerCase();
     const validMailbox = /^(contact|support|sales|finance|management)\.[a-z0-9][a-z0-9-]{0,62}@rythm-os\.com$/i.test(recipient);
 
     if (!validMailbox) {
       message.setReject("Unknown RYTHM managed mailbox");
+      return;
+    }
+
+    if (!env.RYTHM_INGEST_SECRET) {
+      console.error("RYTHM_INGEST_SECRET is not configured");
+      message.setReject("RYTHM mailbox temporarily unavailable");
       return;
     }
 
@@ -34,7 +38,7 @@ export default {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-rythm-email-secret": INGEST_SECRET,
+        "x-rythm-email-secret": env.RYTHM_INGEST_SECRET,
       },
       body: JSON.stringify({
         from: message.from,
