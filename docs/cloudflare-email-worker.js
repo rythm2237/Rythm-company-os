@@ -1,6 +1,6 @@
 // RYTHM Company OS — Cloudflare Email Worker
 
-const RYTHM_ENDPOINT = "https://rythm-os.com/api/communication/inbound/cloudflare";
+const RYTHM_ENDPOINT = "https://rythm-company-os.vercel.app/api/communication/inbound/cloudflare";
 
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
