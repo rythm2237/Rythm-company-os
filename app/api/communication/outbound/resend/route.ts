@@ -12,10 +12,18 @@ function jsonError(error: string, status: number) {
   );
 }
 
-export async function GET() {
-  const { supabase, organizationId } = await requireOwnerOrganizationContext();
+export async function GET(request: Request) {
   const configured = Boolean(process.env.RESEND_API_KEY?.trim());
+  const url = new URL(request.url);
 
+  if (url.searchParams.get("status") === "1") {
+    return NextResponse.json(
+      { ok: true, configured },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
+  }
+
+  const { supabase, organizationId } = await requireOwnerOrganizationContext();
   const { data: queue, error } = await supabase
     .from("communication_messages")
     .select("id,thread_id,subject,sender_email,recipients,created_at,approved_at")
