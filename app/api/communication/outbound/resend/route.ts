@@ -13,8 +13,22 @@ function jsonError(error: string, status: number) {
 }
 
 export async function GET() {
+  const { supabase, organizationId } = await requireOwnerOrganizationContext();
+  const configured = Boolean(process.env.RESEND_API_KEY?.trim());
+
+  const { data: queue, error } = await supabase
+    .from("communication_messages")
+    .select("id,thread_id,subject,sender_email,recipients,created_at,approved_at")
+    .eq("organization_id", organizationId)
+    .eq("status", "ready_for_delivery")
+    .not("approved_at", "is", null)
+    .order("approved_at", { ascending: true })
+    .limit(25);
+
+  if (error) return jsonError("Outbound queue could not be loaded.", 500);
+
   return NextResponse.json(
-    { ok: true, configured: Boolean(process.env.RESEND_API_KEY?.trim()) },
+    { ok: true, configured, queue: queue ?? [] },
     { headers: { "Cache-Control": "no-store, max-age=0" } },
   );
 }
@@ -139,6 +153,12 @@ export async function POST(request: Request) {
     .update({ status: "waiting_external", last_message_at: now, updated_at: now })
     .eq("organization_id", organizationId)
     .eq("id", message.thread_id);
+
+  await supabase
+    .from("communication_provider_connections")
+    .update({ outbound_enabled: true, status: "connected", updated_at: now })
+    .eq("organization_id", organizationId)
+    .eq("provider_code", "rythm_managed");
 
   await supabase.from("audit_events").insert({
     organization_id: organizationId,
