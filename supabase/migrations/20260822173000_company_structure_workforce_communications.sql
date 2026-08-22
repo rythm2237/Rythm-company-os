@@ -32,8 +32,8 @@ alter table public.organization_members
 alter table public.agents
   add column if not exists monthly_company_cost numeric(12,2) not null default 0 check (monthly_company_cost >= 0),
   add column if not exists cost_currency text not null default 'EUR',
-  add column if not exists cost_model text not null default 'included' check (cost_model in ('included','subscription','custom')),
-  add column if not exists purchased_offer_id uuid references public.commercial_offers(id) on delete set null;
+  add column if not exists cost_model text not null default 'included' check (cost_model in ('included','fixed','usage','hybrid','custom')),
+  add column if not exists purchased_offer_code text references public.commercial_offers(offer_code) on delete set null;
 
 create table if not exists public.calendar_events (
   id uuid primary key default gen_random_uuid(),
@@ -56,12 +56,12 @@ create table if not exists public.calendar_events (
 );
 
 create table if not exists public.calendar_event_participants (
+  id uuid primary key default gen_random_uuid(),
   event_id uuid not null references public.calendar_events(id) on delete cascade,
   user_id uuid references auth.users(id) on delete cascade,
   agent_id uuid references public.agents(id) on delete cascade,
   email text,
   response_status text not null default 'needs_action',
-  primary key (event_id, user_id, agent_id),
   check (user_id is not null or agent_id is not null or email is not null)
 );
 
