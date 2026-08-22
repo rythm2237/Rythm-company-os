@@ -12,6 +12,13 @@ function jsonError(error: string, status: number) {
   );
 }
 
+export async function GET() {
+  return NextResponse.json(
+    { ok: true, configured: Boolean(process.env.RESEND_API_KEY?.trim()) },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
+}
+
 export async function POST(request: Request) {
   const resendApiKey = process.env.RESEND_API_KEY?.trim();
   if (!resendApiKey) return jsonError("Outbound email transport is not configured.", 503);
