@@ -7,6 +7,7 @@ import "../workspace-form-hardening.css";
 import "../communication-center.css";
 import "../native-mailbox.css";
 import "../company-operations.css";
+import "../finance-center.css";
 
 export const metadata: Metadata = {
   title: "Company Workspace",
