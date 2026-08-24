@@ -13,19 +13,41 @@ export function normalizeLanguage(value?: string | null) {
   return byName?.[0] ?? lower.slice(0, 16);
 }
 
+function lexiconLanguageClassifier(text: string) {
+  const normalized = text.normalize("NFKC").toLowerCase();
+  const scores: Record<string, number> = { en: 0, fa: 0, ar: 0, hu: 0, de: 0, fr: 0 };
+  const lexicons: Record<string, string[]> = {
+    fa: ["این", "اون", "برای", "که", "میخوام", "می‌خوام", "میشه", "می‌شود", "باید", "رو", "را", "با", "از", "تو", "اگر", "چطور", "لطفا", "لطفاً", "انجام", "بررسی"],
+    ar: ["هذا", "هذه", "التي", "الذي", "من", "إلى", "على", "هل", "كيف", "ماذا", "يرجى", "يمكن", "يجب", "مع"],
+    hu: ["hogy", "vagy", "nem", "egy", "van", "lesz", "kell", "szeretnék", "kérem", "holnap", "miért", "hogyan"],
+    de: ["und", "oder", "nicht", "ich", "bitte", "kann", "möchte", "morgen", "warum", "wie", "mit"],
+    fr: ["et", "ou", "pas", "je", "vous", "peux", "voudrais", "demain", "pourquoi", "comment", "avec"],
+    en: ["the", "and", "or", "not", "please", "can", "should", "how", "why", "with", "review", "check"],
+  };
+  for (const [language, words] of Object.entries(lexicons)) {
+    for (const word of words) {
+      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (new RegExp(`(^|[^\\p{L}])${escaped}([^\\p{L}]|$)`, "iu").test(normalized)) scores[language] += 1;
+    }
+  }
+  const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  return ranked[0][1] > 0 && ranked[0][1] > ranked[1][1] ? ranked[0][0] : null;
+}
+
 export function detectMessageLanguage(text: string) {
-  const sample = text.replace(/[`*_#>\d\W]/g, "").slice(0, 2000);
-  if (!sample) return "en";
-  const persian = (sample.match(/[\u067E\u0686\u0698\u06AF\u06A9\u06CC\u06C0-\u06FF]/g) ?? []).length;
-  const arabic = (sample.match(/[\u0600-\u06FF]/g) ?? []).length;
-  if (persian >= 2 || (arabic / Math.max(1, sample.length)) > 0.18) return persian ? "fa" : "ar";
-  const hungarianHints = /\b(hogy|vagy|nem|egy|van|lesz|kell|szeretnék|kérem|holnap)\b/i.test(text);
-  if (hungarianHints) return "hu";
-  const germanHints = /\b(und|oder|nicht|ich|bitte|kann|möchte|morgen|warum)\b/i.test(text);
-  if (germanHints) return "de";
-  const frenchHints = /\b(et|ou|pas|je|vous|peux|voudrais|demain|pourquoi)\b/i.test(text);
-  if (frenchHints) return "fr";
-  return "en";
+  const sample = text.normalize("NFKC").slice(0, 4000);
+  if (!sample.trim()) return "en";
+  const arabicScript = (sample.match(/[\u0600-\u06FF]/g) ?? []).length;
+  const persianSpecific = (sample.match(/[پچژگک‌یۀ]/g) ?? []).length;
+  if (arabicScript > 0) {
+    const classified = lexiconLanguageClassifier(sample);
+    if (classified === "fa" || classified === "ar") return classified;
+    if (persianSpecific > 0) return "fa";
+    // Persian commonly uses Arabic-shared glyphs only; default Arabic-script ambiguity to Persian
+    // for RYTHM's current primary user base unless Arabic lexical evidence is present.
+    return "fa";
+  }
+  return lexiconLanguageClassifier(sample) ?? "en";
 }
 
 export function resolveResponseLanguage(signals: LanguageSignals) {
@@ -123,8 +145,8 @@ export function deterministicRequestIntelligence(input: {
     requiredTools,
     requiredCapabilities: complexity === "high" ? ["reasoning", "analysis"] : complexity === "medium" ? ["analysis"] : [],
     recommendedTier,
-    confidence: ambiguous ? 0.7 : 0.9,
+    confidence: ambiguous ? 0.72 : 0.94,
     allowEscalation: risk !== "restricted",
-    classificationSource: "deterministic",
+    classificationSource: ambiguous ? "classifier" : "deterministic",
   };
 }
