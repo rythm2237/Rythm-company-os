@@ -2,6 +2,42 @@ import type { ModelTier, ProviderCapability, ReasoningLevel } from "@/lib/ai/rou
 
 const tierRank: Record<ModelTier, number> = { luna: 0, terra: 1, sol: 2 };
 
+const OPENAI_DEFAULTS: Record<ModelTier, Omit<ProviderCapability, "tier">> = {
+  luna: {
+    provider: "openai",
+    model: "gpt-5.6-luna",
+    reasoningLevels: ["low", "medium", "high"],
+    supportsImages: true,
+    supportsFiles: true,
+    supportsTools: true,
+    maxContextTokens: 1_050_000,
+    inputCostPerMillionUsd: 0.20,
+    outputCostPerMillionUsd: 1.20,
+  },
+  terra: {
+    provider: "openai",
+    model: "gpt-5.6-terra",
+    reasoningLevels: ["low", "medium", "high"],
+    supportsImages: true,
+    supportsFiles: true,
+    supportsTools: true,
+    maxContextTokens: 1_050_000,
+    inputCostPerMillionUsd: 2.00,
+    outputCostPerMillionUsd: 12.00,
+  },
+  sol: {
+    provider: "openai",
+    model: "gpt-5.6-sol",
+    reasoningLevels: ["low", "medium", "high"],
+    supportsImages: true,
+    supportsFiles: true,
+    supportsTools: true,
+    maxContextTokens: 1_050_000,
+    inputCostPerMillionUsd: 4.00,
+    outputCostPerMillionUsd: 20.00,
+  },
+};
+
 function parseLevels(value: string | undefined, fallback: ReasoningLevel[]): ReasoningLevel[] {
   if (!value) return fallback;
   const supported = new Set<ReasoningLevel>(["low", "medium", "high"]);
@@ -15,40 +51,28 @@ function numberOrUndefined(value: string | undefined) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
-function capability(tier: ModelTier): ProviderCapability | null {
+function capability(tier: ModelTier): ProviderCapability {
   const upper = tier.toUpperCase();
-  const model = process.env[`RYTHM_MODEL_${upper}`]?.trim();
-  if (!model) return null;
-  const providerRaw = process.env[`RYTHM_MODEL_${upper}_PROVIDER`]?.trim().toLowerCase() || "openai";
+  const defaults = OPENAI_DEFAULTS[tier];
+  const model = process.env[`RYTHM_MODEL_${upper}`]?.trim() || defaults.model;
+  const providerRaw = process.env[`RYTHM_MODEL_${upper}_PROVIDER`]?.trim().toLowerCase() || defaults.provider;
   const provider = providerRaw === "anthropic" || providerRaw === "google" ? providerRaw : "openai";
   return {
     provider,
     model,
     tier,
-    reasoningLevels: parseLevels(process.env[`RYTHM_MODEL_${upper}_REASONING`], tier === "luna" ? ["low", "medium"] : ["low", "medium", "high"]),
+    reasoningLevels: parseLevels(process.env[`RYTHM_MODEL_${upper}_REASONING`], defaults.reasoningLevels),
     supportsImages: process.env[`RYTHM_MODEL_${upper}_IMAGES`] !== "false",
     supportsFiles: process.env[`RYTHM_MODEL_${upper}_FILES`] !== "false",
     supportsTools: process.env[`RYTHM_MODEL_${upper}_TOOLS`] !== "false",
-    maxContextTokens: numberOrUndefined(process.env[`RYTHM_MODEL_${upper}_MAX_CONTEXT`]),
-    inputCostPerMillionUsd: numberOrUndefined(process.env[`RYTHM_MODEL_${upper}_INPUT_COST_PER_MILLION_USD`]),
-    outputCostPerMillionUsd: numberOrUndefined(process.env[`RYTHM_MODEL_${upper}_OUTPUT_COST_PER_MILLION_USD`]),
+    maxContextTokens: numberOrUndefined(process.env[`RYTHM_MODEL_${upper}_MAX_CONTEXT`]) ?? defaults.maxContextTokens,
+    inputCostPerMillionUsd: numberOrUndefined(process.env[`RYTHM_MODEL_${upper}_INPUT_COST_PER_MILLION_USD`]) ?? defaults.inputCostPerMillionUsd,
+    outputCostPerMillionUsd: numberOrUndefined(process.env[`RYTHM_MODEL_${upper}_OUTPUT_COST_PER_MILLION_USD`]) ?? defaults.outputCostPerMillionUsd,
   };
 }
 
 export function getModelRegistry(): ProviderCapability[] {
-  const configured = (["luna", "terra", "sol"] as ModelTier[]).map(capability).filter((item): item is ProviderCapability => Boolean(item));
-  if (configured.length) return configured;
-
-  const legacyModel = process.env.RYTHM_OPENAI_AGENT_MODEL?.trim() || process.env.RYTHM_DRY_RUN_MODEL?.trim();
-  return legacyModel ? [{
-    provider: "openai",
-    model: legacyModel,
-    tier: "terra",
-    reasoningLevels: ["low", "medium", "high"],
-    supportsImages: true,
-    supportsFiles: true,
-    supportsTools: true,
-  }] : [];
+  return (["luna", "terra", "sol"] as ModelTier[]).map(capability);
 }
 
 export function getModelForTier(tier: ModelTier, allowedTiers?: ModelTier[]) {
