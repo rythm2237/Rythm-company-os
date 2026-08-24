@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { executeProviderCapability } from "@/lib/integrations/provider-executors";
 
+type SafeJson = string | number | boolean | null | SafeJson[] | { [key: string]: SafeJson };
+
 function serviceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -8,15 +10,23 @@ function serviceClient() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-function safeResult(value: any) {
+function safeResult(value: any): { [key: string]: SafeJson } {
   if (value == null) return {};
   if (Array.isArray(value)) return { items: value.slice(0, 20).map((item) => safeObject(item)) };
   return safeObject(value);
 }
-function safeObject(value: any) {
+function safeObject(value: any): { [key: string]: SafeJson } {
   if (!value || typeof value !== "object") return { value: String(value).slice(0, 1500) };
   const blocked = /token|secret|password|authorization|credential|private[_-]?key|access[_-]?key/i;
-  return Object.fromEntries(Object.entries(value).filter(([key]) => !blocked.test(key)).slice(0, 60).map(([key,val]) => [key, typeof val === "string" ? val.slice(0, 2000) : typeof val === "object" && val ? (Array.isArray(val) ? val.slice(0,10) : safeObject(val)) : val]));
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !blocked.test(key)).slice(0, 60).map(([key,val]) => {
+    let safeValue: SafeJson;
+    if (typeof val === "string") safeValue = val.slice(0, 2000);
+    else if (typeof val === "number" || typeof val === "boolean" || val == null) safeValue = val as number | boolean | null;
+    else if (Array.isArray(val)) safeValue = val.slice(0,10).map((item) => typeof item === "object" && item ? safeObject(item) : String(item).slice(0,1000));
+    else if (typeof val === "object") safeValue = safeObject(val);
+    else safeValue = String(val).slice(0,1000);
+    return [key, safeValue];
+  }));
 }
 
 export async function executeApprovedToolRequest(executionRequestId: string) {
