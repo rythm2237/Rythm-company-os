@@ -1,12 +1,21 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 
+function value(formData: FormData, key: string) {
+  return String(formData.get(key) ?? "").trim();
+}
+
+function templateFailure(message: string): never {
+  redirect(`/studio/templates?error=${encodeURIComponent(message)}`);
+}
+
 export async function provisionCompanyTemplate(formData: FormData) {
   const context = await requireActiveOwnerOrganizationContext();
-  const templateKey = String(formData.get("templateKey") ?? "").trim();
-  const templateVersion = String(formData.get("templateVersion") ?? "1.0").trim();
+  const templateKey = value(formData, "templateKey");
+  const templateVersion = value(formData, "templateVersion") || "1.0";
 
   if (!context.entitlement.company_template_access) {
     redirect("/studio/templates?error=Company%20Template%20Library%20is%20not%20enabled%20for%20this%20organization.");
@@ -16,7 +25,7 @@ export async function provisionCompanyTemplate(formData: FormData) {
     redirect("/studio/templates?error=Select%20a%20company%20template.");
   }
 
-  const { data, error } = await context.supabase.rpc("provision_company_template", {
+  const { data, error } = await context.supabase.rpc("provision_company_template_v2", {
     target_org_id: context.organizationId,
     target_template_key: templateKey,
     target_template_version: templateVersion,
@@ -29,8 +38,49 @@ export async function provisionCompanyTemplate(formData: FormData) {
       templateVersion,
       error,
     });
-    redirect("/studio/templates?error=Company%20template%20could%20not%20be%20provisioned.%20The%20organization%20must%20be%20empty%20in%20V1.");
+    templateFailure(error?.message ?? "Company template could not be provisioned.");
   }
 
-  redirect("/command-center?message=Company%20template%20provisioned.%20The%20AI%20Agent%20workforce%20is%20visible%20but%20paused%2C%20and%20external%20actions%20remain%20disabled.");
+  revalidatePath("/studio/templates");
+  revalidatePath("/command-center");
+  redirect("/studio/templates?message=Software%20Company%20provisioned.%20Agents%20are%20paused%20and%20external%20actions%20remain%20disabled.");
+}
+
+export async function provisionAgentTemplate(formData: FormData) {
+  const context = await requireActiveOwnerOrganizationContext();
+  const templateKey = value(formData, "templateKey");
+  const templateVersion = value(formData, "templateVersion") || "1.0";
+  if (!templateKey) templateFailure("Select an Agent template.");
+  if (!context.entitlement.agent_builder_enabled || !context.entitlement.agent_create_enabled) {
+    templateFailure("Agent creation is not enabled for this organization.");
+  }
+  const { data, error } = await context.supabase.rpc("provision_agent_template_v1", {
+    target_org_id: context.organizationId,
+    target_agent_template_key: templateKey,
+    target_agent_template_version: templateVersion,
+  });
+  if (error || !data) {
+    console.error("agent_template_provision_failed", { organizationId: context.organizationId, templateKey, templateVersion, error });
+    templateFailure(error?.message ?? "Agent template could not be provisioned.");
+  }
+  revalidatePath("/studio/templates");
+  revalidatePath("/studio/agents");
+  redirect("/studio/templates?message=Agent%20template%20provisioned%20with%20verified%20professional%20knowledge%20and%20paused%20authority.");
+}
+
+export async function startSoftwareProjectBlueprint(formData: FormData) {
+  const context = await requireActiveOwnerOrganizationContext();
+  const projectName = value(formData, "projectName");
+  if (projectName.length < 2) templateFailure("Enter a project name.");
+  const { data, error } = await context.supabase.rpc("start_software_project_blueprint_v1", {
+    target_org_id: context.organizationId,
+    target_project_name: projectName,
+  });
+  if (error || !data) {
+    console.error("software_project_blueprint_failed", { organizationId: context.organizationId, projectName, error });
+    templateFailure(error?.message ?? "Project blueprint could not be started.");
+  }
+  revalidatePath("/projects");
+  revalidatePath("/studio/templates");
+  redirect(`/projects/operating?project=${data}&message=Software%20delivery%20workflow%20created.%20Start%20with%20the%20founder%2Fcustomer%20product%20brief.`);
 }
