@@ -8,6 +8,7 @@ import "../communication-center.css";
 import "../native-mailbox.css";
 import "../company-operations.css";
 import "../finance-center.css";
+import "../crm-center.css";
 
 export const metadata: Metadata = {
   title: "Company Workspace",
