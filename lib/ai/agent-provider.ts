@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import type { AgentProvider } from "@/lib/agent-builder";
-import { routeRequest } from "@/lib/ai/adaptive-router";
-import type { AgentRoutingPolicy, RoutingDecision, TenantAiPolicy } from "@/lib/ai/routing-types";
+import { escalationDecision, routeRequest } from "@/lib/ai/adaptive-router";
+import type { AgentRoutingPolicy, ModelTier, RoutingDecision, TenantAiPolicy } from "@/lib/ai/routing-types";
 
 const OPTIMIZER_SYSTEM = `You are the RYTHM Agent Architect. Convert the supplied structured Agent Blueprint into a production-quality system instruction for one AI Agent.
 Preserve every governance boundary, authority level, approval gate, responsibility, skill, KPI, language, and tool restriction.
@@ -26,7 +26,7 @@ export type GenerateSystemInstructionInput = {
 };
 
 export type RunAgentInput = {
-  /** Legacy provider/model remain a safe fallback and fixed-mode compatibility path. */
+  /** Legacy provider/model remain a fixed-mode compatibility path only. */
   provider: AgentProvider;
   model: string;
   systemInstructions: string;
@@ -53,11 +53,19 @@ export async function generateSystemInstruction(input: GenerateSystemInstruction
   return generateWithGemini(input);
 }
 
-export async function runAgent(input: RunAgentInput) {
-  let provider = input.provider;
-  let model = input.model;
-  let decision: RoutingDecision | null = null;
+function canEscalateExecutionError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /empty Agent response|invalid structured|insufficient capability|context length|unsupported capability|tool complexity/i.test(message);
+}
 
+async function executeConcrete(input: ConcreteRunInput) {
+  if (input.provider === "openai") return runWithOpenAI(input);
+  if (input.provider === "anthropic") return runWithAnthropic(input);
+  return runWithGemini(input);
+}
+
+export async function runAgent(input: RunAgentInput) {
+  let decision: RoutingDecision;
   try {
     decision = routeRequest({
       prompt: input.prompt,
@@ -65,12 +73,7 @@ export async function runAgent(input: RunAgentInput) {
       agent: input.agentPolicy,
       tenant: input.tenantPolicy,
     });
-    provider = decision.selectedProvider;
-    model = decision.selectedModel;
-    await input.onRoutingDecision?.(decision);
   } catch (error) {
-    // Router availability must not become a catastrophic single point of failure.
-    // Restricted/security decisions are never bypassed; only configuration/availability failures may fall back.
     const message = error instanceof Error ? error.message : String(error);
     if (/restricted handling|blocked this request|budget/i.test(message)) throw error;
     console.warn("[RYTHM AI Gateway] adaptive router fallback", {
@@ -78,9 +81,15 @@ export async function runAgent(input: RunAgentInput) {
       model: input.model,
       errorClass: error instanceof Error ? error.name : "unknown",
     });
+    decision = {
+      requestId: crypto.randomUUID(), language: input.conversationLanguage || "en", responseLanguage: input.conversationLanguage || "en",
+      intent: "information", taskType: "read", operation: "read", complexity: "medium", risk: "low", reasoningRequirement: "medium",
+      requiredTools: [], requiredCapabilities: [], recommendedTier: "terra", confidence: 0.3, allowEscalation: false, classificationSource: "fallback",
+      selectedTier: "terra", selectedProvider: input.provider, selectedModel: input.model, reasoningLevel: "medium", estimatedCostUsd: null,
+      escalationIndex: 0, routingVersion: "adaptive-v1-fallback",
+    } satisfies RoutingDecision;
   }
 
-  const system = `${input.systemInstructions.trim()}\n\n${SAFE_CONSOLE_OVERLAY}${decision ? `\n\nRYTHM RESPONSE POLICY\nRespond in language code: ${decision.responseLanguage}. Preserve Unicode correctly. For Persian or Arabic content, produce natural RTL-compatible text.\nOperation class: ${decision.operation}. Risk class: ${decision.risk}. Never reinterpret a read/recommendation request as permission for an external action.` : ""}`;
   const modeInstruction = input.mode === "task"
     ? "Treat the latest user message as a concrete work assignment. Produce the actual deliverable or best complete draft you can create now, not merely advice about how to do it."
     : "Respond conversationally and directly to the latest user message while remaining in your assigned professional role.";
@@ -91,11 +100,37 @@ export async function runAgent(input: RunAgentInput) {
     ? `Conversation so far:\n${input.conversation.trim()}\n\nLatest user message:\n${input.prompt.trim()}${attachmentNote}`
     : `Latest user message:\n${input.prompt.trim()}${attachmentNote}`;
   const prompt = `${modeInstruction}\n\n${transcript}`;
-  const concrete: ConcreteRunInput = { ...input, provider, model, systemInstructions: system, prompt, reasoningLevel: decision?.reasoningLevel };
 
-  if (provider === "openai") return runWithOpenAI(concrete);
-  if (provider === "anthropic") return runWithAnthropic(concrete);
-  return runWithGemini(concrete);
+  let current = decision;
+  while (true) {
+    await input.onRoutingDecision?.(current);
+    const system = `${input.systemInstructions.trim()}\n\n${SAFE_CONSOLE_OVERLAY}\n\nRYTHM RESPONSE POLICY\nRespond in language code: ${current.responseLanguage}. Preserve Unicode correctly. For Persian or Arabic content, produce natural RTL-compatible text.\nOperation class: ${current.operation}. Risk class: ${current.risk}. Never reinterpret a read/recommendation request as permission for an external action.`;
+    const concrete: ConcreteRunInput = {
+      ...input,
+      provider: current.selectedProvider,
+      model: current.selectedModel,
+      systemInstructions: system,
+      prompt,
+      reasoningLevel: current.reasoningLevel,
+    };
+    try {
+      return await executeConcrete(concrete);
+    } catch (error) {
+      if (!canEscalateExecutionError(error)) throw error;
+      const next = escalationDecision(current, input.agentPolicy);
+      if (!next) throw error;
+      current = routeRequest({
+        prompt: input.prompt,
+        requestId: current.requestId,
+        conversationLanguage: input.conversationLanguage,
+        agent: input.agentPolicy,
+        tenant: input.tenantPolicy,
+        escalationIndex: current.escalationIndex + 1,
+        forcedTier: next as ModelTier,
+      });
+      console.warn("[RYTHM AI Gateway] escalating request", { requestId: current.requestId, tier: current.selectedTier, model: current.selectedModel });
+    }
+  }
 }
 
 async function generateWithOpenAI(input: GenerateSystemInstructionInput) {
@@ -165,13 +200,14 @@ async function runWithOpenAI(input: ConcreteRunInput) {
   const client = new OpenAI({ apiKey });
   const request = async (includeBinary: boolean) => client.responses.create({
     model: input.model,
+    reasoning: input.reasoningLevel ? { effort: input.reasoningLevel } : undefined,
     max_output_tokens: 3200,
     store: false,
     input: [
       { role: "system", content: [{ type: "input_text", text: input.systemInstructions }] },
       { role: "user", content: openAIUserContent(input, includeBinary) },
     ] as any,
-  }, { signal: timeout(input.timeoutMs) });
+  } as any, { signal: timeout(input.timeoutMs) });
   let response;
   try { response = await request(true); }
   catch (error) {
