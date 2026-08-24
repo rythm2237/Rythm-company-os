@@ -37,6 +37,7 @@ function includesOnce(value: string, context: string) {
 
 assert.ok(sql.trimStart().startsWith("-- RYTHM OS"), "migration header is missing");
 assert.ok(sql.trimEnd().endsWith("commit;"), "migration must be transactional");
+assert.doesNotMatch(sql, /^\s*'\[.*\],$/m, "JSON array literal is missing a closing SQL quote");
 assert.equal(new Set(agentKeys).size, 19, "Agent catalog must contain 19 unique contracts");
 assert.equal(new Set(departmentKeys).size, 7, "organization must contain seven unique departments");
 assert.equal(new Set(workflowStages).size, 17, "delivery workflow must contain 17 unique stages");
