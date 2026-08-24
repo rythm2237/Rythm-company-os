@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
+import { createPublicMetadata } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
-  title: "Contact | RYTHM Company OS",
-  description: "Contact RYTHM Company OS for product questions, support, billing, legal, and privacy matters.",
-};
+export const metadata: Metadata = createPublicMetadata("/contact");
 
 const contactChannels = [
   {
