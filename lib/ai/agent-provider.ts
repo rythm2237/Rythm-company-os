@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 import type { AgentProvider } from "@/lib/agent-builder";
+import { routeRequest } from "@/lib/ai/adaptive-router";
+import type { AgentRoutingPolicy, RoutingDecision, TenantAiPolicy } from "@/lib/ai/routing-types";
 
 const OPTIMIZER_SYSTEM = `You are the RYTHM Agent Architect. Convert the supplied structured Agent Blueprint into a production-quality system instruction for one AI Agent.
 Preserve every governance boundary, authority level, approval gate, responsibility, skill, KPI, language, and tool restriction.
@@ -14,11 +16,7 @@ You have no external-action authority in this console. Do not claim to have sent
 When the user asks for an external action, produce the proposed output or action plan and clearly identify what would require execution or human approval.
 Follow your Agent system instruction and its governance boundaries. If a user request conflicts with those boundaries, explain the constraint and provide the closest permitted output.`;
 
-export type AgentAttachmentInput = {
-  filename: string;
-  mimeType: string;
-  base64: string;
-};
+export type AgentAttachmentInput = { filename: string; mimeType: string; base64: string };
 
 export type GenerateSystemInstructionInput = {
   provider: AgentProvider;
@@ -28,6 +26,7 @@ export type GenerateSystemInstructionInput = {
 };
 
 export type RunAgentInput = {
+  /** Legacy provider/model remain a safe fallback and fixed-mode compatibility path. */
   provider: AgentProvider;
   model: string;
   systemInstructions: string;
@@ -36,7 +35,13 @@ export type RunAgentInput = {
   attachments?: AgentAttachmentInput[];
   mode?: "chat" | "task";
   timeoutMs?: number;
+  agentPolicy?: AgentRoutingPolicy;
+  tenantPolicy?: TenantAiPolicy;
+  conversationLanguage?: string | null;
+  onRoutingDecision?: (decision: RoutingDecision) => void | Promise<void>;
 };
+
+type ConcreteRunInput = RunAgentInput & { provider: AgentProvider; model: string; reasoningLevel?: RoutingDecision["reasoningLevel"] };
 
 function timeout(ms = 45000) {
   return AbortSignal.timeout(Math.max(5000, Math.min(180000, ms)));
@@ -49,7 +54,33 @@ export async function generateSystemInstruction(input: GenerateSystemInstruction
 }
 
 export async function runAgent(input: RunAgentInput) {
-  const system = `${input.systemInstructions.trim()}\n\n${SAFE_CONSOLE_OVERLAY}`;
+  let provider = input.provider;
+  let model = input.model;
+  let decision: RoutingDecision | null = null;
+
+  try {
+    decision = routeRequest({
+      prompt: input.prompt,
+      conversationLanguage: input.conversationLanguage,
+      agent: input.agentPolicy,
+      tenant: input.tenantPolicy,
+    });
+    provider = decision.selectedProvider;
+    model = decision.selectedModel;
+    await input.onRoutingDecision?.(decision);
+  } catch (error) {
+    // Router availability must not become a catastrophic single point of failure.
+    // Restricted/security decisions are never bypassed; only configuration/availability failures may fall back.
+    const message = error instanceof Error ? error.message : String(error);
+    if (/restricted handling|blocked this request|budget/i.test(message)) throw error;
+    console.warn("[RYTHM AI Gateway] adaptive router fallback", {
+      provider: input.provider,
+      model: input.model,
+      errorClass: error instanceof Error ? error.name : "unknown",
+    });
+  }
+
+  const system = `${input.systemInstructions.trim()}\n\n${SAFE_CONSOLE_OVERLAY}${decision ? `\n\nRYTHM RESPONSE POLICY\nRespond in language code: ${decision.responseLanguage}. Preserve Unicode correctly. For Persian or Arabic content, produce natural RTL-compatible text.\nOperation class: ${decision.operation}. Risk class: ${decision.risk}. Never reinterpret a read/recommendation request as permission for an external action.` : ""}`;
   const modeInstruction = input.mode === "task"
     ? "Treat the latest user message as a concrete work assignment. Produce the actual deliverable or best complete draft you can create now, not merely advice about how to do it."
     : "Respond conversationally and directly to the latest user message while remaining in your assigned professional role.";
@@ -60,10 +91,11 @@ export async function runAgent(input: RunAgentInput) {
     ? `Conversation so far:\n${input.conversation.trim()}\n\nLatest user message:\n${input.prompt.trim()}${attachmentNote}`
     : `Latest user message:\n${input.prompt.trim()}${attachmentNote}`;
   const prompt = `${modeInstruction}\n\n${transcript}`;
+  const concrete: ConcreteRunInput = { ...input, provider, model, systemInstructions: system, prompt, reasoningLevel: decision?.reasoningLevel };
 
-  if (input.provider === "openai") return runWithOpenAI({ ...input, systemInstructions: system, prompt });
-  if (input.provider === "anthropic") return runWithAnthropic({ ...input, systemInstructions: system, prompt });
-  return runWithGemini({ ...input, systemInstructions: system, prompt });
+  if (provider === "openai") return runWithOpenAI(concrete);
+  if (provider === "anthropic") return runWithAnthropic(concrete);
+  return runWithGemini(concrete);
 }
 
 async function generateWithOpenAI(input: GenerateSystemInstructionInput) {
@@ -107,11 +139,7 @@ async function generateWithGemini(input: GenerateSystemInstructionInput) {
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: OPTIMIZER_SYSTEM }] },
-      contents: [{ role: "user", parts: [{ text: input.blueprint }] }],
-      generationConfig: { maxOutputTokens: 2600, temperature: 0.2 },
-    }),
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: OPTIMIZER_SYSTEM }] }, contents: [{ role: "user", parts: [{ text: input.blueprint }] }], generationConfig: { maxOutputTokens: 2600, temperature: 0.2 } }),
     signal: timeout(input.timeoutMs),
   });
   if (!response.ok) throw new Error(`Gemini request failed (${response.status}).`);
@@ -121,24 +149,20 @@ async function generateWithGemini(input: GenerateSystemInstructionInput) {
   return text;
 }
 
-function openAIUserContent(input: RunAgentInput, includeBinary: boolean) {
+function openAIUserContent(input: ConcreteRunInput, includeBinary: boolean) {
   const userContent: any[] = [{ type: "input_text", text: input.prompt }];
   if (!includeBinary) return userContent;
   for (const file of input.attachments ?? []) {
-    if (file.mimeType.startsWith("image/")) {
-      userContent.push({ type: "input_image", image_url: `data:${file.mimeType};base64,${file.base64}`, detail: "auto" });
-    } else {
-      userContent.push({ type: "input_file", filename: file.filename, file_data: file.base64 });
-    }
+    if (file.mimeType.startsWith("image/")) userContent.push({ type: "input_image", image_url: `data:${file.mimeType};base64,${file.base64}`, detail: "auto" });
+    else userContent.push({ type: "input_file", filename: file.filename, file_data: file.base64 });
   }
   return userContent;
 }
 
-async function runWithOpenAI(input: RunAgentInput) {
+async function runWithOpenAI(input: ConcreteRunInput) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OpenAI is not configured.");
   const client = new OpenAI({ apiKey });
-
   const request = async (includeBinary: boolean) => client.responses.create({
     model: input.model,
     max_output_tokens: 3200,
@@ -148,40 +172,26 @@ async function runWithOpenAI(input: RunAgentInput) {
       { role: "user", content: openAIUserContent(input, includeBinary) },
     ] as any,
   }, { signal: timeout(input.timeoutMs) });
-
   let response;
-  try {
-    response = await request(true);
-  } catch (error) {
+  try { response = await request(true); }
+  catch (error) {
     if (!(input.attachments?.length)) throw error;
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn("[RYTHM Agent Runtime] Provider rejected binary context; retrying with live text knowledge only.", {
-      model: input.model,
-      attachments: input.attachments.map((file) => ({ filename: file.filename, mimeType: file.mimeType })),
-      error: message.slice(0, 1000),
-    });
+    console.warn("[RYTHM Agent Runtime] Provider rejected binary context; retrying with live text knowledge only.", { model: input.model, attachmentCount: input.attachments.length, errorClass: error instanceof Error ? error.name : "unknown" });
     response = await request(false);
   }
-
   const text = response.output_text?.trim();
   if (!text) throw new Error("OpenAI returned an empty Agent response.");
   return text;
 }
 
 function textualAttachmentContext(files: AgentAttachmentInput[] = []) {
-  return files
-    .filter((file) => /^(text\/|application\/(json|xml))/.test(file.mimeType) || /\.(csv|txt|md|json|xml)$/i.test(file.filename))
-    .map((file) => {
-      try {
-        return `\n\nAttachment ${file.filename}:\n${Buffer.from(file.base64, "base64").toString("utf8").slice(0, 18000)}`;
-      } catch {
-        return "";
-      }
-    })
-    .join("");
+  return files.filter((file) => /^(text\/|application\/(json|xml))/.test(file.mimeType) || /\.(csv|txt|md|json|xml)$/i.test(file.filename)).map((file) => {
+    try { return `\n\nAttachment ${file.filename}:\n${Buffer.from(file.base64, "base64").toString("utf8").slice(0, 18000)}`; }
+    catch { return ""; }
+  }).join("");
 }
 
-async function runWithAnthropic(input: RunAgentInput) {
+async function runWithAnthropic(input: ConcreteRunInput) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("Anthropic is not configured.");
   const prompt = `${input.prompt}${textualAttachmentContext(input.attachments)}`;
@@ -198,26 +208,18 @@ async function runWithAnthropic(input: RunAgentInput) {
   return text;
 }
 
-async function runWithGemini(input: RunAgentInput) {
+async function runWithGemini(input: ConcreteRunInput) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("Gemini is not configured.");
   const model = encodeURIComponent(input.model);
   const parts: Array<Record<string, unknown>> = [{ text: input.prompt }];
-  for (const file of input.attachments ?? []) {
-    if (file.mimeType.startsWith("image/") || file.mimeType === "application/pdf") {
-      parts.push({ inlineData: { mimeType: file.mimeType, data: file.base64 } });
-    }
-  }
+  for (const file of input.attachments ?? []) if (file.mimeType.startsWith("image/") || file.mimeType === "application/pdf") parts.push({ inlineData: { mimeType: file.mimeType, data: file.base64 } });
   const textFallback = textualAttachmentContext(input.attachments);
   if (textFallback) parts.push({ text: textFallback });
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: input.systemInstructions }] },
-      contents: [{ role: "user", parts }],
-      generationConfig: { maxOutputTokens: 3200, temperature: 0.35 },
-    }),
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: input.systemInstructions }] }, contents: [{ role: "user", parts }], generationConfig: { maxOutputTokens: 3200, temperature: 0.35 } }),
     signal: timeout(input.timeoutMs),
   });
   if (!response.ok) throw new Error(`Gemini request failed (${response.status}).`);
