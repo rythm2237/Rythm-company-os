@@ -18,4 +18,5 @@ jobs:
           node-version: 22
       - run: npm install
       - run: npm run test:routing
+      - run: npm run test:software-company
       - run: npm run build

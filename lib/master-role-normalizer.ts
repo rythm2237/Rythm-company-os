@@ -8,23 +8,37 @@ type MasteryRoleRule = {
 };
 
 const explicitRoleRules: MasteryRoleRule[] = [
+  { test: /product\s+manager|product\s+owner/i, family: "general", canonical: "Senior Product Manager", specs: ["product_management"] },
+  { test: /business\s+analyst/i, family: "analytics", canonical: "Senior Business Analyst", specs: ["business_analysis"] },
+  { test: /cto|chief\s+technology|solution\s+architect|software\s+architect|principal\s+architect/i, family: "technology", canonical: "CTO / Principal Solution Architect", specs: ["software_architecture"] },
+  { test: /database\s+engineer|postgres(?:ql)?\s+(engineer|dba)|database\s+architect/i, family: "technology", canonical: "Senior PostgreSQL & Database Engineer", specs: ["postgres_database_engineering"] },
+  { test: /devops|site\s+reliability|cloud\s+engineer|platform\s+engineer/i, family: "technology", canonical: "Senior DevOps / Cloud Engineer", specs: ["devops_cloud"] },
+  { test: /quality\s+(assurance|engineer)|qa\s+(engineer|lead)|test\s+engineer/i, family: "technology", canonical: "Senior QA / Test Engineer", specs: ["quality_engineering"] },
+  { test: /application\s+security|appsec|product\s+security/i, family: "technology", canonical: "Senior Application Security Engineer", specs: ["application_security"] },
+  { test: /technical\s+writer|documentation\s+engineer|api\s+writer/i, family: "technology", canonical: "Senior Technical Documentation Engineer", specs: ["technical_documentation"] },
+  { test: /ai\s+(automation\s+)?engineer|automation\s+engineer|agent\s+engineer/i, family: "technology", canonical: "Senior AI & Automation Engineer", specs: ["ai_automation"] },
+  { test: /customer\s+support|communications?\s+manager|support\s+manager/i, family: "general", canonical: "Customer Support & Communications Manager", specs: ["customer_support_communications"] },
+  { test: /sales\s+(and|&)\s+crm|crm\s+manager|sales\s+operations/i, family: "general", canonical: "Sales & CRM Manager", specs: ["sales_crm"] },
+  { test: /people\s+(and|&)\s+ai|workforce\s+operations|people\s+operations/i, family: "general", canonical: "People & AI Workforce Operations Manager", specs: ["people_ai_workforce_ops"] },
+  { test: /finance\s+manager|finops|management\s+accountant/i, family: "analytics", canonical: "Finance Manager & FinOps Analyst", specs: ["finance", "finops_accounting"] },
+  { test: /seo.*geo|geo.*growth|growth\s+engineer|technical\s+seo/i, family: "marketing", canonical: "SEO / GEO & Growth Engineer", specs: ["seo", "geo_growth"] },
   {
     test: /\bfull[-\s]?stack\s+(web\s+)?(developer|engineer)\b/i,
     family: "technology",
     canonical: "Full-Stack Web Developer",
-    specs: ["web_development"],
+    specs: ["web_development", "frontend_engineering", "backend_engineering"],
   },
   {
     test: /\bfront[-\s]?end\s+(web\s+)?(developer|engineer)\b/i,
     family: "technology",
     canonical: "Front-End Web Developer",
-    specs: ["web_development"],
+    specs: ["web_development", "frontend_engineering"],
   },
   {
     test: /\bback[-\s]?end\s+(web\s+)?(developer|engineer)\b/i,
     family: "technology",
     canonical: "Back-End Web Developer",
-    specs: ["web_development"],
+    specs: ["web_development", "backend_engineering"],
   },
   {
     test: /\bweb\s+(developer|engineer)\b/i,

@@ -1,21 +1,26 @@
 import { redirect } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
-import { createIntegration, grantAgentCapability, revokeAgentCapability, rotateIntegrationSecret } from "./actions";
+import { applyTemplateIntegrationProfile, createIntegration, grantAgentCapability, revokeAgentCapability, rotateIntegrationSecret } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<Record<string,string|undefined>> }) {
   const context = await requireActiveOwnerOrganizationContext();
   const params = await searchParams;
-  const [providersResult, capabilitiesResult, integrationsResult, agentsResult, grantsResult, executionsResult] = await Promise.all([
+  const [providersResult, capabilitiesResult, integrationsResult, agentsResult, grantsResult, executionsResult, installationsResult, dependenciesResult, profilesResult] = await Promise.all([
     context.supabase.from("integration_providers").select("provider_key,display_name,category,supports_oauth,supports_token").eq("enabled", true).order("display_name"),
     context.supabase.from("integration_capabilities").select("provider_key,capability_key,risk_level,default_approval_mode,description").order("provider_key").order("capability_key"),
     context.supabase.from("organization_integrations").select("id,provider_key,display_name,account_ref,base_url,auth_type,status,connected_at,last_verified_at").eq("organization_id", context.organizationId).order("created_at", { ascending:false }),
     context.supabase.from("agents").select("id,name,role_title,agent_status").eq("organization_id", context.organizationId).neq("agent_status","archived").order("name"),
     context.supabase.from("agent_integration_grants").select("id,agent_id,integration_id,capability_key,approval_mode,enabled").eq("organization_id", context.organizationId).eq("enabled", true).order("created_at", { ascending:false }),
     context.supabase.from("tool_execution_requests").select("id,agent_id,integration_id,capability_key,operation,target_ref,risk_level,approval_mode,status,latency_ms,created_at").eq("organization_id", context.organizationId).order("created_at", { ascending:false }).limit(30),
+    context.supabase.from("organization_template_installations").select("template_key").eq("organization_id", context.organizationId),
+    context.supabase.from("organization_setup_dependencies").select("template_key,dependency_key,requirement_level,status,detail").eq("organization_id", context.organizationId).order("requirement_level"),
+    context.supabase.from("company_template_integration_profiles").select("company_template_key,provider_key,capability_key"),
   ]);
   const providers = providersResult.data ?? [], capabilities = capabilitiesResult.data ?? [], integrations = integrationsResult.data ?? [], agents = agentsResult.data ?? [], grants = grantsResult.data ?? [], executions = executionsResult.data ?? [];
+  const dependencies = dependenciesResult.data ?? [], profiles = profilesResult.data ?? [];
+  const softwareCompanyInstalled = (installationsResult.data ?? []).some(item=>item.template_key==="ready_software_company_v1");
   const agentName = new Map(agents.map(a=>[a.id,a.name]));
   const integrationName = new Map(integrations.map(i=>[i.id,`${i.display_name} · ${i.provider_key}`]));
 
@@ -41,8 +46,13 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
     </section>
 
     <section className="panel panel-wide" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">Connected services</p><h2>Company Integration Registry</h2></div><span className="pill">{integrations.length} connection(s)</span></div><div className="data-list">
-      {integrations.length?integrations.map(i=><div className="data-row" key={i.id}><div><strong>{i.display_name} · {i.provider_key}</strong><span>{i.account_ref||"No account reference"} · {i.auth_type} · {i.status}</span></div><form action={rotateIntegrationSecret} style={{display:"flex",gap:8}}><input type="hidden" name="integrationId" value={i.id}/><input name="secret" type="password" placeholder="Rotate credential" required/><button className="secondary-button">Update</button></form></div>):<p className="empty-state">No company integrations connected yet.</p>}
+      {integrations.length?integrations.map(i=>{
+        const recommendedGrantCount=profiles.filter(profile=>profile.company_template_key==="ready_software_company_v1"&&profile.provider_key===i.provider_key).length;
+        return <div className="data-row" key={i.id}><div><strong>{i.display_name} · {i.provider_key}</strong><span>{i.account_ref||"No account reference"} · {i.auth_type} · {i.status}</span>{softwareCompanyInstalled&&recommendedGrantCount?<span>{recommendedGrantCount} Software Company grant recommendations available. Credentials are never copied.</span>:null}</div><div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>{softwareCompanyInstalled&&i.status==="connected"&&recommendedGrantCount?<form action={applyTemplateIntegrationProfile}><input type="hidden" name="integrationId" value={i.id}/><input type="hidden" name="templateKey" value="ready_software_company_v1"/><button className="primary-button">Apply recommended grants</button></form>:null}<form action={rotateIntegrationSecret} style={{display:"flex",gap:8}}><input type="hidden" name="integrationId" value={i.id}/><input name="secret" type="password" placeholder="Rotate credential" required/><button className="secondary-button">Update</button></form></div></div>;
+      }):<p className="empty-state">No company integrations connected yet.</p>}
     </div></section>
+
+    {softwareCompanyInstalled?<section className="panel panel-wide" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">SOFTWARE COMPANY SETUP</p><h2>Integration dependencies</h2></div><span className="pill">No credential copying</span></div><div className="data-list">{dependencies.filter(item=>item.template_key==="ready_software_company_v1").map(item=><div className="data-row" key={item.dependency_key}><div><strong>{item.dependency_key} · {item.status}</strong><span>{item.requirement_level} · {item.detail}</span></div></div>)}</div></section>:null}
 
     <section className="panel panel-wide" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">Least privilege</p><h2>Agent capability grants</h2></div></div>
       <form action={grantAgentCapability} className="stacked-form" style={{maxWidth:780}}>
