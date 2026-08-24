@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import type { CostStrategy, ModelTier } from "@/lib/ai/routing-types";
 
 export const ACTIVE_ORGANIZATION_COOKIE = "rythm_active_org";
 
@@ -60,6 +61,11 @@ export type OrganizationEntitlement = {
   max_departments: number;
   max_projects: number;
   support_tier: string;
+  allowed_model_tiers: ModelTier[];
+  advanced_reasoning_enabled: boolean;
+  preferred_cost_strategy: CostStrategy;
+  max_ai_context_tokens: number | null;
+  max_ai_cost_per_request: number | null;
 };
 
 export function isOrganizationEntitlementActive(entitlement: OrganizationEntitlement | null | undefined, now = new Date()) {
@@ -82,6 +88,7 @@ export type OrganizationContext = {
 };
 
 const organizationProfileFields = "id,name,slug,status,owner_user_id,legal_name,legal_entity_type,registration_number,tax_id,vat_id,country_code,registered_address,operating_address,website_url,primary_email,primary_phone,default_currency,timezone";
+const organizationEntitlementFields = "organization_id,product_code,plan_code,status,starts_at,ends_at,ai_budget_limit,company_template_access,company_builder_enabled,agent_builder_enabled,agent_create_enabled,agent_clone_enabled,agent_archive_enabled,agent_structure_edit_enabled,workflow_edit_enabled,max_active_agents,max_departments,max_projects,support_tier,allowed_model_tiers,advanced_reasoning_enabled,preferred_cost_strategy,max_ai_context_tokens,max_ai_cost_per_request";
 
 async function legacyMembershipFallback(supabase: Awaited<ReturnType<typeof createAuthServerClient>>, userId: string) {
   const { data: membershipData } = await supabase.from("organization_members").select("organization_id,role").eq("user_id", userId);
@@ -116,7 +123,7 @@ async function resolveOrganizationContextUncached(): Promise<OrganizationContext
   const selectedMembership = memberships.find((item) => item.isActive) ?? memberships.find((item) => item.role === "owner") ?? memberships[0];
   const [{ data: profileData, error: profileError }, { data: entitlementData, error: entitlementError }] = await Promise.all([
     supabase.from("organizations").select(organizationProfileFields).eq("id", selectedMembership.organization_id).maybeSingle(),
-    supabase.from("organization_entitlements").select("organization_id,product_code,plan_code,status,starts_at,ends_at,ai_budget_limit,company_template_access,company_builder_enabled,agent_builder_enabled,agent_create_enabled,agent_clone_enabled,agent_archive_enabled,agent_structure_edit_enabled,workflow_edit_enabled,max_active_agents,max_departments,max_projects,support_tier").eq("organization_id", selectedMembership.organization_id).maybeSingle(),
+    supabase.from("organization_entitlements").select(organizationEntitlementFields).eq("organization_id", selectedMembership.organization_id).maybeSingle(),
   ]);
   if (profileError && !organizationListError) console.error("organization_context_profile_query_failed", profileError);
   if (entitlementError && !organizationListError) console.error("organization_context_entitlement_query_failed", entitlementError);
