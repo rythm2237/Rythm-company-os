@@ -81,3 +81,22 @@ export async function revokeAgentCapability(formData: FormData) {
   if (error) fail(error.message);
   revalidatePath("/integrations");
 }
+
+export async function applyTemplateIntegrationProfile(formData: FormData) {
+  const context = await requireActiveOwnerOrganizationContext();
+  const integrationId = text(formData.get("integrationId"));
+  const templateKey = text(formData.get("templateKey")) || "ready_software_company_v1";
+  if (!integrationId) fail("Select a connected integration.");
+  const { data, error } = await context.supabase.rpc("apply_company_template_integration_profile_v1", {
+    target_org_id: context.organizationId,
+    target_integration_id: integrationId,
+    target_template_key: templateKey,
+  });
+  if (error || data == null) {
+    console.error("template_integration_profile_failed", { organizationId: context.organizationId, integrationId, templateKey, error });
+    fail(error?.message ?? "Recommended integration grants could not be applied.");
+  }
+  revalidatePath("/integrations");
+  revalidatePath("/studio/templates");
+  redirect(`/integrations?message=${encodeURIComponent(`${data} recommended least-privilege grants applied. Restricted capabilities remain Human Only.`)}`);
+}
