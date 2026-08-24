@@ -103,6 +103,14 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
     priority: 0.65,
   },
   {
+    path: "/contact",
+    title: "Contact",
+    description:
+      "Contact RYTHM Company OS for product questions, support, billing, legal, privacy, partnerships, and general enquiries.",
+    changeFrequency: "monthly",
+    priority: 0.6,
+  },
+  {
     path: "/legal",
     title: "Legal Notice",
     description:
@@ -123,6 +131,30 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
     title: "Terms of Service",
     description:
       "Review the Public Beta terms governing professional and organizational use of RYTHM Company OS, including AI, accounts, content, and commercial access.",
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    path: "/consumer-rights",
+    title: "Consumer Rights",
+    description:
+      "Mandatory consumer information for RYTHM digital services, complaints, withdrawal, conformity remedies, and alternative dispute resolution.",
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    path: "/consumer-terms",
+    title: "Consumer Terms",
+    description:
+      "Consumer-specific terms for RYTHM digital services, one-off AI meetings, subscriptions, payment, withdrawal, and statutory remedies.",
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    path: "/withdrawal",
+    title: "Withdraw from Contract",
+    description:
+      "Use RYTHM's online withdrawal function for eligible consumer distance contracts and download a durable acknowledgement.",
     changeFrequency: "monthly",
     priority: 0.5,
   },
