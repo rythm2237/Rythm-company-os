@@ -12,6 +12,7 @@
     "test:phase1a": "node --import tsx scripts/validate-ai-gateway-phase1a.ts",
     "test:phase1b": "node --import tsx scripts/validate-ai-gateway-phase1b.ts",
     "test:phase1c": "node --import tsx scripts/validate-ai-gateway-phase1c.ts",
+    "test:phase1d": "node --import tsx scripts/validate-ai-gateway-phase1d.ts",
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",
     "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts"
   },

@@ -8,6 +8,13 @@ export type AiGatewayActor = {
   agentId?: string | null;
 };
 
+export type AiGatewayContextReferences = {
+  meetingId?: string | null;
+  meetingSessionId?: string | null;
+  documentId?: string | null;
+  projectId?: string | null;
+};
+
 export type AiGatewayFeature =
   | "agent.console"
   | "agent.instruction_generation"
@@ -34,6 +41,7 @@ export type LegacyModelFallback = {
 export type AiGatewayRequest = {
   organizationId: string;
   actor: AiGatewayActor;
+  context?: AiGatewayContextReferences;
   feature: AiGatewayFeature;
   prompt: string;
   systemInstructions: string;
@@ -41,7 +49,10 @@ export type AiGatewayRequest = {
   conversation?: string;
   conversationLanguage?: string | null;
   attachments?: AiGatewayAttachment[];
+  /** Governed ingestion fails closed instead of issuing a second request without its source file. */
+  attachmentFailurePolicy?: "fail" | "retry_without_binary";
   mode?: "chat" | "task";
+  maxOutputTokens?: number;
   timeoutMs?: number;
   agentPolicy?: AgentRoutingPolicy;
   tenantPolicy?: TenantAiPolicy;
@@ -91,7 +102,9 @@ export type ProviderExecutionInput = {
   systemInstructions: string;
   prompt: string;
   attachments?: AiGatewayAttachment[];
+  attachmentFailurePolicy?: "fail" | "retry_without_binary";
   timeoutMs?: number;
+  maxOutputTokens?: number;
   reasoningLevel?: RoutingDecision["reasoningLevel"];
 };
 

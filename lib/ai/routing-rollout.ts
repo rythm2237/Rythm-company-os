@@ -8,6 +8,8 @@ export type RoutingRolloutRow = {
   routing_mode: RoutingMode | string;
   kill_switch: boolean;
   policy_version: string;
+  /** Null for the Phase 1B generic control; populated by Phase 1D path controls. */
+  request_feature?: string | null;
 };
 
 export type ResolvedRoutingRollout = {
@@ -29,10 +31,22 @@ function validRow(row: RoutingRolloutRow) {
   return row.environment == null && Boolean(row.organization_id?.trim());
 }
 
+function selectedRow(rows: RoutingRolloutRow[], requestFeature?: string) {
+  const featureRows = requestFeature ? rows.filter((row) => row.request_feature === requestFeature) : [];
+  const genericRows = rows.filter((row) => row.request_feature == null);
+  return featureRows.find((row) => row.scope === "organization")
+    ?? genericRows.find((row) => row.scope === "organization")
+    ?? featureRows.find((row) => row.scope === "environment")
+    ?? genericRows.find((row) => row.scope === "environment")
+    ?? featureRows.find((row) => row.scope === "global")
+    ?? genericRows.find((row) => row.scope === "global");
+}
+
 export function resolveRoutingRollout(input: {
   rows?: RoutingRolloutRow[] | null;
   environment: string;
   organizationId: string;
+  requestFeature?: string;
   environmentKillSwitch?: string | boolean | null;
 }): ResolvedRoutingRollout {
   const killSwitchValue = input.environmentKillSwitch;
@@ -44,9 +58,10 @@ export function resolveRoutingRollout(input: {
   }
 
   const applicable = (input.rows ?? []).filter((row) =>
-    row.scope === "global"
-    || (row.scope === "environment" && row.environment === input.environment)
-    || (row.scope === "organization" && row.organization_id === input.organizationId));
+    (row.request_feature == null || row.request_feature === input.requestFeature)
+    && (row.scope === "global"
+      || (row.scope === "environment" && row.environment === input.environment)
+      || (row.scope === "organization" && row.organization_id === input.organizationId)));
   if (applicable.some((row) => !validRow(row))) {
     return { mode: "off", source: "invalid", policyVersion: "routing-policy-v1", killSwitchActive: true, reasonCodes: ["invalid_rollout_configuration", "safe_fallback_off"] };
   }
@@ -54,16 +69,13 @@ export function resolveRoutingRollout(input: {
     return { mode: "off", source: "kill_switch", policyVersion: "routing-policy-v1", killSwitchActive: true, reasonCodes: ["database_kill_switch", "safe_fallback_off"] };
   }
 
-  const organization = applicable.find((row) => row.scope === "organization");
-  const environment = applicable.find((row) => row.scope === "environment");
-  const global = applicable.find((row) => row.scope === "global");
-  const selected = organization ?? environment ?? global;
+  const selected = selectedRow(applicable, input.requestFeature);
   if (!selected) return { mode: "off", source: "default", policyVersion: "routing-policy-v1", killSwitchActive: false, reasonCodes: ["missing_configuration", "safe_fallback_off"] };
   return {
     mode: selected.routing_mode as RoutingMode,
     source: selected.scope as RoutingConfigScope,
     policyVersion: selected.policy_version,
     killSwitchActive: false,
-    reasonCodes: [`${selected.scope}_routing_mode`],
+    reasonCodes: [selected.request_feature ? `feature_${selected.scope}_routing_mode` : `${selected.scope}_routing_mode`],
   };
 }

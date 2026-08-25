@@ -35,13 +35,17 @@ export type RunAgentInput = {
   prompt: string;
   conversation?: string;
   attachments?: AgentAttachmentInput[];
+  attachmentFailurePolicy?: "fail" | "retry_without_binary";
   mode?: "chat" | "task";
+  maxOutputTokens?: number;
   timeoutMs?: number;
   agentPolicy?: AgentRoutingPolicy;
   tenantPolicy?: TenantAiPolicy;
   conversationLanguage?: string | null;
   /** Internal Gateway control. Callers must not construct authoritative decisions from user input. */
   authoritativeDecision?: RoutingDecision;
+  /** Internal Gateway marker for a compatibility decision selected by rollout mode. */
+  executionPolicyOverride?: "legacy_fallback";
   onRoutingDecision?: (decision: RoutingDecision) => void | Promise<void>;
 };
 
@@ -72,7 +76,7 @@ async function executeConcrete(input: ConcreteRunInput) {
 
 export async function runAgentDetailed(input: RunAgentInput): Promise<RunAgentResult> {
   let decision: RoutingDecision;
-  let fallbackUsed = false;
+  let fallbackUsed = input.executionPolicyOverride === "legacy_fallback";
   let cumulativeProviderLatencyMs = 0;
   const fixedModel = input.agentPolicy?.modelPolicy?.mode === "fixed";
   try {
@@ -173,7 +177,7 @@ export async function runAgentDetailed(input: RunAgentInput): Promise<RunAgentRe
         providerLatencyMs: cumulativeProviderLatencyMs,
         routingDecision: current,
         fallbackUsed,
-        executionPolicy: fallbackUsed ? "legacy_fallback" : fixedModel ? "fixed_model" : "adaptive",
+        executionPolicy: input.executionPolicyOverride ?? (fallbackUsed ? "legacy_fallback" : fixedModel ? "fixed_model" : "adaptive"),
       };
     } catch (error) {
       cumulativeProviderLatencyMs += Math.max(0, Math.round(performance.now() - providerAttemptStarted));
@@ -268,7 +272,7 @@ async function runWithOpenAI(input: ConcreteRunInput) {
   const request = async (includeBinary: boolean) => client.responses.create({
     model: input.model,
     reasoning: input.reasoningLevel ? { effort: input.reasoningLevel } : undefined,
-    max_output_tokens: 3200,
+    max_output_tokens: Math.max(1, Math.min(16_000, input.maxOutputTokens ?? 3200)),
     store: false,
     input: [
       { role: "system", content: [{ type: "input_text", text: input.systemInstructions }] },
@@ -278,7 +282,7 @@ async function runWithOpenAI(input: ConcreteRunInput) {
   let response;
   try { response = await request(true); }
   catch (error) {
-    if (!(input.attachments?.length)) throw error;
+    if (!(input.attachments?.length) || input.attachmentFailurePolicy === "fail") throw error;
     console.warn("[RYTHM Agent Runtime] Provider rejected binary context; retrying with live text knowledge only.", { model: input.model, attachmentCount: input.attachments.length, errorClass: error instanceof Error ? error.name : "unknown" });
     response = await request(false);
   }
@@ -317,7 +321,7 @@ async function runWithAnthropic(input: ConcreteRunInput) {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: input.model, max_tokens: 3200, system: input.systemInstructions, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ model: input.model, max_tokens: Math.max(1, Math.min(16_000, input.maxOutputTokens ?? 3200)), system: input.systemInstructions, messages: [{ role: "user", content: prompt }] }),
     signal: timeout(input.timeoutMs),
   });
   if (!response.ok) throw new Error(`Anthropic request failed (${response.status}).`);
@@ -343,7 +347,7 @@ async function runWithGemini(input: ConcreteRunInput) {
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify({ systemInstruction: { parts: [{ text: input.systemInstructions }] }, contents: [{ role: "user", parts }], generationConfig: { maxOutputTokens: 3200, temperature: 0.35 } }),
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: input.systemInstructions }] }, contents: [{ role: "user", parts }], generationConfig: { maxOutputTokens: Math.max(1, Math.min(16_000, input.maxOutputTokens ?? 3200)), temperature: 0.35 } }),
     signal: timeout(input.timeoutMs),
   });
   if (!response.ok) throw new Error(`Gemini request failed (${response.status}).`);

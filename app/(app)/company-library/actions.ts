@@ -83,7 +83,12 @@ export async function registerCompanyLibraryDocument(input: RegisterCompanyDocum
     const buffer = Buffer.from(await storedFile.arrayBuffer());
     if (!buffer.length || buffer.length > MAX_FILE_SIZE) throw new Error("Stored document size is outside the allowed Company Library limit.");
 
-    const extracted = await extractCompanyDocument(buffer, fileName, mimeType || storedFile.type);
+    const extracted = await extractCompanyDocument(buffer, fileName, mimeType || storedFile.type, {
+      organizationId: context.organizationId,
+      userId: context.user.id,
+      documentId: knowledgeId,
+      entitlement: context.entitlement,
+    });
     const chunks = chunkCompanyDocument(extracted.text);
     if (!chunks.length) throw new Error("The document could not be divided into searchable knowledge chunks.");
 
@@ -105,6 +110,7 @@ export async function registerCompanyLibraryDocument(input: RegisterCompanyDocum
       extracted_at: new Date().toISOString(),
       chunk_count: chunks.length,
       ingestion_status: "ready",
+      last_ai_correlation_id: extracted.gateway?.correlationId ?? null,
       last_ingestion_error: null,
       updated_at: new Date().toISOString(),
     }).eq("organization_id", context.organizationId).eq("id", knowledgeId);
@@ -118,7 +124,20 @@ export async function registerCompanyLibraryDocument(input: RegisterCompanyDocum
       object_type: "company_knowledge",
       object_id: knowledgeId,
       risk_level: confidentiality === "restricted" ? "medium" : "low",
-      payload: { file_name: fileName, mime_type: mimeType, file_size_bytes: fileSize, chunk_count: chunks.length, confidentiality, transferable: false },
+      payload: {
+        file_name: fileName,
+        mime_type: mimeType,
+        file_size_bytes: fileSize,
+        chunk_count: chunks.length,
+        confidentiality,
+        transferable: false,
+        knowledge_trust_class: "derived_knowledge",
+        ai_correlation_id: extracted.gateway?.correlationId ?? null,
+        routing_mode: extracted.gateway?.routingMode ?? null,
+        selected_tier: extracted.gateway?.routingDecision.selectedTier ?? null,
+        provider: extracted.gateway?.routingDecision.selectedProvider ?? null,
+        model: extracted.gateway?.routingDecision.selectedModel ?? null,
+      },
     });
 
     revalidatePath("/company-library");
