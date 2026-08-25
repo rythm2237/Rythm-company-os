@@ -26,7 +26,7 @@ Routing telemetry remains tenant data. Authenticated reads are restricted by org
 
 ## Migration and rollback
 
-Migration: `20260825085135_phase1b_routing_modes_telemetry.sql`.
+Migration: `20260825091111_phase1b_routing_modes_telemetry.sql`.
 
 Rollback procedure:
 

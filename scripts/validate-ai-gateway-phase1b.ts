@@ -246,7 +246,7 @@ await test("operational telemetry failure does not fail a valid request", async 
 });
 
 await test("migration is additive, least-privilege and tenant-scoped", () => {
-  const sql = readFileSync("supabase/migrations/20260825085135_phase1b_routing_modes_telemetry.sql", "utf8").toLowerCase();
+  const sql = readFileSync("supabase/migrations/20260825091111_phase1b_routing_modes_telemetry.sql", "utf8").toLowerCase();
   assert.match(sql, /alter table public\.ai_routing_decisions[\s\S]*add column if not exists routing_mode/);
   assert.match(sql, /routing_mode in \('off', 'shadow', 'enforced'\)/);
   assert.match(sql, /revoke all on table public\.ai_routing_decisions from public, anon, authenticated/);
