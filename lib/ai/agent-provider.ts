@@ -67,14 +67,13 @@ function canEscalateExecutionError(error: unknown) {
 }
 
 async function executeConcrete(input: ConcreteRunInput) {
-  const started = performance.now();
-  const result = await getAgentProviderAdapter(input.provider).execute(input);
-  return { ...result, providerLatencyMs: Math.max(0, Math.round(performance.now() - started)) };
+  return getAgentProviderAdapter(input.provider).execute(input);
 }
 
 export async function runAgentDetailed(input: RunAgentInput): Promise<RunAgentResult> {
   let decision: RoutingDecision;
   let fallbackUsed = false;
+  let cumulativeProviderLatencyMs = 0;
   const fixedModel = input.agentPolicy?.modelPolicy?.mode === "fixed";
   try {
     decision = input.authoritativeDecision ?? routeRequest({
@@ -126,15 +125,19 @@ export async function runAgentDetailed(input: RunAgentInput): Promise<RunAgentRe
       prompt,
       reasoningLevel: current.reasoningLevel,
     };
+    const providerAttemptStarted = performance.now();
     try {
       const result = await executeConcrete(concrete);
+      cumulativeProviderLatencyMs += Math.max(0, Math.round(performance.now() - providerAttemptStarted));
       return {
         ...result,
+        providerLatencyMs: cumulativeProviderLatencyMs,
         routingDecision: current,
         fallbackUsed,
         executionPolicy: fallbackUsed ? "legacy_fallback" : fixedModel ? "fixed_model" : "adaptive",
       };
     } catch (error) {
+      cumulativeProviderLatencyMs += Math.max(0, Math.round(performance.now() - providerAttemptStarted));
       if (!canEscalateExecutionError(error)) throw error;
       const next = escalationDecision(current, input.agentPolicy);
       if (!next) throw error;
