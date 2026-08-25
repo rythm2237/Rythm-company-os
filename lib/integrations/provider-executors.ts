@@ -1,3 +1,5 @@
+import { wrapReadOnlySql } from "@/lib/security/read-only-sql";
+
 type Json = Record<string, any>;
 
 type ProviderExecution = {
@@ -14,7 +16,7 @@ async function jsonFetch(url: string, init: RequestInit) {
   const text = await response.text();
   let body: any = null;
   try { body = text ? JSON.parse(text) : null; } catch { body = text.slice(0, 2000); }
-  if (!response.ok) throw new Error(`Provider request failed (${response.status}): ${typeof body === "string" ? body : JSON.stringify(body).slice(0, 1500)}`);
+  if (!response.ok) throw new Error(`Provider request failed (${response.status}).`);
   return body;
 }
 
@@ -68,11 +70,11 @@ async function executeSupabase(args: ProviderExecution) {
   const base=args.baseUrl||"https://api.supabase.com"; const i=args.input; const projectRef=i.projectRef||args.accountRef; if(!projectRef) throw new Error("Missing provider input: projectRef");
   const headers={ Authorization:`Bearer ${args.credential}`, "Content-Type":"application/json" };
   if(args.capabilityKey==="schema.read") {
-    const sql=i.sql||"select table_schema,table_name,column_name,data_type from information_schema.columns where table_schema='public' order by table_name,ordinal_position limit 500";
+    const sql=wrapReadOnlySql("select table_schema,table_name,column_name,data_type from information_schema.columns where table_schema='public' order by table_name,ordinal_position limit 500");
     return jsonFetch(`${base}/v1/projects/${projectRef}/database/query`,{method:"POST",headers,body:JSON.stringify({query:sql})});
   }
   if(args.capabilityKey==="sql.read") {
-    requireFields(i,["sql"]); const sql=String(i.sql).trim(); if(!/^(select|with|explain|show)\b/i.test(sql)) throw new Error("sql.read only permits read-only SQL statements.");
+    requireFields(i,["sql"]); const sql=wrapReadOnlySql(String(i.sql));
     return jsonFetch(`${base}/v1/projects/${projectRef}/database/query`,{method:"POST",headers,body:JSON.stringify({query:sql})});
   }
   if(args.capabilityKey==="migration.apply") {

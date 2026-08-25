@@ -1,7 +1,8 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import { redactSecretText } from "@/lib/security/redaction";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -147,12 +148,9 @@ const legalSchema={
 } as const;
 
 async function authContext(){
-  const supabase=await createAuthServerClient();
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user) return {error:fail("Authentication required.",401)} as const;
-  const {data:membership}=await supabase.from("organization_members").select("organization_id").eq("user_id",user.id).eq("role","owner").maybeSingle();
-  if(!membership) return {error:fail("Owner authorization required.",403)} as const;
-  return {supabase,user,organizationId:membership.organization_id as string} as const;
+  const auth=await resolveOwnerApiOrganizationContext();
+  if(!auth.ok) return {error:fail(auth.error,auth.status)} as const;
+  return {supabase:auth.supabase,user:auth.user,organizationId:auth.organizationId} as const;
 }
 
 export async function GET(request:Request){
@@ -238,7 +236,7 @@ export async function POST(request:Request){
     await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"agent",actor_agent_id:legalAgent.id,event_type:"meeting.ai_legal_review_completed",object_type:"meeting",object_id:meeting.id,risk_level:normalizedOutcome==="CLEAR"?"low":normalizedOutcome==="CLEAR_WITH_CONDITIONS"?"medium":"high",payload:{session_id:sessionId,review_id:review.id,agent_code:"A-106",outcome:normalizedOutcome,legal_applicability:normalizedApplicability,calibration_version:CALIBRATION_VERSION,licensed_counsel_required:licensed,conditions,jurisdictions,model:config.dryRunModel,input_tokens:inputTokens,output_tokens:outputTokens,estimated_cost_usd:cost,external_actions:false,advisory_only:true,normalizer:"partial_json_v2"}});
     return NextResponse.json({ok:true,review,sessionEstimatedCostUsd:newCost,recalibrated:Boolean(existing&&Number(existing.calibration_version??1)<CALIBRATION_VERSION)});
   }catch(error){
-    const message=error instanceof Error?error.message:"AI legal review failed.";
+    const message=redactSecretText(error instanceof Error?error.message:"AI legal review failed.");
     await supabase.from("meeting_legal_reviews").update({status:"failed",error_message:message,updated_at:new Date().toISOString()}).eq("id",reviewId).eq("organization_id",organizationId);
     return fail(`A-106 legal review failed: ${message}`,502);
   }

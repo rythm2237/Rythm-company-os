@@ -8,7 +8,7 @@ export async function stripePost(path:string,params:URLSearchParams,idempotencyK
  const key=process.env.STRIPE_SECRET_KEY;
  if(!key) throw new Error("Stripe billing is not configured on this deployment.");
  const response=await fetch(`${API}${path}`,{method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/x-www-form-urlencoded",...(idempotencyKey?{"Idempotency-Key":idempotencyKey}:{})},body:params.toString(),cache:"no-store"});
- const data=await response.json();
- if(!response.ok) throw new Error(data?.error?.message??`Stripe request failed (${response.status}).`);
+ const data=await response.json().catch(()=>null);
+ if(!response.ok) throw new Error(`Stripe request failed (${response.status}).`);
  return data;
 }

@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
 export const dynamic = "force-dynamic";
@@ -41,12 +41,9 @@ function parseTriage(raw:string):ParsedTriage|null{
 }
 
 async function context(){
-  const supabase=await createAuthServerClient();
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user) return {error:fail("Authentication required.",401)} as const;
-  const {data:membership}=await supabase.from("organization_members").select("organization_id").eq("user_id",user.id).eq("role","owner").maybeSingle();
-  if(!membership) return {error:fail("Owner authorization required.",403)} as const;
-  return {supabase,user,organizationId:membership.organization_id as string} as const;
+  const auth=await resolveOwnerApiOrganizationContext();
+  if(!auth.ok) return {error:fail(auth.error,auth.status)} as const;
+  return {supabase:auth.supabase,organizationId:auth.organizationId} as const;
 }
 
 export async function GET(request:Request){
@@ -93,7 +90,7 @@ export async function POST(request:Request){
   catch{return fail("A JSON body with sessionId is required.",400);}
   if(!sessionId) return fail("sessionId is required.",400);
 
-  const {supabase,user,organizationId}=auth;
+  const {supabase,organizationId}=auth;
   const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,status,decision_question,language,synthesis,recommendation,decision_options,legal_triage_status,legal_triage_reason,legal_triaged_at,legal_triage_basis_closed_at").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
   if(!session) return fail("Meeting session not found.",404);
   if(session.status!=="completed") return fail("Legal triage runs after the latest agent synthesis is completed.",409);

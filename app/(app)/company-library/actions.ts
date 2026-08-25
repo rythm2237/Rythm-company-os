@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { chunkCompanyDocument, extractCompanyDocument } from "@/lib/company-library-ingestion";
+import { redactSecretText } from "@/lib/security/redaction";
 
 const categories = new Set(["general","brand","people","contact","product","service","process","operations","analytics","finance","sales","legal","website","other"]);
 const confidentialityLevels = new Set(["public","internal","confidential","restricted"]);
@@ -123,7 +124,7 @@ export async function registerCompanyLibraryDocument(input: RegisterCompanyDocum
     revalidatePath("/company-library");
     return { ok: true, knowledgeId, status: "ready", chunkCount: chunks.length };
   } catch (error) {
-    const message = error instanceof Error ? error.message.slice(0, 900) : "Company Library ingestion failed.";
+    const message = redactSecretText(error instanceof Error ? error.message : "Company Library ingestion failed.",900);
     await context.supabase.from("company_knowledge_chunks").delete().eq("organization_id", context.organizationId).eq("knowledge_id", knowledgeId);
     await context.supabase.from("company_knowledge").update({
       ingestion_status: "failed",

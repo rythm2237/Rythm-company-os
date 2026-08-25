@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test:phase0": "node --experimental-strip-types scripts/validate-phase0-security.ts",
     "test:routing": "npx --yes tsx@4.20.5 scripts/validate-adaptive-routing.ts",
     "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts"
   },

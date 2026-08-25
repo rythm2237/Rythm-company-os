@@ -3,6 +3,8 @@
 import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { fetchPublicResource } from "@/lib/security/public-url";
+import { safeErrorMetadata } from "@/lib/security/redaction";
 
 type ProposedDepartment = { key: string; name: string; description: string };
 type ProposedAgent = {
@@ -66,26 +68,25 @@ export async function addCompanyKnowledgeUrl(formData: FormData) {
   let url: URL;
   try { url=new URL(urlText); if (!/^https?:$/.test(url.protocol)) throw new Error(); } catch { redirect("/studio/builder?error=Enter%20a%20valid%20http%20or%20https%20URL."); }
   try {
-    const response=await fetch(url!.toString(),{redirect:"follow",signal:AbortSignal.timeout(12000),headers:{"user-agent":"RYTHM-Company-Knowledge/1.0"}});
+    const {response,bytes,finalUrl}=await fetchPublicResource(url!,{timeoutMs:12000,maxBytes:15*1024*1024,maxRedirects:4,headers:{"user-agent":"RYTHM-Company-Knowledge/1.0"}});
     if (!response.ok) throw new Error("fetch");
     const contentType=response.headers.get("content-type")?.split(";")[0] || "text/html";
     if (contentType.startsWith("image/") || contentType==="application/pdf") {
-      const bytes=Buffer.from(await response.arrayBuffer());
-      if (bytes.length>15*1024*1024) throw new Error("size");
-      const filename=safeFilename(url!.pathname.split("/").filter(Boolean).pop() || "reference");
+      const buffer=Buffer.from(bytes);
+      const filename=safeFilename(finalUrl.pathname.split("/").filter(Boolean).pop() || "reference");
       const storagePath=`${context.organizationId}/${randomUUID()}-${filename}`;
-      const { error: uploadError }=await context.supabase.storage.from("company-knowledge").upload(storagePath,bytes,{contentType,upsert:false});
+      const { error: uploadError }=await context.supabase.storage.from("company-knowledge").upload(storagePath,buffer,{contentType,upsert:false});
       if (uploadError) throw uploadError;
-      const { error }=await context.supabase.from("company_knowledge").insert({ organization_id:context.organizationId,title:clean(formData.get("title"),180)||filename,category:validCategory(clean(formData.get("category"),30)||"brand"),source_type:"url",source_url:url!.toString(),storage_path:storagePath,mime_type:contentType,content:`Reference asset imported from ${url!.toString()}`,confidentiality:validConfidentiality(clean(formData.get("confidentiality"),30)),allowed_role_keywords:splitList(formData.get("allowedRoles")),allowed_departments:splitList(formData.get("allowedDepartments")),transferable:false });
+      const { error }=await context.supabase.from("company_knowledge").insert({ organization_id:context.organizationId,title:clean(formData.get("title"),180)||filename,category:validCategory(clean(formData.get("category"),30)||"brand"),source_type:"url",source_url:finalUrl.toString(),storage_path:storagePath,mime_type:contentType,content:`Reference asset imported from ${finalUrl.toString()}`,confidentiality:validConfidentiality(clean(formData.get("confidentiality"),30)),allowed_role_keywords:splitList(formData.get("allowedRoles")),allowed_departments:splitList(formData.get("allowedDepartments")),transferable:false });
       if (error) throw error;
     } else {
-      const raw=(await response.text()).slice(0,250000);
+      const raw=new TextDecoder().decode(bytes).slice(0,250000);
       const snapshot=htmlToText(raw).slice(0,50000);
-      const { error }=await context.supabase.from("company_knowledge").insert({ organization_id:context.organizationId,title:clean(formData.get("title"),180)||url!.hostname,category:validCategory(clean(formData.get("category"),30)||"website"),source_type:"url",source_url:url!.toString(),mime_type:contentType,content:snapshot||`Website reference: ${url!.toString()}`,confidentiality:validConfidentiality(clean(formData.get("confidentiality"),30)),allowed_role_keywords:splitList(formData.get("allowedRoles")),allowed_departments:splitList(formData.get("allowedDepartments")),transferable:false });
+      const { error }=await context.supabase.from("company_knowledge").insert({ organization_id:context.organizationId,title:clean(formData.get("title"),180)||finalUrl.hostname,category:validCategory(clean(formData.get("category"),30)||"website"),source_type:"url",source_url:finalUrl.toString(),mime_type:contentType,content:snapshot||`Website reference: ${finalUrl.toString()}`,confidentiality:validConfidentiality(clean(formData.get("confidentiality"),30)),allowed_role_keywords:splitList(formData.get("allowedRoles")),allowed_departments:splitList(formData.get("allowedDepartments")),transferable:false });
       if (error) throw error;
     }
   } catch (error) {
-    console.error("company_knowledge_url_failed",{organizationId:context.organizationId,url:urlText,error});
+    console.error("company_knowledge_url_failed",{organizationId:context.organizationId,error:safeErrorMetadata(error)});
     redirect("/studio/builder?error=The%20URL%20could%20not%20be%20imported.%20You%20can%20add%20the%20same%20information%20as%20text%20or%20file.");
   }
   redirect("/studio/builder?message=Website%20or%20reference%20imported%20into%20Company%20Knowledge.");
@@ -125,7 +126,7 @@ export async function createCompanyBuilderDraft(formData: FormData) {
   if (companyName.length<2 || companyType.length<2) redirect("/studio/builder?error=Enter%20a%20valid%20company%20name%20and%20company%20type.");
   const proposal=createProposal(companyType,primaryServices,requiredCapabilities,authority);
   const { data,error }=await context.supabase.from("company_builder_drafts").insert({organization_id:context.organizationId,created_by_user_id:context.user.id,company_name:companyName,company_type:companyType,primary_services:primaryServices,business_model:businessModel||"Not specified",company_size_intent:companySizeIntent||"Lean",required_capabilities:requiredCapabilities,desired_ai_authority:authority,preferred_language:preferredLanguage,proposed_structure:proposal,status:"reviewed"}).select("id").single();
-  if (error||!data?.id) { console.error("company_builder_draft_create_failed",{organizationId:context.organizationId,error}); redirect("/studio/builder?error=Company%20proposal%20could%20not%20be%20created."); }
+  if (error||!data?.id) { console.error("company_builder_draft_create_failed",{organizationId:context.organizationId,error:safeErrorMetadata(error)}); redirect("/studio/builder?error=Company%20proposal%20could%20not%20be%20created."); }
   redirect(`/studio/builder?draft=${encodeURIComponent(String(data.id))}&message=Company%20proposal%20created.%20Review%20it%20before%20building.`);
 }
 
@@ -134,7 +135,7 @@ export async function buildCompanyFromDraft(formData: FormData) {
   const draftId=clean(formData.get("draftId"),80);
   if (!draftId) redirect("/studio/builder?error=Builder%20draft%20is%20required.");
   const { data,error }=await context.supabase.rpc("build_company_from_draft",{target_draft_id:draftId});
-  if (error) { console.error("company_builder_build_failed",{organizationId:context.organizationId,draftId,error}); redirect(`/studio/builder?draft=${encodeURIComponent(draftId)}&error=Company%20build%20could%20not%20be%20completed.`); }
+  if (error) { console.error("company_builder_build_failed",{organizationId:context.organizationId,draftId,error:safeErrorMetadata(error)}); redirect(`/studio/builder?draft=${encodeURIComponent(draftId)}&error=Company%20build%20could%20not%20be%20completed.`); }
   const result=data as {agents_created?:number;departments_created?:number}|null;
   const message=`Company built with ${result?.departments_created??0} departments and ${result?.agents_created??0} AI Agents. Company Knowledge is attached live at runtime; Agents start paused and external actions remain disabled.`;
   redirect(`/command-center?message=${encodeURIComponent(message)}`);

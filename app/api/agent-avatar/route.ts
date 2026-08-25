@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchPublicResource } from "@/lib/security/public-url";
 
 const ALLOWED_HOSTS = new Set(["images.unsplash.com"]);
 
@@ -18,16 +19,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(target, {
-      headers: { Accept: "image/avif,image/webp,image/jpeg,image/*" },
-      next: { revalidate: 86400 },
-    });
+    const {response,bytes}=await fetchPublicResource(target,{timeoutMs:8000,maxBytes:8*1024*1024,maxRedirects:3,allowedHosts:[...ALLOWED_HOSTS],headers:{Accept:"image/avif,image/webp,image/jpeg,image/*"}});
 
     if (!response.ok || !response.body) {
       return new NextResponse("Image unavailable", { status: 502 });
     }
 
-    return new NextResponse(response.body, {
+    return new NextResponse(bytes, {
       status: 200,
       headers: {
         "Content-Type": response.headers.get("content-type") ?? "image/jpeg",
