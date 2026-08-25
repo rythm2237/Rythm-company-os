@@ -247,6 +247,7 @@ await test("operational telemetry failure does not fail a valid request", async 
 
 await test("migration is additive, least-privilege and tenant-scoped", () => {
   const sql = readFileSync("supabase/migrations/20260825091111_phase1b_routing_modes_telemetry.sql", "utf8").toLowerCase();
+  const grants = readFileSync("supabase/migrations/20260825091238_phase1b_routing_grant_hardening.sql", "utf8").toLowerCase();
   assert.match(sql, /alter table public\.ai_routing_decisions[\s\S]*add column if not exists routing_mode/);
   assert.match(sql, /routing_mode in \('off', 'shadow', 'enforced'\)/);
   assert.match(sql, /revoke all on table public\.ai_routing_decisions from public, anon, authenticated/);
@@ -256,6 +257,9 @@ await test("migration is additive, least-privilege and tenant-scoped", () => {
   assert.match(sql, /om\.user_id = \(select auth\.uid\(\)\)/);
   assert.doesNotMatch(sql, /create policy[\s\S]{0,120}to anon/);
   assert.doesNotMatch(sql, /drop table|truncate table|delete from public\.ai_routing_decisions/);
+  assert.match(grants, /revoke all on table public\.ai_routing_decisions from service_role/);
+  assert.match(grants, /grant select, insert, update, delete on table public\.ai_routing_decisions to service_role/);
+  assert.doesNotMatch(grants, /grant[^;]*truncate/);
 });
 
 console.log(`Phase 1B routing modes and telemetry validation passed: ${passed} checks.`);

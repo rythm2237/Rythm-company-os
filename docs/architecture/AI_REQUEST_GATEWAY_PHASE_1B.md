@@ -26,7 +26,10 @@ Routing telemetry remains tenant data. Authenticated reads are restricted by org
 
 ## Migration and rollback
 
-Migration: `20260825091111_phase1b_routing_modes_telemetry.sql`.
+Migrations:
+
+- `20260825091111_phase1b_routing_modes_telemetry.sql` adds rollout controls, telemetry fields, RLS and explicit Data API grants.
+- `20260825091238_phase1b_routing_grant_hardening.sql` removes unnecessary `TRUNCATE`, `REFERENCES` and `TRIGGER` privileges from the service-role writer.
 
 Rollback procedure:
 
