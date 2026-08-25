@@ -4,7 +4,7 @@ import type { RoutingMode } from "@/lib/ai/routing-rollout";
 import type { RoutingDecision } from "@/lib/ai/routing-types";
 import type { ProviderUsage } from "@/lib/ai/gateway-contracts";
 
-export const AI_ROUTER_VERSION = "adaptive-v1-phase1b";
+export const AI_ROUTER_VERSION = "adaptive-router-v2.0.0";
 
 export type AiRoutingTelemetryRecord = {
   correlationId: string;
@@ -37,27 +37,30 @@ function cleanReasonCodes(values: string[]) {
 
 export function telemetryRow(record: AiRoutingTelemetryRecord) {
   const effective = record.actual ?? record.proposed;
+  const classification = record.proposed ?? record.actual;
   return {
     request_id: record.correlationId,
     organization_id: record.organizationId,
     user_id: record.userId ?? null,
     agent_id: record.agentId ?? null,
     request_type: record.requestType,
-    task_type: effective?.taskType ?? null,
-    operation_type: effective?.operation ?? null,
-    detected_language: effective?.language ?? null,
-    response_language: effective?.responseLanguage ?? null,
-    intent: effective?.intent ?? null,
-    complexity: effective?.complexity ?? null,
-    risk_level: effective?.risk ?? null,
+    task_type: classification?.taskType ?? null,
+    operation_type: classification?.operation ?? null,
+    detected_language: classification?.language ?? null,
+    response_language: classification?.responseLanguage ?? null,
+    intent: classification?.intent ?? null,
+    intent_taxonomy_version: classification?.intentTaxonomyVersion ?? null,
+    complexity: classification?.complexity ?? null,
+    risk_level: classification?.risk ?? null,
     selected_model_tier: effective?.selectedTier ?? null,
     provider: effective?.selectedProvider ?? null,
     provider_model: effective?.selectedModel ?? null,
-    reasoning_level: effective?.reasoningLevel ?? null,
-    routing_confidence: effective?.confidence ?? null,
-    routing_source: effective?.classificationSource ?? null,
+    reasoning_level: classification?.reasoningLevel ?? null,
+    reasoning_depth: classification?.reasoningDepth ?? null,
+    routing_confidence: classification?.confidence ?? null,
+    routing_source: classification?.classificationSource ?? null,
     escalation_index: effective?.escalationIndex ?? 0,
-    tools_used: effective?.requiredTools ?? [],
+    tools_used: classification?.requiredTools ?? [],
     latency_ms: record.totalLatencyMs ?? null,
     input_tokens: record.usage?.inputTokens ?? null,
     cached_tokens: record.usage?.cachedTokens ?? null,
@@ -67,9 +70,11 @@ export function telemetryRow(record: AiRoutingTelemetryRecord) {
     validation_result: record.success ? "completed" : "provider_error",
     routing_mode: record.routingMode,
     proposed_model_tier: record.proposed?.selectedTier ?? null,
+    proposed_capability_tier: record.proposed?.selectedCapabilityTier ?? null,
     proposed_provider: record.proposed?.selectedProvider ?? null,
     proposed_model: record.proposed?.selectedModel ?? null,
     actual_model_tier: record.actual?.selectedTier ?? null,
+    actual_capability_tier: record.actual?.selectedCapabilityTier ?? null,
     actual_provider: record.actual?.selectedProvider ?? null,
     actual_model: record.actual?.selectedModel ?? null,
     execution_policy: record.executionPolicy,
@@ -82,9 +87,17 @@ export function telemetryRow(record: AiRoutingTelemetryRecord) {
     provider_latency_ms: record.providerLatencyMs ?? null,
     gateway_latency_ms: record.gatewayLatencyMs ?? null,
     total_latency_ms: record.totalLatencyMs ?? null,
+    estimated_latency_ms: record.proposed?.estimatedLatencyMs ?? effective?.estimatedLatencyMs ?? null,
+    authorization_signal: classification?.authorizationSignal ?? null,
+    human_review_required: classification?.humanReviewRequired ?? false,
+    context_requirements: classification?.contextRequirements ?? [],
+    required_modalities: classification?.requiredModalities ?? [],
     normalized_error_class: record.errorClass ? redactSecretText(record.errorClass, 80) : null,
     router_version: record.proposed?.routingVersion ?? record.actual?.routingVersion ?? AI_ROUTER_VERSION,
     policy_version: record.policyVersion,
+    adaptive_policy_version: classification?.policyVersion ?? null,
+    classifier_version: classification?.classifierVersion ?? null,
+    model_registry_version: classification?.modelRegistryVersion ?? null,
     pricing_version: record.pricingVersion,
     completed_at: new Date().toISOString(),
   };
