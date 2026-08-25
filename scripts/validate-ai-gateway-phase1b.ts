@@ -21,11 +21,13 @@ const agentId = "00000000-0000-4000-8000-000000000003";
 function decision(overrides: Partial<RoutingDecision> = {}): RoutingDecision {
   return {
     requestId: "00000000-0000-4000-8000-000000000004",
-    language: "en", responseLanguage: "en", intent: "information", taskType: "read", operation: "read",
-    complexity: "low", risk: "low", reasoningRequirement: "low", requiredTools: [], requiredCapabilities: [],
-    recommendedTier: "luna", confidence: 0.95, allowEscalation: true, classificationSource: "deterministic",
-    selectedTier: "luna", selectedProvider: "openai", selectedModel: "gpt-5.6-luna", reasoningLevel: "low",
-    estimatedCostUsd: 0.001, escalationIndex: 0, routingVersion: "adaptive-v1",
+    language: "en", detectedLanguages: ["en"], responseLanguage: "en", intent: "information", intentTaxonomyVersion: "rythm-intents-v1", taskType: "information", operation: "read",
+    complexity: "low", risk: "low", reasoningRequirement: "low", reasoningDepth: "minimal", requiredTools: [], unavailableTools: [], requiredCapabilities: ["fast"],
+    requiredModalities: ["text"], contextRequirements: [], estimatedInputTokens: 10, latencyPreference: "interactive", authorizationSignal: "not_required", humanReviewRequired: false,
+    recommendedCapabilityTier: "fast", recommendedTier: "luna", reasonCodes: ["LOW_COMPLEXITY"], reasonSummary: "low complexity", confidence: 0.95, allowEscalation: true,
+    classificationSource: "deterministic", classifierVersion: "request-intelligence-v2.0.0",
+    selectedCapabilityTier: "fast", selectedTier: "luna", selectedProvider: "openai", selectedModel: "gpt-5.6-luna", reasoningLevel: "low",
+    estimatedCostUsd: 0.001, estimatedLatencyMs: 900, escalationIndex: 0, escalationReasons: [], routingVersion: "adaptive-router-v2.0.0", policyVersion: "adaptive-policy-v2.0.0", modelRegistryVersion: "test-registry-v2",
     ...overrides,
   };
 }

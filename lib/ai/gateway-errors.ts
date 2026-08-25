@@ -33,6 +33,6 @@ export function normalizeAiGatewayError(error: unknown): AiGatewayError {
   if (/not configured|missing.*(?:key|credential)/i.test(detail)) return new AiGatewayError("provider_not_configured", "The selected AI provider is not configured.", false, { cause: error });
   if (/empty .*response|invalid structured|invalid .*output/i.test(detail)) return new AiGatewayError("invalid_response", "The AI provider returned an invalid response.", true, { cause: error });
   if (/\b(?:502|503|504)\b|temporarily unavailable|provider unavailable/i.test(detail)) return new AiGatewayError("provider_unavailable", "The AI provider is temporarily unavailable.", true, { cause: error });
-  if (/restricted handling|blocked this request|permission|entitlement|budget/i.test(detail)) return new AiGatewayError("policy_denied", detail, false, { cause: error });
+  if (/restricted handling|blocked this request|permission|entitlement|budget|no production-eligible|no eligible model|fixed model/i.test(detail)) return new AiGatewayError("policy_denied", detail, false, { cause: error });
   return new AiGatewayError("unknown", "The AI request failed.", false, { cause: error });
 }

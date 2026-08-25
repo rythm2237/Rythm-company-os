@@ -4,7 +4,7 @@ import { AiGatewayError, normalizeAiGatewayError } from "@/lib/ai/gateway-errors
 import { getProviderEligibility } from "@/lib/ai/provider-eligibility";
 import type { AiGatewayRequest, AiGatewayResponse } from "@/lib/ai/gateway-contracts";
 import type { RoutingDecision } from "@/lib/ai/routing-types";
-import { routeRequest } from "@/lib/ai/adaptive-router";
+import { routeRequestV2, RoutingPolicyError } from "@/lib/ai/adaptive-router";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { loadRoutingRollout } from "@/lib/ai/routing-rollout-store";
 import type { ResolvedRoutingRollout } from "@/lib/ai/routing-rollout";
@@ -16,7 +16,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 export type AiGatewayDependencies = {
   loadRollout?: (input: { organizationId: string; environment: string; environmentKillSwitch?: string | boolean | null }) => Promise<ResolvedRoutingRollout>;
-  evaluateRouting?: typeof routeRequest;
+  evaluateRouting?: typeof routeRequestV2;
   execute?: (input: RunAgentInput) => Promise<RunAgentResult>;
   telemetryWriter?: AiRoutingTelemetryWriter;
   now?: () => number;
@@ -32,15 +32,11 @@ export function validateAiGatewayRequest(request: AiGatewayRequest) {
 
 function decisionReasonCodes(decision: RoutingDecision | null) {
   if (!decision) return [];
-  const codes = [
-    `${decision.complexity}_complexity`,
-    `${decision.risk}_risk`,
-    `${decision.reasoningRequirement}_reasoning_required`,
+  return [
+    ...decision.reasonCodes,
+    ...decision.escalationReasons,
+    ...(decision.escalationIndex > 0 ? ["ESCALATION_REQUIRED"] : []),
   ];
-  if (decision.requiredTools.length) codes.push("tool_capability_required");
-  if (decision.language !== "en" || decision.responseLanguage !== "en") codes.push("language_capability_required");
-  if (decision.escalationIndex > 0) codes.push("escalation_triggered");
-  return codes;
 }
 
 async function persistTelemetry(writer: AiRoutingTelemetryWriter, record: AiRoutingTelemetryRecord, policy: AiGatewayRequest["telemetryPolicy"]) {
@@ -58,8 +54,9 @@ async function persistTelemetry(writer: AiRoutingTelemetryWriter, record: AiRout
  * Canonical RYTHM-owned AI Request Gateway.
  *
  * Phase 1B adds deterministic off/shadow/enforced control and durable,
- * content-minimized telemetry. Shadow evaluates without issuing a second
- * provider request; the existing execution path remains authoritative.
+ * content-minimized telemetry. Phase 1C evaluates Request Intelligence v2
+ * only through this boundary. Shadow issues no second provider request and
+ * the v1 compatibility path remains authoritative until Phase 1D migration.
  */
 export async function executeAiRequest(request: AiGatewayRequest, dependencies: AiGatewayDependencies = {}): Promise<AiGatewayResponse> {
   validateAiGatewayRequest(request);
@@ -68,7 +65,7 @@ export async function executeAiRequest(request: AiGatewayRequest, dependencies: 
   const now = dependencies.now ?? (() => performance.now());
   const started = now();
   const loadRollout = dependencies.loadRollout ?? loadRoutingRollout;
-  const evaluate = dependencies.evaluateRouting ?? routeRequest;
+  const evaluate = dependencies.evaluateRouting ?? routeRequestV2;
   const execute = dependencies.execute ?? runAgentDetailed;
   const telemetryWriter = dependencies.telemetryWriter ?? writeRoutingTelemetry;
   const rollout = await loadRollout({
@@ -80,9 +77,13 @@ export async function executeAiRequest(request: AiGatewayRequest, dependencies: 
   const routeInput = {
     prompt: request.prompt,
     requestId: correlationId,
+    requestType: request.feature,
     conversationLanguage: request.conversationLanguage,
+    attachments: request.attachments?.map(({ mimeType }) => ({ mimeType })),
+    contextCharacterCount: request.conversation?.length ?? 0,
     agent: request.agentPolicy,
     tenant: request.tenantPolicy,
+    runtimeEnvironment: runtime.environment,
   };
   let proposed: RoutingDecision | null = null;
   let actual: RoutingDecision | null = null;
@@ -101,6 +102,7 @@ export async function executeAiRequest(request: AiGatewayRequest, dependencies: 
         }
       }
     } catch (error) {
+      if (error instanceof RoutingPolicyError) reasonCodes.push(...error.reasonCodes);
       if (rollout.mode === "enforced") preExecutionError = normalizeAiGatewayError(error);
       else {
         reasonCodes.push("shadow_evaluation_failed");
