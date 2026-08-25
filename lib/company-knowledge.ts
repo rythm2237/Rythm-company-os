@@ -1,4 +1,5 @@
 import type { AgentAttachmentInput } from "@/lib/ai/agent-provider";
+import { fetchPublicResource } from "@/lib/security/public-url";
 import { loadProfessionalRuntimeContext } from "@/lib/trusted-agent-knowledge";
 
 type KnowledgeAgent = { id:string; role_title:string; department?:string|null; company_knowledge_connected?:boolean|null };
@@ -20,7 +21,7 @@ function roleCanUse(item:KnowledgeRow,agent:KnowledgeAgent){
 async function fileFromKnowledge(context:KnowledgeContext,item:KnowledgeRow):Promise<AgentAttachmentInput|null>{
   try{let buffer:Buffer|null=null;let mimeType=item.mime_type||"application/octet-stream";let filename=item.title.replace(/[^a-zA-Z0-9._ -]+/g,"-").slice(0,120)||"company-reference";
     if(item.storage_path){const{data,error}=await context.supabase.storage.from("company-knowledge").download(item.storage_path);if(error||!data)return null;buffer=Buffer.from(await data.arrayBuffer());if(data.type)mimeType=data.type;}
-    else if(item.source_url&&item.mime_type&&/^(image\/|application\/pdf)/.test(item.mime_type)){const response=await fetch(item.source_url,{signal:AbortSignal.timeout(8000),redirect:"follow"});if(!response.ok)return null;buffer=Buffer.from(await response.arrayBuffer());mimeType=response.headers.get("content-type")?.split(";")[0]||mimeType;try{const pathname=new URL(item.source_url).pathname;filename=pathname.split("/").filter(Boolean).pop()||filename;}catch{}}
+    else if(item.source_url&&item.mime_type&&/^(image\/|application\/pdf)/.test(item.mime_type)){const {response,bytes,finalUrl}=await fetchPublicResource(item.source_url,{timeoutMs:8000,maxBytes:15*1024*1024,maxRedirects:4});if(!response.ok)return null;buffer=Buffer.from(bytes);mimeType=response.headers.get("content-type")?.split(";")[0]||mimeType;filename=finalUrl.pathname.split("/").filter(Boolean).pop()||filename;}
     if(!buffer?.length||buffer.length>15*1024*1024)return null;return{filename,mimeType,base64:buffer.toString("base64")};
   }catch{return null;}
 }

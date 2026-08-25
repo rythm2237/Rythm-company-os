@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -7,11 +7,9 @@ export const runtime = "nodejs";
 const fail = (error:string,status:number) => NextResponse.json({ok:false,error},{status});
 
 export async function POST(request:Request){
-  const supabase=await createAuthServerClient();
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user) return fail("Authentication required.",401);
-  const {data:membership}=await supabase.from("organization_members").select("organization_id").eq("user_id",user.id).eq("role","owner").maybeSingle();
-  if(!membership) return fail("Owner authorization required.",403);
+  const auth=await resolveOwnerApiOrganizationContext();
+  if(!auth.ok) return fail(auth.error,auth.status);
+  const {supabase,user,organizationId}=auth;
 
   let sessionId="";let content="";
   try{
@@ -23,7 +21,6 @@ export async function POST(request:Request){
   if(content.length<2) return fail("Enter a CEO contribution before sending.",400);
   if(content.length>4000) return fail("CEO contribution must be 4000 characters or fewer.",400);
 
-  const organizationId=membership.organization_id as string;
   const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,status").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
   if(!session||!["ready","running","completed"].includes(session.status)) return fail("CEO contributions are allowed while the governed meeting remains open.",409);
   const {data:meeting}=await supabase.from("meetings").select("id,status").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();

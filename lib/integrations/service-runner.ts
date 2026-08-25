@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { executeProviderCapability } from "@/lib/integrations/provider-executors";
+import { redactSecretText, redactSensitiveValue } from "@/lib/security/redaction";
 
 type SafeJson = string | number | boolean | null | SafeJson[] | { [key: string]: SafeJson };
 
@@ -11,22 +12,11 @@ function serviceClient() {
 }
 
 function safeResult(value: any): { [key: string]: SafeJson } {
-  if (value == null) return {};
-  if (Array.isArray(value)) return { items: value.slice(0, 20).map((item) => safeObject(item)) };
-  return safeObject(value);
-}
-function safeObject(value: any): { [key: string]: SafeJson } {
-  if (!value || typeof value !== "object") return { value: String(value).slice(0, 1500) };
-  const blocked = /token|secret|password|authorization|credential|private[_-]?key|access[_-]?key/i;
-  return Object.fromEntries(Object.entries(value).filter(([key]) => !blocked.test(key)).slice(0, 60).map(([key,val]) => {
-    let safeValue: SafeJson;
-    if (typeof val === "string") safeValue = val.slice(0, 2000);
-    else if (typeof val === "number" || typeof val === "boolean" || val == null) safeValue = val as number | boolean | null;
-    else if (Array.isArray(val)) safeValue = val.slice(0,10).map((item) => typeof item === "object" && item ? safeObject(item) : String(item).slice(0,1000));
-    else if (typeof val === "object") safeValue = safeObject(val);
-    else safeValue = String(val).slice(0,1000);
-    return [key, safeValue];
-  }));
+  const redacted = redactSensitiveValue(value);
+  if (redacted == null) return {};
+  if (Array.isArray(redacted)) return { items: redacted.slice(0, 20) as SafeJson[] };
+  if (typeof redacted === "object") return redacted as { [key: string]: SafeJson };
+  return { value: String(redacted).slice(0, 1500) };
 }
 
 export async function executeApprovedToolRequest(executionRequestId: string) {
@@ -55,9 +45,9 @@ export async function executeApprovedToolRequest(executionRequestId: string) {
     await supabase.from("tool_execution_events").insert({organization_id:request.organization_id,execution_request_id:request.id,event_type:"execution_succeeded",status:"succeeded",safe_detail:{latency_ms:latency}});
     return { ok:true as const, result:safe, latencyMs:latency };
   } catch (executionError) {
-    const latency=Date.now()-started; const message=executionError instanceof Error?executionError.message:"Provider execution failed"; const code=message.match(/\((\d{3})\)/)?.[1]||"PROVIDER_EXECUTION_FAILED";
+    const latency=Date.now()-started; const message=redactSecretText(executionError instanceof Error?executionError.message:"Provider execution failed"); const code=message.match(/\((\d{3})\)/)?.[1]||"PROVIDER_EXECUTION_FAILED";
     await supabase.from("tool_execution_requests").update({status:"failed",error_code:code,safe_result:{message:message.slice(0,1000)},latency_ms:latency,completed_at:new Date().toISOString()}).eq("id",request.id);
     await supabase.from("tool_execution_events").insert({organization_id:request.organization_id,execution_request_id:request.id,event_type:"execution_failed",status:"failed",safe_detail:{error_code:code,latency_ms:latency}});
-    throw executionError;
+    throw new Error(message);
   }
 }

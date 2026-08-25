@@ -4,6 +4,7 @@ import type { AgentProvider } from "@/lib/agent-builder";
 import { runAgent } from "@/lib/ai/agent-provider";
 import { createKnowledgeAdminClient } from "@/lib/supabase/knowledge-admin";
 import type { NormalizedRole } from "@/lib/trusted-agent-knowledge";
+import { fetchPublicResource } from "@/lib/security/public-url";
 
 type SourceRow = {
   id: string;
@@ -59,16 +60,12 @@ function sanitizeSourceText(html: string) {
 }
 
 async function fetchTrustedSource(source: SourceRow) {
-  const response = await fetch(source.canonical_url, {
-    redirect: "follow",
-    signal: AbortSignal.timeout(9000),
-    headers: { "user-agent": "RYTHM-Trusted-Knowledge-Acquisition/1.0" },
-  });
+  const {response,bytes,finalUrl}=await fetchPublicResource(source.canonical_url,{timeoutMs:9000,maxBytes:240000,maxRedirects:4,allowedHosts:[source.base_domain],headers:{"user-agent":"RYTHM-Trusted-Knowledge-Acquisition/1.0"}});
   if (!response.ok) throw new Error(`Trusted source unavailable (${response.status})`);
-  if (!validTrustedHost(response.url, source.base_domain)) throw new Error("Trusted source redirected outside registered authority domain.");
+  if (!validTrustedHost(finalUrl.toString(), source.base_domain)) throw new Error("Trusted source redirected outside registered authority domain.");
   const contentType = response.headers.get("content-type") ?? "";
   if (!/text\/(html|plain)|application\/xhtml\+xml/i.test(contentType)) throw new Error("Unsupported trusted-source content type.");
-  const raw = (await response.text()).slice(0, 240000);
+  const raw = new TextDecoder().decode(bytes);
   const text = sanitizeSourceText(raw).slice(0, 18000);
   if (text.length < 300) throw new Error("Trusted source did not provide enough usable professional content.");
   return text;

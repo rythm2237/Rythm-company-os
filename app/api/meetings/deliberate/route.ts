@@ -1,7 +1,8 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import { redactSecretText, safeErrorMetadata } from "@/lib/security/redaction";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -49,18 +50,15 @@ export async function POST(request:Request) {
   if (config.externalActionsEnabled) return jsonError("Meeting runtime refuses to operate while external actions are enabled.", 503);
   if (!config.openAIConfigured || !config.dryRunModel) return jsonError("OpenAI and RYTHM_DRY_RUN_MODEL must be configured.", 503);
 
-  const supabase = await createAuthServerClient();
-  const { data:{ user } } = await supabase.auth.getUser();
-  if (!user) return jsonError("Authentication required.", 401);
-  const { data:membership } = await supabase.from("organization_members").select("organization_id").eq("user_id", user.id).eq("role", "owner").maybeSingle();
-  if (!membership) return jsonError("Owner authorization required.", 403);
+  const auth = await resolveOwnerApiOrganizationContext();
+  if (!auth.ok) return jsonError(auth.error, auth.status);
+  const {supabase,user,organizationId}=auth;
 
   let sessionId = "";
   try { sessionId = String(((await request.json()) as {sessionId?:string}).sessionId ?? "").trim(); }
   catch { return jsonError("A JSON body with sessionId is required.", 400); }
   if (!sessionId) return jsonError("sessionId is required.", 400);
 
-  const organizationId = membership.organization_id as string;
   const { data:session } = await supabase.from("meeting_agent_sessions")
     .select("id,meeting_id,project_id,status,decision_question,language,max_rounds,budget_cap_usd,external_research_allowed,total_input_tokens,total_output_tokens,estimated_cost_usd")
     .eq("id", sessionId).eq("organization_id", organizationId).maybeSingle();
@@ -259,10 +257,10 @@ export async function POST(request:Request) {
     await supabase.from("audit_events").insert({ organization_id:organizationId, actor_type:"system", event_type:"meeting.agent_deliberation_completed", object_type:"meeting", object_id:meeting.id, risk_level:"medium", payload:{ session_id:sessionId, rounds:session.max_rounds, participants:participants.length, decision_options:options.length, awaiting_chair_close:true, external_actions:false, human_decision_required:true, company_library_chunks:meetingLibraryRows.length } });
     return NextResponse.json({ ok:true, sessionId, status:"completed", phase:"synthesis", roundNo, turnIndex:nextTurnIndex, speaker:{ id:responseAgent.id, code:responseAgent.agent_code, name:responseAgent.display_name ?? responseAgent.name, role:responseAgent.role_title }, content:responseText, decisionOptions:options, recommendation:payload.recommendation ?? "Human CEO review required.",awaitingChairClose:true });
   } catch (error) {
-    const message = error instanceof Error ? error.message.slice(0,1000) : "Unknown meeting runtime error";
+    const message = redactSecretText(error instanceof Error ? error.message : "Unknown meeting runtime error");
     await supabase.from("meeting_agent_sessions").update({ error_message:message, updated_at:new Date().toISOString() }).eq("id",sessionId).eq("organization_id",organizationId);
     await supabase.from("audit_events").insert({ organization_id:organizationId, actor_type:"system", event_type:"meeting.agent_deliberation_retryable_error", object_type:"meeting", object_id:meeting.id, risk_level:"low", payload:{ session_id:sessionId, message, external_actions:false, session_left_resumable:true } });
-    console.error("meeting_deliberation_retryable_error", { sessionId, error });
+    console.error("meeting_deliberation_retryable_error", { sessionId, error:safeErrorMetadata(error) });
     return jsonError("Agent deliberation hit a retryable runtime error. Retry is safe; the failed turn was not recorded.",500);
   }
 }

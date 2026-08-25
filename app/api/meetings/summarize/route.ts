@@ -1,7 +1,8 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import { redactSecretText } from "@/lib/security/redaction";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -27,11 +28,9 @@ export async function POST(request:Request){
   if(config.externalActionsEnabled) return fail("Meeting summaries refuse to run while external actions are enabled.",503);
   if(!config.openAIConfigured||!config.dryRunModel) return fail("OpenAI runtime is not configured.",503);
 
-  const supabase=await createAuthServerClient();
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user) return fail("Authentication required.",401);
-  const {data:membership}=await supabase.from("organization_members").select("organization_id").eq("user_id",user.id).eq("role","owner").maybeSingle();
-  if(!membership) return fail("Owner authorization required.",403);
+  const auth=await resolveOwnerApiOrganizationContext();
+  if(!auth.ok) return fail(auth.error,auth.status);
+  const {supabase,user,organizationId}=auth;
 
   let sessionId="";
   let requestedLanguage="";
@@ -43,7 +42,6 @@ export async function POST(request:Request){
   catch{return fail("A JSON body with sessionId is required.",400);}
   if(!sessionId) return fail("sessionId is required.",400);
 
-  const organizationId=membership.organization_id as string;
   const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,decision_question,language,status,total_input_tokens,total_output_tokens,estimated_cost_usd,budget_cap_usd").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
   if(!session) return fail("Meeting session not found.",404);
   const summaryLanguage=requestedLanguage||session.language||"English";
@@ -83,7 +81,7 @@ export async function POST(request:Request){
 
     return NextResponse.json({ok:true,summary,language:summaryLanguage,meetingLanguage:session.language,status:session.status,model:config.dryRunModel,inputTokens,outputTokens,summaryCostUsd,sessionEstimatedCostUsd});
   }catch(error){
-    const message=error instanceof Error?error.message:"Meeting summary failed.";
+    const message=redactSecretText(error instanceof Error?error.message:"Meeting summary failed.");
     return fail(`Meeting summary failed: ${message}`,502);
   }
 }

@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { redactSecretText } from "@/lib/security/redaction";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { assertEvaluationIsolation, BASE_EVALUATION_SCENARIOS, classifyEvaluation, EVALUATION_DIMENSIONS, type DimensionScore } from "./harness";
 
@@ -135,7 +136,7 @@ export async function runAgentEvaluationFleet(input: { organizationId: string; r
     await supabase.from("agent_evaluation_batches").update({ status: "completed", completed_at: new Date().toISOString(), summary }).eq("id", batch.id);
     return { batchId: batch.id as string, model, summary, results };
   } catch (error) {
-    await supabase.from("agent_evaluation_batches").update({ status: "failed", completed_at: new Date().toISOString(), error_message: error instanceof Error ? error.message : String(error) }).eq("id", batch.id);
+    await supabase.from("agent_evaluation_batches").update({ status: "failed", completed_at: new Date().toISOString(), error_message: redactSecretText(error) }).eq("id", batch.id);
     throw error;
   }
 }

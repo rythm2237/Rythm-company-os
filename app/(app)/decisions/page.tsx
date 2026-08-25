@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
 
 export const dynamic = "force-dynamic";
 
@@ -55,19 +55,8 @@ const normalizeList = (value: unknown): string[] => {
 };
 
 async function getOwnerContext() {
-  const supabase = await createAuthServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id, role")
-    .eq("user_id", user.id)
-    .eq("role", "owner")
-    .maybeSingle();
-
-  if (!membership) redirect("/login?error=Owner%20authorization%20required.");
-  return { supabase, user, organizationId: membership.organization_id as string };
+  const {supabase,user,organizationId}=await requireOwnerOrganizationContext();
+  return {supabase,user,organizationId};
 }
 
 async function createDecision(formData: FormData) {

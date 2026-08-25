@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
@@ -7,18 +7,15 @@ export const runtime="nodejs";
 const fail=(error:string,status:number)=>NextResponse.json({ok:false,error},{status});
 
 export async function POST(request:Request){
-  const supabase=await createAuthServerClient();
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user) return fail("Authentication required.",401);
-  const {data:membership}=await supabase.from("organization_members").select("organization_id").eq("user_id",user.id).eq("role","owner").maybeSingle();
-  if(!membership) return fail("Only the Human CEO / Owner may close this meeting.",403);
+  const auth=await resolveOwnerApiOrganizationContext();
+  if(!auth.ok) return fail(auth.status===403?"Only the Human CEO / Owner may close this meeting.":auth.error,auth.status);
+  const {supabase,user,organizationId}=auth;
 
   let sessionId="";
   try{sessionId=String(((await request.json()) as {sessionId?:string}).sessionId??"").trim();}
   catch{return fail("A JSON body with sessionId is required.",400);}
   if(!sessionId) return fail("sessionId is required.",400);
 
-  const organizationId=membership.organization_id as string;
   const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,status,synthesis").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
   if(!session) return fail("Meeting session not found.",404);
   if(session.status!=="completed") return fail("Agent deliberation and the latest synthesis must be complete before the chair can close the meeting.",409);
