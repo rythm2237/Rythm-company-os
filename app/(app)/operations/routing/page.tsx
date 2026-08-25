@@ -14,6 +14,8 @@ type RoutingRow = {
   operation_type: string | null;
   detected_language: string | null;
   response_language: string | null;
+  intent: string | null;
+  intent_taxonomy_version: string | null;
   complexity: string | null;
   risk_level: string | null;
   selected_model_tier: string | null;
@@ -28,9 +30,11 @@ type RoutingRow = {
   actual_cost_usd: number | null;
   routing_mode: "off" | "shadow" | "enforced";
   proposed_model_tier: string | null;
+  proposed_capability_tier: string | null;
   proposed_provider: string | null;
   proposed_model: string | null;
   actual_model_tier: string | null;
+  actual_capability_tier: string | null;
   actual_provider: string | null;
   actual_model: string | null;
   reason_codes: string[];
@@ -38,6 +42,12 @@ type RoutingRow = {
   gateway_latency_ms: number | null;
   router_version: string | null;
   policy_version: string | null;
+  adaptive_policy_version: string | null;
+  classifier_version: string | null;
+  model_registry_version: string | null;
+  reasoning_depth: string | null;
+  authorization_signal: string | null;
+  human_review_required: boolean;
   execution_status: string;
   validation_result: string | null;
   created_at: string;
@@ -56,7 +66,7 @@ export default async function RoutingObservabilityPage() {
 
   const [routingResult, agentsResult, rollout] = await Promise.all([
     supabase.from("ai_routing_decisions")
-      .select("id,request_id,agent_id,task_type,operation_type,detected_language,response_language,complexity,risk_level,selected_model_tier,provider,provider_model,reasoning_level,routing_confidence,routing_source,escalation_index,latency_ms,estimated_cost_usd,actual_cost_usd,routing_mode,proposed_model_tier,proposed_provider,proposed_model,actual_model_tier,actual_provider,actual_model,reason_codes,provider_latency_ms,gateway_latency_ms,router_version,policy_version,execution_status,validation_result,created_at")
+      .select("id,request_id,agent_id,task_type,operation_type,detected_language,response_language,intent,intent_taxonomy_version,complexity,risk_level,selected_model_tier,provider,provider_model,reasoning_level,reasoning_depth,routing_confidence,routing_source,escalation_index,latency_ms,estimated_cost_usd,actual_cost_usd,routing_mode,proposed_model_tier,proposed_capability_tier,proposed_provider,proposed_model,actual_model_tier,actual_capability_tier,actual_provider,actual_model,reason_codes,provider_latency_ms,gateway_latency_ms,router_version,policy_version,adaptive_policy_version,classifier_version,model_registry_version,authorization_signal,human_review_required,execution_status,validation_result,created_at")
       .eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(100),
     supabase.from("agents").select("id,name,role_title").eq("organization_id", organizationId),
     loadRoutingRollout({ organizationId, environment: runtime.environment, environmentKillSwitch: process.env.RYTHM_AI_ROUTING_KILL_SWITCH }),
@@ -112,11 +122,11 @@ export default async function RoutingObservabilityPage() {
           const agent = row.agent_id ? agentMap.get(row.agent_id) : null;
           return <div className="data-row" key={row.id}>
             <div>
-              <strong>{row.routing_mode.toUpperCase()} · proposed {row.proposed_model_tier?.toUpperCase() ?? "—"} / actual {row.actual_model_tier?.toUpperCase() ?? row.selected_model_tier?.toUpperCase() ?? "—"}</strong>
-              <span>{agent ? `${agent.name} · ${agent.role_title}` : "Unassigned Agent"} · {row.operation_type ?? "unclassified"} · {row.complexity ?? "unknown"} complexity · {row.risk_level ?? "unknown"} risk</span>
+              <strong>{row.routing_mode.toUpperCase()} · proposed {row.proposed_capability_tier?.toUpperCase() ?? row.proposed_model_tier?.toUpperCase() ?? "—"} / actual {row.actual_capability_tier?.toUpperCase() ?? row.actual_model_tier?.toUpperCase() ?? row.selected_model_tier?.toUpperCase() ?? "—"}</strong>
+              <span>{agent ? `${agent.name} · ${agent.role_title}` : "Unassigned Agent"} · {row.intent ?? row.operation_type ?? "unclassified"} · {row.complexity ?? "unknown"} complexity · {row.risk_level ?? "unknown"} risk · {row.human_review_required ? "human review required" : `authorization ${row.authorization_signal ?? "unknown"}`}</span>
               <span>proposed {row.proposed_provider ?? "—"}/{row.proposed_model ?? "—"} · actual {row.actual_provider ?? row.provider ?? "—"}/{row.actual_model ?? row.provider_model ?? "—"}</span>
-              <span>{row.detected_language ?? "unknown"} → {row.response_language ?? "unknown"} · reasoning {row.reasoning_level ?? "unknown"} · {row.reason_codes?.join(", ") || row.routing_source || "no reason code"}</span>
-              <span>{fmt(row.created_at)} · correlation {row.request_id.slice(0, 8)} · router {row.router_version ?? "legacy"} · policy {row.policy_version ?? "legacy"}</span>
+              <span>{row.detected_language ?? "unknown"} → {row.response_language ?? "unknown"} · reasoning {row.reasoning_depth ?? row.reasoning_level ?? "unknown"} · {row.reason_codes?.join(", ") || row.routing_source || "no reason code"}</span>
+              <span>{fmt(row.created_at)} · correlation {row.request_id.slice(0, 8)} · router {row.router_version ?? "legacy"} · policy {row.adaptive_policy_version ?? row.policy_version ?? "legacy"} · classifier {row.classifier_version ?? "legacy"} · registry {row.model_registry_version ?? "legacy"}</span>
             </div>
             <div className="row-meta">
               <span>provider {row.provider_latency_ms == null ? "—" : `${row.provider_latency_ms} ms`} · gateway {row.gateway_latency_ms == null ? "—" : `${row.gateway_latency_ms} ms`}</span>

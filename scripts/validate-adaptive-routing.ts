@@ -3,6 +3,9 @@ import { routeRequest, escalationDecision } from "../lib/ai/adaptive-router";
 import { deterministicRequestIntelligence } from "../lib/ai/request-intelligence";
 import type { AgentRoutingPolicy, TenantAiPolicy } from "../lib/ai/routing-types";
 
+process.env.OPENAI_API_KEY = "adaptive-routing-test-key";
+process.env.VERCEL_ENV = "production";
+
 const baseAgent: AgentRoutingPolicy = {
   agentId: "00000000-0000-0000-0000-000000000001",
   roleTitle: "Business Analyst",
