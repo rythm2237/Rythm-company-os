@@ -116,12 +116,24 @@ test("direct-provider inventory is complete and blocks unidentified call sites",
     .filter((path) => providerPattern.test(readFileSync(path, "utf8")))
     .map((path) => relative(root, path).replaceAll("\\", "/"))
     .sort();
-  const inventoried = DIRECT_PROVIDER_INVENTORY.map((item) => item.path).sort();
+  const inventoried = DIRECT_PROVIDER_INVENTORY.filter((item) => item.disposition !== "gateway_migrated").map((item) => item.path).sort();
   assert.deepEqual(discovered, inventoried);
   for (const item of DIRECT_PROVIDER_INVENTORY) {
     assert.equal(existsSync(join(root, item.path)), true, `Missing inventoried path: ${item.path}`);
     assert.ok(item.reason.trim().length >= 20, `Missing reason for ${item.path}`);
+    assert.ok(item.securityImplications.trim().length >= 20, `Missing security implications for ${item.path}`);
     assert.ok(item.futurePath.trim().length >= 20, `Missing future path for ${item.path}`);
+  }
+});
+
+test("Phase 1D Gateway-migrated paths cannot import or execute a direct provider", () => {
+  const root = process.cwd();
+  const migrated = DIRECT_PROVIDER_INVENTORY.filter((item) => item.disposition === "gateway_migrated");
+  assert.equal(migrated.length, 5);
+  for (const item of migrated) {
+    const source = readFileSync(join(root, item.path), "utf8");
+    assert.equal(providerPattern.test(source), false, `Migrated path still has direct provider access: ${item.path}`);
+    assert.match(source, /executeAiRequest/, `Migrated path does not use the canonical Gateway: ${item.path}`);
   }
 });
 

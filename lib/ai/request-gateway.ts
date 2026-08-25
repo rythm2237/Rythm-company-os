@@ -5,6 +5,7 @@ import { getProviderEligibility } from "@/lib/ai/provider-eligibility";
 import type { AiGatewayRequest, AiGatewayResponse } from "@/lib/ai/gateway-contracts";
 import type { RoutingDecision } from "@/lib/ai/routing-types";
 import { routeRequestV2, RoutingPolicyError } from "@/lib/ai/adaptive-router";
+import { routeLegacyRequest } from "@/lib/ai/legacy-adaptive-router";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { loadRoutingRollout } from "@/lib/ai/routing-rollout-store";
 import type { ResolvedRoutingRollout } from "@/lib/ai/routing-rollout";
@@ -15,7 +16,7 @@ import { safeErrorMetadata } from "@/lib/security/redaction";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type AiGatewayDependencies = {
-  loadRollout?: (input: { organizationId: string; environment: string; environmentKillSwitch?: string | boolean | null }) => Promise<ResolvedRoutingRollout>;
+  loadRollout?: (input: { organizationId: string; environment: string; feature: AiGatewayRequest["feature"]; environmentKillSwitch?: string | boolean | null }) => Promise<ResolvedRoutingRollout>;
   evaluateRouting?: typeof routeRequestV2;
   execute?: (input: RunAgentInput) => Promise<RunAgentResult>;
   telemetryWriter?: AiRoutingTelemetryWriter;
@@ -26,8 +27,22 @@ export function validateAiGatewayRequest(request: AiGatewayRequest) {
   if (!request.organizationId.trim()) throw new AiGatewayError("invalid_request", "Organization context is required.");
   if (!UUID.test(request.organizationId)) throw new AiGatewayError("invalid_request", "Organization context must be a valid identifier.");
   if (request.correlationId && !UUID.test(request.correlationId)) throw new AiGatewayError("invalid_request", "Correlation ID must be a valid UUID.");
+  const identifiers = [
+    ["Actor user", request.actor.userId],
+    ["Actor agent", request.actor.agentId],
+    ["Meeting", request.context?.meetingId],
+    ["Meeting session", request.context?.meetingSessionId],
+    ["Document", request.context?.documentId],
+    ["Project", request.context?.projectId],
+  ] as const;
+  for (const [label, value] of identifiers) {
+    if (value && !UUID.test(value)) throw new AiGatewayError("invalid_request", `${label} context must be a valid identifier.`);
+  }
   if (!request.prompt.trim()) throw new AiGatewayError("invalid_request", "AI request prompt is required.");
   if (!request.systemInstructions.trim()) throw new AiGatewayError("invalid_request", "AI system instructions are required.");
+  if (request.maxOutputTokens != null && (!Number.isInteger(request.maxOutputTokens) || request.maxOutputTokens < 1 || request.maxOutputTokens > 16_000)) {
+    throw new AiGatewayError("invalid_request", "AI max output tokens must be an integer between 1 and 16000.");
+  }
 }
 
 function decisionReasonCodes(decision: RoutingDecision | null) {
@@ -37,6 +52,31 @@ function decisionReasonCodes(decision: RoutingDecision | null) {
     ...decision.escalationReasons,
     ...(decision.escalationIndex > 0 ? ["ESCALATION_REQUIRED"] : []),
   ];
+}
+
+function legacyCompatibilityDecision(request: AiGatewayRequest, correlationId: string): RoutingDecision | null {
+  if (!request.legacyFallback) return null;
+  const classified = routeLegacyRequest({
+    prompt: request.prompt,
+    requestId: correlationId,
+    requestType: request.feature,
+    conversationLanguage: request.conversationLanguage,
+    attachments: request.attachments?.map(({ mimeType }) => ({ mimeType })),
+    contextCharacterCount: request.conversation?.length ?? 0,
+    agent: request.agentPolicy,
+    tenant: request.tenantPolicy,
+  });
+  return {
+    ...classified,
+    selectedCapabilityTier: "fallback",
+    selectedProvider: request.legacyFallback.provider,
+    selectedModel: request.legacyFallback.model,
+    estimatedCostUsd: null,
+    reasonCodes: [...new Set([...classified.reasonCodes, "LEGACY_FALLBACK" as const])],
+    reasonSummary: "Gateway compatibility model selected by off/shadow rollout mode",
+    routingVersion: "phase1d-legacy-compatibility",
+    policyVersion: "phase1d-legacy-compatibility",
+  };
 }
 
 async function persistTelemetry(writer: AiRoutingTelemetryWriter, record: AiRoutingTelemetryRecord, policy: AiGatewayRequest["telemetryPolicy"]) {
@@ -71,6 +111,7 @@ export async function executeAiRequest(request: AiGatewayRequest, dependencies: 
   const rollout = await loadRollout({
     organizationId: request.organizationId,
     environment: runtime.environment,
+    feature: request.feature,
     environmentKillSwitch: process.env.RYTHM_AI_ROUTING_KILL_SWITCH,
   });
 
@@ -87,6 +128,7 @@ export async function executeAiRequest(request: AiGatewayRequest, dependencies: 
   };
   let proposed: RoutingDecision | null = null;
   let actual: RoutingDecision | null = null;
+  let compatibility: RoutingDecision | null = null;
   let preExecutionError: AiGatewayError | null = null;
   const reasonCodes = [...rollout.reasonCodes];
 
@@ -110,6 +152,14 @@ export async function executeAiRequest(request: AiGatewayRequest, dependencies: 
       }
     }
   }
+  if (rollout.mode !== "enforced" && request.legacyFallback) {
+    try {
+      compatibility = legacyCompatibilityDecision(request, correlationId);
+    } catch (error) {
+      preExecutionError = normalizeAiGatewayError(error);
+      reasonCodes.push("legacy_compatibility_classification_failed");
+    }
+  }
 
   const routingCompleted = now();
   try {
@@ -122,12 +172,15 @@ export async function executeAiRequest(request: AiGatewayRequest, dependencies: 
       prompt: request.prompt,
       conversation: request.conversation,
       attachments: request.attachments,
+      attachmentFailurePolicy: request.attachmentFailurePolicy,
       mode: request.mode,
+      maxOutputTokens: request.maxOutputTokens,
       timeoutMs: request.timeoutMs,
       agentPolicy: request.agentPolicy,
       tenantPolicy: request.tenantPolicy,
       conversationLanguage: request.conversationLanguage,
-      authoritativeDecision: rollout.mode === "enforced" ? proposed ?? undefined : undefined,
+      authoritativeDecision: rollout.mode === "enforced" ? proposed ?? undefined : compatibility ?? undefined,
+      executionPolicyOverride: compatibility ? "legacy_fallback" : undefined,
       onRoutingDecision: async (decision) => {
         actual = decision;
         const eligibility = getProviderEligibility(decision.selectedProvider, runtime.environment);
@@ -151,6 +204,10 @@ export async function executeAiRequest(request: AiGatewayRequest, dependencies: 
       organizationId: request.organizationId,
       userId: request.actor.userId,
       agentId: request.actor.agentId ?? request.agentPolicy?.agentId,
+      meetingId: request.context?.meetingId,
+      meetingSessionId: request.context?.meetingSessionId,
+      documentId: request.context?.documentId,
+      projectId: request.context?.projectId,
       requestType: request.feature,
       routingMode: rollout.mode,
       proposed,
@@ -189,11 +246,15 @@ export async function executeAiRequest(request: AiGatewayRequest, dependencies: 
         organizationId: request.organizationId,
         userId: request.actor.userId,
         agentId: request.actor.agentId ?? request.agentPolicy?.agentId,
+        meetingId: request.context?.meetingId,
+        meetingSessionId: request.context?.meetingSessionId,
+        documentId: request.context?.documentId,
+        projectId: request.context?.projectId,
         requestType: request.feature,
         routingMode: rollout.mode,
         proposed,
         actual,
-        executionPolicy: request.legacyFallback ? "legacy_fallback" : request.agentPolicy?.modelPolicy?.mode === "fixed" ? "fixed_model" : "adaptive",
+        executionPolicy: rollout.mode !== "enforced" && request.legacyFallback ? "legacy_fallback" : request.agentPolicy?.modelPolicy?.mode === "fixed" ? "fixed_model" : "adaptive",
         fallbackUsed: false,
         reasonCodes: [...reasonCodes, "execution_failed"],
         policyVersion: rollout.policyVersion,

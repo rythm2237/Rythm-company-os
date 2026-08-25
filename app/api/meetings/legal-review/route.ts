@@ -1,8 +1,9 @@
-import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { redactSecretText } from "@/lib/security/redaction";
+import { executeAiRequest } from "@/lib/ai/request-gateway";
+import { buildProductionAgentPolicy, buildProductionTenantPolicy, effectiveRequestCostLimit } from "@/lib/ai/production-path-policy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,19 +22,6 @@ type LegalPayload={
   jurisdictions:string[];
   licensed_counsel_required:boolean;
 };
-type ResponseLike={output_text?:string;output?:Array<{type?:string;content?:Array<{type?:string;text?:string}>}>;usage?:{input_tokens?:number;output_tokens?:number}};
-
-function extractText(response:ResponseLike){
-  const direct=String(response.output_text??"").trim();
-  if(direct) return direct;
-  const parts:string[]=[];
-  for(const item of response.output??[]){
-    if(item.type!=="message") continue;
-    for(const part of item.content??[]) if((part.type==="output_text"||part.type==="text")&&part.text) parts.push(part.text);
-  }
-  return parts.join("\n").trim();
-}
-
 function firstSentences(value:string,max=4){
   const compact=value.replace(/\s+/g," ").trim();
   if(!compact) return "A-106 completed advisory legal issue-spotting, but returned no concise executive note.";
@@ -132,25 +120,10 @@ function normalizeLegalPayload(value:string):LegalPayload{
   };
 }
 
-const legalSchema={
-  type:"object",
-  additionalProperties:false,
-  properties:{
-    outcome:{type:"string",enum:["CLEAR","CLEAR_WITH_CONDITIONS","RISK_IDENTIFIED","LICENSED_COUNSEL_REQUIRED"]},
-    legal_applicability:{type:"string",enum:["STRATEGIC_CONDITIONS_ONLY","EXECUTION_REVIEW_REQUIRED","LICENSED_COUNSEL_REQUIRED"]},
-    executive_note:{type:"string"},
-    risk_summary:{type:"string"},
-    conditions:{type:"array",items:{type:"string"}},
-    jurisdictions:{type:"array",items:{type:"string"}},
-    licensed_counsel_required:{type:"boolean"},
-  },
-  required:["outcome","legal_applicability","executive_note","risk_summary","conditions","jurisdictions","licensed_counsel_required"],
-} as const;
-
 async function authContext(){
   const auth=await resolveOwnerApiOrganizationContext();
   if(!auth.ok) return {error:fail(auth.error,auth.status)} as const;
-  return {supabase:auth.supabase,user:auth.user,organizationId:auth.organizationId} as const;
+  return {supabase:auth.supabase,user:auth.user,organizationId:auth.organizationId,entitlement:auth.entitlement} as const;
 }
 
 export async function GET(request:Request){
@@ -176,8 +149,11 @@ export async function POST(request:Request){
   catch{return fail("A JSON body with sessionId is required.",400);}
   if(!sessionId) return fail("sessionId is required.",400);
 
-  const {supabase,user,organizationId}=auth;
-  const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,status,decision_question,language,synthesis,recommendation,decision_options,total_input_tokens,total_output_tokens,estimated_cost_usd,budget_cap_usd,legal_triage_status,legal_triage_reason").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
+  const {supabase,user,organizationId,entitlement}=auth;
+  let tenantPolicy:ReturnType<typeof buildProductionTenantPolicy>;
+  try{tenantPolicy=buildProductionTenantPolicy(entitlement);}
+  catch{return fail("The active organization does not have an active AI entitlement.",403);}
+  const {data:session}=await supabase.from("meeting_agent_sessions").select("id,meeting_id,project_id,status,decision_question,language,synthesis,recommendation,decision_options,total_input_tokens,total_output_tokens,estimated_cost_usd,budget_cap_usd,legal_triage_status,legal_triage_reason").eq("id",sessionId).eq("organization_id",organizationId).maybeSingle();
   if(!session) return fail("Meeting session not found.",404);
   if(session.status!=="completed") return fail("AI legal review is available after deliberation is completed.",409);
   const {data:meeting}=await supabase.from("meetings").select("id,title,purpose,agenda").eq("id",session.meeting_id).eq("organization_id",organizationId).maybeSingle();
@@ -200,19 +176,26 @@ export async function POST(request:Request){
   const systemPrompt=`You are A-106, RYTHM Legal & Regulatory Counsel. You provide advisory AI legal issue-spotting, not licensed legal advice. Calibration rule: first distinguish a strategic/policy direction from a concrete execution authorization. Do NOT require licensed counsel merely because future implementation could touch regulated areas. A strategic decision may normally be CLEAR_WITH_CONDITIONS when the legal issues attach to future experiments or execution steps rather than to adopting the strategy itself. Use LICENSED_COUNSEL_REQUIRED only when the decision package itself authorizes or commits to a concrete legally sensitive action, transaction, customer-facing change, regulated data processing, contract, cross-border transfer, pricing/payment change, material external claim, or other jurisdiction-specific act that should not execute without qualified counsel. If execution-level review is needed later but the strategic direction can be approved now, use legal_applicability EXECUTION_REVIEW_REQUIRED and normally CLEAR_WITH_CONDITIONS. If conditions are only future guardrails, use STRATEGIC_CONDITIONS_ONLY. Cover only relevant issues such as AI regulation, privacy/data protection, consumer protection, online commerce/platform duties, contracts, payments/tax implications, intellectual property, employment, advertising claims, licensing, and cross-border operations. Never state that a matter is legally approved. Keep executive_note concise (maximum 4 sentences), risk_summary concise (maximum 3 sentences), and conditions to no more than 8 short items. Respond in ${session.language}.`;
   const userPrompt=`Meeting: ${meeting.title}\nPurpose: ${meeting.purpose}\nDecision question: ${session.decision_question}\nAgenda: ${Array.isArray(meeting.agenda)?meeting.agenda.map(String).join(" | "):""}\nB-001 legal triage: ${session.legal_triage_status} — ${session.legal_triage_reason??""}\nSynthesis: ${session.synthesis??""}\nRecommendation: ${session.recommendation??""}\nDecision options: ${JSON.stringify(session.decision_options??[])}\n\nTranscript:\n${transcript}`;
 
-  const client=new OpenAI({apiKey:process.env.OPENAI_API_KEY});
   try{
-    let response:ResponseLike;
-    try{
-      response=await client.responses.create({model:config.dryRunModel,max_output_tokens:3000,text:{format:{type:"json_schema",name:"rythm_legal_review",description:"Calibrated advisory legal review for a governed RYTHM meeting.",strict:true,schema:legalSchema}},input:[{role:"system",content:[{type:"input_text",text:systemPrompt}]},{role:"user",content:[{type:"input_text",text:userPrompt}]}]},{signal:AbortSignal.timeout(config.agentTimeoutMs)}) as unknown as ResponseLike;
-    }catch(structuredError){
-      const structuredMessage=structuredError instanceof Error?structuredError.message:String(structuredError);
-      const unsupported=/json_schema|text\.format|unsupported|not supported|unknown parameter/i.test(structuredMessage);
-      if(!unsupported) throw structuredError;
-      response=await client.responses.create({model:config.dryRunModel,max_output_tokens:3000,input:[{role:"system",content:[{type:"input_text",text:`${systemPrompt} Return one valid JSON object only with exactly these keys: outcome, legal_applicability, executive_note, risk_summary, conditions, jurisdictions, licensed_counsel_required. No markdown fences or commentary.`}]},{role:"user",content:[{type:"input_text",text:userPrompt}]}]},{signal:AbortSignal.timeout(config.agentTimeoutMs)}) as unknown as ResponseLike;
-    }
+    const remainingBudget=Math.max(0,Number(session.budget_cap_usd??0)-Number(session.estimated_cost_usd??0));
+    const gateway=await executeAiRequest({
+      organizationId,
+      actor:{type:"agent",userId:user.id,agentId:legalAgent.id},
+      context:{meetingId:meeting.id,meetingSessionId:sessionId,projectId:session.project_id},
+      feature:"boardroom.legal_review",
+      systemInstructions:`${systemPrompt} Return one valid JSON object only with exactly these keys: outcome, legal_applicability, executive_note, risk_summary, conditions, jurisdictions, licensed_counsel_required. No markdown fences or commentary. Routing to a stronger model never constitutes legal approval.`,
+      prompt:userPrompt,
+      conversationLanguage:session.language,
+      mode:"task",
+      maxOutputTokens:3000,
+      timeoutMs:config.agentTimeoutMs,
+      agentPolicy:buildProductionAgentPolicy({agentId:legalAgent.id,roleTitle:legalAgent.role_title,riskCeiling:"high",maxCostPerRequest:effectiveRequestCostLimit(entitlement!,remainingBudget),maxOutputTokens:3000,savedLanguage:session.language}),
+      tenantPolicy,
+      legacyFallback:{provider:"openai",model:config.dryRunModel,reason:"compatibility"},
+      telemetryPolicy:"required",
+    });
 
-    const raw=extractText(response);
+    const raw=gateway.outputText;
     if(!raw) throw new Error("A-106 returned no displayable text.");
     const parsed=normalizeLegalPayload(raw);
     const allowedOutcomes=new Set(["CLEAR","CLEAR_WITH_CONDITIONS","RISK_IDENTIFIED","LICENSED_COUNSEL_REQUIRED"]);
@@ -224,16 +207,16 @@ export async function POST(request:Request){
     const licensed=legalApplicability==="LICENSED_COUNSEL_REQUIRED"||outcome==="LICENSED_COUNSEL_REQUIRED"||Boolean(parsed.licensed_counsel_required);
     const normalizedOutcome=licensed?"LICENSED_COUNSEL_REQUIRED":outcome;
     const normalizedApplicability=licensed?"LICENSED_COUNSEL_REQUIRED":legalApplicability;
-    const inputTokens=Number(response.usage?.input_tokens??0);
-    const outputTokens=Number(response.usage?.output_tokens??0);
-    const cost=estimateCost(inputTokens,outputTokens,config.inputCostPerMillionUsd,config.outputCostPerMillionUsd);
+    const inputTokens=Number(gateway.usage?.inputTokens??0);
+    const outputTokens=Number(gateway.usage?.outputTokens??0);
+    const cost=gateway.actualCostUsd??estimateCost(inputTokens,outputTokens,config.inputCostPerMillionUsd,config.outputCostPerMillionUsd);
     const newCost=Number(session.estimated_cost_usd??0)+cost;
     if(newCost>Number(session.budget_cap_usd)) throw new Error("AI legal review would exceed the configured meeting AI budget cap.");
     const completedAt=new Date().toISOString();
-    const {data:review,error:updateError}=await supabase.from("meeting_legal_reviews").update({status:"completed",outcome:normalizedOutcome,legal_applicability:normalizedApplicability,calibration_version:CALIBRATION_VERSION,executive_note:String(parsed.executive_note??"").slice(0,4000),risk_summary:String(parsed.risk_summary??"").slice(0,4000),conditions,jurisdictions,licensed_counsel_required:licensed,model:config.dryRunModel,input_tokens:inputTokens,output_tokens:outputTokens,estimated_cost_usd:cost,error_message:null,completed_at:completedAt,updated_at:completedAt}).eq("id",reviewId).eq("organization_id",organizationId).select("id,status,outcome,legal_applicability,calibration_version,executive_note,risk_summary,conditions,jurisdictions,licensed_counsel_required,estimated_cost_usd,requested_at,completed_at").single();
+    const {data:review,error:updateError}=await supabase.from("meeting_legal_reviews").update({status:"completed",outcome:normalizedOutcome,legal_applicability:normalizedApplicability,calibration_version:CALIBRATION_VERSION,executive_note:String(parsed.executive_note??"").slice(0,4000),risk_summary:String(parsed.risk_summary??"").slice(0,4000),conditions,jurisdictions,licensed_counsel_required:licensed,model:gateway.routingDecision.selectedModel,ai_correlation_id:gateway.correlationId,input_tokens:inputTokens,output_tokens:outputTokens,estimated_cost_usd:cost,error_message:null,completed_at:completedAt,updated_at:completedAt}).eq("id",reviewId).eq("organization_id",organizationId).select("id,status,outcome,legal_applicability,calibration_version,executive_note,risk_summary,conditions,jurisdictions,licensed_counsel_required,estimated_cost_usd,requested_at,completed_at").single();
     if(updateError||!review) return fail(updateError?.message??"Legal review could not be saved.",500);
     await supabase.from("meeting_agent_sessions").update({total_input_tokens:Number(session.total_input_tokens??0)+inputTokens,total_output_tokens:Number(session.total_output_tokens??0)+outputTokens,estimated_cost_usd:newCost,updated_at:completedAt}).eq("id",sessionId).eq("organization_id",organizationId);
-    await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"agent",actor_agent_id:legalAgent.id,event_type:"meeting.ai_legal_review_completed",object_type:"meeting",object_id:meeting.id,risk_level:normalizedOutcome==="CLEAR"?"low":normalizedOutcome==="CLEAR_WITH_CONDITIONS"?"medium":"high",payload:{session_id:sessionId,review_id:review.id,agent_code:"A-106",outcome:normalizedOutcome,legal_applicability:normalizedApplicability,calibration_version:CALIBRATION_VERSION,licensed_counsel_required:licensed,conditions,jurisdictions,model:config.dryRunModel,input_tokens:inputTokens,output_tokens:outputTokens,estimated_cost_usd:cost,external_actions:false,advisory_only:true,normalizer:"partial_json_v2"}});
+    await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"agent",actor_agent_id:legalAgent.id,event_type:"meeting.ai_legal_review_completed",object_type:"meeting",object_id:meeting.id,risk_level:normalizedOutcome==="CLEAR"?"low":normalizedOutcome==="CLEAR_WITH_CONDITIONS"?"medium":"high",payload:{session_id:sessionId,review_id:review.id,agent_code:"A-106",outcome:normalizedOutcome,legal_applicability:normalizedApplicability,calibration_version:CALIBRATION_VERSION,licensed_counsel_required:licensed,conditions,jurisdictions,correlation_id:gateway.correlationId,routing_mode:gateway.routingMode,selected_tier:gateway.routingDecision.selectedTier,provider:gateway.routingDecision.selectedProvider,model:gateway.routingDecision.selectedModel,input_tokens:inputTokens,output_tokens:outputTokens,estimated_cost_usd:cost,external_actions:false,advisory_only:true,normalizer:"partial_json_v2"}});
     return NextResponse.json({ok:true,review,sessionEstimatedCostUsd:newCost,recalibrated:Boolean(existing&&Number(existing.calibration_version??1)<CALIBRATION_VERSION)});
   }catch(error){
     const message=redactSecretText(error instanceof Error?error.message:"AI legal review failed.");

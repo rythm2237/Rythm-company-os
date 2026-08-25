@@ -11,6 +11,10 @@ export type AiRoutingTelemetryRecord = {
   organizationId: string;
   userId?: string | null;
   agentId?: string | null;
+  meetingId?: string | null;
+  meetingSessionId?: string | null;
+  documentId?: string | null;
+  projectId?: string | null;
   requestType: string;
   routingMode: RoutingMode;
   proposed: RoutingDecision | null;
@@ -43,6 +47,10 @@ export function telemetryRow(record: AiRoutingTelemetryRecord) {
     organization_id: record.organizationId,
     user_id: record.userId ?? null,
     agent_id: record.agentId ?? null,
+    meeting_id: record.meetingId ?? null,
+    meeting_session_id: record.meetingSessionId ?? null,
+    document_id: record.documentId ?? null,
+    project_id: record.projectId ?? null,
     request_type: record.requestType,
     task_type: classification?.taskType ?? null,
     operation_type: classification?.operation ?? null,
