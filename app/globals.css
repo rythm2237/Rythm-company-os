@@ -116,6 +116,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 2
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .executive-grid, .control-grid, .organization-banner { grid-template-columns: 1fr; }
   .panel-wide { grid-column: auto; }
+  .command-shell > .panel.panel-wide > form + div { grid-template-columns: minmax(0, 1fr) !important; }
 }
 
 @media (max-width: 620px) {
@@ -124,4 +125,5 @@ footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 2
   .grid, .metrics-grid { grid-template-columns: 1fr; }
   .row-meta { justify-content: flex-start; }
   .auth-card { padding: 24px; }
+  .command-shell > .panel.panel-wide > form[method="get"] { grid-template-columns: minmax(0, 1fr) !important; }
 }
