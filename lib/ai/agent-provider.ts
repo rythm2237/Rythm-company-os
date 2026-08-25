@@ -260,7 +260,7 @@ function openAIUserContent(input: ConcreteRunInput, includeBinary: boolean) {
   if (!includeBinary) return userContent;
   for (const file of input.attachments ?? []) {
     if (file.mimeType.startsWith("image/")) userContent.push({ type: "input_image", image_url: `data:${file.mimeType};base64,${file.base64}`, detail: "auto" });
-    else userContent.push({ type: "input_file", filename: file.filename, file_data: file.base64 });
+    else userContent.push({ type: "input_file", filename: file.filename, file_data: `data:${file.mimeType || "application/octet-stream"};base64,${file.base64}` });
   }
   return userContent;
 }
