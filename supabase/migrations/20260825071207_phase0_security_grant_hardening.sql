@@ -1,5 +1,6 @@
 -- Phase 0 security baseline: least-privilege SECURITY DEFINER grants and RLS-aware view semantics.
 -- This migration is intentionally narrow and preserves authenticated production callers.
+-- Version matches the migration identifier recorded by Supabase Production.
 
 create or replace function public.agent_professional_index(p_level text, p_score integer)
 returns integer

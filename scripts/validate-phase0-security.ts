@@ -113,7 +113,7 @@ await test("central redaction removes common credentials from text and objects",
 });
 
 await test("database migration preserves least privilege and removes the SECURITY DEFINER caller bypass", () => {
-  const migration = readFileSync("supabase/migrations/20260825090000_phase0_security_grant_hardening.sql", "utf8").toLowerCase();
+  const migration = readFileSync("supabase/migrations/20260825071207_phase0_security_grant_hardening.sql", "utf8").toLowerCase();
   assert.match(migration, /security_invoker\s*=\s*true/);
   assert.doesNotMatch(migration, /current_user\s+not\s+in/);
   assert.match(migration, /revoke all on function public\.create_agent_v2[\s\S]*from public, anon/);
