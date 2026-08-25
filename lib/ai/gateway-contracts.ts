@@ -1,5 +1,6 @@
 import type { AgentProvider } from "@/lib/agent-builder";
 import type { AgentRoutingPolicy, RoutingDecision, TenantAiPolicy } from "@/lib/ai/routing-types";
+import type { RoutingMode } from "@/lib/ai/routing-rollout";
 
 export type AiGatewayActor = {
   type: "user" | "agent" | "system";
@@ -45,6 +46,8 @@ export type AiGatewayRequest = {
   agentPolicy?: AgentRoutingPolicy;
   tenantPolicy?: TenantAiPolicy;
   legacyFallback?: LegacyModelFallback;
+  /** Governance-critical callers may require durable telemetry before returning. */
+  telemetryPolicy?: "operational" | "required";
   onRoutingDecision?: (decision: RoutingDecision) => void | Promise<void>;
 };
 
@@ -52,13 +55,34 @@ export type AiGatewayResponse = {
   correlationId: string;
   outputText: string;
   routingDecision: RoutingDecision;
+  proposedRoutingDecision?: RoutingDecision | null;
+  routingMode: RoutingMode;
+  executionPolicy: "adaptive" | "legacy_fallback" | "fixed_model";
+  fallbackUsed: boolean;
   usage?: {
     inputTokens?: number;
     cachedTokens?: number;
     outputTokens?: number;
+    reasoningTokens?: number;
   };
   actualCostUsd?: number | null;
-  latencyMs?: number;
+  providerLatencyMs?: number;
+  gatewayLatencyMs?: number;
+  totalLatencyMs?: number;
+};
+
+export type ProviderUsage = {
+  inputTokens?: number;
+  cachedTokens?: number;
+  outputTokens?: number;
+  reasoningTokens?: number;
+};
+
+export type ProviderExecutionResult = {
+  outputText: string;
+  actualModel?: string;
+  usage?: ProviderUsage;
+  providerLatencyMs: number;
 };
 
 export type ProviderExecutionInput = {
@@ -81,5 +105,5 @@ export type ProviderInstructionInput = {
 export type AiProviderAdapter = {
   id: AgentProvider;
   generateSystemInstruction(input: ProviderInstructionInput): Promise<string>;
-  execute(input: ProviderExecutionInput): Promise<string>;
+  execute(input: ProviderExecutionInput): Promise<ProviderExecutionResult>;
 };

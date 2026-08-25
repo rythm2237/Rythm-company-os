@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import type { AgentProvider } from "@/lib/agent-builder";
 import { escalationDecision, routeRequest } from "@/lib/ai/adaptive-router";
-import type { AiGatewayAttachment, AiProviderAdapter, ProviderExecutionInput, ProviderInstructionInput } from "@/lib/ai/gateway-contracts";
+import type { AiGatewayAttachment, AiProviderAdapter, ProviderExecutionInput, ProviderExecutionResult, ProviderInstructionInput, ProviderUsage } from "@/lib/ai/gateway-contracts";
 import type { AgentRoutingPolicy, ModelTier, RoutingDecision, TenantAiPolicy } from "@/lib/ai/routing-types";
 
 const OPTIMIZER_SYSTEM = `You are the RYTHM Agent Architect. Convert the supplied structured Agent Blueprint into a production-quality system instruction for one AI Agent.
@@ -40,7 +40,15 @@ export type RunAgentInput = {
   agentPolicy?: AgentRoutingPolicy;
   tenantPolicy?: TenantAiPolicy;
   conversationLanguage?: string | null;
+  /** Internal Gateway control. Callers must not construct authoritative decisions from user input. */
+  authoritativeDecision?: RoutingDecision;
   onRoutingDecision?: (decision: RoutingDecision) => void | Promise<void>;
+};
+
+export type RunAgentResult = ProviderExecutionResult & {
+  routingDecision: RoutingDecision;
+  fallbackUsed: boolean;
+  executionPolicy: "adaptive" | "legacy_fallback" | "fixed_model";
 };
 
 type ConcreteRunInput = ProviderExecutionInput & Omit<RunAgentInput, "provider" | "model" | "systemInstructions" | "prompt" | "attachments" | "timeoutMs">;
@@ -59,13 +67,17 @@ function canEscalateExecutionError(error: unknown) {
 }
 
 async function executeConcrete(input: ConcreteRunInput) {
-  return getAgentProviderAdapter(input.provider).execute(input);
+  const started = performance.now();
+  const result = await getAgentProviderAdapter(input.provider).execute(input);
+  return { ...result, providerLatencyMs: Math.max(0, Math.round(performance.now() - started)) };
 }
 
-export async function runAgent(input: RunAgentInput) {
+export async function runAgentDetailed(input: RunAgentInput): Promise<RunAgentResult> {
   let decision: RoutingDecision;
+  let fallbackUsed = false;
+  const fixedModel = input.agentPolicy?.modelPolicy?.mode === "fixed";
   try {
-    decision = routeRequest({
+    decision = input.authoritativeDecision ?? routeRequest({
       prompt: input.prompt,
       requestId: input.requestId,
       conversationLanguage: input.conversationLanguage,
@@ -76,6 +88,7 @@ export async function runAgent(input: RunAgentInput) {
     const message = error instanceof Error ? error.message : String(error);
     if (/restricted handling|blocked this request|budget/i.test(message)) throw error;
     if (!input.provider || !input.model) throw error;
+    fallbackUsed = true;
     console.warn("[RYTHM AI Gateway] adaptive router fallback", {
       provider: input.provider,
       model: input.model,
@@ -114,7 +127,13 @@ export async function runAgent(input: RunAgentInput) {
       reasoningLevel: current.reasoningLevel,
     };
     try {
-      return await executeConcrete(concrete);
+      const result = await executeConcrete(concrete);
+      return {
+        ...result,
+        routingDecision: current,
+        fallbackUsed,
+        executionPolicy: fallbackUsed ? "legacy_fallback" : fixedModel ? "fixed_model" : "adaptive",
+      };
     } catch (error) {
       if (!canEscalateExecutionError(error)) throw error;
       const next = escalationDecision(current, input.agentPolicy);
@@ -131,6 +150,10 @@ export async function runAgent(input: RunAgentInput) {
       console.warn("[RYTHM AI Gateway] escalating request", { requestId: current.requestId, tier: current.selectedTier, model: current.selectedModel });
     }
   }
+}
+
+export async function runAgent(input: RunAgentInput) {
+  return (await runAgentDetailed(input)).outputText;
 }
 
 async function generateWithOpenAI(input: GenerateSystemInstructionInput) {
@@ -217,7 +240,23 @@ async function runWithOpenAI(input: ConcreteRunInput) {
   }
   const text = response.output_text?.trim();
   if (!text) throw new Error("OpenAI returned an empty Agent response.");
-  return text;
+  const usage = (response as any).usage as {
+    input_tokens?: number;
+    output_tokens?: number;
+    input_tokens_details?: { cached_tokens?: number };
+    output_tokens_details?: { reasoning_tokens?: number };
+  } | undefined;
+  return {
+    outputText: text,
+    actualModel: String((response as any).model ?? input.model),
+    usage: usage ? {
+      inputTokens: usage.input_tokens,
+      cachedTokens: usage.input_tokens_details?.cached_tokens,
+      outputTokens: usage.output_tokens,
+      reasoningTokens: usage.output_tokens_details?.reasoning_tokens,
+    } satisfies ProviderUsage : undefined,
+    providerLatencyMs: 0,
+  } satisfies ProviderExecutionResult;
 }
 
 function textualAttachmentContext(files: AgentAttachmentInput[] = []) {
@@ -238,10 +277,15 @@ async function runWithAnthropic(input: ConcreteRunInput) {
     signal: timeout(input.timeoutMs),
   });
   if (!response.ok) throw new Error(`Anthropic request failed (${response.status}).`);
-  const data = await response.json() as { content?: Array<{ type?: string; text?: string }> };
+  const data = await response.json() as { model?: string; usage?: { input_tokens?: number; output_tokens?: number }; content?: Array<{ type?: string; text?: string }> };
   const text = (data.content ?? []).filter((item) => item.type === "text").map((item) => item.text ?? "").join("\n").trim();
   if (!text) throw new Error("Anthropic returned an empty Agent response.");
-  return text;
+  return {
+    outputText: text,
+    actualModel: data.model ?? input.model,
+    usage: data.usage ? { inputTokens: data.usage.input_tokens, outputTokens: data.usage.output_tokens } : undefined,
+    providerLatencyMs: 0,
+  } satisfies ProviderExecutionResult;
 }
 
 async function runWithGemini(input: ConcreteRunInput) {
@@ -259,10 +303,24 @@ async function runWithGemini(input: ConcreteRunInput) {
     signal: timeout(input.timeoutMs),
   });
   if (!response.ok) throw new Error(`Gemini request failed (${response.status}).`);
-  const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const data = await response.json() as {
+    modelVersion?: string;
+    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; cachedContentTokenCount?: number; thoughtsTokenCount?: number };
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
   const text = (data.candidates?.[0]?.content?.parts ?? []).map((part) => part.text ?? "").join("\n").trim();
   if (!text) throw new Error("Gemini returned an empty Agent response.");
-  return text;
+  return {
+    outputText: text,
+    actualModel: data.modelVersion ?? input.model,
+    usage: data.usageMetadata ? {
+      inputTokens: data.usageMetadata.promptTokenCount,
+      cachedTokens: data.usageMetadata.cachedContentTokenCount,
+      outputTokens: data.usageMetadata.candidatesTokenCount,
+      reasoningTokens: data.usageMetadata.thoughtsTokenCount,
+    } : undefined,
+    providerLatencyMs: 0,
+  } satisfies ProviderExecutionResult;
 }
 
 const AGENT_PROVIDER_ADAPTERS: Record<AgentProvider, AiProviderAdapter> = {
