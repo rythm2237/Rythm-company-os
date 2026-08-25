@@ -55,6 +55,14 @@ These invariants are release gates for all future Routing, Execution, Connector,
 - Demo/Experience Mode remains synthetic, read-only and isolated from production company records.
 - Demo cannot resolve production credentials or perform external execution.
 
+## Phase 0 migration rollback
+
+`20260825090000_phase0_security_grant_hardening.sql` changes function/view definitions and grants only; it does not rewrite or delete tenant data.
+
+- Preferred rollback: restore the affected function definitions from their immediately preceding migrations while retaining the Phase 0 `PUBLIC`/`anon` revocations and authorization guards. This isolates a compatibility regression without reopening anonymous execution.
+- Full rollback: restore the prior `agent_professional_standing` view options, the five prior function definitions, their prior grants, and the prior default function privileges from the schema snapshot taken before deployment. A full rollback reintroduces the documented security findings and therefore requires incident-owner approval and compensating API isolation.
+- Remove the migration ledger entry only after the database objects have been restored and their grants verified. Re-run the RLS/tenancy regression SQL and Security Advisor after either rollback path.
+
 ## Approved future context
 
 - Budget hierarchy: Company → Department → Project → Agent, with warning, soft limit, hard limit and explicit human override.
