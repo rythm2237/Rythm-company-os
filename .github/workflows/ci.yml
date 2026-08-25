@@ -20,6 +20,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:phase0
+      - run: npm run test:phase1a
       - run: npm run test:routing
       - run: npm run test:software-company
       - run: npm run build

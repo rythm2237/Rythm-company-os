@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import type { AgentProvider } from "@/lib/agent-builder";
 import { escalationDecision, routeRequest } from "@/lib/ai/adaptive-router";
+import type { AiGatewayAttachment, AiProviderAdapter, ProviderExecutionInput, ProviderInstructionInput } from "@/lib/ai/gateway-contracts";
 import type { AgentRoutingPolicy, ModelTier, RoutingDecision, TenantAiPolicy } from "@/lib/ai/routing-types";
 
 const OPTIMIZER_SYSTEM = `You are the RYTHM Agent Architect. Convert the supplied structured Agent Blueprint into a production-quality system instruction for one AI Agent.
@@ -16,7 +17,7 @@ You have no external-action authority in this console. Do not claim to have sent
 When the user asks for an external action, produce the proposed output or action plan and clearly identify what would require execution or human approval.
 Follow your Agent system instruction and its governance boundaries. If a user request conflicts with those boundaries, explain the constraint and provide the closest permitted output.`;
 
-export type AgentAttachmentInput = { filename: string; mimeType: string; base64: string };
+export type AgentAttachmentInput = AiGatewayAttachment;
 
 export type GenerateSystemInstructionInput = {
   provider: AgentProvider;
@@ -27,8 +28,9 @@ export type GenerateSystemInstructionInput = {
 
 export type RunAgentInput = {
   /** Legacy provider/model remain a fixed-mode compatibility path only. */
-  provider: AgentProvider;
-  model: string;
+  provider?: AgentProvider;
+  model?: string;
+  requestId?: string;
   systemInstructions: string;
   prompt: string;
   conversation?: string;
@@ -41,16 +43,14 @@ export type RunAgentInput = {
   onRoutingDecision?: (decision: RoutingDecision) => void | Promise<void>;
 };
 
-type ConcreteRunInput = RunAgentInput & { provider: AgentProvider; model: string; reasoningLevel?: RoutingDecision["reasoningLevel"] };
+type ConcreteRunInput = ProviderExecutionInput & Omit<RunAgentInput, "provider" | "model" | "systemInstructions" | "prompt" | "attachments" | "timeoutMs">;
 
 function timeout(ms = 45000) {
   return AbortSignal.timeout(Math.max(5000, Math.min(180000, ms)));
 }
 
 export async function generateSystemInstruction(input: GenerateSystemInstructionInput) {
-  if (input.provider === "openai") return generateWithOpenAI(input);
-  if (input.provider === "anthropic") return generateWithAnthropic(input);
-  return generateWithGemini(input);
+  return getAgentProviderAdapter(input.provider).generateSystemInstruction(input);
 }
 
 function canEscalateExecutionError(error: unknown) {
@@ -59,9 +59,7 @@ function canEscalateExecutionError(error: unknown) {
 }
 
 async function executeConcrete(input: ConcreteRunInput) {
-  if (input.provider === "openai") return runWithOpenAI(input);
-  if (input.provider === "anthropic") return runWithAnthropic(input);
-  return runWithGemini(input);
+  return getAgentProviderAdapter(input.provider).execute(input);
 }
 
 export async function runAgent(input: RunAgentInput) {
@@ -69,6 +67,7 @@ export async function runAgent(input: RunAgentInput) {
   try {
     decision = routeRequest({
       prompt: input.prompt,
+      requestId: input.requestId,
       conversationLanguage: input.conversationLanguage,
       agent: input.agentPolicy,
       tenant: input.tenantPolicy,
@@ -76,6 +75,7 @@ export async function runAgent(input: RunAgentInput) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/restricted handling|blocked this request|budget/i.test(message)) throw error;
+    if (!input.provider || !input.model) throw error;
     console.warn("[RYTHM AI Gateway] adaptive router fallback", {
       provider: input.provider,
       model: input.model,
@@ -263,4 +263,26 @@ async function runWithGemini(input: ConcreteRunInput) {
   const text = (data.candidates?.[0]?.content?.parts ?? []).map((part) => part.text ?? "").join("\n").trim();
   if (!text) throw new Error("Gemini returned an empty Agent response.");
   return text;
+}
+
+const AGENT_PROVIDER_ADAPTERS: Record<AgentProvider, AiProviderAdapter> = {
+  openai: {
+    id: "openai",
+    generateSystemInstruction: (input: ProviderInstructionInput) => generateWithOpenAI(input),
+    execute: (input: ProviderExecutionInput) => runWithOpenAI(input as ConcreteRunInput),
+  },
+  anthropic: {
+    id: "anthropic",
+    generateSystemInstruction: (input: ProviderInstructionInput) => generateWithAnthropic(input),
+    execute: (input: ProviderExecutionInput) => runWithAnthropic(input as ConcreteRunInput),
+  },
+  google: {
+    id: "google",
+    generateSystemInstruction: (input: ProviderInstructionInput) => generateWithGemini(input),
+    execute: (input: ProviderExecutionInput) => runWithGemini(input as ConcreteRunInput),
+  },
+};
+
+export function getAgentProviderAdapter(provider: AgentProvider): AiProviderAdapter {
+  return AGENT_PROVIDER_ADAPTERS[provider];
 }
