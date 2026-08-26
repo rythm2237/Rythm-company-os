@@ -80,6 +80,20 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
   useEffect(() => { try { const saved = localStorage.getItem(`rythm:boardroom:ceo:${sessionId}`); if (saved) setCeoText(saved); } catch {} }, [sessionId]);
   useEffect(() => { try { if (ceoText) localStorage.setItem(`rythm:boardroom:ceo:${sessionId}`, ceoText); else localStorage.removeItem(`rythm:boardroom:ceo:${sessionId}`); } catch {} }, [ceoText, sessionId]);
   useEffect(() => {
+    setMeetingState(meetingStatus);
+    setStatus(initialStatus);
+    setMessages((current) => {
+      const currentTurn = current.reduce((max, message) => Math.max(max, Number(message.turnIndex ?? 0)), 0);
+      const incomingTurn = initialMessages.reduce((max, message) => Math.max(max, Number(message.turnIndex ?? 0)), 0);
+      return incomingTurn > currentTurn || initialMessages.length > current.length ? initialMessages : current;
+    });
+  }, [meetingStatus, initialStatus, initialMessages]);
+  useEffect(() => {
+    if (meetingState !== "running") return;
+    const timer = window.setInterval(() => router.refresh(), 3000);
+    return () => window.clearInterval(timer);
+  }, [meetingState, router]);
+  useEffect(() => {
     if (status !== "completed" || meetingState !== "completed") return;
     let cancelled = false;
     (async () => {
@@ -112,7 +126,7 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
   const appendTurn = (payload: Record<string, any>) => {
     if (!payload.content) return;
     const next: TranscriptMessage = { turnIndex: Number(payload.turnIndex ?? 0), roundNo: Number(payload.roundNo ?? 1), messageType: String(payload.phase ?? "position"), content: String(payload.content), speakerCode: String(payload.speaker?.code ?? "B-001"), speakerName: String(payload.speaker?.name ?? "Executive Orchestrator"), speakerRole: String(payload.speaker?.role ?? "Meeting synthesis") };
-    setMessages((current) => [...current, next]);
+    setMessages((current) => current.some((message) => message.turnIndex === next.turnIndex) ? current : [...current, next]);
     setActiveSpeaker(next.speakerCode);
   };
 
@@ -143,7 +157,7 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
     finally { setRunning(false); if (!pauseRef.current) setActiveSpeaker(""); }
   };
   const pauseAgents = () => { pauseRef.current = true; setPaused(true); setProgressText("Pause requested. The current safe turn will finish before Agents stop."); };
-  const continueDiscussion = () => { pauseRef.current = false; setPaused(false); setProgressText("Human CEO released the floor. Continuing deliberation…"); void runMeeting(); };
+  const continueDiscussion = () => { pauseRef.current = false; setPaused(false); setActiveSpeaker(""); setProgressText("Human CEO released the floor. Agents are continuing deliberation…"); void runMeeting(); };
   const sendCeoContribution = async () => {
     const text = ceoText.trim(); if (text.length < 2) return;
     setCeoSending(true); setError("");
@@ -152,7 +166,7 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
       const content = `CHAIR MESSAGE TO ${target} — ${text}`;
       const payload = await jsonPost("/api/meetings/ceo-contribute", { sessionId, content });
       setMessages((current) => [...current, { turnIndex: Number(payload.turnIndex ?? current.length + 1), roundNo: Number(payload.roundNo ?? 1), messageType: "ceo_contribution", content: String(payload.content ?? content), speakerCode: "CEO", speakerName: "Human CEO", speakerRole: "Meeting Chair" }]);
-      setStatus(String(payload.sessionStatus ?? status)); setCeoText(""); setPaused(true); pauseRef.current = true; setActiveSpeaker("CEO"); setProgressText(`Chair message recorded for ${target}. Agents remain paused until Play.`);
+      setStatus(String(payload.sessionStatus ?? status)); setCeoText(""); setPaused(true); pauseRef.current = true; setActiveSpeaker("CEO"); setProgressText(`Chair message recorded for ${target}. Select Release floor to let Agents respond.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "CEO contribution could not be added."); }
     finally { setCeoSending(false); }
   };
@@ -182,6 +196,8 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
   const currentRound = lastAgentMessage?.roundNo ?? 1;
   const active = participants.find((p) => p.agentCode === activeSpeaker);
   const completed = status === "completed";
+  const lastMessage = messages.at(-1);
+  const chairHasFloor = canRun && paused && lastMessage?.speakerCode === "CEO";
   const leftAgents = participants.filter((_, i) => i % 2 === 0);
   const rightAgents = participants.filter((_, i) => i % 2 === 1);
   const meetingSlide = useMemo(() => {
@@ -210,7 +226,7 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
         <button className={styles.navTrigger} onClick={() => setNavOpen((v) => !v)} aria-label="Open workspace navigation">☰</button>
         <div className={styles.titleCluster}><span className={styles.liveDot} /><div><p>RYTHM BOARDROOM</p><h2>{meetingTitle}</h2><span>{decisionQuestion}</span></div></div>
       </div>
-      <div className={styles.headerMetrics}><span>R{currentRound}/{maxRounds}</span><span>${budgetCapUsd.toFixed(2)} cap</span><span>{paused ? "Paused" : running ? "Running" : completed ? "Synthesis ready" : "Ready"}</span><button onClick={() => setRailOpen((v) => !v)}>{railOpen ? "Close panel" : "Notes"}</button></div>
+      <div className={styles.headerMetrics}><span>R{currentRound}/{maxRounds}</span><span>${budgetCapUsd.toFixed(2)} cap</span><span>{chairHasFloor ? "Chair has floor" : paused ? "Paused" : running ? "Running" : completed ? "Synthesis ready" : "Ready"}</span>{chairHasFloor ? <button onClick={continueDiscussion}>Release floor</button> : null}<button onClick={() => setRailOpen((v) => !v)}>{railOpen ? "Close panel" : "Notes"}</button></div>
     </header>
 
     {navOpen ? <div className={styles.navDrawerBackdrop} onClick={() => setNavOpen(false)}><nav className={styles.navDrawer} onClick={(e) => e.stopPropagation()}><div><strong>RYTHM Workspace</strong><button onClick={() => setNavOpen(false)}>×</button></div><button onClick={() => router.push("/meetings")}>Meetings</button><button onClick={() => router.push("/command-center")}>Command Center</button><button onClick={() => router.push("/company-library")}>Company Library</button><button onClick={() => router.push("/studio/agents")}>Agent Studio</button><button onClick={() => router.push("/projects")}>Projects</button></nav></div> : null}
@@ -238,7 +254,7 @@ export default function DeliberationConsole({ sessionId, meetingStatus, initialS
     </aside>
 
     <div className={styles.commandDock}>
-      <div className={styles.transportControls}><button className={styles.transportButton} onClick={() => void stepMeeting()} disabled={!canRun || running} title="Run one Agent turn">▌▶<span>Step</span></button><button className={`${styles.transportButton} ${styles.playButton}`} onClick={() => void (paused ? continueDiscussion() : runMeeting())} disabled={!canRun || running} title="Run deliberation">▶<span>{paused ? "Resume" : "Play"}</span></button><button className={styles.transportButton} onClick={pauseAgents} disabled={!running} title="Pause at safe boundary">Ⅱ<span>Pause</span></button></div>
+      <div className={styles.transportControls}><button className={styles.transportButton} onClick={() => void stepMeeting()} disabled={!canRun || running} title="Run one Agent turn">▌▶<span>Step</span></button><button className={`${styles.transportButton} ${styles.playButton}`} onClick={() => void (paused ? continueDiscussion() : runMeeting())} disabled={!canRun || running} title={paused ? "Release the floor to Agents" : "Run deliberation"}>▶<span>{paused ? "Release" : "Play"}</span></button><button className={styles.transportButton} onClick={pauseAgents} disabled={!running} title="Pause at safe boundary">Ⅱ<span>Pause</span></button></div>
       <div className={styles.messageComposer}><select value={recipient} onChange={(e) => setRecipient(e.target.value)}><option value="ALL">To: Everyone</option>{participants.map((agent) => <option key={agent.id} value={agent.agentCode}>To: {agent.agentCode}</option>)}</select><input value={ceoText} onChange={(e) => setCeoText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendCeoContribution(); } }} placeholder="Message, question, challenge or direction…" /><button onClick={() => void sendCeoContribution()} disabled={ceoSending || ceoText.trim().length < 2}>{ceoSending ? "…" : "Send"}</button></div>
       <button className={styles.endControl} onClick={() => void closeMeeting()} disabled={!awaitingChairClose || chairClosing}>{chairClosing ? "Closing…" : "End meeting"}</button>
     </div>
