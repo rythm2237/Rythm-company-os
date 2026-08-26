@@ -17,11 +17,20 @@ export default function BoardroomFocusBridge() {
   useEffect(() => {
     if (!inActiveBoardroom) {
       document.documentElement.classList.remove("rythm-boardroom-focus");
+      document.documentElement.classList.remove("rythm-boardroom-completed");
       return;
     }
     document.documentElement.classList.add("rythm-boardroom-focus");
-    return () => document.documentElement.classList.remove("rythm-boardroom-focus");
+    return () => {
+      document.documentElement.classList.remove("rythm-boardroom-focus");
+      document.documentElement.classList.remove("rythm-boardroom-completed");
+    };
   }, [inActiveBoardroom]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("rythm-boardroom-completed", inActiveBoardroom && meetingStatus === "completed");
+    return () => document.documentElement.classList.remove("rythm-boardroom-completed");
+  }, [inActiveBoardroom, meetingStatus]);
 
   useEffect(() => {
     if (!inActiveBoardroom || !meetingId) return;
@@ -41,18 +50,23 @@ export default function BoardroomFocusBridge() {
   if (!inActiveBoardroom) return null;
 
   const openPanel = (tab: "Live" | "Summary" | "Governance") => {
-    const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>("button"));
-    const panelToggle = buttons.find((button) => {
+    const room = document.querySelector<HTMLElement>('section[aria-label="RYTHM executive presentation room"]');
+    if (!room) return;
+
+    const header = room.querySelector("header");
+    const headerButtons = header ? Array.from(header.querySelectorAll<HTMLButtonElement>("button")) : [];
+    const panelToggle = headerButtons.find((button) => {
       const label = (button.textContent ?? "").trim();
       return label === "Notes" || label === "Close panel";
     });
     if (panelToggle && (panelToggle.textContent ?? "").trim() === "Notes") panelToggle.click();
+
     window.setTimeout(() => {
-      const tabButton = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
-        (button) => (button.textContent ?? "").trim() === tab,
-      );
+      const rail = room.querySelector("aside:last-of-type");
+      const tabButtons = rail ? Array.from(rail.querySelectorAll<HTMLButtonElement>("nav button")) : [];
+      const tabButton = tabButtons.find((button) => (button.textContent ?? "").trim() === tab);
       tabButton?.click();
-    }, 40);
+    }, 60);
   };
 
   const leaveRoom = async () => {
@@ -108,9 +122,11 @@ export default function BoardroomFocusBridge() {
       .boardroom-post-copy strong { display: block; font: 800 13px/1.25 system-ui,sans-serif; }
       .boardroom-post-copy span { display: block; margin-top: 4px; color: #9ca9bd; font: 600 11px/1.35 system-ui,sans-serif; }
       .boardroom-post-buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-      .boardroom-post-buttons button { min-height: 38px; padding: 0 13px; border: 1px solid rgba(255,255,255,.15); border-radius: 10px; background: rgba(255,255,255,.07); color: #f5f7fb; font: 750 11px/1 system-ui,sans-serif; cursor: pointer; }
+      .boardroom-post-buttons button { min-height: 38px; padding: 0 13px; border: 1px solid rgba(255,255,255,.15); border-radius: 10px; background: rgba(255,255,255,.07); color: #f5f7fb; font: 750 11px/1 system-ui,sans-serif; cursor: pointer; touch-action: manipulation; }
       .boardroom-post-buttons button:hover { background: rgba(255,255,255,.13); }
       .boardroom-post-buttons button:nth-child(2) { background: #5d72ea; border-color: #7f90f2; }
+
+      html.rythm-boardroom-completed section[aria-label="RYTHM executive presentation room"] > div:last-child { visibility: hidden !important; pointer-events: none !important; }
 
       @media (max-width: 1100px) {
         html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] > header > div:first-child > div:nth-child(2) { margin-left: 100px !important; }
@@ -121,12 +137,67 @@ export default function BoardroomFocusBridge() {
       @media (max-width: 760px) {
         .boardroom-leave-room { left: 52px; top: 10px; height: 34px; min-width: 82px; padding: 0 9px; font-size: 10px; }
         .boardroom-leave-error { left: 8px; right: 8px; top: 48px; max-width: none; }
-        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] > header > div:first-child > div:nth-child(2) { margin-left: 82px !important; }
-        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] > header > div:first-child > div:nth-child(2) h2 { max-width: 34vw !important; }
+
+        html.rythm-boardroom-completed section[aria-label="RYTHM executive presentation room"] > header > div:first-child > div:nth-child(2) { margin-left: 0 !important; }
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] > header > div:first-child > div:nth-child(2) h2 { max-width: 42vw !important; }
         html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] > header > div:first-child > div:nth-child(2) span { display: none !important; }
-        .boardroom-post-actions { bottom: 10px; width: calc(100vw - 20px); grid-template-columns: 1fr; gap: 10px; padding: 12px; }
-        .boardroom-post-buttons { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); width: 100%; }
-        .boardroom-post-buttons button { padding: 0 8px; }
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] > header > div:last-child > span { display: none !important; }
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] > header > div:last-child > button { min-width: 64px !important; padding: 7px 9px !important; }
+
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] main > div:first-child {
+          aspect-ratio: auto !important;
+          min-height: 270px !important;
+          max-height: 44dvh !important;
+          grid-template-rows: auto minmax(0,1fr) auto !important;
+        }
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] main > div:first-child > div:nth-child(2) {
+          min-height: 0 !important;
+          overflow-y: auto !important;
+          justify-content: flex-start !important;
+          padding: 10px 16px 12px !important;
+          overscroll-behavior: contain;
+        }
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] main > div:first-child > div:nth-child(2) h1 {
+          margin: 0 0 10px !important;
+          font-size: 1.02rem !important;
+          line-height: 1.12 !important;
+          letter-spacing: -.025em !important;
+        }
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] main > div:first-child > div:nth-child(2) ul {
+          gap: 6px !important;
+          padding-left: 1rem !important;
+        }
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] main > div:first-child > div:nth-child(2) li {
+          font-size: .6rem !important;
+          line-height: 1.34 !important;
+        }
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] main > div:first-child > div:first-child,
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] main > div:first-child > div:last-child {
+          padding: 8px 12px !important;
+        }
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] main > div:first-child > div:last-child > span {
+          max-width: 58% !important;
+          font-size: .43rem !important;
+          line-height: 1.25 !important;
+        }
+        html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] main > div:first-child > div:last-child > div {
+          width: 76px !important;
+        }
+
+        .boardroom-post-actions {
+          bottom: max(8px, env(safe-area-inset-bottom));
+          width: calc(100vw - 16px);
+          min-height: 94px;
+          grid-template-columns: 1fr;
+          gap: 8px;
+          padding: 10px 12px;
+          border-radius: 14px;
+        }
+        .boardroom-post-copy { min-width: 0; }
+        .boardroom-post-copy strong { font-size: 12px; }
+        .boardroom-post-copy span { display: none; }
+        .boardroom-post-buttons { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 7px; width: 100%; }
+        .boardroom-post-buttons button { min-width: 0; min-height: 40px; padding: 0 6px; font-size: 10px; }
       }
     `}</style>
     {meetingStatus === "completed" ? <div className="boardroom-post-actions" role="region" aria-label="Post-meeting actions">
