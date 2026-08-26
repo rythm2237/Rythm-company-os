@@ -7,20 +7,25 @@ export default function BoardroomFocusBridge() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const inBoardroom = pathname.startsWith("/meetings/room");
+  const inBoardroomRoute = pathname.startsWith("/meetings/room");
   const meetingId = searchParams.get("meeting") ?? "";
+  const sessionId = searchParams.get("session") ?? "";
+  const inActiveBoardroom = inBoardroomRoute && Boolean(meetingId && sessionId);
   const [meetingStatus, setMeetingStatus] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [leaveError, setLeaveError] = useState("");
 
   useEffect(() => {
-    if (!inBoardroom) return;
+    if (!inActiveBoardroom) {
+      document.documentElement.classList.remove("rythm-boardroom-focus");
+      return;
+    }
     document.documentElement.classList.add("rythm-boardroom-focus");
     return () => document.documentElement.classList.remove("rythm-boardroom-focus");
-  }, [inBoardroom]);
+  }, [inActiveBoardroom]);
 
   useEffect(() => {
-    if (!inBoardroom || !meetingId) return;
+    if (!inActiveBoardroom || !meetingId) return;
     let cancelled = false;
     const refresh = async () => {
       try {
@@ -32,9 +37,9 @@ export default function BoardroomFocusBridge() {
     void refresh();
     const timer = window.setInterval(refresh, 8000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [inBoardroom, meetingId]);
+  }, [inActiveBoardroom, meetingId]);
 
-  if (!inBoardroom) return null;
+  if (!inActiveBoardroom) return null;
 
   const leaveRoom = async () => {
     if (leaving) return;
@@ -72,7 +77,6 @@ export default function BoardroomFocusBridge() {
       html.rythm-boardroom-focus .app-stage { margin: 0 !important; width: 100% !important; max-width: none !important; min-height: 100dvh !important; overflow: hidden !important; }
       html.rythm-boardroom-focus .app-page-transition { width: 100% !important; min-height: 100dvh !important; }
 
-      /* Boardroom header safe area: keep room controls from colliding with the meeting title. */
       html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] > header > div:first-child > div:nth-child(2) {
         margin-left: 112px !important;
         min-width: 0 !important;
@@ -83,7 +87,6 @@ export default function BoardroomFocusBridge() {
       html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] > header > div:first-child > div:nth-child(2) span {
         max-width: min(38vw, 560px) !important;
       }
-      /* The slide already carries progress; suppress the misleading post-synthesis round counter (e.g. R3/2). */
       html.rythm-boardroom-focus section[aria-label="RYTHM executive presentation room"] > header > div:last-child > span:first-child {
         display: none !important;
       }
