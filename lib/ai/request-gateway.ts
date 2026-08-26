@@ -79,6 +79,54 @@ function legacyCompatibilityDecision(request: AiGatewayRequest, correlationId: s
   };
 }
 
+function deterministicLegacyFallbackDecision(request: AiGatewayRequest, correlationId: string): RoutingDecision | null {
+  if (!request.legacyFallback) return null;
+  const language = request.conversationLanguage?.trim() || "en";
+  return {
+    language,
+    detectedLanguages: [language],
+    responseLanguage: language,
+    intent: "information",
+    intentTaxonomyVersion: "legacy-intents-v1",
+    taskType: "read",
+    operation: "read",
+    complexity: "medium",
+    risk: "low",
+    reasoningRequirement: "medium",
+    reasoningDepth: "standard",
+    requiredTools: [],
+    unavailableTools: [],
+    requiredCapabilities: [],
+    requiredModalities: ["text"],
+    contextRequirements: [],
+    estimatedInputTokens: null,
+    latencyPreference: "normal",
+    authorizationSignal: "unknown",
+    humanReviewRequired: false,
+    recommendedCapabilityTier: "fallback",
+    recommendedTier: "terra",
+    reasonCodes: ["LEGACY_FALLBACK"],
+    reasonSummary: "Deterministic legacy fallback selected because compatibility classification was unavailable",
+    classificationSource: "fallback",
+    classifierVersion: "phase1d-compatibility-fallback",
+    confidence: 0.3,
+    allowEscalation: false,
+    requestId: correlationId,
+    selectedCapabilityTier: "fallback",
+    selectedTier: "terra",
+    selectedProvider: request.legacyFallback.provider,
+    selectedModel: request.legacyFallback.model,
+    reasoningLevel: "medium",
+    estimatedCostUsd: null,
+    estimatedLatencyMs: null,
+    escalationIndex: 0,
+    escalationReasons: [],
+    routingVersion: "phase1d-legacy-compatibility-fallback",
+    policyVersion: "phase1d-legacy-compatibility",
+    modelRegistryVersion: "legacy-model-registry-v1-fallback",
+  };
+}
+
 async function persistTelemetry(writer: AiRoutingTelemetryWriter, record: AiRoutingTelemetryRecord, policy: AiGatewayRequest["telemetryPolicy"]) {
   try {
     await writer(record);
@@ -157,9 +205,10 @@ export async function executeAiRequest(request: AiGatewayRequest, dependencies: 
       compatibility = legacyCompatibilityDecision(request, correlationId);
     } catch (error) {
       // Off/shadow modes must preserve the approved legacy execution path.
-      // Compatibility classification is advisory in these modes: record the
-      // failure for telemetry, but do not convert it into a policy denial.
-      compatibility = null;
+      // Build a deterministic compatibility decision so the provider executor
+      // cannot re-enter adaptive routing and turn an advisory classifier error
+      // into a policy denial.
+      compatibility = deterministicLegacyFallbackDecision(request, correlationId);
       reasonCodes.push("legacy_compatibility_classification_failed");
       console.warn("[RYTHM AI Gateway] legacy compatibility classification unavailable", {
         correlationId,
