@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import DecisionDraftGuard from "@/components/decision-draft-guard/DecisionDraftGuard";
 import ProductNav from "@/components/product-nav/ProductNav";
 import ProjectPulse from "@/components/project-pulse/ProjectPulse";
+import BoardroomFocusBridge from "@/components/app-shell/BoardroomFocusBridge";
 import {
   isOrganizationEntitlementActive,
   resolveOrganizationContext,
@@ -119,6 +120,7 @@ export default async function AppShell({ children }: Readonly<{ children: React.
   return (
     <div className="app-workspace">
       <ProductNav access={navigationAccess} organization={organizationNavigation} />
+      <Suspense fallback={null}><BoardroomFocusBridge /></Suspense>
       <Suspense fallback={null}><DecisionDraftGuard /></Suspense>
       <div className="app-stage">
         <div className="app-page-transition">{children}</div>
