@@ -15,7 +15,7 @@ import type {
   TenantAiPolicy,
 } from "@/lib/ai/routing-types";
 
-export const REQUEST_INTELLIGENCE_VERSION = "request-intelligence-v2.0.0";
+export const REQUEST_INTELLIGENCE_VERSION = "request-intelligence-v2.1.0";
 export const INTENT_TAXONOMY_VERSION = "rythm-intents-v1";
 
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -249,6 +249,13 @@ function conciseSummary(codes: RoutingReasonCode[]) {
   return codes.slice(0, 5).map((code) => code.toLowerCase().replaceAll("_", " ")).join("; ");
 }
 
+function governedBoardroomIntent(requestType?: string): IntentClass | null {
+  if (!requestType?.startsWith("boardroom.")) return null;
+  if (requestType === "boardroom.deliberation") return "meeting_deliberation";
+  if (requestType === "boardroom.summary") return "summarization";
+  return "analysis";
+}
+
 export function deterministicRequestIntelligence(input: {
   prompt: string;
   requestType?: string;
@@ -268,9 +275,13 @@ export function deterministicRequestIntelligence(input: {
     savedLanguage: input.savedLanguage ?? input.agent?.savedLanguage,
     systemDefault: "en",
   });
-  const operation = inferOperation(input.prompt);
-  const intent = inferIntent(input.prompt, operation);
-  const requiredTools = inferTools(input.prompt);
+  const boardroomIntent = governedBoardroomIntent(input.requestType);
+  const operation: OperationType = boardroomIntent ? "analyze" : inferOperation(input.prompt);
+  const intent = boardroomIntent ?? inferIntent(input.prompt, operation);
+  // Governed Boardroom features are advisory AI analysis. Transcript references to
+  // files, GitHub, databases or external actions describe the subject matter; they
+  // do not authorize or require tool execution. Tool use remains separately gated.
+  const requiredTools = boardroomIntent ? [] : inferTools(input.prompt);
   const unavailableTools = requiredTools.filter((tool) => !(input.agent?.allowedTools ?? []).includes(tool));
   const requiredModalities = inferModalities(input.prompt, input.attachments);
   const contextRequirements = inferContextRequirements(input.prompt, input.requestType);
