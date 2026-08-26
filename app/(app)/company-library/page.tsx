@@ -1,31 +1,11 @@
 import Link from "next/link";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import CompanyLibraryUploader from "./CompanyLibraryUploader";
-import { deleteCompanyLibraryDocument } from "./actions";
+import CompanyLibraryWorkspace, { type CompanyLibraryListDocument } from "./CompanyLibraryWorkspace";
 
 export const dynamic = "force-dynamic";
 
-type LibraryRow = {
-  id: string;
-  title: string;
-  category: string;
-  source_filename: string | null;
-  mime_type: string | null;
-  file_size_bytes: number | null;
-  confidentiality: string;
-  ingestion_status: string;
-  chunk_count: number;
-  summary: string | null;
-  last_ingestion_error: string | null;
-  extracted_at: string | null;
-  updated_at: string;
-};
-
-function sizeLabel(bytes: number | null) {
-  if (!bytes) return "—";
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+type LibraryRow = CompanyLibraryListDocument;
 
 export default async function CompanyLibraryPage() {
   const context = await requireActiveOwnerOrganizationContext();
@@ -38,14 +18,15 @@ export default async function CompanyLibraryPage() {
   const documents = (data ?? []) as LibraryRow[];
   const ready = documents.filter((document) => document.ingestion_status === "ready").length;
   const chunks = documents.reduce((total, document) => total + Number(document.chunk_count || 0), 0);
+  const failed = documents.filter((document) => document.ingestion_status === "failed").length;
 
   return (
     <main className="page-shell">
       <section className="panel">
         <p className="eyebrow">COMPANY MEMORY · PRIVATE DOCUMENT LIBRARY</p>
         <h1>Company Library</h1>
-        <p>Upload the documents that define how this company works. New Agents connect to this live tenant-scoped library by default, and meetings can retrieve relevant internal knowledge without copying it into global professional foundations.</p>
-        <p><strong>{ready}</strong> indexed documents · <strong>{chunks}</strong> searchable chunks · source files private.</p>
+        <p>Manage the source documents that define how this company works. Files remain tenant-isolated, while approved Agents and Boardroom sessions can retrieve indexed knowledge without turning extracted content into global policy.</p>
+        <p><strong>{documents.length}</strong> documents · <strong>{ready}</strong> ready · <strong>{chunks}</strong> searchable chunks{failed ? <> · <strong>{failed}</strong> need attention</> : null}</p>
         <p><Link href="/studio/agents">Agent Studio</Link> · <Link href="/meetings/room">Boardroom</Link></p>
       </section>
 
@@ -56,26 +37,10 @@ export default async function CompanyLibraryPage() {
       </section>
 
       <section className="panel">
-        <p className="eyebrow">LIBRARY INDEX</p>
-        <h2>Company documents</h2>
-        {documents.length === 0 ? <p>No company documents have been uploaded yet.</p> : (
-          <div style={{ display: "grid", gap: ".8rem" }}>
-            {documents.map((document) => (
-              <article className="kpi-card" key={document.id}>
-                <p className="eyebrow">{document.category.toUpperCase()} · {document.confidentiality.toUpperCase()}</p>
-                <h3>{document.title}</h3>
-                <p>{document.source_filename ?? "Uploaded document"} · {sizeLabel(document.file_size_bytes)} · <strong>{document.ingestion_status}</strong></p>
-                {document.ingestion_status === "ready" ? <p>{document.chunk_count} indexed chunks · extracted {document.extracted_at ? new Date(document.extracted_at).toISOString().slice(0, 10) : "—"}</p> : null}
-                {document.summary ? <p style={{ opacity: .78 }}>{document.summary.slice(0, 420)}{document.summary.length > 420 ? "…" : ""}</p> : null}
-                {document.last_ingestion_error ? <p className="form-error">{document.last_ingestion_error}</p> : null}
-                <form action={deleteCompanyLibraryDocument}>
-                  <input type="hidden" name="knowledgeId" value={document.id} />
-                  <button type="submit">Delete from Company Library</button>
-                </form>
-              </article>
-            ))}
-          </div>
-        )}
+        <p className="eyebrow">LIBRARY WORKSPACE</p>
+        <h2>Documents</h2>
+        <p>Search, filter, read extracted content, open the original private file, update access metadata, or remove documents.</p>
+        {documents.length === 0 ? <p>No company documents have been uploaded yet.</p> : <CompanyLibraryWorkspace documents={documents} />}
       </section>
     </main>
   );
