@@ -13,6 +13,10 @@ function cleanList(values: string[] | undefined) {
   return [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))].slice(0, 30);
 }
 
+function cleanCsv(value: FormDataEntryValue | null) {
+  return cleanList(String(value ?? "").split(","));
+}
+
 export type RegisterCompanyDocumentInput = {
   storagePath: string;
   fileName: string;
@@ -153,6 +157,65 @@ export async function registerCompanyLibraryDocument(input: RegisterCompanyDocum
     revalidatePath("/company-library");
     throw new Error(message);
   }
+}
+
+export async function getCompanyLibraryDocumentDetail(knowledgeId: string) {
+  const context = await requireActiveOwnerOrganizationContext();
+  const { data, error } = await context.supabase
+    .from("company_knowledge")
+    .select("id,title,category,confidentiality,source_filename,mime_type,file_size_bytes,content,summary,allowed_departments,allowed_role_keywords,ingestion_status,chunk_count,extracted_at,updated_at")
+    .eq("organization_id", context.organizationId)
+    .eq("source_type", "file")
+    .eq("id", knowledgeId)
+    .maybeSingle();
+  if (error || !data) throw new Error("Company Library document could not be loaded.");
+  return {
+    id: String(data.id), title: String(data.title), category: String(data.category), confidentiality: String(data.confidentiality),
+    sourceFilename: data.source_filename ? String(data.source_filename) : null, mimeType: data.mime_type ? String(data.mime_type) : null,
+    fileSizeBytes: data.file_size_bytes == null ? null : Number(data.file_size_bytes), content: data.content ? String(data.content) : null,
+    summary: data.summary ? String(data.summary) : null, allowedDepartments: (data.allowed_departments ?? []).map(String),
+    allowedRoleKeywords: (data.allowed_role_keywords ?? []).map(String), ingestionStatus: String(data.ingestion_status), chunkCount: Number(data.chunk_count || 0),
+    extractedAt: data.extracted_at ? String(data.extracted_at) : null, updatedAt: String(data.updated_at),
+  };
+}
+
+export async function getCompanyLibraryDocumentUrl(knowledgeId: string) {
+  const context = await requireActiveOwnerOrganizationContext();
+  const { data } = await context.supabase
+    .from("company_knowledge")
+    .select("storage_path,source_filename")
+    .eq("organization_id", context.organizationId)
+    .eq("source_type", "file")
+    .eq("id", knowledgeId)
+    .maybeSingle();
+  if (!data?.storage_path) throw new Error("The original source file is not available.");
+  const { data: signed, error } = await context.supabase.storage.from("company-knowledge").createSignedUrl(String(data.storage_path), 300, { download: data.source_filename ? String(data.source_filename) : true });
+  if (error || !signed?.signedUrl) throw new Error("Could not create a secure link for this document.");
+  return { url: signed.signedUrl };
+}
+
+export async function updateCompanyLibraryDocumentMetadata(formData: FormData) {
+  const context = await requireActiveOwnerOrganizationContext();
+  const knowledgeId = String(formData.get("knowledgeId") ?? "");
+  const title = String(formData.get("title") ?? "").trim().slice(0, 180);
+  const categoryRaw = String(formData.get("category") ?? "general");
+  const confidentialityRaw = String(formData.get("confidentiality") ?? "internal");
+  const category = categories.has(categoryRaw) ? categoryRaw : "general";
+  const confidentiality = confidentialityLevels.has(confidentialityRaw) ? confidentialityRaw : "internal";
+  const allowedDepartments = cleanCsv(formData.get("allowedDepartments"));
+  const allowedRoleKeywords = cleanCsv(formData.get("allowedRoleKeywords"));
+  if (!knowledgeId || !title) throw new Error("Document title is required.");
+  if ((confidentiality === "confidential" || confidentiality === "restricted") && !allowedDepartments.length && !allowedRoleKeywords.length) throw new Error("Confidential or restricted documents require at least one allowed department or role keyword.");
+  const { error } = await context.supabase.from("company_knowledge").update({
+    title, category, confidentiality, allowed_departments: allowedDepartments, allowed_role_keywords: allowedRoleKeywords, updated_at: new Date().toISOString(),
+  }).eq("organization_id", context.organizationId).eq("source_type", "file").eq("id", knowledgeId);
+  if (error) throw new Error(`Could not update Company Library document: ${error.message}`);
+  await context.supabase.from("audit_events").insert({
+    organization_id: context.organizationId, actor_type: "user", actor_user_id: context.user.id,
+    event_type: "company_library.document_metadata_updated", object_type: "company_knowledge", object_id: knowledgeId,
+    risk_level: confidentiality === "restricted" ? "medium" : "low", payload: { title, category, confidentiality },
+  });
+  revalidatePath("/company-library");
 }
 
 export async function deleteCompanyLibraryDocument(formData: FormData) {
