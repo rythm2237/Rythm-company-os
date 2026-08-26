@@ -156,8 +156,15 @@ export async function executeAiRequest(request: AiGatewayRequest, dependencies: 
     try {
       compatibility = legacyCompatibilityDecision(request, correlationId);
     } catch (error) {
-      preExecutionError = normalizeAiGatewayError(error);
+      // Off/shadow modes must preserve the approved legacy execution path.
+      // Compatibility classification is advisory in these modes: record the
+      // failure for telemetry, but do not convert it into a policy denial.
+      compatibility = null;
       reasonCodes.push("legacy_compatibility_classification_failed");
+      console.warn("[RYTHM AI Gateway] legacy compatibility classification unavailable", {
+        correlationId,
+        ...safeErrorMetadata(error),
+      });
     }
   }
 
