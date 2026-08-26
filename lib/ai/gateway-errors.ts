@@ -28,7 +28,7 @@ export class AiGatewayError extends Error {
 export function normalizeAiGatewayError(error: unknown): AiGatewayError {
   if (error instanceof AiGatewayError) return error;
   const detail = redactSecretText(error);
-  if (/timed?\s*out|aborterror/i.test(detail)) return new AiGatewayError("timeout", "The AI provider request timed out.", true, { cause: error });
+  if (/timed?\s*out|aborterror|apiconnectiontimeouterror|etimedout|request timeout/i.test(detail)) return new AiGatewayError("timeout", "The AI provider request timed out.", true, { cause: error });
   if (/\b429\b|rate.?limit/i.test(detail)) return new AiGatewayError("rate_limited", "The AI provider rate limit was reached.", true, { cause: error });
   if (/not configured|missing.*(?:key|credential)/i.test(detail)) return new AiGatewayError("provider_not_configured", "The selected AI provider is not configured.", false, { cause: error });
   if (/empty .*response|invalid structured|invalid .*output/i.test(detail)) return new AiGatewayError("invalid_response", "The AI provider returned an invalid response.", true, { cause: error });

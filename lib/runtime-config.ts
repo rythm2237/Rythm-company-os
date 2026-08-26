@@ -38,7 +38,7 @@ export function getRuntimeConfig(): RuntimeConfig {
     monthlyAiBudgetUsd: boundedNumber(process.env.RYTHM_MONTHLY_AI_BUDGET_USD, 25, 0, 100000),
     environment: process.env.VERCEL_ENV ?? process.env.RYTHM_ENV ?? process.env.NODE_ENV ?? "development",
     dryRunModel: process.env.RYTHM_DRY_RUN_MODEL?.trim() || null,
-    agentTimeoutMs: boundedNumber(process.env.RYTHM_AGENT_TIMEOUT_MS, 45000, 5000, 180000),
+    agentTimeoutMs: boundedNumber(process.env.RYTHM_AGENT_TIMEOUT_MS, 90000, 5000, 180000),
     agentMaxRetries: boundedNumber(process.env.RYTHM_AGENT_MAX_RETRIES, 1, 0, 4),
     inputCostPerMillionUsd: boundedNumber(process.env.RYTHM_INPUT_COST_PER_MILLION_USD, 0, 0, 1000),
     outputCostPerMillionUsd: boundedNumber(process.env.RYTHM_OUTPUT_COST_PER_MILLION_USD, 0, 0, 1000),
