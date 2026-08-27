@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { runCompanyBootstrapDiscovery } from "@/lib/company-bootstrap/discovery";
+import {
+  executeCompanyBootstrapApply,
+  requestCompanyBootstrapApply,
+  rollbackCompanyBootstrapApply,
+} from "@/lib/company-bootstrap/apply";
 
 function text(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -11,6 +16,12 @@ function text(value: FormDataEntryValue | null) {
 
 function fail(message: string): never {
   redirect(`/company/bootstrap?error=${encodeURIComponent(message)}`);
+}
+
+function runRedirect(runId: string, message: string): never {
+  redirect(
+    `/company/bootstrap?run=${encodeURIComponent(runId)}&message=${encodeURIComponent(message)}`,
+  );
 }
 
 export async function startCompanyBootstrap(formData: FormData) {
@@ -65,10 +76,9 @@ export async function startCompanyBootstrap(formData: FormData) {
       runId: String(runId),
     });
     revalidatePath("/company/bootstrap");
-    redirect(
-      `/company/bootstrap?run=${encodeURIComponent(String(runId))}&message=${encodeURIComponent(
-        `Read-only discovery completed through the execution gateway. Proposal ${result.proposalDigest.slice(0, 12)}… is ready for Human CEO review.`,
-      )}`,
+    runRedirect(
+      String(runId),
+      `Read-only discovery completed through the execution gateway. Proposal ${result.proposalDigest.slice(0, 12)}… is ready for Human CEO review.`,
     );
   } catch (discoveryError) {
     revalidatePath("/company/bootstrap");
@@ -102,9 +112,83 @@ export async function confirmCompanyBootstrap(formData: FormData) {
     fail(error?.message ?? "Bootstrap proposal could not be confirmed.");
 
   revalidatePath("/company/bootstrap");
-  redirect(
-    `/company/bootstrap?run=${encodeURIComponent(runId)}&message=${encodeURIComponent(
-      "Exact proposal confirmed. Company changes remain blocked until the governed apply execution is approved.",
-    )}`,
+  runRedirect(
+    runId,
+    "Exact proposal confirmed. Request the separate governed apply action when you are ready to create the company structure.",
   );
+}
+
+export async function requestBootstrapApply(formData: FormData) {
+  const context = await requireOwnerOrganizationContext();
+  const runId = text(formData.get("runId"));
+  const proposalDigest = text(formData.get("proposalDigest"));
+  if (!runId || !proposalDigest)
+    fail("Bootstrap run and exact proposal digest are required.");
+
+  try {
+    const request = await requestCompanyBootstrapApply({
+      organizationId: context.organizationId,
+      userId: context.user.id,
+      runId,
+      proposalDigest,
+    });
+    revalidatePath("/company/bootstrap");
+    redirect(
+      `/approvals?approval=${encodeURIComponent(request.approvalId)}&message=${encodeURIComponent(
+        "Review the exact Phase 3 Company Bootstrap apply request. No changes occur until you approve it and then explicitly execute it.",
+      )}`,
+    );
+  } catch (error) {
+    fail(error instanceof Error ? error.message : "Bootstrap apply request failed.");
+  }
+}
+
+export async function executeBootstrapApply(formData: FormData) {
+  const context = await requireOwnerOrganizationContext();
+  const runId = text(formData.get("runId"));
+  const executionId = text(formData.get("executionId"));
+  if (!runId || !executionId) fail("Bootstrap run and approved execution are required.");
+
+  try {
+    await executeCompanyBootstrapApply({
+      organizationId: context.organizationId,
+      executionId,
+    });
+    revalidatePath("/company/bootstrap");
+    revalidatePath("/company");
+    revalidatePath("/agents");
+    runRedirect(
+      runId,
+      "Approved Company Bootstrap applied and verified. All created Agents remain paused and external actions remain disabled.",
+    );
+  } catch (error) {
+    fail(error instanceof Error ? error.message : "Bootstrap apply execution failed.");
+  }
+}
+
+export async function rollbackBootstrapApply(formData: FormData) {
+  const context = await requireOwnerOrganizationContext();
+  const runId = text(formData.get("runId"));
+  const executionId = text(formData.get("executionId"));
+  const confirmation = text(formData.get("confirmation"));
+  if (!runId || !executionId) fail("Bootstrap run and execution are required.");
+  if (confirmation !== "ROLLBACK BOOTSTRAP")
+    fail("Type ROLLBACK BOOTSTRAP to perform the compensating action.");
+
+  try {
+    await rollbackCompanyBootstrapApply({
+      organizationId: context.organizationId,
+      executionId,
+      runId,
+    });
+    revalidatePath("/company/bootstrap");
+    revalidatePath("/company");
+    revalidatePath("/agents");
+    runRedirect(
+      runId,
+      "Bootstrap rollback completed and verified. The run returned to confirmed state and can be reviewed again.",
+    );
+  } catch (error) {
+    fail(error instanceof Error ? error.message : "Bootstrap rollback failed.");
+  }
 }
