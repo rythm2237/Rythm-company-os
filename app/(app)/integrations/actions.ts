@@ -304,8 +304,15 @@ export async function rollbackApprovedRequest(formData: FormData) {
   );
 }
 
-export async function proposePhase2Validation() {
+export async function proposePhase2Validation(formData: FormData) {
   const context = await requireActiveOwnerOrganizationContext();
+  const proposalId = text(formData.get("proposalId"));
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      proposalId,
+    )
+  )
+    fail("A valid validation proposal ID is required.");
   const service = createExecutionServiceClient();
   const { data: integration, error: integrationError } = await service
     .from("organization_integrations")
@@ -342,6 +349,7 @@ export async function proposePhase2Validation() {
     capabilityKey: "validation.record.create",
     targetRef: "release-gate-2",
     input: { marker: "phase2-production-validation" },
+    originatingRequestId: `phase2-validation:${proposalId}`,
     requestedBy: "user",
     authoritySource: "human",
     intent: "release_gate_validation",
