@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { resolveOrganizationContext, isOrganizationEntitlementActive } from "@/lib/auth/organization-context";
 
@@ -9,6 +10,13 @@ type GoogleTokenResponse = {
   token_type?: string;
   error?: string;
   error_description?: string;
+};
+
+type OAuthStatePayload = {
+  integrationId: string;
+  userId: string;
+  nonce: string;
+  issuedAt: number;
 };
 
 function finish(request: Request, key: "error" | "message", message: string) {
@@ -31,6 +39,46 @@ function finish(request: Request, key: "error" | "message", message: string) {
   return response;
 }
 
+function stateSecret() {
+  return (
+    process.env.GOOGLE_WORKSPACE_CLIENT_SECRET?.trim() ||
+    process.env.GOOGLE_CLIENT_SECRET?.trim() ||
+    ""
+  );
+}
+
+function verifySignedState(state: string): OAuthStatePayload | null {
+  const secret = stateSecret();
+  if (!secret) return null;
+  const [encoded, suppliedSignature] = state.split(".");
+  if (!encoded || !suppliedSignature) return null;
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(encoded)
+    .digest("base64url");
+  const supplied = Buffer.from(suppliedSignature);
+  const expected = Buffer.from(expectedSignature);
+  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected))
+    return null;
+  try {
+    const payload = JSON.parse(
+      Buffer.from(encoded, "base64url").toString("utf8"),
+    ) as OAuthStatePayload;
+    if (
+      !payload.integrationId ||
+      !payload.userId ||
+      !payload.nonce ||
+      !Number.isFinite(payload.issuedAt) ||
+      Date.now() - payload.issuedAt > 10 * 60 * 1000 ||
+      payload.issuedAt > Date.now() + 60_000
+    )
+      return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code")?.trim();
@@ -51,12 +99,16 @@ export async function GET(request: Request) {
       }),
   );
   const expectedState = cookies.get("rythm_google_oauth_state") ?? "";
-  const integrationId = cookies.get("rythm_google_oauth_integration") ?? "";
-  const expectedUserId = cookies.get("rythm_google_oauth_user") ?? "";
+  const cookieIntegrationId = cookies.get("rythm_google_oauth_integration") ?? "";
+  const cookieUserId = cookies.get("rythm_google_oauth_user") ?? "";
+  const signedPayload = state ? verifySignedState(state) : null;
+  const cookieStateValid = Boolean(state && expectedState && state === expectedState);
+  const integrationId = cookieStateValid ? cookieIntegrationId : signedPayload?.integrationId ?? "";
+  const expectedUserId = cookieStateValid ? cookieUserId : signedPayload?.userId ?? "";
 
   if (providerError)
     return finish(request, "error", `Google authorization was not completed: ${providerError}`);
-  if (!code || !state || !expectedState || state !== expectedState || !integrationId || !expectedUserId)
+  if (!code || !state || (!cookieStateValid && !signedPayload) || !integrationId || !expectedUserId)
     return finish(request, "error", "Google OAuth state validation failed. Start the connection again from Integrations.");
 
   const context = await resolveOrganizationContext();
@@ -79,7 +131,7 @@ export async function GET(request: Request) {
     return finish(request, "error", "The Google Workspace connection request is no longer valid.");
 
   const clientId = process.env.GOOGLE_WORKSPACE_CLIENT_ID?.trim() || process.env.GOOGLE_CLIENT_ID?.trim();
-  const clientSecret = process.env.GOOGLE_WORKSPACE_CLIENT_SECRET?.trim() || process.env.GOOGLE_CLIENT_SECRET?.trim();
+  const clientSecret = stateSecret();
   if (!clientId || !clientSecret)
     return finish(request, "error", "Google Workspace OAuth server credentials are not configured.");
 
