@@ -1,6 +1,9 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { resolveOrganizationContext, isOrganizationEntitlementActive } from "@/lib/auth/organization-context";
+import {
+  isOrganizationEntitlementActive,
+  resolveOrganizationContext,
+} from "@/lib/auth/organization-context";
 
 const GOOGLE_SCOPES = [
   "openid",
@@ -17,11 +20,20 @@ function back(request: Request, message: string) {
 
 export async function POST(request: Request) {
   const context = await resolveOrganizationContext();
-  if (!context) return NextResponse.redirect(new URL("/login", request.url), 303);
-  if (context.role !== "owner" || !isOrganizationEntitlementActive(context.entitlement))
-    return back(request, "Owner authorization with an active entitlement is required.");
+  if (!context)
+    return NextResponse.redirect(new URL("/login", request.url), 303);
+  if (
+    context.role !== "owner" ||
+    !isOrganizationEntitlementActive(context.entitlement)
+  )
+    return back(
+      request,
+      "Owner authorization with an active entitlement is required.",
+    );
 
-  const clientId = process.env.GOOGLE_WORKSPACE_CLIENT_ID?.trim() || process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientId =
+    process.env.GOOGLE_WORKSPACE_CLIENT_ID?.trim() ||
+    process.env.GOOGLE_CLIENT_ID?.trim();
   if (!clientId)
     return back(
       request,
@@ -29,31 +41,60 @@ export async function POST(request: Request) {
     );
 
   const form = await request.formData();
-  const displayName = String(form.get("displayName") ?? "Google Workspace").trim() || "Google Workspace";
-  const { data: integration, error } = await context.supabase
-    .from("organization_integrations")
-    .insert({
-      organization_id: context.organizationId,
-      provider_key: "google_workspace",
-      display_name: displayName,
-      account_ref: null,
-      base_url: null,
-      auth_type: "oauth",
-      granted_scopes: ["gmail.readonly", "calendar.readonly"],
-      status: "disconnected",
-      enabled: true,
-      connected_by_user_id: context.user.id,
-      metadata: {
-        oauth_flow: "google_workspace_v1",
-        credential_format: "oauth_token_envelope_v1",
-        phase3_read_only_bootstrap: true,
-      },
-    })
-    .select("id")
-    .single();
+  const displayName =
+    String(form.get("displayName") ?? "Google Workspace").trim() ||
+    "Google Workspace";
 
+  const connectionPayload = {
+    organization_id: context.organizationId,
+    provider_key: "google_workspace",
+    display_name: displayName,
+    account_ref: null,
+    base_url: null,
+    auth_type: "oauth",
+    granted_scopes: ["gmail.readonly", "calendar.readonly"],
+    status: "disconnected",
+    enabled: true,
+    connected_by_user_id: context.user.id,
+    metadata: {
+      oauth_flow: "google_workspace_v1",
+      credential_format: "oauth_token_envelope_v1",
+      phase3_read_only_bootstrap: true,
+    },
+  } as const;
+
+  const { data: existing, error: lookupError } = await context.supabase
+    .from("organization_integrations")
+    .select("id")
+    .eq("organization_id", context.organizationId)
+    .eq("provider_key", "google_workspace")
+    .eq("display_name", displayName)
+    .maybeSingle();
+
+  if (lookupError)
+    return back(request, lookupError.message);
+
+  const prepared = existing
+    ? await context.supabase
+        .from("organization_integrations")
+        .update(connectionPayload)
+        .eq("id", existing.id)
+        .eq("organization_id", context.organizationId)
+        .select("id")
+        .single()
+    : await context.supabase
+        .from("organization_integrations")
+        .insert(connectionPayload)
+        .select("id")
+        .single();
+
+  const integration = prepared.data;
+  const error = prepared.error;
   if (error || !integration)
-    return back(request, error?.message ?? "Google Workspace connection could not be prepared.");
+    return back(
+      request,
+      error?.message ?? "Google Workspace connection could not be prepared.",
+    );
 
   const state = crypto.randomBytes(32).toString("base64url");
   const origin = new URL(request.url).origin;
@@ -77,7 +118,11 @@ export async function POST(request: Request) {
     maxAge: 10 * 60,
   };
   response.cookies.set("rythm_google_oauth_state", state, cookieOptions);
-  response.cookies.set("rythm_google_oauth_integration", integration.id, cookieOptions);
+  response.cookies.set(
+    "rythm_google_oauth_integration",
+    integration.id,
+    cookieOptions,
+  );
   response.cookies.set("rythm_google_oauth_user", context.user.id, cookieOptions);
   return response;
 }
