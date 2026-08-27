@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/app-shell/AppShell";
 import CommunicationDeliveryDock from "@/components/communication/CommunicationDeliveryDock";
+import GoogleWorkspaceConnectEnhancer from "@/components/integrations/GoogleWorkspaceConnectEnhancer";
 import "../mobile-workspace.css";
 import "../mobile-navigation-footer.css";
 import "../workspace-form-hardening.css";
@@ -20,6 +21,7 @@ export default function CompanyWorkspaceLayout({ children }: Readonly<{ children
     <AppShell>
       {children}
       <CommunicationDeliveryDock />
+      <GoogleWorkspaceConnectEnhancer />
     </AppShell>
   );
 }
