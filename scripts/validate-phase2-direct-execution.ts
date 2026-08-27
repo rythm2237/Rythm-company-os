@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { GOOGLE_OAUTH_REFRESH_BOUNDARY } from "../lib/company-bootstrap/direct-execution-boundary";
 import { DIRECT_EXECUTION_INVENTORY } from "../lib/integrations/direct-execution-inventory";
 
 function files(root: string): string[] {
@@ -27,6 +28,7 @@ const fetchBoundaries = new Set([
   "components/project-pulse/ProjectPulse.tsx",
   "lib/ai/agent-provider.ts",
   "lib/billing/stripe-rest.ts",
+  GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   "lib/integrations/adapters/http.ts",
 ]);
 const allFetchFiles = sourceFiles
@@ -51,9 +53,10 @@ const discovered = sourceFiles
     return directPatterns.some((pattern) => pattern.test(source));
   })
   .map((path) => relative(".", path));
-const inventoried = new Set(
-  DIRECT_EXECUTION_INVENTORY.map((item) => item.path),
-);
+const inventoried = new Set([
+  ...DIRECT_EXECUTION_INVENTORY.map((item) => item.path),
+  GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
+]);
 const unknown = discovered.filter(
   (path) =>
     !path.startsWith("lib/integrations/adapters/") && !inventoried.has(path),
@@ -63,6 +66,9 @@ assert.deepEqual(
   [],
   `Unknown direct provider/external execution paths: ${unknown.join(", ")}`,
 );
+assert.equal(GOOGLE_OAUTH_REFRESH_BOUNDARY.disposition, "platform_control_boundary");
+assert.match(GOOGLE_OAUTH_REFRESH_BOUNDARY.scope, /OAuth access-token refresh/);
+assert.match(GOOGLE_OAUTH_REFRESH_BOUNDARY.reason, /cannot perform Gmail or Calendar business actions/);
 const directSdkPattern =
   /from\s+["'](?:stripe|resend|@octokit\/rest|googleapis|@microsoft\/microsoft-graph-client|nodemailer|playwright|puppeteer|axios|got|ky)["']/;
 assert.deepEqual(
