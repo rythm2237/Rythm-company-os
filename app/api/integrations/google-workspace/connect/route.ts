@@ -18,6 +18,30 @@ function back(request: Request, message: string) {
   return NextResponse.redirect(url, 303);
 }
 
+function oauthStateSecret() {
+  return (
+    process.env.GOOGLE_WORKSPACE_CLIENT_SECRET?.trim() ||
+    process.env.GOOGLE_CLIENT_SECRET?.trim() ||
+    ""
+  );
+}
+
+function signedState(payload: {
+  integrationId: string;
+  userId: string;
+  nonce: string;
+  issuedAt: number;
+}) {
+  const secret = oauthStateSecret();
+  if (!secret) return null;
+  const encoded = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  const signature = crypto
+    .createHmac("sha256", secret)
+    .update(encoded)
+    .digest("base64url");
+  return `${encoded}.${signature}`;
+}
+
 export async function POST(request: Request) {
   const context = await resolveOrganizationContext();
   if (!context)
@@ -34,10 +58,11 @@ export async function POST(request: Request) {
   const clientId =
     process.env.GOOGLE_WORKSPACE_CLIENT_ID?.trim() ||
     process.env.GOOGLE_CLIENT_ID?.trim();
-  if (!clientId)
+  const stateSecret = oauthStateSecret();
+  if (!clientId || !stateSecret)
     return back(
       request,
-      "Google Workspace OAuth is not configured on the RYTHM server yet. GOOGLE_WORKSPACE_CLIENT_ID is required.",
+      "Google Workspace OAuth server credentials are not configured.",
     );
 
   const form = await request.formData();
@@ -71,8 +96,7 @@ export async function POST(request: Request) {
     .eq("display_name", displayName)
     .maybeSingle();
 
-  if (lookupError)
-    return back(request, lookupError.message);
+  if (lookupError) return back(request, lookupError.message);
 
   const prepared = existing
     ? await context.supabase
@@ -96,7 +120,15 @@ export async function POST(request: Request) {
       error?.message ?? "Google Workspace connection could not be prepared.",
     );
 
-  const state = crypto.randomBytes(32).toString("base64url");
+  const state = signedState({
+    integrationId: integration.id,
+    userId: context.user.id,
+    nonce: crypto.randomBytes(24).toString("base64url"),
+    issuedAt: Date.now(),
+  });
+  if (!state)
+    return back(request, "Google Workspace OAuth state could not be created.");
+
   const origin = new URL(request.url).origin;
   const redirectUri = `${origin}/api/integrations/google-workspace/callback`;
   const consentUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
