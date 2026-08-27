@@ -1,0 +1,83 @@
+import crypto from "node:crypto";
+import { NextResponse } from "next/server";
+import { resolveOrganizationContext, isOrganizationEntitlementActive } from "@/lib/auth/organization-context";
+
+const GOOGLE_SCOPES = [
+  "openid",
+  "email",
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/calendar.readonly",
+];
+
+function back(request: Request, message: string) {
+  const url = new URL("/integrations", request.url);
+  url.searchParams.set("error", message);
+  return NextResponse.redirect(url, 303);
+}
+
+export async function POST(request: Request) {
+  const context = await resolveOrganizationContext();
+  if (!context) return NextResponse.redirect(new URL("/login", request.url), 303);
+  if (context.role !== "owner" || !isOrganizationEntitlementActive(context.entitlement))
+    return back(request, "Owner authorization with an active entitlement is required.");
+
+  const clientId = process.env.GOOGLE_WORKSPACE_CLIENT_ID?.trim() || process.env.GOOGLE_CLIENT_ID?.trim();
+  if (!clientId)
+    return back(
+      request,
+      "Google Workspace OAuth is not configured on the RYTHM server yet. GOOGLE_WORKSPACE_CLIENT_ID is required.",
+    );
+
+  const form = await request.formData();
+  const displayName = String(form.get("displayName") ?? "Google Workspace").trim() || "Google Workspace";
+  const { data: integration, error } = await context.supabase
+    .from("organization_integrations")
+    .insert({
+      organization_id: context.organizationId,
+      provider_key: "google_workspace",
+      display_name: displayName,
+      account_ref: null,
+      base_url: null,
+      auth_type: "oauth",
+      granted_scopes: ["gmail.readonly", "calendar.readonly"],
+      status: "disconnected",
+      enabled: true,
+      connected_by_user_id: context.user.id,
+      metadata: {
+        oauth_flow: "google_workspace_v1",
+        credential_format: "oauth_token_envelope_v1",
+        phase3_read_only_bootstrap: true,
+      },
+    })
+    .select("id")
+    .single();
+
+  if (error || !integration)
+    return back(request, error?.message ?? "Google Workspace connection could not be prepared.");
+
+  const state = crypto.randomBytes(32).toString("base64url");
+  const origin = new URL(request.url).origin;
+  const redirectUri = `${origin}/api/integrations/google-workspace/callback`;
+  const consentUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  consentUrl.searchParams.set("client_id", clientId);
+  consentUrl.searchParams.set("redirect_uri", redirectUri);
+  consentUrl.searchParams.set("response_type", "code");
+  consentUrl.searchParams.set("scope", GOOGLE_SCOPES.join(" "));
+  consentUrl.searchParams.set("access_type", "offline");
+  consentUrl.searchParams.set("prompt", "consent");
+  consentUrl.searchParams.set("include_granted_scopes", "true");
+  consentUrl.searchParams.set("state", state);
+
+  const response = NextResponse.redirect(consentUrl, 303);
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/api/integrations/google-workspace",
+    maxAge: 10 * 60,
+  };
+  response.cookies.set("rythm_google_oauth_state", state, cookieOptions);
+  response.cookies.set("rythm_google_oauth_integration", integration.id, cookieOptions);
+  response.cookies.set("rythm_google_oauth_user", context.user.id, cookieOptions);
+  return response;
+}
