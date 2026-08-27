@@ -68,18 +68,14 @@ export async function startCompanyBootstrap(formData: FormData) {
   if (error || !runId)
     fail(error?.message ?? "Bootstrap discovery could not be started.");
 
+  let result: Awaited<ReturnType<typeof runCompanyBootstrapDiscovery>>;
   try {
-    const result = await runCompanyBootstrapDiscovery({
+    result = await runCompanyBootstrapDiscovery({
       organizationId: context.organizationId,
       userId: context.user.id,
       integrationId,
       runId: String(runId),
     });
-    revalidatePath("/company/bootstrap");
-    runRedirect(
-      String(runId),
-      `Read-only discovery completed through the execution gateway. Proposal ${result.proposalDigest.slice(0, 12)}… is ready for Human CEO review.`,
-    );
   } catch (discoveryError) {
     revalidatePath("/company/bootstrap");
     fail(
@@ -88,6 +84,12 @@ export async function startCompanyBootstrap(formData: FormData) {
         : "Governed bootstrap discovery failed.",
     );
   }
+
+  revalidatePath("/company/bootstrap");
+  runRedirect(
+    String(runId),
+    `Read-only discovery completed through the execution gateway. Proposal ${result.proposalDigest.slice(0, 12)}… is ready for Human CEO review.`,
+  );
 }
 
 export async function confirmCompanyBootstrap(formData: FormData) {
@@ -125,22 +127,24 @@ export async function requestBootstrapApply(formData: FormData) {
   if (!runId || !proposalDigest)
     fail("Bootstrap run and exact proposal digest are required.");
 
+  let request: Awaited<ReturnType<typeof requestCompanyBootstrapApply>>;
   try {
-    const request = await requestCompanyBootstrapApply({
+    request = await requestCompanyBootstrapApply({
       organizationId: context.organizationId,
       userId: context.user.id,
       runId,
       proposalDigest,
     });
-    revalidatePath("/company/bootstrap");
-    redirect(
-      `/approvals?approval=${encodeURIComponent(request.approvalId)}&message=${encodeURIComponent(
-        "Review the exact Phase 3 Company Bootstrap apply request. No changes occur until you approve it and then explicitly execute it.",
-      )}`,
-    );
   } catch (error) {
     fail(error instanceof Error ? error.message : "Bootstrap apply request failed.");
   }
+
+  revalidatePath("/company/bootstrap");
+  redirect(
+    `/approvals?approval=${encodeURIComponent(request.approvalId)}&message=${encodeURIComponent(
+      "Review the exact Phase 3 Company Bootstrap apply request. No changes occur until you approve it and then explicitly execute it.",
+    )}`,
+  );
 }
 
 export async function executeBootstrapApply(formData: FormData) {
@@ -154,16 +158,17 @@ export async function executeBootstrapApply(formData: FormData) {
       organizationId: context.organizationId,
       executionId,
     });
-    revalidatePath("/company/bootstrap");
-    revalidatePath("/company");
-    revalidatePath("/agents");
-    runRedirect(
-      runId,
-      "Approved Company Bootstrap applied and verified. All created Agents remain paused and external actions remain disabled.",
-    );
   } catch (error) {
     fail(error instanceof Error ? error.message : "Bootstrap apply execution failed.");
   }
+
+  revalidatePath("/company/bootstrap");
+  revalidatePath("/company");
+  revalidatePath("/agents");
+  runRedirect(
+    runId,
+    "Approved Company Bootstrap applied and verified. All created Agents remain paused and external actions remain disabled.",
+  );
 }
 
 export async function rollbackBootstrapApply(formData: FormData) {
@@ -181,14 +186,15 @@ export async function rollbackBootstrapApply(formData: FormData) {
       executionId,
       runId,
     });
-    revalidatePath("/company/bootstrap");
-    revalidatePath("/company");
-    revalidatePath("/agents");
-    runRedirect(
-      runId,
-      "Bootstrap rollback completed and verified. The run returned to confirmed state and can be reviewed again.",
-    );
   } catch (error) {
     fail(error instanceof Error ? error.message : "Bootstrap rollback failed.");
   }
+
+  revalidatePath("/company/bootstrap");
+  revalidatePath("/company");
+  revalidatePath("/agents");
+  runRedirect(
+    runId,
+    "Bootstrap rollback completed and verified. The run returned to confirmed state and can be reviewed again.",
+  );
 }
