@@ -43,6 +43,19 @@ export const DIRECT_EXECUTION_INVENTORY: DirectExecutionInventoryItem[] = [
     reviewPoint: "Every provider addition",
   },
   {
+    path: "app/api/integrations/google-workspace/callback/route.ts",
+    classification: ["B", "D"],
+    disposition: "platform_control_boundary",
+    owner: "Integration Gateway",
+    scope: "Human Owner initiated Google OAuth code exchange and account verification",
+    risk: "External authorization and provider credential issuance",
+    reason:
+      "This route establishes a company-owned credential after an explicit Google consent screen; it is not Agent-reachable operational execution and cannot perform Gmail or Calendar business actions",
+    migrationPlan:
+      "Permanent OAuth control-plane boundary; all subsequent provider operations remain behind registered Phase 2 adapters and capabilities",
+    reviewPoint: "Every Google OAuth scope or credential-flow change",
+  },
+  {
     path: "app/api/communication/outbound/resend/route.ts",
     classification: ["E"],
     disposition: "gateway_migrated",

@@ -19,6 +19,7 @@ const sourceFiles = [
 const fetchBoundaries = new Set([
   "app/(app)/meetings/room/DeliberationConsole.tsx",
   "app/(app)/readiness/ExecuteValidationButton.tsx",
+  "app/api/integrations/google-workspace/callback/route.ts",
   "app/api/meetings/continue-detached/route.ts",
   "components/app-shell/BoardroomFocusBridge.tsx",
   "components/communication/CommunicationDeliveryDock.tsx",
