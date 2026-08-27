@@ -8,12 +8,16 @@ const read = (relative: string) => fs.readFileSync(path.join(root, relative), "u
 
 const migration = read("supabase/migrations/20260827133000_phase3_company_auto_bootstrap_foundation.sql");
 const catalog = read("supabase/migrations/20260827143000_phase3_bootstrap_tool_catalog.sql");
+const applyMigration = read("supabase/migrations/20260827150000_phase3_bootstrap_apply_gateway.sql");
 const phase2Gateway = read("lib/integrations/execution-gateway.ts");
 const providerExecutors = read("lib/integrations/provider-executors.ts");
 const registry = read("lib/integrations/registry.ts");
 const bootstrapTools = read("lib/company-bootstrap/register-tools.ts");
+const applyTool = read("lib/company-bootstrap/register-apply-tool.ts");
 const discovery = read("lib/company-bootstrap/discovery.ts");
+const apply = read("lib/company-bootstrap/apply.ts");
 const actions = read("app/(app)/company/bootstrap/actions.ts");
+const page = read("app/(app)/company/bootstrap/page.tsx");
 
 assert.match(migration, /create table if not exists public\.company_bootstrap_runs/i);
 assert.match(migration, /enable row level security/i);
@@ -58,10 +62,45 @@ assert.match(catalog, /'calendar\.readonly'/);
 assert.match(catalog, /'read'/);
 assert.match(catalog, /external_side_effect[\s\S]*false/);
 
-// User initiation validates least-privilege scopes before creating a run.
+// Apply is a distinct high-risk internal governed action with exact Human CEO confirmation evidence.
+assert.match(applyMigration, /apply_company_bootstrap_service_v1/);
+assert.match(applyMigration, /rollback_company_bootstrap_service_v1/);
+assert.match(applyMigration, /Matching governed execution claim is required/);
+assert.match(applyMigration, /Human CEO confirmation evidence is missing/);
+assert.match(applyMigration, /proposal changed after Human CEO confirmation/i);
+assert.match(applyMigration, /Company already contains Agents; Phase 3 V1 overlay is blocked/);
+assert.match(applyMigration, /Company already contains departments; Phase 3 V1 overlay is blocked/);
+assert.match(applyMigration, /'paused'/);
+assert.match(applyMigration, /external_actions_allowed[\s\S]*false/);
+assert.match(applyMigration, /rollback_supported[\s\S]*true/);
+assert.match(applyMigration, /'internal\.company_bootstrap'/);
+assert.match(applyMigration, /'company_bootstrap\.apply'/);
+assert.match(applyMigration, /'high'[\s\S]*'approval_required'/);
+
+assert.match(applyTool, /human_ceo_required/);
+assert.match(applyTool, /riskLevel: "high"/);
+assert.match(applyTool, /reversibility: "reversible"/);
+assert.match(applyTool, /rollbackSupported: true/);
+assert.match(applyTool, /apply_company_bootstrap_service_v1/);
+assert.match(applyTool, /rollback_company_bootstrap_service_v1/);
+
+assert.match(apply, /requestToolExecution/);
+assert.match(apply, /syncToolExecutionApproval/);
+assert.match(apply, /executeApprovedToolRequest/);
+assert.match(apply, /rollbackToolExecution/);
+assert.match(apply, /limited_enforced/);
+assert.match(apply, /High-risk bootstrap apply did not produce the required Human CEO approval/);
+
+// User initiation validates least-privilege scopes and exposes explicit confirm / approval / execute / rollback controls.
 assert.match(actions, /gmail\.readonly/);
 assert.match(actions, /calendar\.readonly/);
 assert.match(actions, /runCompanyBootstrapDiscovery/);
+assert.match(actions, /requestCompanyBootstrapApply/);
+assert.match(actions, /executeCompanyBootstrapApply/);
+assert.match(actions, /ROLLBACK BOOTSTRAP/);
+assert.match(page, /Request governed apply approval/);
+assert.match(page, /Execute approved bootstrap/);
+assert.match(page, /Execute verified rollback/);
 
 const proposal = synthesizeCompanyBootstrapProposal({
   accountEmail: "ceo@example-company.com",
@@ -89,4 +128,4 @@ assert.ok(proposal.proposed_structure.agents.length >= 2);
 assert.ok(proposal.proposed_structure.agents.every((agent) => agent.external_actions_allowed === false));
 assert.ok(proposal.proposed_structure.agents.every((agent) => agent.initial_status === "paused"));
 
-console.log("Phase 3 Company Auto-Bootstrap governed discovery validation passed.");
+console.log("Phase 3 Company Auto-Bootstrap governed discovery/apply/rollback validation passed.");
