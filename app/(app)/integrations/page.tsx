@@ -132,6 +132,7 @@ export default async function IntegrationsPage({
           </p>
         </div>
         <form action={proposePhase2Validation}>
+          <input type="hidden" name="proposalId" value={crypto.randomUUID()} />
           <button className="secondary-button">
             Propose reversible Phase 2 validation
           </button>

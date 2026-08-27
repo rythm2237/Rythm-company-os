@@ -207,6 +207,15 @@ async function main() {
         .reasonCode,
       "DUPLICATE_EXECUTION_BLOCKED",
     ));
+  await test("independent validation proposals keep retry-safe request IDs", () => {
+    const actions = readFileSync("app/(app)/integrations/actions.ts", "utf8");
+    const page = readFileSync("app/(app)/integrations/page.tsx", "utf8");
+    assert.match(page, /name="proposalId" value=\{crypto\.randomUUID\(\)\}/);
+    assert.match(
+      actions,
+      /originatingRequestId: `phase2-validation:\$\{proposalId\}`/,
+    );
+  });
   await test("idempotency key is stable across object key ordering", () => {
     const a = buildExecutionIdempotencyKey({
       organizationId,
