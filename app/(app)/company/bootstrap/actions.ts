@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { runCompanyBootstrapDiscovery } from "@/lib/company-bootstrap/discovery";
 
 function text(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -19,7 +20,7 @@ export async function startCompanyBootstrap(formData: FormData) {
 
   const { data: integration, error: integrationError } = await context.supabase
     .from("organization_integrations")
-    .select("id,provider_key,status,enabled")
+    .select("id,provider_key,status,enabled,granted_scopes")
     .eq("id", integrationId)
     .eq("organization_id", context.organizationId)
     .maybeSingle();
@@ -34,6 +35,18 @@ export async function startCompanyBootstrap(formData: FormData) {
     fail("The selected Google Workspace connection is not available.");
   }
 
+  const grantedScopes = Array.isArray(integration.granted_scopes)
+    ? integration.granted_scopes.map((scope) => String(scope).toLowerCase())
+    : [];
+  const missingScopes = ["gmail.readonly", "calendar.readonly"].filter(
+    (scope) => !grantedScopes.includes(scope),
+  );
+  if (missingScopes.length) {
+    fail(
+      `The Google Workspace connection is missing the Phase 3 read-only scopes: ${missingScopes.join(", ")}.`,
+    );
+  }
+
   const { data: runId, error } = await context.supabase.rpc(
     "create_company_bootstrap_run_v1",
     {
@@ -41,14 +54,30 @@ export async function startCompanyBootstrap(formData: FormData) {
       target_integration_id: integrationId,
     },
   );
-  if (error || !runId) fail(error?.message ?? "Bootstrap discovery could not be started.");
+  if (error || !runId)
+    fail(error?.message ?? "Bootstrap discovery could not be started.");
 
-  revalidatePath("/company/bootstrap");
-  redirect(
-    `/company/bootstrap?run=${encodeURIComponent(String(runId))}&message=${encodeURIComponent(
-      "Bootstrap run created. Read-only Gmail and Google Calendar discovery will run through the governed execution gateway.",
-    )}`,
-  );
+  try {
+    const result = await runCompanyBootstrapDiscovery({
+      organizationId: context.organizationId,
+      userId: context.user.id,
+      integrationId,
+      runId: String(runId),
+    });
+    revalidatePath("/company/bootstrap");
+    redirect(
+      `/company/bootstrap?run=${encodeURIComponent(String(runId))}&message=${encodeURIComponent(
+        `Read-only discovery completed through the execution gateway. Proposal ${result.proposalDigest.slice(0, 12)}… is ready for Human CEO review.`,
+      )}`,
+    );
+  } catch (discoveryError) {
+    revalidatePath("/company/bootstrap");
+    fail(
+      discoveryError instanceof Error
+        ? discoveryError.message
+        : "Governed bootstrap discovery failed.",
+    );
+  }
 }
 
 export async function confirmCompanyBootstrap(formData: FormData) {
@@ -57,15 +86,20 @@ export async function confirmCompanyBootstrap(formData: FormData) {
   const proposalDigest = text(formData.get("proposalDigest"));
   const confirmation = text(formData.get("confirmation"));
 
-  if (!runId || !proposalDigest) fail("Bootstrap run and proposal digest are required.");
+  if (!runId || !proposalDigest)
+    fail("Bootstrap run and proposal digest are required.");
   if (confirmation !== "CONFIRM BOOTSTRAP")
     fail("Type CONFIRM BOOTSTRAP to confirm the exact proposal.");
 
-  const { data, error } = await context.supabase.rpc("confirm_company_bootstrap_v1", {
-    target_run_id: runId,
-    target_proposal_digest: proposalDigest,
-  });
-  if (error || !data) fail(error?.message ?? "Bootstrap proposal could not be confirmed.");
+  const { data, error } = await context.supabase.rpc(
+    "confirm_company_bootstrap_v1",
+    {
+      target_run_id: runId,
+      target_proposal_digest: proposalDigest,
+    },
+  );
+  if (error || !data)
+    fail(error?.message ?? "Bootstrap proposal could not be confirmed.");
 
   revalidatePath("/company/bootstrap");
   redirect(
