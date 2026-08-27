@@ -9,6 +9,10 @@ const phase2 = readFileSync(
   "supabase/migrations/20260826192947_phase2_integration_execution_gateway.sql",
   "utf8",
 ).toLowerCase();
+const serviceRoleCompatibility = readFileSync(
+  "supabase/migrations/20260827054000_phase2_service_role_claim_compatibility.sql",
+  "utf8",
+).toLowerCase();
 
 for (const table of [
   "integration_tool_registry",
@@ -88,5 +92,20 @@ assert.match(
   phase2,
   /set_organization_integration_secret_v1[\s\S]*membership_status='active'[\s\S]*m\.role='owner'[\s\S]*credential_last_rotated_at=now\(\)/,
 );
+for (const functionName of [
+  "record_tool_execution_lifecycle_v2",
+  "enforce_execution_approval_scope",
+  "claim_tool_execution_v2",
+  "claim_tool_execution_rollback_v2",
+  "get_organization_integration_secret_service_v1",
+]) {
+  assert.match(
+    serviceRoleCompatibility,
+    new RegExp(
+      `${functionName}[\\s\\S]*?request\\.jwt\\.claims[\\s\\S]*?service_role`,
+    ),
+    `${functionName} must accept the modern Data API JWT claims format`,
+  );
+}
 
 console.log("Phase 2 RLS/security contract validation passed.");
