@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const migration = readFileSync("supabase/migrations/20260828090000_ready_ai_company_library.sql", "utf8");
 const standardMigration = readFileSync("supabase/migrations/20260828101500_ready_company_minimum_standard.sql", "utf8");
+const enforcementMigration = readFileSync("supabase/migrations/20260828102500_ready_company_standard_enforcement.sql", "utf8");
 const standardDoc = readFileSync("docs/phase4-ready-company-minimum-standard.md", "utf8");
 const page = readFileSync("app/(app)/studio/templates/page.tsx", "utf8");
 const actions = readFileSync("app/(app)/studio/templates/actions.ts", "utf8");
@@ -69,6 +70,21 @@ mustContain(standardMigration, [
   "provider_adapters_must_be_verified_before_execution",
   "maturity='preview'",
   "ready_company_minimum_standard_status",
+]);
+
+mustContain(enforcementMigration, [
+  "company_templates_stable_minimum_standard_check",
+  "company_templates_advertising_extension_check",
+  "finance_accounting",
+  "legal_compliance",
+  "people_workforce",
+  "generic_business_api",
+  "meta_marketing",
+  "google_ads",
+  "youtube",
+  "tiktok_business",
+  "linkedin_marketing",
+  "spend_requires_human_ceo",
 ]);
 
 // Contracts for not-yet-verified external adapters must fail closed rather than pretending to be live.
