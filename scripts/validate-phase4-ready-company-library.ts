@@ -15,6 +15,10 @@ const integrationGuide = readFileSync("app/(app)/integrations/integration-setup-
 const agentKnowledge = readFileSync("app/(app)/agents/[code]/knowledge/page.tsx", "utf8");
 const agentUploader = readFileSync("app/(app)/agents/[code]/AgentKnowledgeUploader.tsx", "utf8");
 const companyKnowledgeRuntime = readFileSync("lib/company-knowledge.ts", "utf8");
+const agentDirectory = readFileSync("app/(app)/agents/page.tsx", "utf8");
+const agentTaskPage = readFileSync("app/(app)/agents/[code]/task/page.tsx", "utf8");
+const agentTaskActions = readFileSync("app/(app)/agents/[code]/task/actions.ts", "utf8");
+const agentTaskConsole = readFileSync("app/(app)/agents/[code]/task/AgentTaskConsole.tsx", "utf8");
 
 const mustContain = (source: string, values: string[]) => values.forEach((value) => assert.ok(source.includes(value), `Missing Phase 4 contract: ${value}`));
 
@@ -51,4 +55,10 @@ mustContain(agentKnowledge,["AGENT KNOWLEDGE","Add role-specific knowledge witho
 mustContain(agentUploader,["registerCompanyLibraryDocument","allowedRoleKeywords:[`agent:${agentId}`]","Add knowledge to this Agent","No prompt is required","<option value=\"marketing\">Marketing</option>","<option value=\"technical\">Technical</option>"]);
 mustContain(companyKnowledgeRuntime,["const exactAgentAcl=`agent:${agent.id}`","agentScoped","normalize(value)===exactAgentAcl","allowedKnowledgeIds","filter((item)=>allowedKnowledgeIds.has(item.knowledge_id))"]);
 
-console.log("Phase 4 Ready AI Company Library + launch experience + guided setup + exact Agent knowledge contract validation passed.");
+mustContain(agentDirectory,["Give task",'href={`/agents/${code}/task`}',"Company + direct Agent knowledge"]);
+mustContain(agentTaskPage,["AGENT WORKSPACE · GOVERNED TASK","Adaptive Routing","cannot publish, spend money","AgentTaskConsole"]);
+mustContain(agentTaskConsole,["Run task","Knowledge sources considered","Adaptive routing"]);
+mustContain(agentTaskActions,["executeAiRequest","loadCompanyKnowledgeForAgent",'feature: "agent.console"','mode: "task"','telemetryPolicy: "required"',"External actions, publishing, spending, legal commitments","agent.task_completed","external_actions_allowed: false"]);
+assert.ok(!agentTaskActions.includes("runtime_model"));
+
+console.log("Phase 4 Ready AI Company Library + launch experience + guided setup + exact Agent knowledge + governed Give task contract validation passed.");
