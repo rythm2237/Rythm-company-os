@@ -101,10 +101,11 @@ mustContain(page, [
   "Immutable catalog releases",
   "template_snapshot_digest",
   "provisionCompanyTemplate",
-  "agent_template_refs",
+  "Version snapshot isolation",
+  "const hasCapacity",
 ]);
 assert.ok(page.includes("supported_product_codes.includes"), "Marketplace must enforce active product entitlement before provisioning");
-assert.ok(page.includes("max_active_agents >= template.agent_template_refs.length"), "Marketplace must enforce Agent capacity before provisioning");
+assert.ok(page.includes("context.entitlement.max_active_agents") && page.includes("template.agent_template_refs.length"), "Marketplace must enforce Agent capacity before provisioning");
 assert.ok(page.includes('template.template_key === "ready_software_company_v1"'), "Legacy Software project blueprint must not be offered to unrelated ready-company templates");
 
 mustContain(actions, [
