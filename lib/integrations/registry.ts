@@ -431,6 +431,42 @@ export const TOOL_REGISTRY: Record<string, ToolMetadata> = {
       }),
     },
   },
+  "generic_business_api.request": {
+    toolId: "generic_business_api.request",
+    integrationId: "generic_business_api",
+    name: "Generic Business API",
+    version: "1.0.0",
+    category: "generic_connector",
+    adapterVersion: "generic-business-api-v1",
+    enabled: true,
+    killSwitch: false,
+    defaultMode: "simulate",
+    operations: {
+      "api.read": {
+        ...readOperation("read_connected_business_system", ["api.read"]),
+        operation: "api.read",
+        dataSensitivity: "confidential",
+      },
+      "api.write": consequentialWrite({
+        operation: "api.write",
+        permission: "write_connected_business_system",
+        userPermission: "privileged",
+        scopes: ["api.write"],
+        risk: "high",
+        reversibility: "compensatable",
+        idempotency: true,
+      }),
+      "webhook.send": consequentialWrite({
+        operation: "webhook.send",
+        permission: "send_connected_business_webhook",
+        userPermission: "privileged",
+        scopes: ["webhook.send"],
+        risk: "high",
+        reversibility: "irreversible",
+        idempotency: true,
+      }),
+    },
+  },
 };
 
 export function getToolMetadata(toolId: string, operation: string) {
