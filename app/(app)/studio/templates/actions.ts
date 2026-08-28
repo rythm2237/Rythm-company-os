@@ -35,8 +35,9 @@ export async function provisionCompanyTemplate(formData: FormData) {
 
   revalidatePath("/studio/templates");
   revalidatePath("/company");
+  revalidatePath("/company/launch");
   revalidatePath("/command-center");
-  redirect("/studio/templates?message=Ready%20company%20provisioned.%20The%20version%20snapshot%20is%20locked%2C%20Agents%20are%20paused%2C%20and%20external%20actions%20remain%20disabled.");
+  redirect(`/company/launch?template=${encodeURIComponent(templateKey)}&message=Ready%20company%20provisioned.%20Complete%20the%20launch%20checklist%20before%20starting%20operations.`);
 }
 
 export async function provisionAgentTemplate(formData: FormData) {
