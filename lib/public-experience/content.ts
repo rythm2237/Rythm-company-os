@@ -96,10 +96,10 @@ export const PUBLIC_TEMPLATES: PublicTemplate[] = [
     family: "Ready Company",
     audience: "Advertising, creative, and marketing teams that want a governed AI agency workforce.",
     description:
-      "A 10-Agent governed advertising company covering strategy, client accounts, creative, content, performance marketing, analytics, finance/accounting, legal/compliance, and operations/people under Human CEO control.",
+      "An 11-Agent governed advertising company with Senior GTM strategy, client accounts, creative, content, performance marketing, analytics, finance/accounting, legal/compliance, and operations/people under Human CEO control.",
     departments: 7,
-    agents: 10,
-    capabilities: ["Multi-channel campaign planning", "Creative & social content", "Performance & analytics", "Finance & legal controls"],
+    agents: 11,
+    capabilities: ["GTM & multi-channel campaign strategy", "Creative & social content", "Performance & analytics", "Finance & legal controls"],
     templateKey: "ready_ai_advertising_agency_v1",
     productCode: "ready_company",
     cta: "Choose Advertising Agency",
