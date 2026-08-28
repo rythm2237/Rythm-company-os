@@ -20,10 +20,7 @@ export async function provisionCompanyTemplate(formData: FormData) {
   if (!context.entitlement.company_template_access) {
     redirect("/studio/templates?error=Company%20Template%20Library%20is%20not%20enabled%20for%20this%20organization.");
   }
-
-  if (!templateKey) {
-    redirect("/studio/templates?error=Select%20a%20company%20template.");
-  }
+  if (!templateKey) redirect("/studio/templates?error=Select%20a%20company%20template.");
 
   const { data, error } = await context.supabase.rpc("provision_company_template_v2", {
     target_org_id: context.organizationId,
@@ -32,18 +29,14 @@ export async function provisionCompanyTemplate(formData: FormData) {
   });
 
   if (error || !data) {
-    console.error("company_template_provision_failed", {
-      organizationId: context.organizationId,
-      templateKey,
-      templateVersion,
-      error,
-    });
+    console.error("company_template_provision_failed", { organizationId: context.organizationId, templateKey, templateVersion, error });
     templateFailure(error?.message ?? "Company template could not be provisioned.");
   }
 
   revalidatePath("/studio/templates");
+  revalidatePath("/company");
   revalidatePath("/command-center");
-  redirect("/studio/templates?message=Software%20Company%20provisioned.%20Agents%20are%20paused%20and%20external%20actions%20remain%20disabled.");
+  redirect("/studio/templates?message=Ready%20company%20provisioned.%20The%20version%20snapshot%20is%20locked%2C%20Agents%20are%20paused%2C%20and%20external%20actions%20remain%20disabled.");
 }
 
 export async function provisionAgentTemplate(formData: FormData) {
