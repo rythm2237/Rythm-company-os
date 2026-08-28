@@ -7,10 +7,17 @@ import {
 
 export const dynamic = "force-dynamic";
 
+type Props = { searchParams: Promise<{ template?: string }> };
+
 const PRODUCT_LABELS: Record<string, string> = {
   ready_company: "Ready AI Company",
   company_studio: "Custom AI Company with Company Studio",
   custom_company: "Legacy Custom Company",
+};
+const TEMPLATE_LABELS: Record<string, string> = {
+  ready_saas_startup_v1: "SaaS Startup",
+  ready_ai_advertising_agency_v1: "AI Advertising Agency",
+  ready_software_company_v1: "Software Company",
 };
 
 function formatPrice(currency: string | undefined, value: number | undefined) {
@@ -26,11 +33,20 @@ function formatPrice(currency: string | undefined, value: number | undefined) {
   }
 }
 
-export default async function ActivationPage() {
+export default async function ActivationPage({ searchParams }: Props) {
+  const params = await searchParams;
   const context = await requireOwnerOrganizationContext();
+  const { data: { user } } = await context.supabase.auth.getUser();
+  const metadataTemplate = typeof user?.user_metadata?.selected_template_key === "string"
+    ? user.user_metadata.selected_template_key
+    : "";
+  const requestedTemplate = params.template ?? metadataTemplate;
+  const selectedTemplate = TEMPLATE_LABELS[requestedTemplate] ? requestedTemplate : "";
 
   if (isOrganizationEntitlementActive(context.entitlement)) {
-    redirect("/onboarding?source=commercial_activation");
+    redirect(selectedTemplate
+      ? `/studio/templates?template=${encodeURIComponent(selectedTemplate)}`
+      : "/onboarding?source=commercial_activation");
   }
 
   const entitlement = context.entitlement;
@@ -66,6 +82,7 @@ export default async function ActivationPage() {
         <div className="activation-status">
           <span>Organization</span><strong>{context.organization.name}</strong>
           <span>Selected product</span><strong>{productLabel}</strong>
+          {selectedTemplate ? <><span>Selected Ready Company</span><strong>{TEMPLATE_LABELS[selectedTemplate]}</strong></> : null}
           <span>Subscription</span><strong>{price}{commercialRecord?.billing_interval ? ` / ${commercialRecord.billing_interval}` : ""} + AI usage</strong>
           <span>Entitlement status</span><strong>{status}</strong>
         </div>
@@ -80,8 +97,8 @@ export default async function ActivationPage() {
         <p>
           Paid Public Beta uses controlled commercial confirmation. RYTHM may confirm invoices
           manually; a payment-provider webhook is not required for launch. When payment is
-          confirmed, the entitlement becomes active and this page automatically routes the Human
-          CEO into onboarding and product provisioning.
+          confirmed, the entitlement becomes active and an explicitly selected Ready Company is
+          resumed without asking you to find it again.
         </p>
         <p>
           This boundary is enforced server-side and in database mutation guards. A pending
