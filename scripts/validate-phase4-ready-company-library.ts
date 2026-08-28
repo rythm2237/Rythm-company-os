@@ -10,7 +10,7 @@ const mustContain = (source: string, values: string[]) => values.forEach((value)
 mustContain(migration, [
   "ready_saas_startup_v1",
   "array['ready_company','custom_company','company_studio']",
-  "'agent_count':10",
+  '"agent_count":10',
   "agents_initial_status",
   "external_actions_allowed",
   "template_snapshot",
