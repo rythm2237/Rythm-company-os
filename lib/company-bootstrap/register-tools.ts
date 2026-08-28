@@ -2,6 +2,10 @@ import { executeJsonRequest, secureProviderUrl } from "@/lib/integrations/adapte
 import { INTEGRATION_ADAPTERS } from "@/lib/integrations/adapters/provider-adapters";
 import type { AdapterContext } from "@/lib/integrations/adapters/types";
 import { TOOL_REGISTRY, type ToolMetadata, type ToolOperationMetadata } from "@/lib/integrations/registry";
+import {
+  resolveGoogleAccessToken,
+  validateGoogleOAuthCredential,
+} from "@/lib/company-bootstrap/google-oauth";
 
 const TOOL_ID = "google_workspace.bootstrap";
 let registered = false;
@@ -36,23 +40,6 @@ function bootstrapReadOperation(permission: string, scopes: string[]): ToolOpera
   };
 }
 
-function accessToken(credential: string) {
-  const trimmed = credential.trim();
-  if (!trimmed) throw new Error("Provider credential is unavailable.");
-  if (!trimmed.startsWith("{")) return trimmed;
-  try {
-    const envelope = JSON.parse(trimmed) as { access_token?: unknown; provider?: unknown };
-    const token = typeof envelope.access_token === "string" ? envelope.access_token.trim() : "";
-    if (!token) throw new Error("Google OAuth access token is unavailable.");
-    if (envelope.provider && envelope.provider !== "google_workspace")
-      throw new Error("Google OAuth credential provider does not match the integration.");
-    return token;
-  } catch (error) {
-    if (error instanceof Error && error.message.startsWith("Google OAuth")) throw error;
-    throw new Error("Google OAuth credential envelope is invalid.");
-  }
-}
-
 function headerValue(headers: Array<{ name?: string; value?: string }> | undefined, name: string) {
   return headers?.find((header) => header.name?.toLowerCase() === name.toLowerCase())?.value ?? null;
 }
@@ -63,7 +50,8 @@ function splitRecipients(value: string | null) {
 }
 
 async function readGmailMetadata(context: AdapterContext) {
-  const headers = { Authorization: `Bearer ${accessToken(context.credential)}` };
+  const token = await resolveGoogleAccessToken(context.credential, context.request.integrationId);
+  const headers = { Authorization: `Bearer ${token}` };
   const maxResults = Math.max(1, Math.min(Number(context.request.input.maxResults ?? 50), 100));
   const days = Math.max(1, Math.min(Number(context.request.input.days ?? 90), 365));
   const q = `newer_than:${days}d`;
@@ -115,7 +103,8 @@ async function readGmailMetadata(context: AdapterContext) {
 }
 
 async function readCalendarMetadata(context: AdapterContext) {
-  const headers = { Authorization: `Bearer ${accessToken(context.credential)}` };
+  const token = await resolveGoogleAccessToken(context.credential, context.request.integrationId);
+  const headers = { Authorization: `Bearer ${token}` };
   const maxResults = Math.max(1, Math.min(Number(context.request.input.maxResults ?? 100), 100));
   const lookbackDays = Math.max(1, Math.min(Number(context.request.input.lookbackDays ?? 180), 365));
   const lookaheadDays = Math.max(0, Math.min(Number(context.request.input.lookaheadDays ?? 90), 365));
@@ -174,11 +163,11 @@ export function registerPhase3BootstrapTools() {
   const supportedTools = [...new Set([...baseAdapter.supportedTools, TOOL_ID])];
   INTEGRATION_ADAPTERS.google_workspace = {
     ...baseAdapter,
-    version: "google_workspace-adapter-v2+bootstrap-v1",
+    version: "google_workspace-adapter-v2+bootstrap-v2",
     supportedTools,
     validate(context) {
       if (context.request.tool === TOOL_ID) {
-        accessToken(context.credential);
+        validateGoogleOAuthCredential(context.credential);
         if (!tool.operations[context.request.operation]) throw new Error("Bootstrap operation is not supported.");
         return;
       }
