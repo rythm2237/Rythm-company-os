@@ -13,8 +13,6 @@ export type AgentTaskState = {
   knowledgeCount?: number;
 };
 
-export const initialAgentTaskState: AgentTaskState = { status: "idle" };
-
 function cleanTask(value: FormDataEntryValue | null) {
   return String(value ?? "").trim().slice(0, 12000);
 }
