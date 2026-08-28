@@ -11,11 +11,11 @@ export default async function CompanyLaunchPage() {
     supabase.from("organizations").select("name,mission,vision,status").eq("id", organizationId).single(),
     supabase.from("company_knowledge").select("id", { count:"exact", head:true }).eq("organization_id",organizationId).eq("status","active").eq("ingestion_status","ready"),
     supabase.from("company_knowledge").select("id", { count:"exact", head:true }).eq("organization_id",organizationId).eq("category","legal").eq("status","active").eq("ingestion_status","ready"),
-    supabase.from("integrations").select("id", { count:"exact", head:true }).eq("organization_id",organizationId).eq("status","connected"),
+    supabase.from("organization_integrations").select("id", { count:"exact", head:true }).eq("organization_id",organizationId).eq("status","connected"),
     supabase.from("agents").select("id,enabled").eq("organization_id",organizationId),
     supabase.from("projects").select("id", { count:"exact", head:true }).eq("organization_id",organizationId),
     supabase.from("meetings").select("id", { count:"exact", head:true }).eq("organization_id",organizationId),
-    supabase.from("organization_template_installations").select("id,company_template_key,template_version,template_snapshot_digest").eq("organization_id",organizationId).order("installed_at",{ascending:false}).limit(1).maybeSingle(),
+    supabase.from("organization_template_installations").select("id,template_key,template_version,template_snapshot_digest").eq("organization_id",organizationId).order("installed_at",{ascending:false}).limit(1).maybeSingle(),
   ]);
 
   const organization = organizationResult.data;
@@ -51,7 +51,7 @@ export default async function CompanyLaunchPage() {
         <div style={{fontSize:"2.8rem",fontWeight:900,lineHeight:1,color:ready?"#16845b":"#5367ef"}}>{percent}%</div>
       </div>
       <div style={{height:12,borderRadius:999,background:"#e8ecf4",overflow:"hidden",marginTop:18}}><div style={{height:"100%",width:`${percent}%`,background:ready?"#16845b":"#5367ef"}} /></div>
-      {installation ? <p className="security-note" style={{marginTop:14}}>Template {installation.company_template_key} v{installation.template_version} · snapshot {String(installation.template_snapshot_digest ?? "pending").slice(0,12)}</p> : null}
+      {installation ? <p className="security-note" style={{marginTop:14}}>Template {installation.template_key} v{installation.template_version} · snapshot {String(installation.template_snapshot_digest ?? "pending").slice(0,12)}</p> : null}
     </section>
 
     <section style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(270px,1fr))",gap:14}}>
