@@ -73,6 +73,10 @@
 }
 
 /* Forms: consistent label/control/action spacing across app pages */
+.command-shell form {
+  row-gap: var(--ui-space-4);
+}
+
 .stacked-form,
 .auth-form {
   display: grid;
@@ -81,7 +85,8 @@
 
 .stacked-form label,
 .auth-form label,
-.meeting-wizard label {
+.meeting-wizard label,
+.command-shell form > label {
   display: grid;
   gap: var(--ui-space-2);
   min-width: 0;
@@ -95,7 +100,10 @@
 .auth-form textarea,
 .meeting-wizard input,
 .meeting-wizard select,
-.meeting-wizard textarea {
+.meeting-wizard textarea,
+.command-shell form > label > input:not([type="checkbox"]):not([type="radio"]),
+.command-shell form > label > select,
+.command-shell form > label > textarea {
   min-height: var(--ui-control-height);
   width: 100%;
   padding: 10px 13px;
@@ -110,7 +118,8 @@
 
 .stacked-form textarea,
 .auth-form textarea,
-.meeting-wizard textarea {
+.meeting-wizard textarea,
+.command-shell form > label > textarea {
   min-height: 108px;
   resize: vertical;
 }
@@ -123,7 +132,10 @@
 .auth-form textarea:focus-visible,
 .meeting-wizard input:focus-visible,
 .meeting-wizard select:focus-visible,
-.meeting-wizard textarea:focus-visible {
+.meeting-wizard textarea:focus-visible,
+.command-shell form > label > input:focus-visible,
+.command-shell form > label > select:focus-visible,
+.command-shell form > label > textarea:focus-visible {
   outline: none;
   border-color: var(--ui-accent);
   box-shadow: 0 0 0 3px rgba(82, 103, 217, 0.16);
@@ -214,7 +226,9 @@ button.secondary-button {
 
 .stacked-form > .primary-button,
 .stacked-form > .secondary-button,
-.stacked-form > button {
+.stacked-form > button,
+.command-shell form > .primary-button,
+.command-shell form > .secondary-button {
   justify-self: start;
   margin-top: var(--ui-space-1);
 }
@@ -279,7 +293,9 @@ button.secondary-button {
 
   .stacked-form > .primary-button,
   .stacked-form > .secondary-button,
-  .stacked-form > button {
+  .stacked-form > button,
+  .command-shell form > .primary-button,
+  .command-shell form > .secondary-button {
     width: 100%;
     justify-self: stretch;
   }
