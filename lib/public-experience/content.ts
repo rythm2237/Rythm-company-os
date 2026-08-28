@@ -23,6 +23,9 @@ export type PublicTemplate = {
   departments: number;
   agents: number;
   capabilities: string[];
+  templateKey?: string;
+  productCode?: "ready_company" | "company_studio";
+  cta?: string;
 };
 
 export const PUBLIC_NAVIGATION: PublicNavigationItem[] = [
@@ -74,26 +77,46 @@ export const PRODUCT_TOURS: ProductTour[] = [
 
 export const PUBLIC_TEMPLATES: PublicTemplate[] = [
   {
-    id: "nova-commerce",
-    name: "Nova Commerce Operations",
+    id: "saas-startup",
+    name: "SaaS Startup",
     family: "Ready Company",
-    audience: "Commerce teams coordinating growth, customer experience, finance, and operations.",
+    audience: "Founders and early product teams that need a lean, governed product organization.",
     description:
-      "A governed operating company with executive coordination, specialist departments, and approval-led execution.",
-    departments: 4,
-    agents: 12,
-    capabilities: ["Executive command", "Growth planning", "Operations review", "Finance analysis"],
+      "A production-minded AI SaaS company for discovery, product delivery, engineering, quality, growth, and customer operations under Human CEO authority.",
+    departments: 6,
+    agents: 10,
+    capabilities: ["Product discovery", "Engineering delivery", "Quality gates", "Growth operations"],
+    templateKey: "ready_saas_startup_v1",
+    productCode: "ready_company",
+    cta: "Choose SaaS Startup",
   },
   {
-    id: "professional-services",
-    name: "Professional Services Company",
+    id: "ai-advertising-agency",
+    name: "AI Advertising Agency",
     family: "Ready Company",
-    audience: "Advisory and delivery businesses that need a repeatable operating cadence.",
+    audience: "Advertising, creative, and marketing teams that want a governed AI agency workforce.",
     description:
-      "A client-delivery structure connecting requirements, research, planning, quality review, and accountable actions.",
-    departments: 4,
-    agents: 10,
-    capabilities: ["Client intake", "Delivery planning", "Quality review", "Executive reporting"],
+      "A ready-to-operate advertising company with strategy, accounts, creative, content, performance marketing, and analytics roles under Human CEO control.",
+    departments: 5,
+    agents: 7,
+    capabilities: ["Advertising strategy", "Creative production", "Performance planning", "Marketing analytics"],
+    templateKey: "ready_ai_advertising_agency_v1",
+    productCode: "ready_company",
+    cta: "Choose Advertising Agency",
+  },
+  {
+    id: "software-company",
+    name: "Software Company",
+    family: "Ready Company",
+    audience: "Technical founders and mature product teams that need a full software delivery operating system.",
+    description:
+      "A 19-Agent software company covering product, design, engineering, QA, security, growth, operations, finance, and governed production delivery.",
+    departments: 7,
+    agents: 19,
+    capabilities: ["Product delivery", "Software engineering", "Security review", "Governed deployment"],
+    templateKey: "ready_software_company_v1",
+    productCode: "company_studio",
+    cta: "Choose Software Company",
   },
   {
     id: "custom-operating-company",
@@ -105,17 +128,8 @@ export const PUBLIC_TEMPLATES: PublicTemplate[] = [
     departments: 0,
     agents: 0,
     capabilities: ["Custom hierarchy", "Agent Builder", "Company Builder", "Governance configuration"],
-  },
-  {
-    id: "integration-office",
-    name: "AI Integration Office",
-    family: "Enterprise Workforce",
-    audience: "Transformation and shared-service teams deploying governed AI roles alongside human departments.",
-    description:
-      "A reference workforce led by a Human Integration Director with AI program, process, data, research, and automation roles.",
-    departments: 3,
-    agents: 8,
-    capabilities: ["Program governance", "Process analysis", "Department participation", "Executive oversight"],
+    productCode: "company_studio",
+    cta: "Build a custom company",
   },
 ];
 
@@ -154,4 +168,3 @@ export const SOLUTION_PATHS = [
     cta: "Discuss Enterprise Beta",
   },
 ] as const;
-
