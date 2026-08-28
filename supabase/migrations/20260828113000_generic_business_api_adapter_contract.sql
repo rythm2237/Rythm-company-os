@@ -8,8 +8,7 @@ update public.integration_capabilities
 set
   tool_id = 'generic_business_api.request',
   operation = capability_key,
-  adapter_version = 'generic-business-api-v1',
-  updated_at = now()
+  adapter_version = 'generic-business-api-v1'
 where provider_key = 'generic_business_api'
   and capability_key in ('api.read','api.write','webhook.send','file.exchange');
 
@@ -25,7 +24,7 @@ set enabled = false, updated_at = now()
 where provider_key = 'generic_business_api';
 
 update public.integration_capabilities
-set enabled = false, updated_at = now()
+set enabled = false
 where provider_key = 'generic_business_api';
 
 commit;
