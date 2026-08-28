@@ -22,7 +22,7 @@ export default async function CompanyLaunchPage() {
   const agents = agentsResult.data ?? [];
   const enabledAgents = agents.filter((agent) => Boolean(agent.enabled)).length;
   const checks: Check[] = [
-    { title:"Company profile", detail:"Add the company identity, mission, vision and operating information.", done:Boolean(organization?.name && organization?.mission && organization?.vision), href:"/company", action:"Complete profile" },
+    { title:"Company profile", detail:"Add the company identity, mission, vision and operating information. You can edit this profile again at any time after launch.", done:Boolean(organization?.name && organization?.mission && organization?.vision), href:"/company/profile", action:"Complete profile" },
     { title:"Company knowledge", detail:"Upload the files the workforce needs: services, brand, policies, processes and operating material.", done:(knowledgeResult.count ?? 0)>0, href:"/company-library", action:"Add company knowledge" },
     { title:"Legal foundation", detail:"Add legal/company formation, contract, policy or compliance material relevant to the business.", done:(legalResult.count ?? 0)>0, href:"/company-library", action:"Add legal knowledge" },
     { title:"Business integrations", detail:"Connect company-owned tools such as email, calendar, CRM, advertising, accounting or website systems.", done:(integrationsResult.count ?? 0)>0, href:"/integrations", action:"Connect tools" },
@@ -40,7 +40,7 @@ export default async function CompanyLaunchPage() {
       <div>
         <p className="eyebrow">READY COMPANY · LAUNCH CONTROL</p>
         <h1>{ready ? "Your company is ready to operate." : "Finish setting up your company."}</h1>
-        <p className="subtitle">Provisioning created the governed operating system. Complete the launch checklist before treating the company as operational.</p>
+        <p className="subtitle">Provisioning created the governed operating system. Complete the launch checklist before treating the company as operational. After launch, all company information remains editable from Company Profile and the relevant workspace sections.</p>
       </div>
       <Link className="secondary-button" href="/command-center">Enter Command</Link>
     </header>
@@ -64,7 +64,7 @@ export default async function CompanyLaunchPage() {
 
     <section className="panel" style={{marginTop:18}}>
       <p className="label">WHEN YOU ARE READY</p><h2>Start operating</h2><p style={{color:"#667085",lineHeight:1.7}}>Command is the Human CEO control plane. Projects hold accountable work, Actions hold tasks, Meetings coordinate Agents, Approvals gate consequential execution, and each Agent profile controls runtime state and role-specific knowledge.</p>
-      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><Link className="primary-button" href="/command-center">Enter Company</Link><Link className="secondary-button" href="/agents">Open Agent workforce</Link><Link className="secondary-button" href="/integrations">Open Integrations</Link></div>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><Link className="primary-button" href="/command-center">Enter Company</Link><Link className="secondary-button" href="/company/profile">Edit Company Profile</Link><Link className="secondary-button" href="/agents">Open Agent workforce</Link><Link className="secondary-button" href="/integrations">Open Integrations</Link></div>
     </section>
   </main>;
 }

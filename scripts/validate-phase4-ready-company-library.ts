@@ -46,7 +46,7 @@ assert.ok(page.includes('template.template_key === "ready_software_company_v1"')
 mustContain(actions,['rpc("provision_company_template_v2"',"/company/launch","Complete%20the%20launch%20checklist"]);
 mustContain(launchPage,["COMPANY READINESS","Company profile","Company knowledge","Legal foundation","Business integrations","Agent workforce","First project","First company meeting","Enter Company"]);
 mustContain(activeGuide,["Guide me","Do this now","Next:","rythm-active-guide","/company/launch","/integrations","/agents","/projects","/meetings","/command-center"]);
-mustContain(integrationGuide,["Guide this connection","Show me where","Security checkpoint","background:\"rgba(255,255,255,.985)\"","google_ads","meta_marketing","youtube","tiktok_business","linkedin_marketing"]);
+mustContain(integrationGuide,["Guide this connection","Show me where","Security checkpoint","integration-guide","integration-guide-step","integration-guide-note","google_ads","meta_marketing","youtube","tiktok_business","linkedin_marketing"]);
 mustContain(agentKnowledge,["AGENT KNOWLEDGE","Add role-specific knowledge without writing a prompt","directAcl=`agent:${agent.id}`","AgentKnowledgeUploader"]);
 mustContain(agentUploader,["registerCompanyLibraryDocument","allowedRoleKeywords:[`agent:${agentId}`]","Add knowledge to this Agent","No prompt is required","<option value=\"marketing\">Marketing</option>","<option value=\"technical\">Technical</option>"]);
 mustContain(companyKnowledgeRuntime,["const exactAgentAcl=`agent:${agent.id}`","agentScoped","normalize(value)===exactAgentAcl","allowedKnowledgeIds","filter((item)=>allowedKnowledgeIds.has(item.knowledge_id))"]);
