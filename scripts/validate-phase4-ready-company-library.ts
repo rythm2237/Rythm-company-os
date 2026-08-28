@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const migration = readFileSync("supabase/migrations/20260828090000_ready_ai_company_library.sql", "utf8");
 const standardMigration = readFileSync("supabase/migrations/20260828101500_ready_company_minimum_standard.sql", "utf8");
 const enforcementMigration = readFileSync("supabase/migrations/20260828102500_ready_company_standard_enforcement.sql", "utf8");
+const advertisingFoundationMigration = readFileSync("supabase/migrations/20260828145500_advertising_professional_foundations.sql", "utf8");
 const standardDoc = readFileSync("docs/phase4-ready-company-minimum-standard.md", "utf8");
 const page = readFileSync("app/(app)/studio/templates/page.tsx", "utf8");
 const actions = readFileSync("app/(app)/studio/templates/actions.ts", "utf8");
@@ -94,6 +95,29 @@ for (const provider of ["generic_business_api", "meta_marketing", "google_ads", 
 assert.ok(standardMigration.includes("false,'1.0.0'"), "Unverified provider adapters must be registered disabled");
 assert.ok(!standardMigration.includes("'budget.modify','autonomous'"), "Advertising budget changes must never be autonomous");
 assert.ok(!standardMigration.includes("'budget.modify','approval_required'"), "Advertising spend must remain Human CEO controlled by default");
+
+// Every Advertising Agency role must resolve to an active professional foundation before materialization.
+mustContain(advertisingFoundationMigration, [
+  "advertising_account_manager",
+  "advertising_analytics_specialist",
+  "advertising_content_specialist",
+  "advertising_copywriter",
+  "advertising_creative_director",
+  "advertising_performance_marketing",
+  "advertising_strategy_director",
+  "advertising_finance_accounting_manager",
+  "advertising_legal_compliance_counsel",
+  "advertising_operations_people_manager",
+  "role_family = 'marketing'",
+  "role_family = 'analytics'",
+  "role_family = 'design'",
+  "role_family = 'legal'",
+  "role_family = 'general'",
+  "role_foundations",
+  "role_specializations",
+  "Advertising Agency professional knowledge contract is incomplete",
+]);
+assert.ok(!advertisingFoundationMigration.includes("role_family = null"), "Advertising Agency role families must never be cleared");
 
 // Marketplace UI must preserve the same governed provisioning and immutable-version semantics.
 mustContain(page, [
