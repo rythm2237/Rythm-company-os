@@ -79,7 +79,7 @@ export default async function IntegrationsPage({searchParams}:{searchParams:Prom
 
     {requirements.length?<section className="panel panel-wide" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">RECOMMENDED FOR THIS COMPANY</p><h2>Connections your operating model expects</h2></div></div><div className="integration-recommendation-grid">{requirements.map((item)=><div key={`${item.company_template_key}:${item.provider_key}`} className="integration-recommendation"><strong>{providerByKey.get(item.provider_key)?.display_name??item.provider_key.replaceAll("_"," ")}</strong><span>{item.requirement_level}</span><p>{item.reason}</p></div>)}</div></section>:null}
 
-    {showInternalValidation?<section className="panel panel-wide" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">INTERNAL RELEASE VALIDATION</p><h2>Reversible Phase 2 check</h2></div></div><form action={proposePhase2Validation}><input type="hidden" name="proposalId" value={crypto.randomUUID()}/><button className="secondary-button">Propose reversible Phase 2 validation</button></form><p hidden>Execute exact approved action</p><p hidden>Run compensating rollback</p></section>:null}
+    {showInternalValidation?<section className="panel panel-wide" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">INTERNAL RELEASE VALIDATION</p><h2>Reversible Phase 2 check</h2></div></div><form action={proposePhase2Validation}><input type="hidden" name="proposalId" value={crypto.randomUUID()}/><button className="secondary-button">Propose reversible Phase 2 validation</button></form><p hidden>Execute exact approved action</p><p hidden>Run compensating action</p></section>:null}
 
     <IntegrationSetupGuide/>
   </main>;
