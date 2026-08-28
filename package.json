@@ -17,6 +17,7 @@
     "test:phase2:direct-guard": "node --import tsx scripts/validate-phase2-direct-execution.ts",
     "test:phase2:rls": "node --import tsx scripts/validate-phase2-rls.ts",
     "test:phase3": "node --import tsx scripts/validate-phase3-company-bootstrap.ts",
+    "test:phase4": "node --experimental-strip-types scripts/validate-phase4-ready-company-library.ts",
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",
     "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts"
   },
