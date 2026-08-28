@@ -94,9 +94,13 @@ language plpgsql
 set search_path=public
 as $$
 begin
-  if new.template_snapshot is distinct from old.template_snapshot
-     or new.template_snapshot_digest is distinct from old.template_snapshot_digest
-     or new.source_template_version is distinct from old.source_template_version then
+  -- Existing pre-Phase-4 rows are allowed exactly one null -> captured snapshot
+  -- transition during migration backfill. Once populated, snapshot identity is immutable.
+  if old.template_snapshot is not null and (
+       new.template_snapshot is distinct from old.template_snapshot
+       or new.template_snapshot_digest is distinct from old.template_snapshot_digest
+       or new.source_template_version is distinct from old.source_template_version
+     ) then
     raise exception 'Installed company template snapshots are immutable';
   end if;
   return new;
