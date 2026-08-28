@@ -9,6 +9,7 @@ import {
   requireAdapterFields,
   secureProviderUrl,
 } from "@/lib/integrations/adapters/http";
+import { GENERIC_BUSINESS_API_ADAPTER } from "@/lib/integrations/adapters/generic-business-api";
 import { normalizeExecutionError } from "@/lib/integrations/error-normalization";
 import { executeProviderCapability } from "@/lib/integrations/provider-executors";
 
@@ -282,8 +283,10 @@ function adapter(integrationId: string): IntegrationAdapter {
   };
 }
 
-export const INTEGRATION_ADAPTERS: Record<string, IntegrationAdapter> =
-  Object.fromEntries(Object.keys(TOOLS).map((key) => [key, adapter(key)]));
+export const INTEGRATION_ADAPTERS: Record<string, IntegrationAdapter> = {
+  ...Object.fromEntries(Object.keys(TOOLS).map((key) => [key, adapter(key)])),
+  generic_business_api: GENERIC_BUSINESS_API_ADAPTER,
+};
 export function getIntegrationAdapter(integrationId: string) {
   return INTEGRATION_ADAPTERS[integrationId] ?? null;
 }
