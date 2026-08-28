@@ -5,17 +5,26 @@ import { signup, signOutForSignup } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: Promise<{ error?: string; product?: string }> };
+type Props = { searchParams: Promise<{ error?: string; product?: string; template?: string }> };
 
 const selfServeProducts = new Set(["ready_company", "company_studio"]);
+const selectableTemplates = new Set([
+  "ready_saas_startup_v1",
+  "ready_ai_advertising_agency_v1",
+  "ready_software_company_v1",
+]);
 
 export default async function SignupPage({ searchParams }: Props) {
   const params = await searchParams;
   const selectedProduct = selfServeProducts.has(params.product ?? "")
     ? params.product
     : "company_studio";
+  const selectedTemplate = selectableTemplates.has(params.template ?? "") ? params.template ?? "" : "";
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const loginNext = selectedTemplate
+    ? `/setup/company?product=${encodeURIComponent(selectedProduct ?? "ready_company")}&template=${encodeURIComponent(selectedTemplate)}`
+    : "/command-center";
 
   return (
     <main className="auth-shell">
@@ -24,6 +33,7 @@ export default async function SignupPage({ searchParams }: Props) {
           <p className="eyebrow">RYTHM PAID PUBLIC BETA</p>
           <h1 id="signup-title" className="auth-title">Create your Human CEO account</h1>
           <p className="auth-copy">Create a B2B account first. Your governed AI company is provisioned in the next step.</p>
+          {selectedTemplate ? <p className="security-note">Your selected Ready Company will remain selected through setup and activation.</p> : null}
         </div>
 
         {params.error ? <p className="form-error" role="alert">{params.error}</p> : null}
@@ -45,6 +55,7 @@ export default async function SignupPage({ searchParams }: Props) {
                 <input type="hidden" name="provider" value="google" />
                 <input type="hidden" name="source" value="signup" />
                 <input type="hidden" name="productCode" value={selectedProduct} />
+                <input type="hidden" name="templateKey" value={selectedTemplate} />
                 <button className="secondary-button" style={{ width: "100%" }} type="submit">
                   Continue with Google
                 </button>
@@ -59,6 +70,7 @@ export default async function SignupPage({ searchParams }: Props) {
 
             <form action={signup} className="auth-form">
               <input type="hidden" name="productCode" value={selectedProduct} />
+              <input type="hidden" name="templateKey" value={selectedTemplate} />
               <label>Full name<input name="fullName" autoComplete="name" required minLength={2} maxLength={120}/></label>
               <label>Work email<input name="email" type="email" autoComplete="email" required/></label>
               <label>Password<input name="password" type="password" autoComplete="new-password" required minLength={8}/></label>
@@ -69,7 +81,7 @@ export default async function SignupPage({ searchParams }: Props) {
         )}
 
         <p className="security-note">B2B Public Beta. AI Agents remain governed by Human CEO authority and external actions remain disabled by default.</p>
-        <p className="security-note">Already registered? <Link href="/login">Sign in</Link></p>
+        <p className="security-note">Already registered? <Link href={`/login?next=${encodeURIComponent(loginNext)}`}>Sign in</Link></p>
       </section>
     </main>
   );
