@@ -10,6 +10,7 @@ import { logout } from "@/components/app-shell/actions";
 const groups = [
   { label: "Operate", items: [
     { label: "Command", href: "/command-center", icon: "⌁" },
+    { label: "Agents", href: "/agents", icon: "✦" },
     { label: "Communication", href: "/communication", icon: "@" },
     { label: "Calendar", href: "/calendar", icon: "◫" },
     { label: "Notifications", href: "/notifications", icon: "!" },
@@ -53,7 +54,7 @@ type Props = {
 
 function isRouteActive(pathname: string, href: string) {
   if (href === "/command-center" || href === "/company") return pathname === href;
-  if (href === "/projects") return pathname === href || pathname.startsWith("/projects/");
+  if (href === "/projects" || href === "/agents") return pathname === href || pathname.startsWith(`${href}/`);
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
