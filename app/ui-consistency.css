@@ -1,0 +1,331 @@
+:root {
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-space-8: 32px;
+  --ui-control-height: 44px;
+  --ui-control-radius: 12px;
+  --ui-border: #d9dfeb;
+  --ui-border-strong: #c7d0df;
+  --ui-ink: #172033;
+  --ui-muted: #697386;
+  --ui-accent: #5267d9;
+  --ui-surface: #ffffff;
+  --ui-surface-soft: #f7f8fb;
+  --ui-shadow: 0 10px 30px rgba(23, 32, 51, 0.06);
+}
+
+/* Shared application-page rhythm */
+.command-shell {
+  width: min(100%, 1380px);
+  padding: clamp(28px, 4vw, 48px) clamp(20px, 3vw, 36px) 72px;
+}
+
+.command-header {
+  align-items: flex-start;
+  gap: var(--ui-space-8);
+  margin-bottom: var(--ui-space-6);
+}
+
+.command-header > div:first-child {
+  min-width: 0;
+  max-width: 980px;
+}
+
+.command-header .secondary-button {
+  flex: 0 0 auto;
+  margin-top: var(--ui-space-2);
+}
+
+.executive-grid,
+.control-grid,
+.metrics-grid {
+  align-items: stretch;
+}
+
+.panel,
+.control-card,
+.metric-card {
+  border-color: var(--ui-border);
+  box-shadow: var(--ui-shadow);
+}
+
+.panel {
+  padding: clamp(20px, 2.2vw, 26px);
+}
+
+.panel-heading {
+  gap: var(--ui-space-4);
+  margin-bottom: var(--ui-space-4);
+}
+
+.panel-heading > div {
+  min-width: 0;
+}
+
+.panel > .subtitle,
+.control-card > p,
+.security-note {
+  max-width: 78ch;
+}
+
+/* Forms: consistent label/control/action spacing across app pages */
+.command-shell form {
+  row-gap: var(--ui-space-4);
+}
+
+.stacked-form,
+.auth-form {
+  display: grid;
+  gap: var(--ui-space-4);
+}
+
+.stacked-form label,
+.auth-form label,
+.meeting-wizard label,
+.command-shell form > label {
+  display: grid;
+  gap: var(--ui-space-2);
+  min-width: 0;
+}
+
+.stacked-form input,
+.stacked-form select,
+.stacked-form textarea,
+.auth-form input,
+.auth-form select,
+.auth-form textarea,
+.meeting-wizard input,
+.meeting-wizard select,
+.meeting-wizard textarea,
+.command-shell form > label > input:not([type="checkbox"]):not([type="radio"]),
+.command-shell form > label > select,
+.command-shell form > label > textarea {
+  min-height: var(--ui-control-height);
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--ui-border-strong);
+  border-radius: var(--ui-control-radius);
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+  font: inherit;
+  line-height: 1.35;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.stacked-form textarea,
+.auth-form textarea,
+.meeting-wizard textarea,
+.command-shell form > label > textarea {
+  min-height: 108px;
+  resize: vertical;
+}
+
+.stacked-form input:focus-visible,
+.stacked-form select:focus-visible,
+.stacked-form textarea:focus-visible,
+.auth-form input:focus-visible,
+.auth-form select:focus-visible,
+.auth-form textarea:focus-visible,
+.meeting-wizard input:focus-visible,
+.meeting-wizard select:focus-visible,
+.meeting-wizard textarea:focus-visible,
+.command-shell form > label > input:focus-visible,
+.command-shell form > label > select:focus-visible,
+.command-shell form > label > textarea:focus-visible {
+  outline: none;
+  border-color: var(--ui-accent);
+  box-shadow: 0 0 0 3px rgba(82, 103, 217, 0.16);
+}
+
+.stacked-form > .security-note,
+.stacked-form > p {
+  margin: 0;
+}
+
+/* Buttons and button-like links */
+.primary-button,
+.secondary-button,
+.auth-form button,
+.auth-card button,
+button.primary-button,
+button.secondary-button {
+  min-height: var(--ui-control-height);
+  width: auto;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-2);
+  padding: 10px 16px;
+  border-radius: var(--ui-control-radius);
+  font: inherit;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  white-space: normal;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.primary-button,
+.auth-form button,
+.auth-card button {
+  border: 1px solid var(--ui-ink);
+  background: var(--ui-ink);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(23, 32, 51, 0.12);
+}
+
+.secondary-button {
+  border: 1px solid var(--ui-border-strong);
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+  box-shadow: 0 4px 12px rgba(23, 32, 51, 0.04);
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.auth-form button:hover,
+.auth-card button:hover {
+  transform: translateY(-1px);
+}
+
+.primary-button:hover,
+.auth-form button:hover,
+.auth-card button:hover {
+  background: #111a2b;
+  box-shadow: 0 8px 20px rgba(23, 32, 51, 0.16);
+}
+
+.secondary-button:hover {
+  border-color: #aeb9ca;
+  background: var(--ui-surface-soft);
+}
+
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.auth-form button:focus-visible,
+.auth-card button:focus-visible {
+  outline: 3px solid rgba(82, 103, 217, 0.22);
+  outline-offset: 2px;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled,
+.auth-form button:disabled,
+.auth-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+.stacked-form > .primary-button,
+.stacked-form > .secondary-button,
+.stacked-form > button,
+.command-shell form > .primary-button,
+.command-shell form > .secondary-button {
+  justify-self: start;
+  margin-top: var(--ui-space-1);
+}
+
+/* Lists and rows should keep actions visually separated from content */
+.data-row {
+  gap: var(--ui-space-5);
+  padding: var(--ui-space-4) 0;
+}
+
+.data-row > .primary-button,
+.data-row > .secondary-button,
+.compact-list > .primary-button,
+.compact-list > .secondary-button {
+  flex: 0 0 auto;
+}
+
+.compact-list > div {
+  gap: var(--ui-space-1);
+  padding: 15px 0;
+}
+
+.form-error,
+.form-success {
+  margin: 0 0 var(--ui-space-5);
+  padding: 12px 14px;
+  line-height: 1.45;
+}
+
+/* Remove accidental visual crowding between content blocks. */
+.command-shell > .executive-grid + .panel,
+.command-shell > .panel + .panel,
+.command-shell > section + section {
+  margin-top: var(--ui-space-5) !important;
+}
+
+/* Bootstrap and similar setup panels */
+.bootstrap-source-form {
+  margin-top: var(--ui-space-5) !important;
+  max-width: 100%;
+}
+
+.bootstrap-source-form .primary-button {
+  min-width: 190px;
+}
+
+@media (max-width: 820px) {
+  .command-header {
+    display: grid;
+    gap: var(--ui-space-4);
+  }
+
+  .command-header .secondary-button {
+    margin-top: 0;
+    justify-self: start;
+  }
+
+  .panel-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .stacked-form > .primary-button,
+  .stacked-form > .secondary-button,
+  .stacked-form > button,
+  .command-shell form > .primary-button,
+  .command-shell form > .secondary-button {
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .data-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .data-row > .primary-button,
+  .data-row > .secondary-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .command-shell {
+    padding-inline: 16px;
+  }
+
+  .panel,
+  .control-card,
+  .metric-card {
+    border-radius: 14px;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .auth-form button,
+  .auth-card button {
+    width: 100%;
+  }
+}

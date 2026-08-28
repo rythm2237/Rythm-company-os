@@ -9,6 +9,7 @@ import {
 import "./globals.css";
 import "./experience.css";
 import "./project-portfolio.css";
+import "./ui-consistency.css";
 
 const vazirmatn = localFont({
   src: "./fonts/Vazirmatn[wght].woff2",
