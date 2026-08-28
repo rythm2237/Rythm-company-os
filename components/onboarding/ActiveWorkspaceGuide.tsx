@@ -41,6 +41,7 @@ export default function ActiveWorkspaceGuide() {
     window.localStorage.setItem("rythm-active-guide", nextEnabled ? "on" : "off");
   }
 
+  if (pathname === "/integrations" || pathname.startsWith("/integrations/")) return null;
   if (!enabled) {
     return <button type="button" onClick={toggleGuide} style={{position:"fixed",right:20,bottom:20,zIndex:55,border:0,borderRadius:999,padding:"12px 16px",background:"#111827",color:"white",fontWeight:800,boxShadow:"0 16px 40px rgba(15,23,42,.24)"}}>Guide me</button>;
   }
