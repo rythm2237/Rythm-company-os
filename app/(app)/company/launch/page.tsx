@@ -7,8 +7,9 @@ type Check = { title:string; detail:string; done:boolean; href:string; action:st
 
 export default async function CompanyLaunchPage() {
   const { supabase, organizationId } = await requireActiveOwnerOrganizationContext();
-  const [organizationResult, knowledgeResult, legalResult, integrationsResult, agentsResult, projectsResult, meetingsResult, installationResult] = await Promise.all([
+  const [organizationResult, profileConfirmationResult, knowledgeResult, legalResult, integrationsResult, agentsResult, projectsResult, meetingsResult, installationResult] = await Promise.all([
     supabase.from("organizations").select("name,mission,vision,status").eq("id", organizationId).single(),
+    supabase.from("audit_events").select("id", { count:"exact", head:true }).eq("organization_id",organizationId).eq("event_type","organization.profile_updated").eq("actor_type","user"),
     supabase.from("company_knowledge").select("id", { count:"exact", head:true }).eq("organization_id",organizationId).eq("status","active").eq("ingestion_status","ready"),
     supabase.from("company_knowledge").select("id", { count:"exact", head:true }).eq("organization_id",organizationId).eq("category","legal").eq("status","active").eq("ingestion_status","ready"),
     supabase.from("organization_integrations").select("id", { count:"exact", head:true }).eq("organization_id",organizationId).eq("status","connected"),
@@ -19,10 +20,12 @@ export default async function CompanyLaunchPage() {
   ]);
 
   const organization = organizationResult.data;
+  const profileHasRequiredContent = Boolean(organization?.name && organization?.mission && organization?.vision);
+  const profileConfirmedByUser = (profileConfirmationResult.count ?? 0) > 0;
   const agents = agentsResult.data ?? [];
   const enabledAgents = agents.filter((agent) => Boolean(agent.enabled)).length;
   const checks: Check[] = [
-    { title:"Company profile", detail:"Add the company identity, mission, vision and operating information. You can edit this profile again at any time after launch.", done:Boolean(organization?.name && organization?.mission && organization?.vision), href:"/company/profile", action:"Complete profile" },
+    { title:"Company profile", detail:"Review and save the company identity, mission, vision and operating information. Template defaults do not count as complete until you confirm them.", done:profileHasRequiredContent && profileConfirmedByUser, href:"/company/profile", action:"Review & confirm profile" },
     { title:"Company knowledge", detail:"Upload the files the workforce needs: services, brand, policies, processes and operating material.", done:(knowledgeResult.count ?? 0)>0, href:"/company-library", action:"Add company knowledge" },
     { title:"Legal foundation", detail:"Add legal/company formation, contract, policy or compliance material relevant to the business.", done:(legalResult.count ?? 0)>0, href:"/company-library", action:"Add legal knowledge" },
     { title:"Business integrations", detail:"Connect company-owned tools such as email, calendar, CRM, advertising, accounting or website systems.", done:(integrationsResult.count ?? 0)>0, href:"/integrations", action:"Connect tools" },
