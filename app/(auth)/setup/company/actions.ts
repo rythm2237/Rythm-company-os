@@ -6,10 +6,17 @@ import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/lib/auth/organization-context";
 
 const productCodes = new Set(["ready_company", "company_studio"]);
+const selectableTemplates = new Set([
+  "ready_saas_startup_v1",
+  "ready_ai_advertising_agency_v1",
+  "ready_software_company_v1",
+]);
 
 export async function provisionCompany(formData: FormData) {
   const companyName = String(formData.get("companyName") ?? "").trim();
   const productCode = String(formData.get("productCode") ?? "company_studio");
+  const requestedTemplate = String(formData.get("templateKey") ?? "").trim();
+  const templateKey = selectableTemplates.has(requestedTemplate) ? requestedTemplate : "";
 
   if (companyName.length < 2 || companyName.length > 120 || !productCodes.has(productCode)) {
     redirect(`/setup/company?error=${encodeURIComponent("Enter a valid company name and product.")}`);
@@ -18,6 +25,19 @@ export async function provisionCompany(formData: FormData) {
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/setup/company");
+
+  if (templateKey) {
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: {
+        ...user.user_metadata,
+        selected_product_code: productCode,
+        selected_template_key: templateKey,
+      },
+    });
+    if (metadataError) {
+      console.error("selected_template_intent_persist_failed", { userId: user.id, templateKey, error: metadataError });
+    }
+  }
 
   // This RPC creates only the isolated customer organization shell, Owner membership,
   // and a PENDING commercial entitlement. Active commercial capabilities remain
@@ -56,5 +76,6 @@ export async function provisionCompany(formData: FormData) {
     maxAge: 60 * 60 * 24 * 365,
   });
 
-  redirect("/activation?stage=payment_pending");
+  const templateQuery = templateKey ? `&template=${encodeURIComponent(templateKey)}` : "";
+  redirect(`/activation?stage=payment_pending${templateQuery}`);
 }

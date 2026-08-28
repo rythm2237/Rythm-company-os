@@ -4,9 +4,14 @@ import { provisionCompany } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: Promise<{ error?: string; product?: string }> };
+type Props = { searchParams: Promise<{ error?: string; product?: string; template?: string }> };
 
 const selfServeProducts = new Set(["ready_company", "company_studio"]);
+const selectableTemplates: Record<string, string> = {
+  ready_saas_startup_v1: "SaaS Startup",
+  ready_ai_advertising_agency_v1: "AI Advertising Agency",
+  ready_software_company_v1: "Software Company",
+};
 
 export default async function CompanySetupPage({ searchParams }: Props) {
   const params = await searchParams;
@@ -21,6 +26,11 @@ export default async function CompanySetupPage({ searchParams }: Props) {
   const selectedProduct = selfServeProducts.has(requestedProduct)
     ? requestedProduct
     : "company_studio";
+  const metadataTemplate = typeof user.user_metadata?.selected_template_key === "string"
+    ? user.user_metadata.selected_template_key
+    : "";
+  const requestedTemplate = params.template ?? metadataTemplate;
+  const selectedTemplate = selectableTemplates[requestedTemplate] ? requestedTemplate : "";
 
   const { data: memberships } = await supabase
     .from("organization_members")
@@ -28,7 +38,9 @@ export default async function CompanySetupPage({ searchParams }: Props) {
     .eq("user_id", user.id)
     .limit(1);
 
-  if (memberships?.length) redirect("/activation");
+  if (memberships?.length) {
+    redirect(selectedTemplate ? `/activation?template=${encodeURIComponent(selectedTemplate)}` : "/activation");
+  }
 
   return (
     <main className="auth-shell">
@@ -40,9 +52,11 @@ export default async function CompanySetupPage({ searchParams }: Props) {
             This creates an isolated organization shell and a locked product entitlement. Product
             capabilities are provisioned only after commercial and payment / invoice confirmation.
           </p>
+          {selectedTemplate ? <p className="security-note"><strong>Selected Ready Company:</strong> {selectableTemplates[selectedTemplate]}</p> : null}
         </div>
         {params.error ? <p className="form-error" role="alert">{params.error}</p> : null}
         <form action={provisionCompany} className="auth-form">
+          <input type="hidden" name="templateKey" value={selectedTemplate}/>
           <label>Company name<input name="companyName" required minLength={2} maxLength={120} autoComplete="organization"/></label>
           <label>Product
             <select name="productCode" defaultValue={selectedProduct}>

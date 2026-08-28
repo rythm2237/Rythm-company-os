@@ -4,6 +4,12 @@ import { redirect } from "next/navigation";
 import { SITE_ORIGIN } from "@/lib/seo/site";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
+const selectableTemplates = new Set([
+  "ready_saas_startup_v1",
+  "ready_ai_advertising_agency_v1",
+  "ready_software_company_v1",
+]);
+
 function signupErrorMessage(error: { message?: string; code?: string; status?: number }) {
   const message = String(error.message ?? "").toLowerCase();
   const code = String(error.code ?? "").toLowerCase();
@@ -34,6 +40,8 @@ export async function signup(formData: FormData) {
   const fullName = String(formData.get("fullName") ?? "").trim();
   const requestedProduct = String(formData.get("productCode") ?? "company_studio");
   const productCode = requestedProduct === "ready_company" ? "ready_company" : "company_studio";
+  const requestedTemplate = String(formData.get("templateKey") ?? "").trim();
+  const templateKey = selectableTemplates.has(requestedTemplate) ? requestedTemplate : "";
 
   if (!email || !password || fullName.length < 2) {
     redirect(`/signup?error=${encodeURIComponent("Name, email, and password are required.")}`);
@@ -51,12 +59,19 @@ export async function signup(formData: FormData) {
     redirect(`/signup?error=${encodeURIComponent(`You are already signed in as ${currentUser.email ?? "another account"}. Sign out before creating a separate customer account.`)}`);
   }
 
-  const confirmationRedirect = `${SITE_ORIGIN}/auth/callback?next=${encodeURIComponent("/demo")}`;
+  const setupPath = templateKey
+    ? `/setup/company?product=${encodeURIComponent(productCode)}&template=${encodeURIComponent(templateKey)}`
+    : "/demo";
+  const confirmationRedirect = `${SITE_ORIGIN}/auth/callback?next=${encodeURIComponent(setupPath)}`;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name: fullName, selected_product_code: productCode },
+      data: {
+        full_name: fullName,
+        selected_product_code: productCode,
+        ...(templateKey ? { selected_template_key: templateKey } : {}),
+      },
       emailRedirectTo: confirmationRedirect,
     },
   });
@@ -77,8 +92,11 @@ export async function signup(formData: FormData) {
       onboarding_status: "company_pending",
       updated_at: new Date().toISOString(),
     });
-    redirect("/demo");
+    redirect(setupPath);
   }
 
-  redirect(`/signup/check-email?product=${encodeURIComponent(productCode)}`);
+  const checkEmailQuery = templateKey
+    ? `?product=${encodeURIComponent(productCode)}&template=${encodeURIComponent(templateKey)}`
+    : `?product=${encodeURIComponent(productCode)}`;
+  redirect(`/signup/check-email${checkEmailQuery}`);
 }
