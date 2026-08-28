@@ -5,6 +5,7 @@ const migration = readFileSync("supabase/migrations/20260828090000_ready_ai_comp
 const standardMigration = readFileSync("supabase/migrations/20260828101500_ready_company_minimum_standard.sql", "utf8");
 const enforcementMigration = readFileSync("supabase/migrations/20260828102500_ready_company_standard_enforcement.sql", "utf8");
 const advertisingFoundationMigration = readFileSync("supabase/migrations/20260828145500_advertising_professional_foundations.sql", "utf8");
+const gtmMigration = readFileSync("supabase/migrations/20260828152000_senior_gtm_strategist.sql", "utf8");
 const standardDoc = readFileSync("docs/phase4-ready-company-minimum-standard.md", "utf8");
 const page = readFileSync("app/(app)/studio/templates/page.tsx", "utf8");
 const actions = readFileSync("app/(app)/studio/templates/actions.ts", "utf8");
@@ -88,7 +89,6 @@ mustContain(enforcementMigration, [
   "spend_requires_human_ceo",
 ]);
 
-// Contracts for not-yet-verified external adapters must fail closed rather than pretending to be live.
 for (const provider of ["generic_business_api", "meta_marketing", "google_ads", "youtube", "tiktok_business", "linkedin_marketing"]) {
   assert.ok(standardMigration.includes(`('${provider}'`) || standardMigration.includes(`  ('${provider}'`), `Missing provider contract: ${provider}`);
 }
@@ -96,7 +96,6 @@ assert.ok(standardMigration.includes("false,'1.0.0'"), "Unverified provider adap
 assert.ok(!standardMigration.includes("'budget.modify','autonomous'"), "Advertising budget changes must never be autonomous");
 assert.ok(!standardMigration.includes("'budget.modify','approval_required'"), "Advertising spend must remain Human CEO controlled by default");
 
-// Every Advertising Agency role must resolve to an active professional foundation before materialization.
 mustContain(advertisingFoundationMigration, [
   "advertising_account_manager",
   "advertising_analytics_specialist",
@@ -119,7 +118,31 @@ mustContain(advertisingFoundationMigration, [
 ]);
 assert.ok(!advertisingFoundationMigration.includes("role_family = null"), "Advertising Agency role families must never be cleared");
 
-// Marketplace UI must preserve the same governed provisioning and immutable-version semantics.
+// One canonical Senior GTM Strategist: adaptive-routed, multilingual, advisory-first and associated only to Advertising Agency.
+mustContain(gtmMigration, [
+  "'gtm-strategist','1.0','GTM Strategist','Senior GTM Strategist'",
+  "Go-to-Market Strategy",
+  "TAM, SAM and SOM",
+  "ICP",
+  "30/60/90",
+  "ROAS",
+  "Respond in the user's language",
+  "Adaptive Routing",
+  "AI Gateway",
+  "Explicit Human approval is required",
+  "role_family='marketing'",
+  "array['b2b_marketing','performance_marketing']",
+  "go_to_market_strategy",
+  "Strategy & Growth",
+  "'gtm-strategist'=any(agent_template_refs)",
+  "'{agent_count}','11'",
+  "strategy_input_only",
+  "Senior GTM Strategist must not be auto-added to unrelated Ready Companies",
+]);
+assert.ok(!gtmMigration.includes("runtime_model='"), "GTM Strategist must not hardcode a model");
+assert.ok(!gtmMigration.includes("budget.modify','autonomous"), "GTM Strategist must never receive autonomous spend authority");
+assert.equal((gtmMigration.match(/insert into public\.agent_templates/g) ?? []).length, 1, "GTM must have one canonical agent-template insertion");
+
 mustContain(page, [
   "RYTHM READY COMPANY MARKETPLACE",
   "Immutable catalog releases",
@@ -138,4 +161,4 @@ mustContain(actions, [
   "external%20actions%20remain%20disabled",
 ]);
 
-console.log("Phase 4 Ready AI Company Library + Minimum Standard contract validation passed.");
+console.log("Phase 4 Ready AI Company Library + Minimum Standard + Senior GTM Strategist contract validation passed.");
