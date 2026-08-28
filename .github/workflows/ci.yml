@@ -28,6 +28,7 @@ jobs:
       - run: npm run test:phase2:direct-guard
       - run: npm run test:phase2:rls
       - run: npm run test:phase3
+      - run: npm run test:phase4
       - run: npm run test:routing
       - run: npm run test:software-company
       - run: npm run build
