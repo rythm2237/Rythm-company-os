@@ -95,13 +95,16 @@ assert.ok(standardMigration.includes("false,'1.0.0'"), "Unverified provider adap
 assert.ok(!standardMigration.includes("'budget.modify','autonomous'"), "Advertising budget changes must never be autonomous");
 assert.ok(!standardMigration.includes("'budget.modify','approval_required'"), "Advertising spend must remain Human CEO controlled by default");
 
+// Marketplace UI must preserve the same governed provisioning and immutable-version semantics.
 mustContain(page, [
-  "RYTHM READY COMPANY LIBRARY · PHASE 4",
-  "Version snapshot isolation",
+  "RYTHM READY COMPANY MARKETPLACE",
+  "Immutable catalog releases",
   "template_snapshot_digest",
-  "Provision this company",
-  "external execution authority are never copied",
+  "provisionCompanyTemplate",
+  "agent_template_refs",
 ]);
+assert.ok(page.includes("supported_product_codes.includes"), "Marketplace must enforce active product entitlement before provisioning");
+assert.ok(page.includes("max_active_agents >= template.agent_template_refs.length"), "Marketplace must enforce Agent capacity before provisioning");
 assert.ok(page.includes('template.template_key === "ready_software_company_v1"'), "Legacy Software project blueprint must not be offered to unrelated ready-company templates");
 
 mustContain(actions, [
