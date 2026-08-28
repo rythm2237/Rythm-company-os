@@ -13,6 +13,9 @@ const CATEGORY_ROLE_HINTS:Record<string,string[]>={
 function normalize(value:string|null|undefined){return String(value??"").toLowerCase();}
 function roleCanUse(item:KnowledgeRow,agent:KnowledgeAgent){
   const role=normalize(agent.role_title),department=normalize(agent.department),explicitDepartments=item.allowed_departments??[],explicitRoles=item.allowed_role_keywords??[];
+  const exactAgentAcl=`agent:${agent.id}`;
+  const agentScoped=explicitRoles.some((value)=>normalize(value).startsWith("agent:"));
+  if(agentScoped)return explicitRoles.some((value)=>normalize(value)===exactAgentAcl);
   if(explicitDepartments.length||explicitRoles.length)return explicitDepartments.some((value)=>department.includes(normalize(value)))||explicitRoles.some((value)=>role.includes(normalize(value)));
   const hints=CATEGORY_ROLE_HINTS[item.category];
   if(item.confidentiality==="restricted"||item.confidentiality==="confidential"){if(!hints?.length)return false;return hints.some((hint)=>role.includes(hint)||department.includes(hint));}
@@ -42,8 +45,10 @@ export async function loadCompanyKnowledgeForAgent(context:KnowledgeContext,agen
     context.supabase.rpc("search_company_knowledge_for_agent_v1",{target_org_id:context.organizationId,target_agent_id:agent.id,query_text:currentTask||agent.role_title,max_results:10}),
   ]);
   if(chunkError) console.error("company_library_agent_search_failed",{agentId:agent.id,message:chunkError.message});
-  const relevant=((data??[]) as KnowledgeRow[]).filter((item)=>roleCanUse(item,agent));
-  const retrievedChunks=(chunkData??[]) as KnowledgeChunkRow[];
+  const rows=(data??[]) as KnowledgeRow[];
+  const relevant=rows.filter((item)=>roleCanUse(item,agent));
+  const allowedKnowledgeIds=new Set(relevant.map((item)=>item.id));
+  const retrievedChunks=((chunkData??[]) as KnowledgeChunkRow[]).filter((item)=>allowedKnowledgeIds.has(item.knowledge_id));
   const baseline=[`Company: ${context.organization?.name||"Current company"}`,context.organization?.mission?`Mission: ${context.organization.mission}`:"",context.organization?.vision?`Vision: ${context.organization.vision}`:""].filter(Boolean).join("\n");
   const entries=relevant.filter((item)=>item.content?.trim()||item.source_url).map((item)=>{const source=item.source_url?` Source reference retained internally: ${item.title}`:"";const body=item.content?.trim()?item.content.trim().slice(0,5000):"Reference asset available to this Agent.";return`[${item.category.toUpperCase()} · ${item.confidentiality.toUpperCase()}] ${item.title}\n${body}${source}`;});
   const chunkEntries=retrievedChunks.map((item)=>`[COMPANY LIBRARY · ${item.category.toUpperCase()} · ${item.confidentiality.toUpperCase()}] ${item.title} · chunk ${item.chunk_index+1}\n${item.content.slice(0,3600)}`);
