@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const migration = readFileSync("supabase/migrations/20260828090000_ready_ai_company_library.sql", "utf8");
+const standardMigration = readFileSync("supabase/migrations/20260828101500_ready_company_minimum_standard.sql", "utf8");
+const standardDoc = readFileSync("docs/phase4-ready-company-minimum-standard.md", "utf8");
 const page = readFileSync("app/(app)/studio/templates/page.tsx", "utf8");
 const actions = readFileSync("app/(app)/studio/templates/actions.ts", "utf8");
 
@@ -29,6 +31,54 @@ mustContain(migration, [
 assert.ok(!migration.includes("grant execute on function public.capture_company_template_installation_snapshot_v1"), "Snapshot trigger must not become a callable customer RPC");
 assert.ok(migration.includes("revoke insert,update,delete,truncate on public.company_templates from anon,authenticated"), "Catalog must remain read-only to customers");
 
+mustContain(standardDoc, [
+  "Mandatory company functions",
+  "Generic Business Connector fallback",
+  "Advertising Agency extension",
+  "Finance / Accounting",
+  "Legal / Compliance",
+  "People / Workforce",
+  "budget/spend",
+  "Meta Marketing",
+  "Google Ads",
+  "YouTube",
+  "TikTok for Business",
+  "LinkedIn Marketing",
+]);
+
+mustContain(standardMigration, [
+  "minimum_standard_version",
+  "function_coverage",
+  "integration_family_coverage",
+  "generic_connector_fallback",
+  "generic_business_api",
+  "accounting_erp",
+  "crm_sales",
+  "website_cms",
+  "legal_contracts",
+  "people_hris",
+  "meta_marketing",
+  "google_ads",
+  "youtube",
+  "tiktok_business",
+  "linkedin_marketing",
+  "advertising_finance_accounting_manager",
+  "advertising_legal_compliance_counsel",
+  "advertising_operations_people_manager",
+  "'budget.modify','restricted','human_only'",
+  "provider_adapters_must_be_verified_before_execution",
+  "maturity='preview'",
+  "ready_company_minimum_standard_status",
+]);
+
+// Contracts for not-yet-verified external adapters must fail closed rather than pretending to be live.
+for (const provider of ["generic_business_api", "meta_marketing", "google_ads", "youtube", "tiktok_business", "linkedin_marketing"]) {
+  assert.ok(standardMigration.includes(`('${provider}'`) || standardMigration.includes(`  ('${provider}'`), `Missing provider contract: ${provider}`);
+}
+assert.ok(standardMigration.includes("false,'1.0.0'"), "Unverified provider adapters must be registered disabled");
+assert.ok(!standardMigration.includes("'budget.modify','autonomous'"), "Advertising budget changes must never be autonomous");
+assert.ok(!standardMigration.includes("'budget.modify','approval_required'"), "Advertising spend must remain Human CEO controlled by default");
+
 mustContain(page, [
   "RYTHM READY COMPANY LIBRARY · PHASE 4",
   "Version snapshot isolation",
@@ -44,4 +94,4 @@ mustContain(actions, [
   "external%20actions%20remain%20disabled",
 ]);
 
-console.log("Phase 4 Ready AI Company Library contract validation passed.");
+console.log("Phase 4 Ready AI Company Library + Minimum Standard contract validation passed.");
