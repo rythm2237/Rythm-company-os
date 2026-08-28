@@ -14,6 +14,7 @@ const activeGuide = readFileSync("components/onboarding/ActiveWorkspaceGuide.tsx
 const integrationGuide = readFileSync("app/(app)/integrations/integration-setup-guide.tsx", "utf8");
 const agentKnowledge = readFileSync("app/(app)/agents/[code]/knowledge/page.tsx", "utf8");
 const agentUploader = readFileSync("app/(app)/agents/[code]/AgentKnowledgeUploader.tsx", "utf8");
+const companyKnowledgeRuntime = readFileSync("lib/company-knowledge.ts", "utf8");
 
 const mustContain = (source: string, values: string[]) => values.forEach((value) => assert.ok(source.includes(value), `Missing Phase 4 contract: ${value}`));
 
@@ -46,7 +47,8 @@ mustContain(actions,['rpc("provision_company_template_v2"',"/company/launch","Co
 mustContain(launchPage,["COMPANY READINESS","Company profile","Company knowledge","Legal foundation","Business integrations","Agent workforce","First project","First company meeting","Enter Company"]);
 mustContain(activeGuide,["Guide me","Do this now","Next:","rythm-active-guide","/company/launch","/integrations","/agents","/projects","/meetings","/command-center"]);
 mustContain(integrationGuide,["Guide this connection","Show me where","Security checkpoint","background:\"rgba(255,255,255,.985)\"","google_ads","meta_marketing","youtube","tiktok_business","linkedin_marketing"]);
-mustContain(agentKnowledge,["AGENT KNOWLEDGE","Add role-specific knowledge without writing a prompt","allowed_role_keywords","AgentKnowledgeUploader"]);
-mustContain(agentUploader,["registerCompanyLibraryDocument","allowedRoleKeywords:[agentCode,agentName,roleTitle]","Add knowledge to this Agent","No prompt is required"]);
+mustContain(agentKnowledge,["AGENT KNOWLEDGE","Add role-specific knowledge without writing a prompt","directAcl=`agent:${agent.id}`","AgentKnowledgeUploader"]);
+mustContain(agentUploader,["registerCompanyLibraryDocument","allowedRoleKeywords:[`agent:${agentId}`]","Add knowledge to this Agent","No prompt is required","<option value=\"marketing\">Marketing</option>","<option value=\"technical\">Technical</option>"]);
+mustContain(companyKnowledgeRuntime,["const exactAgentAcl=`agent:${agent.id}`","agentScoped","normalize(value)===exactAgentAcl","allowedKnowledgeIds","filter((item)=>allowedKnowledgeIds.has(item.knowledge_id))"]);
 
-console.log("Phase 4 Ready AI Company Library + launch experience + guided setup + Agent knowledge contract validation passed.");
+console.log("Phase 4 Ready AI Company Library + launch experience + guided setup + exact Agent knowledge contract validation passed.");
