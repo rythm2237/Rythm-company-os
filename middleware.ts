@@ -105,6 +105,13 @@ export async function middleware(request: NextRequest) {
   const isLogin = pathname === "/login";
   const meetingApiLimit = request.method === "POST" ? MEETING_API_LIMITS[pathname] : undefined;
 
+  // Studio pages already enforce authenticated owner/tenant context in their server components/actions.
+  // Avoid duplicating a remote Supabase auth round-trip in routing middleware: a transient auth-network
+  // stall can otherwise consume Vercel's middleware response budget and turn a healthy page into a 504.
+  // Error sanitization above is still preserved for studio routes.
+  const pageAuthFastPath = pathname.startsWith("/studio/") || pathname === "/studio";
+  if (pageAuthFastPath && !meetingApiLimit) return response;
+
   if (!url || !publishableKey) {
     if (meetingApiLimit) {
       return apiError("Authentication service is not configured in this environment.", 503, { "Retry-After": "10" });
