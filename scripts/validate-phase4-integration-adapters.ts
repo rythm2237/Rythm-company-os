@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const adapter = readFileSync("lib/integrations/adapters/generic-business-api.ts", "utf8");
+const http = readFileSync("lib/integrations/adapters/http.ts", "utf8");
 const providerAdapters = readFileSync("lib/integrations/adapters/provider-adapters.ts", "utf8");
 const registry = readFileSync("lib/integrations/registry.ts", "utf8");
 const migration = readFileSync("supabase/migrations/20260828113000_generic_business_api_adapter_contract.sql", "utf8");
@@ -18,7 +19,12 @@ mustContain(adapter, [
   'WRITE_METHODS = new Set(["POST", "PUT", "PATCH"])',
   'Authorization: `Bearer ${context.credential}`',
   'headers["Idempotency-Key"] = context.idempotencyKey',
-  'redirect',
+]);
+
+mustContain(http, [
+  'redirect: "error"',
+  'cache: "no-store"',
+  'secureProviderUrl',
 ]);
 
 assert.ok(!adapter.includes('method = "DELETE"'), "Generic connector must not expose arbitrary DELETE in v1");
