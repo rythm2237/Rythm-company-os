@@ -83,6 +83,26 @@ export type ResolvedKnowledgePackage = {
 };
 
 const roleRules: Array<{ test: RegExp; family: NormalizedRole["roleFamily"]; canonical: string; specs?: string[] }> = [
+  { test: /\bprincipal strategy\s*&\s*corporate development advisor\b/i, family: "general", canonical: "Strategy & Corporate Development Advisor" },
+  { test: /\bprincipal operations\s*&\s*transformation director\b/i, family: "analytics", canonical: "Operations Analyst", specs: ["operations"] },
+  { test: /\bprincipal finance director\s*&\s*strategic controller\b/i, family: "analytics", canonical: "Finance Analyst", specs: ["finance"] },
+  { test: /\bprincipal risk,? compliance\s*&\s*ai governance director\b/i, family: "legal", canonical: "Compliance Specialist", specs: ["compliance"] },
+  { test: /\bprincipal research\s*&\s*intelligence director\b/i, family: "analytics", canonical: "Research & Intelligence Analyst" },
+  { test: /\bprincipal legal,? privacy\s*&\s*ai regulatory director\b/i, family: "legal", canonical: "Legal, Privacy & Regulatory Advisor", specs: ["privacy", "compliance"] },
+  { test: /\bprincipal executive orchestrator\s*&\s*ai chief of staff\b/i, family: "general", canonical: "Executive Orchestrator & AI Chief of Staff" },
+  { test: /\bprincipal runtime assurance\s*&\s*ai systems validation director\b/i, family: "technology", canonical: "AI Systems Validation Specialist" },
+  { test: /\bsenior\s+gtm\s+strategist\b|\bgtm\s+strategist\b/i, family: "marketing", canonical: "Senior GTM Strategist", specs: ["b2b_marketing", "performance_marketing"] },
+  { test: /^strategy director$/i, family: "marketing", canonical: "Advertising Strategy Director" },
+  { test: /^account manager$/i, family: "marketing", canonical: "Advertising Account Manager" },
+  { test: /^finance\s*&\s*accounting manager$/i, family: "analytics", canonical: "Finance Operations Manager", specs: ["finance", "finops_accounting"] },
+  { test: /^legal\s*&\s*compliance counsel$/i, family: "legal", canonical: "Legal & Compliance Advisor", specs: ["contracts", "privacy", "compliance"] },
+  { test: /^operations\s*&\s*people manager$/i, family: "general", canonical: "People & AI Workforce Operations Manager" },
+  { test: /^analytics specialist$/i, family: "analytics", canonical: "Advertising Analytics Specialist" },
+  { test: /^content specialist$/i, family: "marketing", canonical: "Advertising Content Specialist" },
+  { test: /^copywriter$/i, family: "marketing", canonical: "Advertising Copywriter" },
+  { test: /^creative director$/i, family: "design", canonical: "Advertising Creative Director" },
+  { test: /\bcommunications?\s*&\s*customer support manager\b|^communication manager$/i, family: "general", canonical: "Customer Support & Communications Manager" },
+  { test: /\bfull[- ]stack web developer\b/i, family: "technology", canonical: "Full-Stack Web Developer" },
   { test: /\b(ui\s*\/\s*ux|ui\s+ux|ux\s+ui|user experience|user interface)\b/i, family: "design", canonical: "UI/UX Designer", specs: ["ui_ux"] },
   { test: /\bgraphic\s+design(er)?\b/i, family: "design", canonical: "Graphic Designer", specs: ["graphic_design"] },
   { test: /\bproduct\s+design(er)?\b/i, family: "design", canonical: "Product Designer", specs: ["product_design"] },
@@ -118,17 +138,24 @@ function isStale(row: { next_review_at?: string | null; expires_at?: string | nu
 }
 
 async function loadBlueprint(supabase: SupabaseClient, normalized: NormalizedRole) {
-  const { data } = await supabase.from("role_knowledge_blueprints").select("id,role_family,canonical_role,version,required_domains,required_competencies,required_methods,required_qa_rules,recommended_sources,risk_classification").eq("role_family", normalized.roleFamily).eq("active", true).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const selection = "id,role_family,canonical_role,version,required_domains,required_competencies,required_methods,required_qa_rules,recommended_sources,risk_classification";
+  const { data: exact } = await supabase.from("role_knowledge_blueprints").select(selection).eq("role_family", normalized.roleFamily).eq("canonical_role", normalized.canonicalRole).eq("active", true).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (exact) return exact as BlueprintRow;
+  const { data } = await supabase.from("role_knowledge_blueprints").select(selection).eq("role_family", normalized.roleFamily).is("canonical_role", null).eq("active", true).order("created_at", { ascending: false }).limit(1).maybeSingle();
   return (data ?? null) as BlueprintRow | null;
 }
 
+const foundationSelection = "id,role_family,canonical_role,version,title,summary,knowledge_content,competency_tags,methodology_tags,qa_rules,risk_classification,source_ids,freshness_class,last_verified_at,next_review_at,expires_at,status";
+
 async function loadFoundation(supabase: SupabaseClient, normalized: NormalizedRole) {
-  const { data } = await supabase.from("role_foundations").select("id,role_family,canonical_role,version,title,summary,knowledge_content,competency_tags,methodology_tags,qa_rules,risk_classification,source_ids,freshness_class,last_verified_at,next_review_at,expires_at,status").eq("role_family", normalized.roleFamily).eq("status", "active").order("last_verified_at", { ascending: false }).limit(1).maybeSingle();
+  const { data: exact } = await supabase.from("role_foundations").select(foundationSelection).eq("role_family", normalized.roleFamily).eq("canonical_role", normalized.canonicalRole).eq("status", "active").order("last_verified_at", { ascending: false }).limit(1).maybeSingle();
+  if (exact) return exact as FoundationRow;
+  const { data } = await supabase.from("role_foundations").select(foundationSelection).eq("role_family", normalized.roleFamily).is("canonical_role", null).eq("status", "active").order("last_verified_at", { ascending: false }).limit(1).maybeSingle();
   return (data ?? null) as FoundationRow | null;
 }
 
 async function loadGeneralFoundation(supabase: SupabaseClient) {
-  const { data, error } = await supabase.from("role_foundations").select("id,role_family,canonical_role,version,title,summary,knowledge_content,competency_tags,methodology_tags,qa_rules,risk_classification,source_ids,freshness_class,last_verified_at,next_review_at,expires_at,status").eq("role_family", "general").eq("status", "active").order("last_verified_at", { ascending: false }).limit(1).maybeSingle();
+  const { data, error } = await supabase.from("role_foundations").select(foundationSelection).eq("role_family", "general").is("canonical_role", null).eq("status", "active").order("last_verified_at", { ascending: false }).limit(1).maybeSingle();
   if (error || !data) throw new Error("GENERAL_PROFESSIONAL_FOUNDATION_V1 is unavailable.");
   return data as FoundationRow;
 }
@@ -192,6 +219,7 @@ export function buildKnowledgeInstructionOverlay(knowledge: ResolvedKnowledgePac
     `Role family: ${knowledge.normalized.roleFamily}`,
     `Professional foundation: ${knowledge.foundation.title} (version ${knowledge.foundation.version}, verified ${knowledge.foundation.last_verified_at})`,
     `Specialization: ${specializations}`,
+    `Verified professional sources: ${knowledge.sourceCount}`,
     `Fallback foundation: ${knowledge.fallbackUsed ? "YES — clearly disclose material role-knowledge limitations" : "no"}`,
     methods.length ? `Required methods: ${methods.join("; ")}` : "",
     qa.length ? `Professional QA rules: ${qa.join("; ")}` : "",
@@ -231,21 +259,27 @@ function boundedKnowledge(value: unknown, task: string, maxChars: number) {
 export async function loadProfessionalRuntimeContext(supabase: SupabaseClient, organizationId: string, agentId: string, currentTask: string) {
   const { data: binding } = await supabase.from("agent_role_foundation_bindings").select("role_foundation_id,foundation_version").eq("organization_id", organizationId).eq("agent_id", agentId).eq("status", "active").limit(1).maybeSingle();
   if (!binding) return { contextText: "", foundationTitle: null as string | null, specializationTitles: [] as string[], qaRules: [] as string[] };
-  const { data: foundation } = await supabase.from("role_foundations").select("id,title,version,knowledge_content,qa_rules,last_verified_at,freshness_class,next_review_at").eq("id", binding.role_foundation_id).maybeSingle();
+  const { data: foundation } = await supabase.from("role_foundations").select("id,title,version,knowledge_content,qa_rules,source_ids,last_verified_at,freshness_class,next_review_at").eq("id", binding.role_foundation_id).maybeSingle();
   const { data: specBindings } = await supabase.from("agent_specialization_bindings").select("specialization_id").eq("organization_id", organizationId).eq("agent_id", agentId).eq("status", "active");
   const ids = (specBindings ?? []).map((item: { specialization_id: string }) => item.specialization_id);
   const { data: specs } = ids.length ? await supabase.from("role_specializations").select("id,title,version,knowledge_content,qa_rules,last_verified_at,freshness_class,next_review_at").in("id", ids).eq("active", true) : { data: [] as any[] };
   if (!foundation) return { contextText: "", foundationTitle: null, specializationTitles: [] as string[], qaRules: [] as string[] };
+  const professionalSourceIds = (foundation.source_ids ?? []) as string[];
+  const { data: sources } = professionalSourceIds.length
+    ? await supabase.from("knowledge_source_registry").select("id,source_name,publisher,canonical_url,authority_level,last_verified_at").in("id", professionalSourceIds).eq("enabled", true)
+    : { data: [] as any[] };
   const foundationContext = boundedKnowledge(foundation.knowledge_content, currentTask, 11500);
   const specializationContext = (specs ?? []).map((spec: any) => `${spec.title} v${spec.version}:\n${boundedKnowledge(spec.knowledge_content, currentTask, 4500)}`).join("\n\n").slice(0, 7500);
   const qaRules = [
     ...(Array.isArray(foundation.qa_rules) ? foundation.qa_rules : []),
     ...(specs ?? []).flatMap((spec: any) => Array.isArray(spec.qa_rules) ? spec.qa_rules : []),
   ].map(String).slice(0, 30);
+  const provenance = (sources ?? []).map((source: any) => `- ${source.source_name} — ${source.publisher} — ${source.canonical_url} (${source.authority_level})`).join("\n");
   return {
     contextText: [
       `PROFESSIONAL ROLE FOUNDATION — ${foundation.title} v${foundation.version}`,
       `Last verified: ${foundation.last_verified_at}. Freshness: ${foundation.freshness_class}.`,
+      provenance ? `VERIFIED PROFESSIONAL SOURCE PROVENANCE\n${provenance}` : "",
       foundationContext,
       specializationContext ? `SPECIALIZATION KNOWLEDGE\n${specializationContext}` : "",
       qaRules.length ? `ROLE QA RULES\n${qaRules.map((rule) => `- ${rule}`).join("\n")}` : "",
