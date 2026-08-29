@@ -1,9 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { runAgentTask, type AgentTaskState } from "./actions";
-
-const initialAgentTaskState: AgentTaskState = { status: "idle" };
+import { runAgentTask } from "./actions";
+import { initialAgentTaskState } from "./state";
 
 export default function AgentTaskConsole({agentCode,agentName}:{agentCode:string;agentName:string}) {
   const [state, action, pending] = useActionState(runAgentTask, initialAgentTaskState);
