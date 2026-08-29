@@ -3,15 +3,7 @@
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { executeAiRequest } from "@/lib/ai/request-gateway";
 import { loadCompanyKnowledgeForAgent } from "@/lib/company-knowledge";
-
-export type AgentTaskState = {
-  status: "idle" | "success" | "error";
-  output?: string;
-  error?: string;
-  correlationId?: string;
-  routing?: string;
-  knowledgeCount?: number;
-};
+import type { AgentTaskState } from "./state";
 
 function cleanTask(value: FormDataEntryValue | null) {
   return String(value ?? "").trim().slice(0, 12000);
