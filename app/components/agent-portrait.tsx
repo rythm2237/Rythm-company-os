@@ -9,6 +9,13 @@ type Props = {
   className?: string;
 };
 
+function initials(value: string) {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "AI";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+}
+
 export function AgentPortrait({ agentCode, avatarUrl, alt, className }: Props) {
   const [failed, setFailed] = useState(false);
   const src = avatarUrl && !failed
@@ -16,7 +23,12 @@ export function AgentPortrait({ agentCode, avatarUrl, alt, className }: Props) {
     : null;
 
   if (!src) {
-    return <div className={className} aria-label={`${alt} portrait placeholder`}>{agentCode}</div>;
+    return (
+      <div className={className} data-fallback="true" aria-label={`${alt} portrait placeholder`}>
+        <span>{initials(alt)}</span>
+        <small>{agentCode}</small>
+      </div>
+    );
   }
 
   return (
