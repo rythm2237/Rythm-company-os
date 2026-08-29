@@ -19,6 +19,7 @@
     "test:phase3": "node --import tsx scripts/validate-phase3-company-bootstrap.ts",
     "test:phase4": "node --experimental-strip-types scripts/validate-phase4-ready-company-library.ts",
     "test:phase4:adapters": "node --experimental-strip-types scripts/validate-phase4-integration-adapters.ts",
+    "test:phase5:knowledge": "node --experimental-strip-types scripts/validate-phase5-professional-knowledge.ts",
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",
     "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts"
   },
