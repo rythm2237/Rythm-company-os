@@ -1,0 +1,102 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+type Scenario = { id: string; title: string; category: string };
+type ScenarioResult = { scenario_id: string; scenario_title: string; score: number; verdict: string; governance_violation: boolean };
+type FinalSummary = { benchmark_verdict: string; average_score: number; pass_count: number; scenario_count: number; governance_violation_count: number; pass_rate: number };
+
+export function BenchmarkConsole({ agentCode, scenarios }: { agentCode: string; scenarios: Scenario[] }) {
+  const [status, setStatus] = useState<"idle" | "running" | "success" | "error">("idle");
+  const [current, setCurrent] = useState("");
+  const [results, setResults] = useState<ScenarioResult[]>([]);
+  const [summary, setSummary] = useState<FinalSummary | null>(null);
+  const [readiness, setReadiness] = useState<any>(null);
+  const [error, setError] = useState("");
+  const completed = useMemo(() => new Set(results.map((item) => item.scenario_id)), [results]);
+
+  async function post(body: Record<string, unknown>) {
+    const response = await fetch(`/api/agents/${encodeURIComponent(agentCode)}/benchmark`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `Benchmark request failed (${response.status}).`);
+    return payload;
+  }
+
+  async function runBenchmark() {
+    if (status === "running") return;
+    setStatus("running");
+    setError("");
+    setResults([]);
+    setSummary(null);
+    setReadiness(null);
+    const runId = crypto.randomUUID();
+    try {
+      const next: ScenarioResult[] = [];
+      for (const scenario of scenarios) {
+        setCurrent(scenario.id);
+        const payload = await post({ runId, scenarioId: scenario.id });
+        const result = payload.result as ScenarioResult;
+        next.push(result);
+        setResults([...next]);
+      }
+      setCurrent("finalizing");
+      const final = await post({ runId, finalize: true });
+      setSummary(final.summary as FinalSummary);
+      setReadiness(final.readiness ?? null);
+      setCurrent("");
+      setStatus("success");
+    } catch (cause) {
+      setCurrent("");
+      setStatus("error");
+      setError(cause instanceof Error ? cause.message : "Benchmark execution failed.");
+    }
+  }
+
+  return <div style={{display:"grid",gap:18}}>
+    <article className="panel">
+      <p className="label">CONTROLLED EVALUATION</p>
+      <h2>Senior GTM Strategist benchmark</h2>
+      <p style={{color:"#596579",lineHeight:1.75,maxWidth:900}}>Six independent synthetic scenarios are executed through the canonical AI Request Gateway. Each answer is evaluated by a separate AI judge through the Gateway, with deterministic governance checks on the adversarial case. Raw prompts, outputs, scores, routing correlation IDs and judge evidence are persisted in protected evaluation tables. No external action is permitted.</p>
+      <div className="compact-list" style={{marginTop:16}}>
+        <div><strong>Senior benchmark threshold</strong><span>≥85 average · ≥80% PASS · 0 governance violations</span></div>
+        <div><strong>Formal Senior promotion</strong><span>Separate gate: level sequence + 3 validated real-world experience events + review</span></div>
+        <div><strong>External actions</strong><span>Disabled</span></div>
+      </div>
+      <button onClick={runBenchmark} disabled={status==="running"} style={{marginTop:18}}>{status==="running"?"Benchmark running…":"Run Senior benchmark"}</button>
+      {status==="running"?<p className="security-note" style={{marginTop:12}}>Running {current==="finalizing"?"final evidence validation":scenarios.find((item)=>item.id===current)?.title??"scenario"}. Keep this page open.</p>:null}
+      {error?<p className="form-error" style={{marginTop:12}}>{error}</p>:null}
+    </article>
+
+    <article className="panel">
+      <p className="label">SCENARIO EVIDENCE</p>
+      <h2>{results.length}/{scenarios.length} completed</h2>
+      <div style={{display:"grid",gap:10,marginTop:14}}>
+        {scenarios.map((scenario) => {
+          const result = results.find((item) => item.scenario_id === scenario.id);
+          const isCurrent = current === scenario.id;
+          return <div key={scenario.id} style={{border:"1px solid #e1e6ef",borderRadius:14,padding:"12px 14px",display:"grid",gridTemplateColumns:"minmax(0,1fr) auto",gap:12,alignItems:"center"}}>
+            <div><strong style={{display:"block"}}>{scenario.title}</strong><span style={{color:"#69758a",fontSize:13}}>{scenario.category}{isCurrent?" · evaluating…":""}</span></div>
+            <div style={{textAlign:"right",fontWeight:800}}>{result?<>{result.score}/100 · {result.verdict}{result.governance_violation?" · GOVERNANCE FAIL":""}</>:completed.has(scenario.id)?"Recorded":"Pending"}</div>
+          </div>;
+        })}
+      </div>
+    </article>
+
+    {summary?<article className="panel">
+      <p className="label">BENCHMARK RESULT</p>
+      <h2>{summary.benchmark_verdict} · {summary.average_score}/100 average</h2>
+      <div className="compact-list" style={{marginTop:14}}>
+        <div><strong>Scenario passes</strong><span>{summary.pass_count}/{summary.scenario_count}</span></div>
+        <div><strong>Pass rate</strong><span>{Math.round(summary.pass_rate*100)}%</span></div>
+        <div><strong>Governance violations</strong><span>{summary.governance_violation_count}</span></div>
+        <div><strong>Formal Senior readiness</strong><span>{readiness?.eligible?"Eligible for review":"Not yet promotion-eligible"}</span></div>
+        {readiness?<><div><strong>Current certified level</strong><span>{String(readiness.current_level??"unknown")}</span></div><div><strong>Validated real-world experience</strong><span>{Number(readiness.validated_experience_count??0)}/{Number(readiness.minimum_validated_experience??3)}</span></div></>:null}
+      </div>
+      <p className="security-note" style={{marginTop:14}}>A benchmark PASS is professional evidence, not an automatic promotion. RYTHM keeps certification review-gated.</p>
+    </article>:null}
+  </div>;
+}
