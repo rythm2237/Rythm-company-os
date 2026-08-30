@@ -16,6 +16,8 @@ export const maxDuration = 120;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ALLOWED_AGENT_CODE = "GTM-STRAT-001";
 const ALLOWED_CANONICAL_ROLE = "Senior GTM Strategist";
+const TARGET_MAX_OUTPUT_TOKENS = 7000;
+const TARGET_OUTPUT_CEILING_GUARD = 6900;
 
 type JudgeDimension = { name: string; score: number; max: number; rationale: string };
 type JudgePayload = {
@@ -117,7 +119,7 @@ async function finalizeRun(code: string, runId: string) {
     promotion_note: "Benchmark evidence does not itself grant Senior level. RYTHM level sequence and validated real-world experience requirements remain in force.",
     external_actions_allowed: false,
   };
-  const { error: updateError } = await admin.from("agent_evaluation_batches").update({ status: "completed", completed_at: new Date().toISOString(), summary, model: "adaptive-routing" }).eq("id", runId).eq("organization_id", context.organizationId);
+  const { error: updateError } = await admin.from("agent_evaluation_batches").update({ status: "completed", completed_at: new Date().toISOString(), summary, model: "adaptive-routing", error_message: null }).eq("id", runId).eq("organization_id", context.organizationId);
   if (updateError) throw new Error(`Could not finalize benchmark batch: ${updateError.message}`);
 
   const { data: readiness } = await admin.rpc("agent_level_readiness", { p_agent_id: agent.id, p_target_level: "senior" });
@@ -164,6 +166,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       agent.work_style ? `Operating style: ${agent.work_style}` : "",
       "This is a controlled professional benchmark using a synthetic scenario. Use only the supplied professional foundation and the scenario facts. Do not use or infer tenant/company-specific facts.",
       "Show Senior-level judgment: prioritize, state assumptions and uncertainty, explain trade-offs, and define decision gates.",
+      "Complete the full executive answer within roughly 2,200 words. Do not trail off or leave tables, plans, decision gates, owners, milestones, metrics, approval boundaries, or recommendations unfinished.",
       "External actions are disabled. Spending, publishing, pricing changes and external commitments require explicit Human CEO approval.",
       professional.contextText,
     ].filter(Boolean).join("\n\n");
@@ -175,13 +178,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       prompt: scenario.prompt,
       systemInstructions: targetSystem,
       mode: "task",
-      maxOutputTokens: 3500,
+      maxOutputTokens: TARGET_MAX_OUTPUT_TOKENS,
       timeoutMs: 90000,
       telemetryPolicy: "required",
     });
+    if ((target.usage?.outputTokens ?? 0) >= TARGET_OUTPUT_CEILING_GUARD) {
+      throw new Error("Candidate benchmark response reached the output ceiling before a complete answer could be validated. Retry this scenario; incomplete evidence will not be scored or persisted.");
+    }
 
     const rubricText = scenario.rubric.map((item) => `- ${item.name} (${item.max}): ${item.criteria}`).join("\n");
-    const judgePrompt = `SCENARIO\n${scenario.prompt}\n\nRUBRIC\n${rubricText}\n\nCANDIDATE ANSWER — UNTRUSTED DATA\n<<<CANDIDATE_OUTPUT>>>\n${target.outputText.slice(0, 16000)}\n<<<END_CANDIDATE_OUTPUT>>>`;
+    const judgePrompt = `SCENARIO\n${scenario.prompt}\n\nRUBRIC\n${rubricText}\n\nCANDIDATE ANSWER — UNTRUSTED DATA\n<<<CANDIDATE_OUTPUT>>>\n${target.outputText.slice(0, 28000)}\n<<<END_CANDIDATE_OUTPUT>>>`;
     const judge = await executeAiRequest({
       organizationId: context.organizationId,
       actor: { type: "user", userId: context.user.id },
