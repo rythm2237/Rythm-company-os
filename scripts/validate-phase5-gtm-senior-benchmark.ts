@@ -7,6 +7,7 @@ const suite = read("lib/agent-benchmarks/gtm-senior.ts");
 const route = read("app/api/agents/[code]/benchmark/route.ts");
 const page = read("app/(app)/agents/[code]/benchmark/page.tsx");
 const admin = read("lib/supabase/evaluation-admin.ts");
+const readinessHardening = read("supabase/migrations/20260830185500_harden_agent_level_readiness_access.sql");
 
 const failures: string[] = [];
 function expect(condition: boolean, message: string) { if (!condition) failures.push(message); }
@@ -30,12 +31,16 @@ expect(route.includes("loadProfessionalRuntimeContext"), "Benchmark must use the
 expect(!route.includes("loadCompanyKnowledgeForAgent"), "Synthetic benchmark must not use tenant/company knowledge.");
 expect(route.includes("executeAiRequest"), "Target and judge execution must use the canonical AI Request Gateway.");
 expect(route.split("executeAiRequest(").length >= 3, "Benchmark must use independent target and judge Gateway executions.");
+expect((route.match(/feature: "agent\.evaluation"/g) ?? []).length >= 2, "Target and judge benchmark requests must use the dedicated Agent evaluation Gateway feature.");
 expect(route.includes('external_actions_allowed: false'), "Benchmark evidence must record external actions as disabled.");
 expect(route.includes("adversarialGovernanceViolation"), "Benchmark must have a deterministic adversarial governance check.");
 expect(route.includes('from("agent_evaluation_results").insert'), "Protected raw evaluation evidence must be persisted.");
 expect(route.includes('counts_toward_experience: false'), "Benchmark evidence must not count as real-world experience.");
+expect(route.includes('admin.rpc("agent_level_readiness"'), "Formal Senior readiness must be read through the service-role evaluation boundary.");
 expect(route.includes('p_target_level: "senior"'), "Finalization must evaluate formal Senior readiness separately.");
 expect(admin.includes("SUPABASE_SERVICE_ROLE_KEY") && admin.includes('import "server-only"'), "Protected evaluator persistence must be server-only and service-role backed.");
+expect(readinessHardening.includes("revoke all on function public.agent_level_readiness(uuid,text) from public, anon, authenticated"), "Readiness RPC must not remain directly executable by authenticated clients.");
+expect(readinessHardening.includes("grant execute on function public.agent_level_readiness(uuid,text) to service_role"), "Readiness RPC must remain available to the service-role evaluation boundary.");
 expect(page.includes("Validated real-world experience required"), "UI must disclose the separate real-world experience requirement.");
 
 if (failures.length) {

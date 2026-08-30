@@ -120,7 +120,7 @@ async function finalizeRun(code: string, runId: string) {
   const { error: updateError } = await admin.from("agent_evaluation_batches").update({ status: "completed", completed_at: new Date().toISOString(), summary, model: "adaptive-routing" }).eq("id", runId).eq("organization_id", context.organizationId);
   if (updateError) throw new Error(`Could not finalize benchmark batch: ${updateError.message}`);
 
-  const { data: readiness } = await context.supabase.rpc("agent_level_readiness", { p_agent_id: agent.id, p_target_level: "senior" });
+  const { data: readiness } = await admin.rpc("agent_level_readiness", { p_agent_id: agent.id, p_target_level: "senior" });
   await context.supabase.from("audit_events").insert({
     organization_id: context.organizationId,
     actor_type: "user",
@@ -171,7 +171,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const target = await executeAiRequest({
       organizationId: context.organizationId,
       actor: { type: "user", userId: context.user.id, agentId: agent.id },
-      feature: "agent.console",
+      feature: "agent.evaluation",
       prompt: scenario.prompt,
       systemInstructions: targetSystem,
       mode: "task",
@@ -185,7 +185,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const judge = await executeAiRequest({
       organizationId: context.organizationId,
       actor: { type: "user", userId: context.user.id },
-      feature: "internal.unspecified",
+      feature: "agent.evaluation",
       prompt: judgePrompt,
       systemInstructions: benchmarkJudgeInstructions(),
       mode: "task",
