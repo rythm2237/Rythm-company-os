@@ -6,14 +6,26 @@ type Scenario = { id: string; title: string; category: string };
 type ScenarioResult = { scenario_id: string; scenario_title: string; score: number; verdict: string; governance_violation: boolean };
 type FinalSummary = { benchmark_verdict: string; average_score: number; pass_count: number; scenario_count: number; governance_violation_count: number; pass_rate: number };
 
-export function BenchmarkConsole({ agentCode, scenarios }: { agentCode: string; scenarios: Scenario[] }) {
+export function BenchmarkConsole({
+  agentCode,
+  scenarios,
+  initialRunId = null,
+  initialResults = [],
+}: {
+  agentCode: string;
+  scenarios: Scenario[];
+  initialRunId?: string | null;
+  initialResults?: ScenarioResult[];
+}) {
   const [status, setStatus] = useState<"idle" | "running" | "success" | "error">("idle");
   const [current, setCurrent] = useState("");
-  const [results, setResults] = useState<ScenarioResult[]>([]);
+  const [runId, setRunId] = useState<string | null>(initialRunId);
+  const [results, setResults] = useState<ScenarioResult[]>(initialResults);
   const [summary, setSummary] = useState<FinalSummary | null>(null);
   const [readiness, setReadiness] = useState<any>(null);
   const [error, setError] = useState("");
   const completed = useMemo(() => new Set(results.map((item) => item.scenario_id)), [results]);
+  const resumable = Boolean(runId && results.length > 0 && results.length < scenarios.length);
 
   async function post(body: Record<string, unknown>) {
     const response = await fetch(`/api/agents/${encodeURIComponent(agentCode)}/benchmark`, {
@@ -30,21 +42,24 @@ export function BenchmarkConsole({ agentCode, scenarios }: { agentCode: string; 
     if (status === "running") return;
     setStatus("running");
     setError("");
-    setResults([]);
     setSummary(null);
     setReadiness(null);
-    const runId = crypto.randomUUID();
+    const activeRunId = runId ?? crypto.randomUUID();
+    if (!runId) {
+      setRunId(activeRunId);
+      setResults([]);
+    }
     try {
-      const next: ScenarioResult[] = [];
+      const byScenario = new Map(results.map((item) => [item.scenario_id, item]));
       for (const scenario of scenarios) {
         setCurrent(scenario.id);
-        const payload = await post({ runId, scenarioId: scenario.id });
+        const payload = await post({ runId: activeRunId, scenarioId: scenario.id });
         const result = payload.result as ScenarioResult;
-        next.push(result);
-        setResults([...next]);
+        byScenario.set(result.scenario_id, result);
+        setResults(scenarios.map((item) => byScenario.get(item.id)).filter(Boolean) as ScenarioResult[]);
       }
       setCurrent("finalizing");
-      const final = await post({ runId, finalize: true });
+      const final = await post({ runId: activeRunId, finalize: true });
       setSummary(final.summary as FinalSummary);
       setReadiness(final.readiness ?? null);
       setCurrent("");
@@ -66,7 +81,8 @@ export function BenchmarkConsole({ agentCode, scenarios }: { agentCode: string; 
         <div><strong>Formal Senior promotion</strong><span>Separate gate: level sequence + 3 validated real-world experience events + review</span></div>
         <div><strong>External actions</strong><span>Disabled</span></div>
       </div>
-      <button onClick={runBenchmark} disabled={status==="running"} style={{marginTop:18}}>{status==="running"?"Benchmark running…":"Run Senior benchmark"}</button>
+      {resumable?<p className="security-note" style={{marginTop:14}}>An incomplete benchmark run was recovered. Completed scenario evidence will be reused and only missing work will execute again.</p>:null}
+      <button onClick={runBenchmark} disabled={status==="running"} style={{marginTop:18}}>{status==="running"?"Benchmark running…":resumable?"Resume benchmark":"Run Senior benchmark"}</button>
       {status==="running"?<p className="security-note" style={{marginTop:12}}>Running {current==="finalizing"?"final evidence validation":scenarios.find((item)=>item.id===current)?.title??"scenario"}. Keep this page open.</p>:null}
       {error?<p className="form-error" style={{marginTop:12}}>{error}</p>:null}
     </article>
