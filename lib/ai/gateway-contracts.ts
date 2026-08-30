@@ -17,6 +17,7 @@ export type AiGatewayContextReferences = {
 
 export type AiGatewayFeature =
   | "agent.console"
+  | "agent.evaluation"
   | "agent.instruction_generation"
   | "agent.knowledge_acquisition"
   | "company.document_extraction"
