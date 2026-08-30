@@ -18,6 +18,7 @@ const sourceFiles = [
   ...files("components"),
 ].filter((path) => /\.(ts|tsx)$/.test(path));
 const fetchBoundaries = new Set([
+  "app/(app)/agents/[code]/benchmark/BenchmarkConsole.tsx",
   "app/(app)/meetings/room/DeliberationConsole.tsx",
   "app/(app)/readiness/ExecuteValidationButton.tsx",
   "app/api/integrations/google-workspace/callback/route.ts",
