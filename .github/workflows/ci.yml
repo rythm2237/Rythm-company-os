@@ -31,6 +31,8 @@ jobs:
       - run: npm run test:phase4
       - run: npm run test:phase4:adapters
       - run: npm run test:phase5:knowledge
+      - run: npm run test:phase5:professional-assessment
+      - run: npm run test:phase5:gtm-benchmark
       - run: npm run test:routing
       - run: npm run test:software-company
       - run: npm run build
