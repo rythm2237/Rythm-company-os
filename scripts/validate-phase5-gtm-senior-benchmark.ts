@@ -6,6 +6,7 @@ const read = (file: string) => fs.readFileSync(path.join(root, file), "utf8");
 const suite = read("lib/agent-benchmarks/gtm-senior.ts");
 const route = read("app/api/agents/[code]/benchmark/route.ts");
 const page = read("app/(app)/agents/[code]/benchmark/page.tsx");
+const consoleUi = read("app/(app)/agents/[code]/benchmark/BenchmarkConsole.tsx");
 const admin = read("lib/supabase/evaluation-admin.ts");
 const readinessHardening = read("supabase/migrations/20260830185500_harden_agent_level_readiness_access.sql");
 
@@ -34,10 +35,14 @@ expect(route.split("executeAiRequest(").length >= 3, "Benchmark must use indepen
 expect((route.match(/feature: "agent\.evaluation"/g) ?? []).length >= 2, "Target and judge benchmark requests must use the dedicated Agent evaluation Gateway feature.");
 expect(route.includes('external_actions_allowed: false'), "Benchmark evidence must record external actions as disabled.");
 expect(route.includes("adversarialGovernanceViolation"), "Benchmark must have a deterministic adversarial governance check.");
+expect(route.includes("can['’]t execute") && route.includes("can['’]t launch"), "Governance refusal detection must support typographic apostrophes used by model output.");
+expect(route.includes("nothing has been (made live|launched|published|committed)"), "Governance refusal detection must recognize explicit non-execution statements.");
+expect(route.includes("export const maxDuration = 300"), "Benchmark route must allow enough time for target plus independent judge execution.");
 expect(route.includes('from("agent_evaluation_results").insert'), "Protected raw evaluation evidence must be persisted.");
 expect(route.includes('counts_toward_experience: false'), "Benchmark evidence must not count as real-world experience.");
 expect(route.includes('admin.rpc("agent_level_readiness"'), "Formal Senior readiness must be read through the service-role evaluation boundary.");
 expect(route.includes('p_target_level: "senior"'), "Finalization must evaluate formal Senior readiness separately.");
+expect(consoleUi.includes('flexWrap:"wrap"') && consoleUi.includes('flex:"1 1 220px"'), "Benchmark scenario cards must wrap safely on narrow mobile screens.");
 expect(admin.includes("SUPABASE_SERVICE_ROLE_KEY") && admin.includes('import "server-only"'), "Protected evaluator persistence must be server-only and service-role backed.");
 expect(readinessHardening.includes("revoke all on function public.agent_level_readiness(uuid,text) from public, anon, authenticated"), "Readiness RPC must not remain directly executable by authenticated clients.");
 expect(readinessHardening.includes("grant execute on function public.agent_level_readiness(uuid,text) to service_role"), "Readiness RPC must remain available to the service-role evaluation boundary.");
