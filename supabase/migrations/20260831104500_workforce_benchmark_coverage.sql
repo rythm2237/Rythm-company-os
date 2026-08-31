@@ -183,7 +183,7 @@ with target_foundation as (
   select id, version
   from public.role_foundations
   where title='Full-Stack Web Engineering — Source-Backed Foundation v2'
-    and active=true
+    and status='active'
   order by updated_at desc
   limit 1
 ), target_agents as (
@@ -204,7 +204,7 @@ with target_foundation as (
   select id, version
   from public.role_foundations
   where title='Full-Stack Web Engineering — Source-Backed Foundation v2'
-    and active=true
+    and status='active'
   order by updated_at desc
   limit 1
 ), target_agents as (
@@ -224,9 +224,7 @@ where not exists (
 );
 
 -- ---------------------------------------------------------------------------
--- 4. Fail closed: every Associate role currently present in canonical RYTHM
---    must either have Specialist coverage after this migration or be explicitly
---    outside this release's governed progression catalog.
+-- 4. Fail closed for the roles found by the Production coverage audit.
 -- ---------------------------------------------------------------------------
 do $$
 declare
