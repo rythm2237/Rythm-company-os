@@ -6,6 +6,13 @@ type Scenario = { id: string; title: string; category: string };
 type ScenarioResult = { scenario_id: string; scenario_title: string; score: number; verdict: string; governance_violation: boolean };
 type FinalSummary = { benchmark_verdict: string; average_score: number; pass_count: number; scenario_count: number; governance_violation_count: number; pass_rate: number };
 
+const RETRYABLE_STATUS = new Set([408, 425, 429, 502, 503, 504]);
+const MAX_NETWORK_ATTEMPTS = 3;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function BenchmarkConsole({
   agentCode,
   scenarios,
@@ -24,19 +31,40 @@ export function BenchmarkConsole({
   const [summary, setSummary] = useState<FinalSummary | null>(null);
   const [readiness, setReadiness] = useState<any>(null);
   const [error, setError] = useState("");
+  const [retryMessage, setRetryMessage] = useState("");
   const inFlight = useRef(false);
   const completed = useMemo(() => new Set(results.map((item) => item.scenario_id)), [results]);
   const resumable = Boolean(runId && results.length > 0 && results.length < scenarios.length);
 
   async function post(body: Record<string, unknown>) {
-    const response = await fetch(`/api/agents/${encodeURIComponent(agentCode)}/benchmark`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || `Benchmark request failed (${response.status}).`);
-    return payload;
+    let lastError: unknown = null;
+    for (let attempt = 1; attempt <= MAX_NETWORK_ATTEMPTS; attempt += 1) {
+      try {
+        const response = await fetch(`/api/agents/${encodeURIComponent(agentCode)}/benchmark`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+          cache: "no-store",
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.ok) {
+          setRetryMessage("");
+          return payload;
+        }
+        const message = payload.error || `Benchmark request failed (${response.status}).`;
+        if (!RETRYABLE_STATUS.has(response.status) || attempt === MAX_NETWORK_ATTEMPTS) {
+          throw new Error(message);
+        }
+        lastError = new Error(message);
+      } catch (cause) {
+        lastError = cause;
+        const isNetworkFailure = cause instanceof TypeError || (cause instanceof Error && /load failed|failed to fetch|network/i.test(cause.message));
+        if (!isNetworkFailure || attempt === MAX_NETWORK_ATTEMPTS) throw cause;
+      }
+      setRetryMessage(`Connection interrupted. Retrying automatically (${attempt}/${MAX_NETWORK_ATTEMPTS - 1})…`);
+      await sleep(1200 * attempt);
+    }
+    throw lastError instanceof Error ? lastError : new Error("Benchmark request failed after automatic retries.");
   }
 
   async function runBenchmark() {
@@ -44,6 +72,7 @@ export function BenchmarkConsole({
     inFlight.current = true;
     setStatus("running");
     setError("");
+    setRetryMessage("");
     setSummary(null);
     setReadiness(null);
     const activeRunId = runId ?? crypto.randomUUID();
@@ -72,6 +101,7 @@ export function BenchmarkConsole({
       setStatus("error");
       setError(cause instanceof Error ? cause.message : "Benchmark execution failed.");
     } finally {
+      setRetryMessage("");
       inFlight.current = false;
     }
   }
@@ -88,7 +118,8 @@ export function BenchmarkConsole({
       </div>
       {resumable?<p className="security-note" style={{marginTop:14}}>An incomplete benchmark run was recovered. Completed scenario evidence will be reused and only missing work will execute again.</p>:null}
       <button onClick={runBenchmark} disabled={status==="running"} style={{marginTop:18}}>{status==="running"?"Benchmark running…":resumable?"Resume benchmark":"Run Senior benchmark"}</button>
-      {status==="running"?<p className="security-note" style={{marginTop:12}}>Running {current==="finalizing"?"final evidence validation":scenarios.find((item)=>item.id===current)?.title??"scenario"}. Keep this page open.</p>:null}
+      {status==="running"?<p className="security-note" style={{marginTop:12}}>Running {current==="finalizing"?"final evidence validation":scenarios.find((item)=>item.id===current)?.title??"scenario"}. You can keep the page open; brief mobile network interruptions are retried automatically.</p>:null}
+      {retryMessage?<p className="security-note" style={{marginTop:12}}>{retryMessage}</p>:null}
       {error?<p className="form-error" style={{marginTop:12}}>{error}</p>:null}
     </article>
 

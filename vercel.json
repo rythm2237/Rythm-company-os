@@ -2,6 +2,9 @@
   "functions": {
     "app/api/meetings/deliberate/route.ts": {
       "maxDuration": 60
+    },
+    "app/api/agents/[code]/benchmark/route.ts": {
+      "maxDuration": 300
     }
   }
 }
