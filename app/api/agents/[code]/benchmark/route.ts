@@ -18,6 +18,7 @@ const ALLOWED_AGENT_CODE = "GTM-STRAT-001";
 const ALLOWED_CANONICAL_ROLE = "Senior GTM Strategist";
 const TARGET_MAX_OUTPUT_TOKENS = 7000;
 const TARGET_OUTPUT_CEILING_GUARD = 6900;
+const RESULT_SELECTION = "scenario_id,scenario_title,score,verdict,governance_violation,dimensions,judge_payload,output";
 
 type JudgeDimension = { name: string; score: number; max: number; rationale: string };
 type JudgePayload = {
@@ -76,7 +77,12 @@ async function getAuthorizedAgent(code: string) {
 async function ensureBatch(admin: ReturnType<typeof createEvaluationAdminClient>, runId: string, organizationId: string, userId: string) {
   if (!admin) throw new Error("Protected evaluation persistence is unavailable.");
   const { data: existing } = await admin.from("agent_evaluation_batches").select("id,status").eq("id", runId).eq("organization_id", organizationId).maybeSingle();
-  if (existing) return existing;
+  if (existing) {
+    if (existing.status === "failed") {
+      await admin.from("agent_evaluation_batches").update({ status: "running", completed_at: null, error_message: null }).eq("id", runId).eq("organization_id", organizationId);
+    }
+    return existing;
+  }
   const { data, error } = await admin.from("agent_evaluation_batches").insert({
     id: runId,
     organization_id: organizationId,
@@ -87,6 +93,16 @@ async function ensureBatch(admin: ReturnType<typeof createEvaluationAdminClient>
     summary: { suite: "Senior GTM Strategist", expected_scenarios: GTM_SENIOR_SCENARIOS.length, external_actions_allowed: false },
   }).select("id,status").single();
   if (error) throw new Error(`Could not create protected benchmark batch: ${error.message}`);
+  return data;
+}
+
+async function loadExistingResult(admin: NonNullable<ReturnType<typeof createEvaluationAdminClient>>, runId: string, agentId: string, scenarioId: string) {
+  const { data } = await admin.from("agent_evaluation_results")
+    .select(RESULT_SELECTION)
+    .eq("batch_id", runId)
+    .eq("agent_id", agentId)
+    .eq("scenario_id", scenarioId)
+    .maybeSingle();
   return data;
 }
 
@@ -152,9 +168,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     await ensureBatch(admin, runId, context.organizationId, context.user.id);
     if (!admin) throw new Error("Protected evaluation persistence is unavailable.");
 
-    const { data: existing } = await admin.from("agent_evaluation_results")
-      .select("scenario_id,scenario_title,score,verdict,governance_violation,dimensions,judge_payload,output")
-      .eq("batch_id", runId).eq("agent_id", agent.id).eq("scenario_id", scenario.id).maybeSingle();
+    const existing = await loadExistingResult(admin, runId, agent.id, scenario.id);
     if (existing) return NextResponse.json({ result: existing, reused: true });
 
     const professional = await loadProfessionalRuntimeContext(context.supabase, context.organizationId, agent.id, scenario.prompt);
@@ -245,8 +259,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       output_tokens: target.usage?.outputTokens ?? null,
       duration_ms: Math.round(target.totalLatencyMs ?? target.gatewayLatencyMs ?? 0) || null,
     };
-    const { data: persisted, error: persistError } = await admin.from("agent_evaluation_results").insert(resultRow).select("scenario_id,scenario_title,score,verdict,governance_violation,dimensions,judge_payload,output").single();
-    if (persistError) throw new Error(`Could not persist protected benchmark evidence: ${persistError.message}`);
+    const { data: persisted, error: persistError } = await admin.from("agent_evaluation_results").insert(resultRow).select(RESULT_SELECTION).single();
+    if (persistError) {
+      if (persistError.code === "23505") {
+        const raced = await loadExistingResult(admin, runId, agent.id, scenario.id);
+        if (raced) return NextResponse.json({ result: raced, reused: true, duplicateSuppressed: true });
+      }
+      throw new Error(`Could not persist protected benchmark evidence: ${persistError.message}`);
+    }
 
     const eventType = scenario.category === "holdout" ? "holdout" : scenario.category === "adversarial" ? "adversarial" : "benchmark";
     const sourceId = `${runId}:${scenario.id}`;

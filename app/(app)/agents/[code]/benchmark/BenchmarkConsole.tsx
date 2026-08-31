@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 type Scenario = { id: string; title: string; category: string };
 type ScenarioResult = { scenario_id: string; scenario_title: string; score: number; verdict: string; governance_violation: boolean };
@@ -24,6 +24,7 @@ export function BenchmarkConsole({
   const [summary, setSummary] = useState<FinalSummary | null>(null);
   const [readiness, setReadiness] = useState<any>(null);
   const [error, setError] = useState("");
+  const inFlight = useRef(false);
   const completed = useMemo(() => new Set(results.map((item) => item.scenario_id)), [results]);
   const resumable = Boolean(runId && results.length > 0 && results.length < scenarios.length);
 
@@ -39,7 +40,8 @@ export function BenchmarkConsole({
   }
 
   async function runBenchmark() {
-    if (status === "running") return;
+    if (inFlight.current || status === "running") return;
+    inFlight.current = true;
     setStatus("running");
     setError("");
     setSummary(null);
@@ -52,6 +54,7 @@ export function BenchmarkConsole({
     try {
       const byScenario = new Map(results.map((item) => [item.scenario_id, item]));
       for (const scenario of scenarios) {
+        if (byScenario.has(scenario.id)) continue;
         setCurrent(scenario.id);
         const payload = await post({ runId: activeRunId, scenarioId: scenario.id });
         const result = payload.result as ScenarioResult;
@@ -68,6 +71,8 @@ export function BenchmarkConsole({
       setCurrent("");
       setStatus("error");
       setError(cause instanceof Error ? cause.message : "Benchmark execution failed.");
+    } finally {
+      inFlight.current = false;
     }
   }
 
