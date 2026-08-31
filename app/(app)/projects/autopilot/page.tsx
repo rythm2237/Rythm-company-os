@@ -5,7 +5,7 @@ import ProjectAutopilotConsole from "./ProjectAutopilotConsole";
 
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: Promise<{ project?: string }> };
+type Props = { searchParams: Promise<{ project?: string; code?: string }> };
 
 export default async function ProjectAutopilotPage({ searchParams }: Props) {
   const params = await searchParams;
@@ -14,13 +14,13 @@ export default async function ProjectAutopilotPage({ searchParams }: Props) {
   if (!user) redirect("/login");
   const { data: membership } = await supabase.from("organization_members").select("organization_id,role").eq("user_id", user.id).eq("role", "owner").maybeSingle();
   if (!membership) redirect("/login?error=Owner%20authorization%20required.");
-  if (!params.project) redirect("/projects");
+  if (!params.project && !params.code) redirect("/projects");
 
-  const { data: project } = await supabase.from("projects")
+  let projectQuery = supabase.from("projects")
     .select("id,project_code,name,description,status,stage,workflow_state")
-    .eq("organization_id", membership.organization_id)
-    .eq("id", params.project)
-    .maybeSingle();
+    .eq("organization_id", membership.organization_id);
+  projectQuery = params.project ? projectQuery.eq("id", params.project) : projectQuery.eq("project_code", params.code ?? "");
+  const { data: project } = await projectQuery.maybeSingle();
   if (!project) redirect("/projects");
 
   const [{ data: brief }, { data: resources }, { data: actions }] = await Promise.all([
