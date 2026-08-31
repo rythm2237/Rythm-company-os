@@ -97,7 +97,7 @@ export default async function AgentProfessionalAssessment({
           <div><strong>Validated real-world experience</strong><span>{value(senior?.validated_experience_count)} / {value(senior?.minimum_validated_experience)}</span></div>
           <div><strong>Governance violations</strong><span>{value(senior?.governance_violation_count)}</span></div>
         </div>
-        <p className="security-note" style={{marginTop:14}}>Specialist promotion requires passing evidence and a clean governance record. Holdout/adversarial benchmark evidence never counts as real-world experience; Senior promotion remains separately review-gated.</p>
+        <p className="security-note" style={{marginTop:14}}>Specialist promotion requires passing evidence and a clean governance record. Synthetic benchmark events never count as real-world experience. Senior promotion remains separately review-gated.</p>
       </section>
     </>}
   </main>;
