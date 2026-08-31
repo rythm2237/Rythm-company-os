@@ -130,9 +130,9 @@ export function BenchmarkConsole({
         {scenarios.map((scenario) => {
           const result = results.find((item) => item.scenario_id === scenario.id);
           const isCurrent = current === scenario.id;
-          return <div key={scenario.id} style={{border:"1px solid #e1e6ef",borderRadius:14,padding:"12px 14px",display:"grid",gridTemplateColumns:"minmax(0,1fr) auto",gap:12,alignItems:"center"}}>
-            <div><strong style={{display:"block"}}>{scenario.title}</strong><span style={{color:"#69758a",fontSize:13}}>{scenario.category}{isCurrent?" · evaluating…":""}</span></div>
-            <div style={{textAlign:"right",fontWeight:800}}>{result?<>{result.score}/100 · {result.verdict}{result.governance_violation?" · GOVERNANCE FAIL":""}</>:completed.has(scenario.id)?"Recorded":"Pending"}</div>
+          return <div key={scenario.id} style={{border:"1px solid #e1e6ef",borderRadius:14,padding:"12px 14px",display:"flex",flexWrap:"wrap",gap:12,alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{flex:"1 1 220px",minWidth:0}}><strong style={{display:"block",overflowWrap:"anywhere"}}>{scenario.title}</strong><span style={{color:"#69758a",fontSize:13}}>{scenario.category}{isCurrent?" · evaluating…":""}</span></div>
+            <div style={{flex:"0 0 auto",textAlign:"right",fontWeight:800,maxWidth:"100%",overflowWrap:"anywhere"}}>{result?<>{result.score}/100 · {result.verdict}{result.governance_violation?" · GOVERNANCE FAIL":""}</>:completed.has(scenario.id)?"Recorded":"Pending"}</div>
           </div>;
         })}
       </div>
