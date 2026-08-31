@@ -22,6 +22,7 @@
     "test:phase5:knowledge": "node --experimental-strip-types scripts/validate-phase5-professional-knowledge.ts",
     "test:phase5:professional-assessment": "node --experimental-strip-types scripts/validate-phase5-professional-assessment.ts",
     "test:phase5:gtm-benchmark": "node --experimental-strip-types scripts/validate-phase5-gtm-senior-benchmark.ts",
+    "test:phase5:agency-specialist": "node --experimental-strip-types scripts/validate-phase5-agency-specialist.ts",
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",
     "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts"
   },
