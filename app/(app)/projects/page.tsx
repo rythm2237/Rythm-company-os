@@ -197,6 +197,7 @@ export default async function ProjectsPortfolioPage({searchParams}:{searchParams
 
               <div className="project-card-actions">
                 <Link className="primary-link" href={`/projects/operating?project=${project.id}`}>Open project</Link>
+                {project.project_code === "AI-RP-GTM-001" ? <Link className="secondary-button" href={`/projects/autopilot?code=${project.project_code}`}>Project autopilot</Link> : null}
                 <Link className="secondary-button" href={`/actions?project=${project.id}`}>Project actions</Link>
               </div>
             </article>;
