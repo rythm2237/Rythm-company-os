@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { GTM_SENIOR_SCENARIOS, GTM_SENIOR_SUITE_VERSION } from "@/lib/agent-benchmarks/gtm-senior";
 import { createEvaluationAdminClient } from "@/lib/supabase/evaluation-admin";
@@ -9,13 +8,25 @@ export const dynamic = "force-dynamic";
 
 export default async function AgentBenchmarkPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const { supabase, organizationId } = await requireOwnerOrganizationContext();
+  const context = await requireOwnerOrganizationContext();
+  const { supabase, organizationId } = context;
   const { data: agent } = await supabase.from("agents")
     .select("id,agent_code,display_name,name,role_title,enabled,canonical_role")
     .eq("organization_id", organizationId)
     .ilike("agent_code", code)
     .maybeSingle();
-  if (!agent || agent.agent_code !== "GTM-STRAT-001" || agent.canonical_role !== "Senior GTM Strategist") notFound();
+
+  if (!agent || agent.agent_code !== "GTM-STRAT-001" || agent.canonical_role !== "Senior GTM Strategist") {
+    return <main className="command-shell">
+      <header className="command-header"><div><p className="eyebrow">PROFESSIONAL BENCHMARK</p><h1>Benchmark unavailable in this company</h1><p className="subtitle">The requested GTM Agent is not part of the currently active organization: {context.organization.name}.</p></div></header>
+      <section className="panel">
+        <h2>Open the Agent from the active workforce</h2>
+        <p>Benchmark routes are organization-scoped. Use the workforce directory to open the GTM Strategist that belongs to this company. If it is not listed there, the Agent has not been provisioned into this organization.</p>
+        <p><Link className="secondary-button" href="/agents">Open workforce directory</Link></p>
+      </section>
+    </main>;
+  }
+
   const { data: standing } = await supabase.from("agent_asset_profiles")
     .select("current_level,level_score,certification_status,last_assessed_at")
     .eq("organization_id", organizationId)
