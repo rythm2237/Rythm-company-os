@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import type { AgentProvider } from "@/lib/agent-builder";
-import { escalationDecision, routeRequest } from "@/lib/ai/adaptive-router";
+import { escalationDecision, routeRequestV2 } from "@/lib/ai/adaptive-router";
 import type { AiGatewayAttachment, AiProviderAdapter, ProviderExecutionInput, ProviderExecutionResult, ProviderInstructionInput, ProviderUsage } from "@/lib/ai/gateway-contracts";
 import type { AgentRoutingPolicy, ModelTier, RoutingDecision, TenantAiPolicy } from "@/lib/ai/routing-types";
 
@@ -80,7 +80,7 @@ export async function runAgentDetailed(input: RunAgentInput): Promise<RunAgentRe
   let cumulativeProviderLatencyMs = 0;
   const fixedModel = input.agentPolicy?.modelPolicy?.mode === "fixed";
   try {
-    decision = input.authoritativeDecision ?? routeRequest({
+    decision = input.authoritativeDecision ?? routeRequestV2({
       prompt: input.prompt,
       requestId: input.requestId,
       conversationLanguage: input.conversationLanguage,
@@ -184,7 +184,7 @@ export async function runAgentDetailed(input: RunAgentInput): Promise<RunAgentRe
       if (!canEscalateExecutionError(error)) throw error;
       const next = escalationDecision(current, input.agentPolicy);
       if (!next) throw error;
-      current = routeRequest({
+      current = routeRequestV2({
         prompt: input.prompt,
         requestId: current.requestId,
         conversationLanguage: input.conversationLanguage,
@@ -219,39 +219,6 @@ async function generateWithOpenAI(input: GenerateSystemInstructionInput) {
   }, { signal: timeout(input.timeoutMs) });
   const text = response.output_text?.trim();
   if (!text) throw new Error("OpenAI returned an empty Agent instruction.");
-  return text;
-}
-
-async function generateWithAnthropic(input: GenerateSystemInstructionInput) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("Anthropic is not configured.");
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: input.model, max_tokens: 2600, system: OPTIMIZER_SYSTEM, messages: [{ role: "user", content: input.blueprint }] }),
-    signal: timeout(input.timeoutMs),
-  });
-  if (!response.ok) throw new Error(`Anthropic request failed (${response.status}).`);
-  const data = await response.json() as { content?: Array<{ type?: string; text?: string }> };
-  const text = (data.content ?? []).filter((item) => item.type === "text").map((item) => item.text ?? "").join("\n").trim();
-  if (!text) throw new Error("Anthropic returned an empty Agent instruction.");
-  return text;
-}
-
-async function generateWithGemini(input: GenerateSystemInstructionInput) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("Gemini is not configured.");
-  const model = encodeURIComponent(input.model);
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify({ systemInstruction: { parts: [{ text: OPTIMIZER_SYSTEM }] }, contents: [{ role: "user", parts: [{ text: input.blueprint }] }], generationConfig: { maxOutputTokens: 2600, temperature: 0.2 } }),
-    signal: timeout(input.timeoutMs),
-  });
-  if (!response.ok) throw new Error(`Gemini request failed (${response.status}).`);
-  const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  const text = (data.candidates?.[0]?.content?.parts ?? []).map((part) => part.text ?? "").join("\n").trim();
-  if (!text) throw new Error("Gemini returned an empty Agent instruction.");
   return text;
 }
 
@@ -307,85 +274,21 @@ async function runWithOpenAI(input: ConcreteRunInput) {
   } satisfies ProviderExecutionResult;
 }
 
-function textualAttachmentContext(files: AgentAttachmentInput[] = []) {
-  return files.filter((file) => /^(text\/|application\/(json|xml))/.test(file.mimeType) || /\.(csv|txt|md|json|xml)$/i.test(file.filename)).map((file) => {
-    try { return `\n\nAttachment ${file.filename}:\n${Buffer.from(file.base64, "base64").toString("utf8").slice(0, 18000)}`; }
-    catch { return ""; }
-  }).join("");
-}
-
-async function runWithAnthropic(input: ConcreteRunInput) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("Anthropic is not configured.");
-  const prompt = `${input.prompt}${textualAttachmentContext(input.attachments)}`;
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: input.model, max_tokens: Math.max(1, Math.min(16_000, input.maxOutputTokens ?? 3200)), system: input.systemInstructions, messages: [{ role: "user", content: prompt }] }),
-    signal: timeout(input.timeoutMs),
-  });
-  if (!response.ok) throw new Error(`Anthropic request failed (${response.status}).`);
-  const data = await response.json() as { model?: string; usage?: { input_tokens?: number; output_tokens?: number }; content?: Array<{ type?: string; text?: string }> };
-  const text = (data.content ?? []).filter((item) => item.type === "text").map((item) => item.text ?? "").join("\n").trim();
-  if (!text) throw new Error("Anthropic returned an empty Agent response.");
-  return {
-    outputText: text,
-    actualModel: data.model ?? input.model,
-    usage: data.usage ? { inputTokens: data.usage.input_tokens, outputTokens: data.usage.output_tokens } : undefined,
-    providerLatencyMs: 0,
-  } satisfies ProviderExecutionResult;
-}
-
-async function runWithGemini(input: ConcreteRunInput) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("Gemini is not configured.");
-  const model = encodeURIComponent(input.model);
-  const parts: Array<Record<string, unknown>> = [{ text: input.prompt }];
-  for (const file of input.attachments ?? []) if (file.mimeType.startsWith("image/") || file.mimeType === "application/pdf") parts.push({ inlineData: { mimeType: file.mimeType, data: file.base64 } });
-  const textFallback = textualAttachmentContext(input.attachments);
-  if (textFallback) parts.push({ text: textFallback });
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify({ systemInstruction: { parts: [{ text: input.systemInstructions }] }, contents: [{ role: "user", parts }], generationConfig: { maxOutputTokens: Math.max(1, Math.min(16_000, input.maxOutputTokens ?? 3200)), temperature: 0.35 } }),
-    signal: timeout(input.timeoutMs),
-  });
-  if (!response.ok) throw new Error(`Gemini request failed (${response.status}).`);
-  const data = await response.json() as {
-    modelVersion?: string;
-    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; cachedContentTokenCount?: number; thoughtsTokenCount?: number };
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-  const text = (data.candidates?.[0]?.content?.parts ?? []).map((part) => part.text ?? "").join("\n").trim();
-  if (!text) throw new Error("Gemini returned an empty Agent response.");
-  return {
-    outputText: text,
-    actualModel: data.modelVersion ?? input.model,
-    usage: data.usageMetadata ? {
-      inputTokens: data.usageMetadata.promptTokenCount,
-      cachedTokens: data.usageMetadata.cachedContentTokenCount,
-      outputTokens: data.usageMetadata.candidatesTokenCount,
-      reasoningTokens: data.usageMetadata.thoughtsTokenCount,
-    } : undefined,
-    providerLatencyMs: 0,
-  } satisfies ProviderExecutionResult;
-}
-
 const AGENT_PROVIDER_ADAPTERS: Record<AgentProvider, AiProviderAdapter> = {
   openai: {
     id: "openai",
-    generateSystemInstruction: (input: ProviderInstructionInput) => generateWithOpenAI(input),
+    generateSystemInstruction: (input: ProviderInstructionInput) => generateSystemInstruction(input as GenerateSystemInstructionInput),
     execute: (input: ProviderExecutionInput) => runWithOpenAI(input as ConcreteRunInput),
   },
   anthropic: {
     id: "anthropic",
-    generateSystemInstruction: (input: ProviderInstructionInput) => generateWithAnthropic(input),
-    execute: (input: ProviderExecutionInput) => runWithAnthropic(input as ConcreteRunInput),
+    generateSystemInstruction: async () => { throw new Error("Anthropic is not configured for system instruction generation in the OpenAI-only Production policy."); },
+    execute: async () => { throw new Error("Anthropic is not enabled by the OpenAI-only Production policy."); },
   },
   google: {
     id: "google",
-    generateSystemInstruction: (input: ProviderInstructionInput) => generateWithGemini(input),
-    execute: (input: ProviderExecutionInput) => runWithGemini(input as ConcreteRunInput),
+    generateSystemInstruction: async () => { throw new Error("Google is not configured for system instruction generation in the OpenAI-only Production policy."); },
+    execute: async () => { throw new Error("Google is not enabled by the OpenAI-only Production policy."); },
   },
 };
 
