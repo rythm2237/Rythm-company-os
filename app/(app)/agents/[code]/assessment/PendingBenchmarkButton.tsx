@@ -2,12 +2,12 @@
 
 import { useFormStatus } from "react-dom";
 
-export default function PendingBenchmarkButton() {
+export default function PendingBenchmarkButton({ label = "Run benchmark" }: { label?: string }) {
   const { pending } = useFormStatus();
 
   return <div aria-live="polite">
     <button type="submit" disabled={pending} aria-disabled={pending} style={{opacity:pending?.72:1,cursor:pending?"wait":"pointer",width:"100%"}}>
-      {pending ? "Benchmark running…" : "Run benchmark"}
+      {pending ? "Benchmark running…" : label}
     </button>
     {pending ? <div style={{marginTop:12}}>
       <div style={{height:7,borderRadius:999,background:"#e7ebf4",overflow:"hidden",position:"relative"}}>
