@@ -37,12 +37,15 @@ export default async function AgentProfessionalAssessment({
   const { supabase, organizationId, role } = await requireOrganizationContext();
   const { data: agent } = await supabase
     .from("agents")
-    .select("id,agent_code,display_name,name,role_title,canonical_role,role_family,enabled")
+    .select("id,agent_code,display_name,name,role_title,canonical_role,role_family,enabled,agent_asset_profiles(current_level,level_score,certification_status)")
     .eq("organization_id", organizationId)
     .ilike("agent_code", code)
     .maybeSingle();
   if (!agent) notFound();
 
+  const rawAsset=(agent as any).agent_asset_profiles;
+  const asset=Array.isArray(rawAsset)?rawAsset[0]??null:rawAsset??null;
+  const currentLevel=String(asset?.current_level??"associate");
   const summary = isAgencySpecialistRole(agent.canonical_role)
     ? await getAgencySpecialistAssessmentSummary({ organizationId, agentId: agent.id, canonicalRole: agent.canonical_role })
     : await getProfessionalAssessmentSummary({ organizationId, agentId: agent.id, canonicalRole: agent.canonical_role });
@@ -65,9 +68,14 @@ export default async function AgentProfessionalAssessment({
     {query.message ? <p className="form-success">{query.message}</p> : null}
 
     {!summary ? <section className="panel">
-      <p className="label">Assessment catalog</p>
-      <h2>No role-specific benchmark published yet</h2>
-      <p className="security-note">RYTHM will not infer a professional level from the Agent title. A source-backed benchmark must exist for the canonical role first.</p>
+      <p className="label">Assessment status</p>
+      {currentLevel!=="associate" ? <>
+        <h2>Already certified at {currentLevel} level</h2>
+        <p className="security-note">This Agent does not need the Associate → Specialist benchmark. Its current certified level is {currentLevel}{asset?.level_score!=null?` with a ${asset.level_score}/100 level score`:""}. A future benchmark is only required when a governed promotion path for the next level is published.</p>
+      </> : <>
+        <h2>No role-specific benchmark published yet</h2>
+        <p className="security-note">RYTHM will not infer a professional level from the Agent title. A source-backed benchmark must exist for the canonical role first.</p>
+      </>}
     </section> : <>
       <section className="panel">
         <p className="label">{suiteLabel.toUpperCase()}</p>
