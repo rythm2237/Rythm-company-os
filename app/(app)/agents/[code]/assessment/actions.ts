@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { runNextProfessionalBenchmark } from "@/lib/agent-professional-assessment";
-import { isAgencySpecialistRole, runAgencySpecialistBenchmark } from "@/lib/agency-specialist-assessment";
+import { isAgencyProgressionRole, runAgencyNextLevelBenchmark } from "@/lib/agency-level-progression";
 
 export async function runProfessionalBenchmark(formData: FormData) {
   const context = await requireOwnerOrganizationContext();
@@ -28,13 +28,14 @@ export async function runProfessionalBenchmark(formData: FormData) {
       userId: context.user.id,
       organizationName: context.organization.name,
     };
-    const result = isAgencySpecialistRole(agent.canonical_role)
-      ? await runAgencySpecialistBenchmark(assessmentContext, agentCode)
+    const result = isAgencyProgressionRole(agent.canonical_role)
+      ? await runAgencyNextLevelBenchmark(assessmentContext, agentCode)
       : await runNextProfessionalBenchmark(assessmentContext, agentCode);
 
     const promotion = result.promotion?.promoted ? ` · promoted to ${result.promotion.target}` : "";
     resultMessage = `${result.scenario}: ${result.score}/100 · ${result.verdict}${promotion}`;
     resultStatus = String(result.verdict).toUpperCase() === "PASS" ? "pass" : "fail";
+    revalidatePath("/agents");
     revalidatePath(`/agents/${agentCode.toLowerCase()}`);
     revalidatePath(`/agents/${agentCode.toLowerCase()}/assessment`);
   } catch (error) {

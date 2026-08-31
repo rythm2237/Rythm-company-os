@@ -63,7 +63,7 @@ assert(assessmentActions.includes("requireOwnerOrganizationContext"), "benchmark
 assert(assessmentActions.includes("runNextProfessionalBenchmark"), "assessment action is not connected to the governed runner");
 assert(assessmentPage.includes("PendingBenchmarkButton") && pendingControl.includes("Benchmark running…"), "professional assessment execution control is missing");
 assert(pendingControl.includes("disabled={pending}"), "professional assessment must disable duplicate submissions while running");
-assert(assessmentPage.includes("never count as real-world experience"), "UI must disclose benchmark/experience separation");
+assert(assessmentPage.includes("never count as validated real-world experience") || assessmentPage.includes("never count as real-world experience"), "UI must disclose benchmark/experience separation");
 assert(assessmentPage.includes("cannot publish, spend money, change pricing"), "UI must disclose execution boundaries");
 
 console.log("Phase 5 professional assessment validation passed.");
