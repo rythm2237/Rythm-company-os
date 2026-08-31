@@ -4,6 +4,7 @@ import { requireOrganizationContext } from "@/lib/auth/organization-context";
 import { getProfessionalAssessmentSummary } from "@/lib/agent-professional-assessment";
 import { getAgencySpecialistAssessmentSummary, isAgencySpecialistRole } from "@/lib/agency-specialist-assessment";
 import { runProfessionalBenchmark } from "./actions";
+import PendingBenchmarkButton from "./PendingBenchmarkButton";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export default async function AgentProfessionalAssessment({
   searchParams,
 }: {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ error?: string; message?: string }>;
+  searchParams: Promise<{ error?: string; message?: string; status?: string }>;
 }) {
   const { code } = await params;
   const query = await searchParams;
@@ -53,6 +54,7 @@ export default async function AgentProfessionalAssessment({
   const specialist = summary?.specialistReadiness as any;
   const senior = summary?.seniorReadiness as any;
   const suiteLabel = (summary as any)?.suiteLabel ?? "GTM Professional Benchmark";
+  const lastFailed = String((summary as any)?.lastResult?.verdict ?? "").toUpperCase() === "FAIL";
 
   return <main className="command-shell">
     <header className="command-header">
@@ -65,7 +67,7 @@ export default async function AgentProfessionalAssessment({
     </header>
 
     {query.error ? <p className="form-error">{query.error}</p> : null}
-    {query.message ? <p className="form-success">{query.message}</p> : null}
+    {query.message ? <p className={query.status === "fail" ? "form-error" : "form-success"}>{query.message}</p> : null}
 
     {!summary ? <section className="panel">
       <p className="label">Assessment status</p>
@@ -87,11 +89,12 @@ export default async function AgentProfessionalAssessment({
           <div><strong>Next scenario</strong><span>{summary.nextScenario ? `${summary.nextScenario.title} · ${summary.nextScenario.type}` : "Suite complete"}</span></div>
           <div><strong>Runtime</strong><span>{agent.enabled ? "Enabled" : "Paused"}</span></div>
         </div>
+        {lastFailed ? <p className="security-note" style={{marginTop:14}}>The last attempt remains in the audit trail. After the Agent is corrected, a new attempt can supersede it for current readiness without deleting historical evidence.</p> : null}
         <p className="security-note" style={{marginTop:14}}>Benchmark runs are internal evaluation only. They cannot publish, spend money, change pricing, create contractual commitments or expand Agent runtime authority.</p>
         {owner && summary.nextScenario ? <div style={{marginTop:18}}>
           {agent.enabled ? <form action={runProfessionalBenchmark}>
             <input type="hidden" name="agentCode" value={agent.agent_code}/>
-            <button type="submit">Run next benchmark scenario</button>
+            <PendingBenchmarkButton label={lastFailed ? "Retry benchmark" : "Run benchmark"}/>
           </form> : <p className="security-note">Enable the Agent runtime from its profile before running the next benchmark.</p>}
         </div> : null}
       </section>
