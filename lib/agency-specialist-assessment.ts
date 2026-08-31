@@ -19,6 +19,10 @@ const SUPPORTED_ROLES = new Set([
   "Graphic Designer",
   "Finance Operations Manager",
   "Legal & Compliance Advisor",
+  "Customer Support & Communications Manager",
+  "People & AI Workforce Operations Manager",
+  "Full-Stack Web Developer",
+  "Executive Orchestrator & AI Chief of Staff",
 ]);
 
 type AssessmentContext = {
@@ -88,7 +92,7 @@ async function loadAgent(context: AssessmentContext, agentCode: string) {
     .maybeSingle();
   if (error || !agent) throw new Error("Agent is not part of this company.");
   if (!agent.enabled) throw new Error("Enable the Agent runtime before running a Specialist benchmark.");
-  if (!agent.canonical_role || !SUPPORTED_ROLES.has(agent.canonical_role)) throw new Error("No Advertising Agency Specialist benchmark is published for this role yet.");
+  if (!agent.canonical_role || !SUPPORTED_ROLES.has(agent.canonical_role)) throw new Error("No governed Specialist benchmark is published for this role yet.");
   return agent;
 }
 
@@ -348,7 +352,7 @@ export async function getAgencySpecialistAssessmentSummary(input: { organization
   const lastResult = (results ?? [])[0] ?? null;
   return {
     suiteVersion: AGENCY_SPECIALIST_SUITE_VERSION,
-    suiteLabel: "Advertising Agency Specialist Benchmark",
+    suiteLabel: "Professional Specialist Benchmark",
     completed: currentResults.length,
     passed: currentResults.filter((item: any) => item.verdict === "PASS").length,
     total: scenarios.length,
