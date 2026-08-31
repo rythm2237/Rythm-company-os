@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireOrganizationContext } from "@/lib/auth/organization-context";
 import { getProfessionalAssessmentSummary } from "@/lib/agent-professional-assessment";
+import { getAgencySpecialistAssessmentSummary, isAgencySpecialistRole } from "@/lib/agency-specialist-assessment";
 import { runProfessionalBenchmark } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -42,14 +43,13 @@ export default async function AgentProfessionalAssessment({
     .maybeSingle();
   if (!agent) notFound();
 
-  const summary = await getProfessionalAssessmentSummary({
-    organizationId,
-    agentId: agent.id,
-    canonicalRole: agent.canonical_role,
-  });
+  const summary = isAgencySpecialistRole(agent.canonical_role)
+    ? await getAgencySpecialistAssessmentSummary({ organizationId, agentId: agent.id, canonicalRole: agent.canonical_role })
+    : await getProfessionalAssessmentSummary({ organizationId, agentId: agent.id, canonicalRole: agent.canonical_role });
   const owner = role === "owner";
   const specialist = summary?.specialistReadiness as any;
   const senior = summary?.seniorReadiness as any;
+  const suiteLabel = (summary as any)?.suiteLabel ?? "GTM Professional Benchmark";
 
   return <main className="command-shell">
     <header className="command-header">
@@ -70,9 +70,9 @@ export default async function AgentProfessionalAssessment({
       <p className="security-note">RYTHM will not infer a professional level from the Agent title. A source-backed benchmark must exist for the canonical role first.</p>
     </section> : <>
       <section className="panel">
-        <p className="label">GTM PROFESSIONAL BENCHMARK</p>
+        <p className="label">{suiteLabel.toUpperCase()}</p>
         <h2>{summary.completed}/{summary.total} scenarios completed · {summary.passed} passed</h2>
-        <p style={{color:"#596579",lineHeight:1.7}}>This suite evaluates domain judgment, channel experimentation, a holdout problem and an adversarial governance scenario. The suite is backed by {summary.sourceCount} verified professional sources.</p>
+        <p style={{color:"#596579",lineHeight:1.7}}>This role-specific suite evaluates professional judgment against a source-backed scenario and an independent judge. The current catalog is backed by {summary.sourceCount} verified professional sources.</p>
         <div className="compact-list">
           <div><strong>Suite version</strong><span>{summary.suiteVersion}</span></div>
           <div><strong>Last score</strong><span>{summary.lastResult ? `${value(summary.lastResult.score)}/100 · ${summary.lastResult.verdict}` : "Not run"}</span></div>
@@ -97,7 +97,7 @@ export default async function AgentProfessionalAssessment({
           <div><strong>Validated real-world experience</strong><span>{value(senior?.validated_experience_count)} / {value(senior?.minimum_validated_experience)}</span></div>
           <div><strong>Governance violations</strong><span>{value(senior?.governance_violation_count)}</span></div>
         </div>
-        <p className="security-note" style={{marginTop:14}}>Holdout and adversarial benchmark passes are competency evidence only and never count as real-world experience. Senior promotion requires real work that is separately validated by a human reviewer.</p>
+        <p className="security-note" style={{marginTop:14}}>Specialist promotion requires passing evidence and a clean governance record. Holdout/adversarial benchmark evidence never counts as real-world experience; Senior promotion remains separately review-gated.</p>
       </section>
     </>}
   </main>;
