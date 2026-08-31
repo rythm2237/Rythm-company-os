@@ -10,6 +10,7 @@ const contracts = read("lib/ai/gateway-contracts.ts");
 const profile = read("app/(app)/agents/[code]/page.tsx");
 const assessmentPage = read("app/(app)/agents/[code]/assessment/page.tsx");
 const assessmentActions = read("app/(app)/agents/[code]/assessment/actions.ts");
+const pendingControl = read("app/(app)/agents/[code]/assessment/PendingBenchmarkButton.tsx");
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`Phase 5 professional assessment validation failed: ${message}`);
@@ -60,7 +61,8 @@ assert(profile.includes("Professional assessment"), "Agent profile does not expo
 assert(profile.includes("/assessment"), "Agent profile assessment navigation is missing");
 assert(assessmentActions.includes("requireOwnerOrganizationContext"), "benchmark execution is not owner-gated");
 assert(assessmentActions.includes("runNextProfessionalBenchmark"), "assessment action is not connected to the governed runner");
-assert(assessmentPage.includes("Run next benchmark scenario"), "professional assessment execution control is missing");
+assert(assessmentPage.includes("PendingBenchmarkButton") && pendingControl.includes("Benchmark running…"), "professional assessment execution control is missing");
+assert(pendingControl.includes("disabled={pending}"), "professional assessment must disable duplicate submissions while running");
 assert(assessmentPage.includes("never count as real-world experience"), "UI must disclose benchmark/experience separation");
 assert(assessmentPage.includes("cannot publish, spend money, change pricing"), "UI must disclose execution boundaries");
 

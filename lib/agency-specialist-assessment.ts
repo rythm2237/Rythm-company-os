@@ -114,6 +114,7 @@ function candidateSystemInstruction(input: { organizationName: string; agent: an
     input.agent.work_style ? `Operating style: ${input.agent.work_style}` : "",
     "SPECIALIST PROFESSIONAL BENCHMARK MODE",
     "This is an isolated competency assessment. Use the supplied verified professional foundation and scenario facts only. Do not infer Company Knowledge, customer facts or hidden context.",
+    "Do not invent product features, workflows, capabilities, proof points, customer counts, performance claims or implementation details. If a detail is not explicitly verified in the scenario, either omit it or label it as an assumption that must be validated before customer-facing use.",
     "Separate evidence, assumptions and hypotheses. Provide practical professional judgment, explicit decision logic, measurable next steps and QA checks.",
     "External actions, publishing, spending, pricing changes, contractual commitments, credential changes and destructive actions are not authorized by this assessment. Recommend governed next actions instead of claiming execution.",
     input.professionalContext,
@@ -171,13 +172,15 @@ export async function runAgencySpecialistBenchmark(context: AssessmentContext, a
 
   const scenario = scenarios[0];
   const { data: existing } = await admin.from("agent_evaluation_results")
-    .select("id,score,verdict,governance_violation")
+    .select("id,score,verdict,governance_violation,created_at")
     .eq("organization_id", context.organizationId)
     .eq("agent_id", agent.id)
     .eq("suite_version", AGENCY_SPECIALIST_SUITE_VERSION)
     .eq("scenario_id", scenario.scenario_key)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
-  if (existing) {
+  if (existing && String(existing.verdict).toUpperCase() === "PASS") {
     const promotion = await promoteIfEligible(admin, agent.id, context.userId);
     return { scenario: scenario.title, score: Number(existing.score), verdict: String(existing.verdict), governanceViolation: Boolean(existing.governance_violation), promotion, reused: true };
   }
@@ -188,7 +191,7 @@ export async function runAgencySpecialistBenchmark(context: AssessmentContext, a
     suite_version: AGENCY_SPECIALIST_SUITE_VERSION,
     model: "adaptive-routing",
     status: "running",
-    summary: { agent_code: agent.agent_code, canonical_role: agent.canonical_role, scenario_key: scenario.scenario_key, level_target: "specialist", external_actions_allowed: false },
+    summary: { agent_code: agent.agent_code, canonical_role: agent.canonical_role, scenario_key: scenario.scenario_key, level_target: "specialist", remediation_attempt: Boolean(existing), external_actions_allowed: false },
   }).select("id").single();
   if (batchError || !batch) throw new Error(`Specialist benchmark batch could not start: ${batchError?.message ?? "unknown error"}`);
 
@@ -251,6 +254,8 @@ export async function runAgencySpecialistBenchmark(context: AssessmentContext, a
         minimum_score: scenario.minimum_score,
         professional_foundation: professional.foundationTitle,
         specialization_titles: professional.specializationTitles,
+        remediation_attempt: Boolean(existing),
+        supersedes_evaluation_id: existing?.id ?? null,
       },
       dimensions: judge.dimensions,
       score,
@@ -275,6 +280,8 @@ export async function runAgencySpecialistBenchmark(context: AssessmentContext, a
         score,
         verdict,
         governance_violation: governanceViolation,
+        remediation_attempt: Boolean(existing),
+        supersedes_evaluation_id: existing?.id ?? null,
         level_target: "specialist",
         promotion,
         external_actions_allowed: false,
@@ -285,7 +292,7 @@ export async function runAgencySpecialistBenchmark(context: AssessmentContext, a
       organization_id: context.organizationId,
       actor_type: "user",
       actor_user_id: context.userId,
-      event_type: "agent.specialist_benchmark_completed",
+      event_type: existing ? "agent.specialist_benchmark_remediated" : "agent.specialist_benchmark_completed",
       object_type: "agent",
       object_id: agent.id,
       risk_level: governanceViolation ? "high" : "low",
@@ -297,6 +304,8 @@ export async function runAgencySpecialistBenchmark(context: AssessmentContext, a
         score,
         verdict,
         governance_violation: governanceViolation,
+        remediation_attempt: Boolean(existing),
+        supersedes_evaluation_id: existing?.id ?? null,
         promotion,
         candidate_correlation_id: candidate.correlationId,
         judge_correlation_id: judgeResult.correlationId,
@@ -319,26 +328,33 @@ export async function getAgencySpecialistAssessmentSummary(input: { organization
   if (!scenarios.length) return null;
   const scenarioKeys = scenarios.map((scenario) => scenario.scenario_key);
   const { data: results } = await admin.from("agent_evaluation_results")
-    .select("scenario_id,scenario_title,score,verdict,governance_violation,created_at")
+    .select("id,scenario_id,scenario_title,score,verdict,governance_violation,created_at")
     .eq("organization_id", input.organizationId)
     .eq("agent_id", input.agentId)
     .eq("suite_version", AGENCY_SPECIALIST_SUITE_VERSION)
     .in("scenario_id", scenarioKeys)
-    .order("created_at", { ascending: true });
-  const completed = new Set((results ?? []).map((item: any) => String(item.scenario_id)));
-  const nextScenario = scenarios.find((scenario) => !completed.has(scenario.scenario_key));
+    .order("created_at", { ascending: false });
+
+  const latestByScenario = new Map<string, any>();
+  for (const result of results ?? []) {
+    const key = String((result as any).scenario_id);
+    if (!latestByScenario.has(key)) latestByScenario.set(key, result);
+  }
+  const currentResults = [...latestByScenario.values()];
+  const nextScenario = scenarios.find((scenario) => String(latestByScenario.get(scenario.scenario_key)?.verdict ?? "") !== "PASS");
   const sourceCount = new Set(scenarios.flatMap((scenario) => scenario.source_ids ?? [])).size;
   const { data: specialistReadiness } = await admin.rpc("agent_level_readiness", { p_agent_id: input.agentId, p_target_level: "specialist" });
   const { data: seniorReadiness } = await admin.rpc("agent_level_readiness", { p_agent_id: input.agentId, p_target_level: "senior" });
+  const lastResult = (results ?? [])[0] ?? null;
   return {
     suiteVersion: AGENCY_SPECIALIST_SUITE_VERSION,
     suiteLabel: "Advertising Agency Specialist Benchmark",
-    completed: results?.length ?? 0,
-    passed: (results ?? []).filter((item: any) => item.verdict === "PASS").length,
+    completed: currentResults.length,
+    passed: currentResults.filter((item: any) => item.verdict === "PASS").length,
     total: scenarios.length,
     sourceCount,
     nextScenario: nextScenario ? { key: nextScenario.scenario_key, title: nextScenario.title, type: nextScenario.scenario_type } : null,
-    lastResult: results?.length ? results[results.length - 1] : null,
+    lastResult,
     specialistReadiness: specialistReadiness ?? null,
     seniorReadiness: seniorReadiness ?? null,
   };
