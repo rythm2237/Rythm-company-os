@@ -79,7 +79,7 @@ async function ensureApprovalGate(context: AutopilotContext, action: ActionRow) 
     execution_operation: "external_campaign_launch",
     execution_target: "AI Role Path advertising channels",
     execution_expected_impact: "May publish externally and/or incur advertising spend.",
-    execution_reversibility: "partially_reversible",
+    execution_reversibility: "compensatable",
     execution_payload_summary: { action_code: action.action_code, title: action.title },
   }).select("id,status").single();
   if (error) throw new Error(`Approval request could not be created: ${error.message}`);
