@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import type { AgentProvider } from "@/lib/agent-builder";
-import { escalationDecision, routeRequest } from "@/lib/ai/adaptive-router";
+import { escalationDecision, routeRequestV2 } from "@/lib/ai/adaptive-router";
 import type { AiGatewayAttachment, AiProviderAdapter, ProviderExecutionInput, ProviderExecutionResult, ProviderInstructionInput, ProviderUsage } from "@/lib/ai/gateway-contracts";
 import type { AgentRoutingPolicy, ModelTier, RoutingDecision, TenantAiPolicy } from "@/lib/ai/routing-types";
 
@@ -80,7 +80,7 @@ export async function runAgentDetailed(input: RunAgentInput): Promise<RunAgentRe
   let cumulativeProviderLatencyMs = 0;
   const fixedModel = input.agentPolicy?.modelPolicy?.mode === "fixed";
   try {
-    decision = input.authoritativeDecision ?? routeRequest({
+    decision = input.authoritativeDecision ?? routeRequestV2({
       prompt: input.prompt,
       requestId: input.requestId,
       conversationLanguage: input.conversationLanguage,
@@ -184,7 +184,7 @@ export async function runAgentDetailed(input: RunAgentInput): Promise<RunAgentRe
       if (!canEscalateExecutionError(error)) throw error;
       const next = escalationDecision(current, input.agentPolicy);
       if (!next) throw error;
-      current = routeRequest({
+      current = routeRequestV2({
         prompt: input.prompt,
         requestId: current.requestId,
         conversationLanguage: input.conversationLanguage,
