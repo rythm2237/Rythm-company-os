@@ -5,8 +5,10 @@ const root = process.cwd();
 const read = (file: string) => fs.readFileSync(path.join(root, file), "utf8");
 const runner = read("lib/agency-specialist-assessment.ts");
 const migration = read("supabase/migrations/20260831044500_agency_specialist_benchmarks.sql");
+const remediation = read("supabase/migrations/20260831053500_specialist_remediation_readiness.sql");
 const actions = read("app/(app)/agents/[code]/assessment/actions.ts");
 const page = read("app/(app)/agents/[code]/assessment/page.tsx");
+const pending = read("app/(app)/agents/[code]/assessment/PendingBenchmarkButton.tsx");
 
 const failures: string[] = [];
 const expect = (condition: boolean, message: string) => { if (!condition) failures.push(message); };
@@ -35,8 +37,16 @@ expect(runner.includes('p_target_level: "specialist"'), "Promotion must target S
 expect(runner.includes("apply_agent_level_promotion"), "Promotion must use the governed promotion RPC.");
 expect(runner.includes("loadProfessionalRuntimeContext"), "Candidate must use source-backed professional foundations.");
 expect(runner.includes("governance_violation"), "Independent judge must enforce governance evidence.");
+expect(runner.includes("Do not invent product features"), "Candidate instructions must explicitly prevent unverified product capability claims.");
+expect(runner.includes('String(existing.verdict).toUpperCase() === "PASS"'), "A failed Specialist attempt must be retryable while a passed result remains reusable.");
+expect(runner.includes("supersedes_evaluation_id"), "Remediation evidence must preserve the superseded attempt reference.");
 expect(migration.includes("minimum_score,source_ids") && migration.includes("85,seed.source_ids"), "Specialist benchmark threshold must be 85.");
+expect(remediation.includes("distinct on (r.suite_version,r.scenario_id)"), "Readiness must use the latest valid attempt per suite and scenario.");
+expect(remediation.includes("Claim discipline: never state a product feature"), "Copywriter production instructions must be hardened after claim-discipline failure.");
 expect(actions.includes("runAgencySpecialistBenchmark") && actions.includes("isAgencySpecialistRole"), "Assessment action must route supported agency roles to the Specialist runner.");
+expect(actions.includes("&status=${resultStatus}"), "Assessment redirect must preserve pass/fail presentation semantics.");
+expect(page.includes("PendingBenchmarkButton") && page.includes('query.status === "fail" ? "form-error" : "form-success"'), "Assessment page must show running state and render failed benchmarks as failures.");
+expect(pending.includes("useFormStatus") && pending.includes("Benchmark running…") && pending.includes("disabled={pending}"), "Benchmark submit control must visibly disable duplicate submissions while running.");
 expect(page.includes("getAgencySpecialistAssessmentSummary") && page.includes("Advertising Agency Specialist Benchmark") === false, "Assessment page must resolve agency summaries dynamically without hard-coded role-specific copy.");
 
 if (failures.length) {
