@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { ProviderOption } from "@/lib/agent-builder";
+import styles from "./AgentBuilderWizard.module.css";
 
 type Department = { id: string; name: string };
 type ExistingAgent = { id: string; name: string; role_title: string };
@@ -120,17 +121,16 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
   const providerReady = Boolean(selectedProvider?.configured);
   const canGenerate = roleReady && missionReady && providerReady;
 
-  const shell: React.CSSProperties = { display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(280px, .65fr)", gap: "1.25rem", alignItems: "start" };
   const chips: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: ".5rem", margin: ".6rem 0 1rem" };
   const card: React.CSSProperties = { border: "1px solid var(--border, rgba(255,255,255,.12))", borderRadius: "14px", padding: "1rem", cursor: "pointer" };
 
   return (
-    <div style={shell}>
+    <div className={styles.shell}>
       <form action={action} className="auth-form">
         <input type="hidden" name="departmentName" value={departmentName} />
         {Object.entries(draft).map(([key, value]) => <input key={key} type="hidden" name={key} value={value} />)}
 
-        <div style={{ display: "flex", gap: ".35rem", flexWrap: "wrap", marginBottom: "1.25rem" }} aria-label="Agent Builder progress">
+        <div className={styles.progress} aria-label="Agent Builder progress">
           {steps.map((label, index) => (
             <button key={label} type="button" onClick={() => setStep(index)} aria-current={step === index ? "step" : undefined} style={{ opacity: step === index ? 1 : .58 }}>
               {index + 1}. {label}
@@ -199,17 +199,17 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
           <GenerateButton disabled={!canGenerate} />
         </div> : null}
 
-        <div style={{ display: "flex", justifyContent: "space-between", gap: ".75rem", marginTop: "1.5rem" }}>
+        <div className={styles.footer}>
           <button type="button" onClick={() => setStep((value) => Math.max(0, value - 1))} disabled={step === 0}>Back</button>
           {step < steps.length - 1 ? <button type="button" onClick={() => setStep((value) => Math.min(steps.length - 1, value + 1))} disabled={(step === 0 && !roleReady) || (step === 1 && !missionReady)}>Continue</button> : null}
         </div>
       </form>
 
-      <aside className="panel" style={{ position: "sticky", top: "1rem", maxHeight: "80vh", overflow: "auto" }}>
+      <aside className={`panel ${styles.blueprint}`}>
         <p className="eyebrow">LIVE AGENT BLUEPRINT</p>
         <h3>RYTHM is preparing the hire</h3>
         <p style={{ opacity: .72 }}>The live summary is local. Professional knowledge acquisition/provider cost begins only when Generate is pressed.</p>
-        <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: ".9rem", lineHeight: 1.55 }}>{blueprint}</pre>
+        <pre>{blueprint}</pre>
       </aside>
     </div>
   );

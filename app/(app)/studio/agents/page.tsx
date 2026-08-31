@@ -32,7 +32,7 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
   const params = await searchParams;
 
   if (!context.entitlement.agent_builder_enabled) {
-    return <main className="page-shell"><section className="panel"><p className="eyebrow">RYTHM COMPANY STUDIO</p><h1>Agent Studio</h1><p>Agent Builder is not enabled for this organization&apos;s entitlement.</p><Link href="/command-center">Return to Command Center</Link></section></main>;
+    return <main className="page-shell"><section className="panel"><p className="eyebrow">RYTHM COMPANY STUDIO</p><h1>Agent Studio</h1><p>Agent Builder is not enabled for this organization&apos;s entitlement.</p><Link href="/agents">Open workforce directory</Link></section></main>;
   }
 
   const entitlement = context.entitlement;
@@ -46,14 +46,39 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
   const agents = (agentData ?? []) as AgentRow[];
   const departments = (departmentData ?? []) as DepartmentRow[];
   const activeAgents = agents.filter((agent) => agent.agent_status !== "archived");
+  const archivedAgents = agents.filter((agent) => agent.agent_status === "archived");
   const canCreate = Boolean(entitlement.agent_create_enabled && activeAgents.length < entitlement.max_active_agents);
+
+  const agentCard = (agent: AgentRow) => (
+    <article className="kpi-card" key={agent.id}>
+      <p className="eyebrow">{agent.agent_code} · AI AGENT</p>
+      <h3>{agent.name}</h3>
+      <p>{agent.role_title}</p>
+      <p>A{agent.authority_level} · {agent.risk_ceiling} risk · {agent.language}</p>
+      <p>Competency: <strong>{agent.mastery_status === "verified" ? "Master-level verified" : agent.professional_competency_level ?? "foundation"}</strong></p>
+      <p>Brain: <strong>{agent.runtime_provider ?? "OpenAI"}</strong>{agent.runtime_model ? ` · ${agent.runtime_model}` : ""}</p>
+      <p>Status: <strong>{agent.agent_status}</strong></p>
+      <p>External actions: <strong>{agent.external_actions_allowed ? "Allowed" : "Disabled"}</strong></p>
+      <p>
+        {agent.agent_status !== "archived" ? <><Link href={`/agents/${agent.agent_code.toLowerCase()}`}><strong>Open profile</strong></Link> · <Link href={`/studio/agents/${agent.id}/run`}>Chat / Run</Link> · </> : null}
+        <Link href={`/studio/agents/${agent.id}`}>Edit Agent</Link>
+      </p>
+      {agent.agent_status !== "archived" ? <div>
+        <form action={setAgentStatus}><input type="hidden" name="agentId" value={agent.id} /><input type="hidden" name="status" value={agent.agent_status === "enabled" ? "paused" : "enabled"} /><button type="submit">{agent.agent_status === "enabled" ? "Pause" : "Enable"}</button></form>
+        {entitlement.agent_clone_enabled ? <form action={cloneAgent}><input type="hidden" name="agentId" value={agent.id} /><button type="submit">Clone</button></form> : null}
+        {entitlement.agent_archive_enabled ? <form action={setAgentStatus}><input type="hidden" name="agentId" value={agent.id} /><input type="hidden" name="status" value="archived" /><button type="submit">Archive</button></form> : null}
+      </div> : null}
+    </article>
+  );
 
   return (
     <main className="page-shell">
       <section className="panel">
         <p className="eyebrow">RYTHM COMPANY STUDIO</p>
-        <h1>Agent Builder</h1>
-        <p>Build a governed AI specialist. Generate now resolves the position and expertise, provisions trusted professional knowledge, verifies the RYTHM Master-level Professional Competency Benchmark, and connects the Agent to the company&apos;s live document memory.</p>
+        <h1>Agent Studio</h1>
+        <p><strong>One workforce, two views.</strong> The <Link href="/agents">Workforce directory</Link> is the operational view for tasks, profiles and knowledge. Agent Studio manages the same organization&apos;s Agent lifecycle: create, edit, pause, clone and archive.</p>
+        <p>Active/non-archived Agents shown below are the same workforce exposed in the operational directory. Archived records are kept separately for lifecycle administration.</p>
+        <p>Build a governed AI specialist. Generate resolves the position and expertise, provisions trusted professional knowledge, verifies the RYTHM Master-level Professional Competency Benchmark, and connects the Agent to the company&apos;s live document memory.</p>
         <p><strong>Master-level</strong> is an internal professional capability benchmark. It is not an academic degree, professional license, or regulated credential.</p>
         <p>Every generated Agent is explicitly AI, starts <strong>Paused</strong>, and cannot perform external actions in Public Beta.</p>
         <p><strong>Agent capacity:</strong> {activeAgents.length} / {entitlement.max_active_agents}</p>
@@ -77,32 +102,15 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
 
       <section className="panel">
         <h2>Organization AI workforce</h2>
-        {agents.length === 0 ? <p>No AI Agents have been created for this organization yet.</p> : (
-          <div className="kpi-grid">
-            {agents.map((agent) => (
-              <article className="kpi-card" key={agent.id}>
-                <p className="eyebrow">{agent.agent_code} · AI AGENT</p>
-                <h3>{agent.name}</h3>
-                <p>{agent.role_title}</p>
-                <p>A{agent.authority_level} · {agent.risk_ceiling} risk · {agent.language}</p>
-                <p>Competency: <strong>{agent.mastery_status === "verified" ? "Master-level verified" : agent.professional_competency_level ?? "foundation"}</strong></p>
-                <p>Brain: <strong>{agent.runtime_provider ?? "OpenAI"}</strong>{agent.runtime_model ? ` · ${agent.runtime_model}` : ""}</p>
-                <p>Status: <strong>{agent.agent_status}</strong></p>
-                <p>External actions: <strong>{agent.external_actions_allowed ? "Allowed" : "Disabled"}</strong></p>
-                <p>
-                  {agent.agent_status !== "archived" ? <><Link href={`/studio/agents/${agent.id}/run`}><strong>Chat / Run</strong></Link> · </> : null}
-                  <Link href={`/studio/agents/${agent.id}`}>Edit Agent</Link>
-                </p>
-                {agent.agent_status !== "archived" ? <div>
-                  <form action={setAgentStatus}><input type="hidden" name="agentId" value={agent.id} /><input type="hidden" name="status" value={agent.agent_status === "enabled" ? "paused" : "enabled"} /><button type="submit">{agent.agent_status === "enabled" ? "Pause" : "Enable"}</button></form>
-                  {entitlement.agent_clone_enabled ? <form action={cloneAgent}><input type="hidden" name="agentId" value={agent.id} /><button type="submit">Clone</button></form> : null}
-                  {entitlement.agent_archive_enabled ? <form action={setAgentStatus}><input type="hidden" name="agentId" value={agent.id} /><input type="hidden" name="status" value="archived" /><button type="submit">Archive</button></form> : null}
-                </div> : null}
-              </article>
-            ))}
-          </div>
-        )}
+        <p>This active workforce matches the operational <Link href="/agents">Agents</Link> directory for the current company.</p>
+        {activeAgents.length === 0 ? <p>No active AI Agents have been created for this organization yet.</p> : <div className="kpi-grid">{activeAgents.map(agentCard)}</div>}
       </section>
+
+      {archivedAgents.length ? <section className="panel">
+        <h2>Archived Agents</h2>
+        <p>Archived lifecycle records are intentionally hidden from the operational workforce directory.</p>
+        <div className="kpi-grid">{archivedAgents.map(agentCard)}</div>
+      </section> : null}
     </main>
   );
 }
