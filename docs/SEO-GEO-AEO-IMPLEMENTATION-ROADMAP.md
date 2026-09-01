@@ -34,6 +34,19 @@ Status legend:
 
 Baseline classification: **INDEXABLE BUT LOW AUTHORITY**.
 
+## Current next actions after the production release
+
+Continue in this order. Items that require owner access or genuine market evidence must not be closed with synthetic data.
+
+1. `P0-08` / `M-01`–`M-03`: verify Google Search Console, submit the canonical sitemap and save indexing/query baselines.
+2. `P0-09`: verify Bing Webmaster Tools, submit the sitemap and save URL Inspection evidence.
+3. `P0-11` / `E-01`–`E-03`: create or verify official LinkedIn/GitHub company profiles, then add only verified URLs to `Organization.sameAs`.
+4. `M-04` / `M-07`: connect the implemented privacy-safe AI/organic referral events to a durable analytics sink and conversion reporting.
+5. `T-02`: complete a full Production crawl when stable crawler network access is available; resolve any broken links, orphans or unintended redirects found.
+6. `T-03`: record mobile/desktop lab performance now and establish Search Console/CrUX monitoring once field data exists.
+7. `P2-01` / `P2-02` / `E-08`: publish customer proof only after permission and measurable evidence exist.
+8. `P2-08`–`P2-12`: create original research, partner/integration proof and legitimate third-party coverage.
+
 ## Positioning decision
 
 Use this category hierarchy consistently:
@@ -152,13 +165,15 @@ Implement in this order; each page must add original product facts, examples or 
 | T-01 | DONE | Add automated SEO contract tests for public route metadata, canonical uniqueness, sitemap coverage, schema IDs and legacy-host absence | Engineering |
 | T-02 | TODO | Run production crawl and resolve broken internal/external links, orphan pages and unexpected redirects | Engineering |
 | T-03 | TODO | Measure Core Web Vitals with Search Console/CrUX once traffic is sufficient; use lab tests as diagnostics, not ranking claims | Engineering |
-| T-04 | TODO | Audit image dimensions, formats, lazy-loading, `alt` text and total transfer size on key landing pages | Engineering/Content |
+| T-04 | DONE | Audit image dimensions, formats, lazy-loading, `alt` text and total transfer size on key landing pages | Engineering/Content |
 | T-05 | DONE | Add `BreadcrumbList` schema only to pages with visible hierarchical breadcrumbs | Engineering |
 | T-06 | DONE | Keep FAQ answers visible and machine-readable without adding `FAQPage`; RYTHM is not in a current Google FAQ rich-result eligibility class | Engineering/Content |
 | T-07 | TODO | Add `Article` schema, author and `datePublished/dateModified` to future editorial content | Engineering/Content |
 | T-08 | DONE | Decide a deliberate training-crawler policy separately from search/user-agent crawling; document the privacy/visibility trade-off | Founder/Legal/Security |
 | T-09 | TODO | Monitor sitemap/index coverage and redirect retirement for legacy-host URLs for at least 90 days | Growth/Engineering |
 | T-10 | TODO | Commit the intended package-manager lockfile and require reproducible clean installs in CI | Engineering |
+
+Image audit evidence (2026-09-01): public layouts use the shared `RythmBrandLogo` and `RythmBrandMark` through `next/image` with explicit intrinsic dimensions. The logo has descriptive alt text; the decorative mark uses `alt=""` plus `aria-hidden`. Active SVG assets are approximately 1.6–5.8 KB each and no raster landing-page image debt was found in the public route source.
 
 ## Entity and trust backlog
 
