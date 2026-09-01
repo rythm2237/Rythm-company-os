@@ -108,7 +108,7 @@ async function inviteMember(formData: FormData) {
   const admin = createWorkforceAdminClient();
   if (!admin) redirect("/company?error=Invitation%20service%20is%20not%20configured.");
 
-  const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://company.rythm-os.com"}/auth/callback`;
+  const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://rythm-os.com"}/auth/callback`;
   const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo, data: { organization_id: organizationId, organization_role: role } });
   if (inviteError || !invite.user) redirect(`/company?error=${encodeURIComponent(inviteError?.message ?? "Invitation failed.")}`);
 

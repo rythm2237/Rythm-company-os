@@ -1,0 +1,229 @@
+.public-breadcrumbs {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 34px clamp(32px, 5vw, 76px) 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--mk-muted);
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.public-breadcrumbs a {
+  color: #4450b8;
+  text-decoration: none;
+}
+
+.knowledge-hero {
+  padding-top: 52px;
+}
+
+.knowledge-definition {
+  max-width: 1348px;
+  margin: 0 auto;
+  padding: 34px clamp(28px, 5vw, 64px);
+  border: 1px solid var(--mk-border);
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(83, 98, 212, .08), rgba(75, 198, 216, .08));
+}
+
+.knowledge-definition > p:last-child {
+  max-width: 1100px;
+  margin: 10px 0 0;
+  color: #243047;
+  font-size: clamp(1.22rem, 2.2vw, 1.85rem);
+  font-weight: 680;
+  line-height: 1.52;
+}
+
+.knowledge-section {
+  padding-top: 76px;
+  padding-bottom: 76px;
+  border-bottom: 1px solid rgba(215, 220, 230, .75);
+}
+
+.knowledge-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.knowledge-card-grid article,
+.knowledge-answer-list article {
+  padding: 28px;
+  border: 1px solid var(--mk-border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .82);
+  box-shadow: 0 14px 38px rgba(34, 45, 73, .045);
+}
+
+.knowledge-card-grid h3,
+.knowledge-answer-list h3 {
+  margin: 0 0 10px;
+  color: #172033;
+  font-size: 1.08rem;
+  line-height: 1.3;
+}
+
+.knowledge-card-grid p,
+.knowledge-answer-list p {
+  margin: 0;
+  color: var(--mk-muted);
+  line-height: 1.68;
+}
+
+.knowledge-answer-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.knowledge-cta .page-review-note,
+.page-review-note {
+  margin: 22px 0 0;
+  color: var(--mk-muted);
+  font-size: .76rem;
+}
+
+.comparison-table {
+  overflow: hidden;
+  border: 1px solid var(--mk-border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .82);
+}
+
+.comparison-row {
+  display: grid;
+  grid-template-columns: minmax(150px, .75fr) repeat(2, minmax(0, 1.4fr));
+  gap: 0;
+  border-top: 1px solid var(--mk-border);
+}
+
+.comparison-row:first-child {
+  border-top: 0;
+}
+
+.comparison-row > * {
+  margin: 0;
+  padding: 20px;
+  border-left: 1px solid var(--mk-border);
+  color: var(--mk-muted);
+  line-height: 1.58;
+}
+
+.comparison-row > *:first-child {
+  border-left: 0;
+  color: #172033;
+}
+
+.comparison-header {
+  background: rgba(83, 98, 212, .08);
+}
+
+.comparison-header > * {
+  color: #172033;
+}
+
+.comparison-link-grid article {
+  display: flex;
+  flex-direction: column;
+}
+
+.comparison-link-grid a,
+.comparison-sources a {
+  color: #4450b8;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.comparison-link-grid a {
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.comparison-sources ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comparison-sources li {
+  padding: 18px 20px;
+  border: 1px solid var(--mk-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .82);
+}
+
+@media (max-width: 1050px) {
+  .knowledge-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .public-breadcrumbs {
+    padding: 24px 20px 0;
+  }
+
+  .knowledge-hero {
+    padding-top: 38px;
+  }
+
+  .knowledge-definition {
+    margin-right: 20px;
+    margin-left: 20px;
+    padding: 26px 22px;
+    border-radius: 22px;
+  }
+
+  .knowledge-card-grid,
+  .knowledge-answer-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .comparison-row,
+  .comparison-header {
+    display: block;
+  }
+
+  .comparison-header {
+    display: none;
+  }
+
+  .comparison-row > * {
+    display: block;
+    padding: 14px 18px;
+    border-left: 0;
+  }
+
+  .comparison-row > *:first-child {
+    padding-top: 20px;
+  }
+
+  .comparison-row > *:nth-child(2)::before,
+  .comparison-row > *:nth-child(3)::before {
+    display: block;
+    margin-bottom: 5px;
+    color: #172033;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  .comparison-row > *:nth-child(2)::before {
+    content: "RYTHM Company OS";
+  }
+
+  .comparison-row > *:nth-child(3)::before {
+    content: "Compared platform";
+  }
+
+  .knowledge-card-grid article,
+  .knowledge-answer-list article {
+    padding: 23px;
+  }
+}

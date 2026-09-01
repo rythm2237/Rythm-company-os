@@ -25,11 +25,12 @@ export default async function HomePage() {
       <main>
       <section className="marketing-hero">
         <div className="hero-copy">
-          <p className="marketing-kicker">GOVERNED AI COMPANY PLATFORM</p>
-          <h1>Build a company that thinks and operates—with you in control.</h1>
+          <p className="marketing-kicker">GOVERNED AI WORKFORCE PLATFORM</p>
+          <h1>Build and operate an AI workforce—with human authority built in.</h1>
           <p>
-            Give a Human CEO a specialized AI workforce, company memory, meetings,
-            approvals, and traceable action in one governed operating system.
+            RYTHM Company OS is a governed AI workforce platform for building and running
+            specialized AI Agent teams, Company Memory, meetings, approvals, and traceable
+            execution under a Human CEO.
           </p>
           <div className="hero-actions">
             <Link className="marketing-button marketing-button-large" href="/product">Explore the Company OS</Link>
@@ -63,6 +64,7 @@ export default async function HomePage() {
           <article><span>03</span><h3>Keep authority human</h3><p>Recommendations become consequential work only through the required approval path.</p></article>
           <article><span>04</span><h3>Preserve the operating trace</h3><p>Intent, meetings, decisions, approvals, actions, and outcomes remain connected.</p></article>
         </div>
+        <div className="hero-actions"><Link href="/ai-workforce">Understand the AI workforce</Link><Link href="/how-it-works">Read the full operating model</Link><Link href="/ai-agents-for-business">Explore business AI Agents</Link></div>
       </section>
 
       <section className="governance-section">

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const SITE_ORIGIN = "https://rythm-os.com";
 export const SITE_NAME = "RYTHM Company OS";
 export const DEFAULT_DESCRIPTION =
-  "Build and operate a governed AI company with a Human CEO, specialized AI Agents, Company Memory, meetings, approvals, and traceable execution.";
+  "RYTHM Company OS is a governed AI workforce platform for building and operating specialized AI Agent teams under Human CEO authority.";
 export const SOCIAL_IMAGE_PATH = "/brand/social/rythm-open-graph-1200x630.png";
 
 export type PublicRoute = Readonly<{
@@ -17,10 +17,42 @@ export type PublicRoute = Readonly<{
 export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   {
     path: "/",
-    title: "RYTHM Company OS — Governed AI Company Operating System",
+    title: "Governed AI Workforce Platform | RYTHM Company OS",
     description: DEFAULT_DESCRIPTION,
     changeFrequency: "weekly",
     priority: 1,
+  },
+  {
+    path: "/about",
+    title: "About RYTHM Company OS",
+    description:
+      "Learn what RYTHM Company OS is, who operates it, and how its governed AI workforce model keeps consequential authority with a Human CEO.",
+    changeFrequency: "monthly",
+    priority: 0.7,
+  },
+  {
+    path: "/ai-workforce",
+    title: "Governed AI Workforce Platform",
+    description:
+      "Learn how RYTHM structures specialized AI Agent teams with Company Memory, organizational roles, approvals, and Human CEO authority.",
+    changeFrequency: "monthly",
+    priority: 0.95,
+  },
+  {
+    path: "/ai-agents-for-business",
+    title: "AI Agents for Business",
+    description:
+      "See how RYTHM gives business AI Agents defined roles, knowledge, permissions, risk limits, reporting context, and human approval boundaries.",
+    changeFrequency: "monthly",
+    priority: 0.9,
+  },
+  {
+    path: "/how-it-works",
+    title: "How RYTHM Company OS Works",
+    description:
+      "Follow the RYTHM operating loop from company context and multi-agent deliberation through human decisions, approvals, execution, and traceability.",
+    changeFrequency: "monthly",
+    priority: 0.9,
   },
   {
     path: "/product",
@@ -29,6 +61,126 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
       "See how RYTHM connects an AI workforce, Company Memory, projects, meetings, decisions, approvals, actions, economics, and traceability under human authority.",
     changeFrequency: "monthly",
     priority: 0.9,
+  },
+  {
+    path: "/product/ai-agents",
+    title: "RYTHM AI Agents and Roles",
+    description:
+      "Explore RYTHM AI Agent role families, responsibilities, professional knowledge, permissions, reporting lines, risk limits, and customization boundaries.",
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
+  {
+    path: "/product/integrations",
+    title: "Governed AI Agent Integrations",
+    description:
+      "Review RYTHM integration architecture, current gateway providers, connection lifecycle, permissions, approval controls, and planned connector families.",
+    changeFrequency: "monthly",
+    priority: 0.85,
+  },
+  {
+    path: "/product-architecture",
+    title: "Multi-Agent Product Architecture",
+    description:
+      "Understand how RYTHM separates organization context, request intelligence, multi-agent work, human decisions, governed execution, and audit evidence.",
+    changeFrequency: "monthly",
+    priority: 0.8,
+  },
+  {
+    path: "/use-cases",
+    title: "AI Workforce Use Cases",
+    description:
+      "Explore substantive RYTHM AI workforce use cases for startups, advertising agencies, software companies, and custom organizations.",
+    changeFrequency: "monthly",
+    priority: 0.82,
+  },
+  {
+    path: "/use-cases/startups",
+    title: "AI Workforce for Startups",
+    description:
+      "See how founders can coordinate product, delivery, growth, support, finance, and risk with a lean governed AI workforce.",
+    changeFrequency: "monthly",
+    priority: 0.75,
+  },
+  {
+    path: "/use-cases/agencies",
+    title: "AI Workforce for Advertising Agencies",
+    description:
+      "See how RYTHM coordinates agency strategy, accounts, creative, content, performance, analytics, finance, legal, and operations under human approval.",
+    changeFrequency: "monthly",
+    priority: 0.75,
+  },
+  {
+    path: "/use-cases/software-companies",
+    title: "AI Agents for Software Companies",
+    description:
+      "See how RYTHM coordinates product, design, engineering, QA, security, DevOps, growth, support, and business operations through governed delivery.",
+    changeFrequency: "monthly",
+    priority: 0.75,
+  },
+  {
+    path: "/faq",
+    title: "RYTHM Company OS FAQ",
+    description:
+      "Get direct answers about RYTHM, AI workforces, business Agents, pricing, security, integrations, human approval, custom Agents, and Public Beta limits.",
+    changeFrequency: "monthly",
+    priority: 0.8,
+  },
+  {
+    path: "/docs",
+    title: "RYTHM Company OS Documentation",
+    description:
+      "Start with public RYTHM documentation for AI workforce concepts, setup paths, governance, Company Memory, integrations, and product architecture.",
+    changeFrequency: "monthly",
+    priority: 0.78,
+  },
+  {
+    path: "/glossary",
+    title: "AI Workforce and Agentic Operations Glossary",
+    description:
+      "Clear definitions for AI workforce, AI Agent, multi-agent system, Company Memory, human-in-the-loop, governed execution, and related RYTHM terms.",
+    changeFrequency: "monthly",
+    priority: 0.72,
+  },
+  {
+    path: "/compare",
+    title: "Compare AI Workforce and Agent Platforms",
+    description:
+      "Compare RYTHM Company OS with current AI Agent, AI workforce, and multi-agent platforms using fair criteria and official competitor sources.",
+    changeFrequency: "monthly",
+    priority: 0.78,
+  },
+  {
+    path: "/compare/lindy",
+    title: "RYTHM Company OS vs Lindy",
+    description:
+      "Compare RYTHM's governed AI workforce and company operating model with Lindy's AI teammate and tool-connected Agent approach.",
+    changeFrequency: "monthly",
+    priority: 0.72,
+  },
+  {
+    path: "/compare/relevance-ai",
+    title: "RYTHM Company OS vs Relevance AI",
+    description:
+      "Compare RYTHM's company operating model with Relevance AI's low/no-code AI Agents and visual multi-agent Workforces.",
+    changeFrequency: "monthly",
+    priority: 0.74,
+  },
+  {
+    path: "/compare/crewai",
+    title: "RYTHM Company OS vs CrewAI",
+    description:
+      "Compare RYTHM's managed governed AI organization with CrewAI's developer-oriented multi-agent framework and enterprise platform.",
+    changeFrequency: "monthly",
+    priority: 0.72,
+  },
+  {
+    path: "/compare/microsoft-copilot-studio",
+    title: "RYTHM Company OS vs Microsoft Copilot Studio",
+    description:
+      "Compare RYTHM's governed AI company operating model with Microsoft Copilot Studio's custom Agent and workflow platform.",
+    changeFrequency: "monthly",
+    priority: 0.72,
   },
   {
     path: "/demo",
@@ -230,7 +382,7 @@ export function createPublicMetadata(path: string): Metadata {
           url: SOCIAL_IMAGE_PATH,
           width: 1200,
           height: 630,
-          alt: "RYTHM Company OS — the governed AI company operating system",
+          alt: "RYTHM Company OS — governed AI workforce platform",
         },
       ],
     },
@@ -256,7 +408,7 @@ export const ORGANIZATION_GRAPH = {
       taxID: "48332376-1-42",
       identifier: {
         "@type": "PropertyValue",
-        propertyID: "Hungarian individual entrepreneur registration number",
+        propertyID: "Hungarian Individual Entrepreneurs Register",
         value: "58642889",
       },
       email: "hello@rythm-os.com",
@@ -281,13 +433,30 @@ export const ORGANIZATION_GRAPH = {
         height: 1024,
       },
       description: DEFAULT_DESCRIPTION,
+      founder: { "@id": `${SITE_ORIGIN}/#founder` },
+      brand: {
+        "@type": "Brand",
+        name: "RYTHM",
+        alternateName: "RYTHM Company OS",
+        url: SITE_ORIGIN,
+      },
       knowsAbout: [
+        "Governed AI workforce platforms",
+        "AI agents for business",
+        "Multi-agent business operations",
         "Governed AI companies",
         "AI workforce governance",
         "Human-in-the-loop AI",
-        "AI agents",
         "Company operating systems",
       ],
+    },
+    {
+      "@type": "Person",
+      "@id": `${SITE_ORIGIN}/#founder`,
+      name: "Yaser Tayyebialashti",
+      jobTitle: "Founder and Operator",
+      worksFor: { "@id": `${SITE_ORIGIN}/#organization` },
+      sameAs: ["https://hu.linkedin.com/in/tayyebialashti"],
     },
     {
       "@type": "WebSite",
@@ -309,6 +478,7 @@ export const PRODUCT_GRAPH = {
   name: SITE_NAME,
   url: absoluteUrl("/product"),
   applicationCategory: "BusinessApplication",
+  applicationSubCategory: "Governed AI workforce platform",
   operatingSystem: "Web",
   description: DEFAULT_DESCRIPTION,
   publisher: { "@id": `${SITE_ORIGIN}/#organization` },

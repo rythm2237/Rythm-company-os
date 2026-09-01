@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import PublicPageStructuredData from "@/components/brand/PublicPageStructuredData";
 import { createPublicMetadata } from "@/lib/seo/site";
 
 export const metadata: Metadata = createPublicMetadata("/trust");
@@ -7,15 +8,16 @@ export const metadata: Metadata = createPublicMetadata("/trust");
 export default function TrustPage() {
   return (
     <main>
+      <PublicPageStructuredData path="/trust" name="RYTHM Company OS Trust Center" description="Current Public Beta governance, tenant, identity, authority, and certification boundaries for RYTHM Company OS." breadcrumbLabel="Trust Center" dateModified="2026-09-01" />
       <section className="public-page-hero enterprise-hero">
         <div>
           <p className="marketing-kicker">RYTHM TRUST CENTER</p>
           <h1>Governance, security boundaries, and human authority are part of the product.</h1>
         </div>
-        <p>
+        <div><p>
           RYTHM Company OS is designed so AI work remains organization-scoped, reviewable, traceable,
           and bounded by explicit human authority. This page describes the controls currently used in the Public Beta.
-        </p>
+        </p><p className="contact-notice">Reviewed 1 September 2026</p></div>
       </section>
 
       <section className="marketing-section enterprise-model">

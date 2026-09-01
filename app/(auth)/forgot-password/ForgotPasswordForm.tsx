@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { createAuthBrowserClient } from "@/lib/supabase/auth-browser";
 
-const RESET_REDIRECT_URL = "https://company.rythm-os.com/auth/callback?next=/reset-password";
+const RESET_REDIRECT_URL = "https://rythm-os.com/auth/callback?next=/reset-password";
 
 export function ForgotPasswordForm() {
   const supabase = useMemo(() => createAuthBrowserClient(), []);

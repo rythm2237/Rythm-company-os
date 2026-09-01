@@ -26,6 +26,19 @@ const FOOTER_GROUPS = [
     ],
   },
   {
+    label: "Learn",
+    links: [
+      ["AI Workforce", "/ai-workforce"],
+      ["AI Agents", "/ai-agents-for-business"],
+      ["How It Works", "/how-it-works"],
+      ["Use Cases", "/use-cases"],
+      ["Documentation", "/docs"],
+      ["Comparisons", "/compare"],
+      ["FAQ", "/faq"],
+      ["Glossary", "/glossary"],
+    ],
+  },
+  {
     label: "Trust",
     links: [
       ["Trust Center", "/trust"],
@@ -51,6 +64,7 @@ const FOOTER_GROUPS = [
   {
     label: "Help",
     links: [
+      ["About", "/about"],
       ["Support", "/support"],
       ["Contact", "/contact"],
       ["Customer sign in", "/login"],
@@ -128,7 +142,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
         <footer className="marketing-footer marketing-footer-structured" aria-label="RYTHM public footer">
           <div className="marketing-footer-brand">
             <RythmBrandLogo variant="primary" />
-            <p>Governed AI companies under Human CEO authority.</p>
+            <p>Governed AI workforces under Human CEO authority.</p>
           </div>
           <nav className="marketing-footer-groups" aria-label="Footer navigation">
             {FOOTER_GROUPS.map((group) => (

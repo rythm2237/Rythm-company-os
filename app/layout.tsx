@@ -24,7 +24,7 @@ const vazirmatn = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
   title: {
-    default: "RYTHM Company OS — Governed AI Company Operating System",
+    default: "Governed AI Workforce Platform | RYTHM Company OS",
     template: `%s | ${SITE_NAME}`,
   },
   description: DEFAULT_DESCRIPTION,
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     siteName: SITE_NAME,
-    title: "RYTHM Company OS — Governed AI Company Operating System",
+    title: "Governed AI Workforce Platform | RYTHM Company OS",
     description: DEFAULT_DESCRIPTION,
     locale: "en_US",
     images: [
@@ -45,13 +45,13 @@ export const metadata: Metadata = {
         url: SOCIAL_IMAGE_PATH,
         width: 1200,
         height: 630,
-        alt: "RYTHM Company OS — the governed AI company operating system",
+        alt: "RYTHM Company OS — governed AI workforce platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "RYTHM Company OS — Governed AI Company Operating System",
+    title: "Governed AI Workforce Platform | RYTHM Company OS",
     description: DEFAULT_DESCRIPTION,
     images: [SOCIAL_IMAGE_PATH],
   },
