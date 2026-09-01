@@ -18,7 +18,8 @@ export type PublicExperienceEventName =
   | "solution_finder_answered"
   | "solution_finder_recommended"
   | "solution_finder_primary_clicked"
-  | "solution_finder_meeting_clicked";
+  | "solution_finder_meeting_clicked"
+  | "ai_referral_detected";
 
 export type PublicExperienceEvent = {
   name: PublicExperienceEventName;

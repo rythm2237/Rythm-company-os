@@ -3,7 +3,7 @@
 Canonical site: https://rythm-os.com
 Status: Public Beta
 
-RYTHM Company OS is a governed AI company operating system. It is designed to place a specialized AI workforce inside a company operating model where roles, context, projects, meetings, decisions, approvals, actions, economics, and traceability remain connected under human authority.
+RYTHM Company OS is a governed AI workforce platform and AI company operating system. It is designed to place specialized AI Agent teams inside a company operating model where roles, context, projects, meetings, decisions, approvals, actions, economics, and traceability remain connected under human authority.
 
 ## Operator identity
 
@@ -42,10 +42,46 @@ RYTHM is not presented as a system that gives AI unrestricted organizational aut
 
 ## Public experiences
 
+### About
+https://rythm-os.com/about
+
+Defines the product category, identifies the operator, and explains the human-authority principles behind RYTHM.
+
 ### Product
 https://rythm-os.com/product
 
 Explains the governed company operating system, its operating loop, workforce model, Company Memory, projects, meetings, decisions, approvals, actions, economics, and traceability.
+
+### AI Workforce
+https://rythm-os.com/ai-workforce
+
+Defines the primary product category, intended buyers, operating model, human authority boundary, customization model, and difference between an AI workforce and disconnected AI tools.
+
+### AI Agents for Business
+https://rythm-os.com/ai-agents-for-business
+
+Defines a RYTHM business AI Agent and explains roles, responsibilities, knowledge, permissions, risk ceilings, collaboration, and external-action limits.
+
+### How It Works
+https://rythm-os.com/how-it-works
+
+Explains the seven-step operating loop from company model and context through deliberation, human decision, approval, execution, and traceability.
+
+### Product Architecture and Integrations
+- Architecture: https://rythm-os.com/product-architecture
+- AI Agent roles: https://rythm-os.com/product/ai-agents
+- Integrations: https://rythm-os.com/product/integrations
+
+These pages describe the organization, request-intelligence, multi-agent, governance, execution, provider, permission, approval, and audit boundaries. A listed capability contract does not necessarily mean that a provider adapter is available to every customer.
+
+### Fair Platform Comparisons
+- Comparison hub: https://rythm-os.com/compare
+- RYTHM vs Lindy: https://rythm-os.com/compare/lindy
+- RYTHM vs Relevance AI: https://rythm-os.com/compare/relevance-ai
+- RYTHM vs CrewAI: https://rythm-os.com/compare/crewai
+- RYTHM vs Microsoft Copilot Studio: https://rythm-os.com/compare/microsoft-copilot-studio
+
+These pages compare intended user, operating model, organizational records, governance, integrations, pricing model, and implementation responsibility. Changing competitor facts link to official sources and carry a review date.
 
 ### Interactive Demo
 https://rythm-os.com/demo
@@ -61,6 +97,18 @@ Explains the available solution paths, including Ready AI Company, Custom AI Com
 https://rythm-os.com/templates
 
 Provides governed AI company and workforce templates that can be explored before creating an account or provisioning a persistent organization.
+
+### Use Cases
+https://rythm-os.com/use-cases
+
+Routes to substantive operating patterns for startups, advertising agencies, and software companies. Use-case descriptions do not grant automatic external execution.
+
+### Documentation, FAQ and Glossary
+- Documentation: https://rythm-os.com/docs
+- FAQ: https://rythm-os.com/faq
+- Glossary: https://rythm-os.com/glossary
+
+Use these pages for direct product answers and RYTHM-specific definitions.
 
 ### Pricing
 https://rythm-os.com/pricing

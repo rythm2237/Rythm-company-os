@@ -1,6 +1,6 @@
 # RYTHM Company OS
 
-> RYTHM Company OS is a governed AI company operating system that gives a Human CEO a specialized AI workforce, Company Memory, meetings, approvals, projects, actions, and traceable execution in one operating environment.
+> RYTHM Company OS is a governed AI workforce platform for building and operating specialized AI Agent teams, Company Memory, meetings, approvals, projects, actions, and traceable execution under Human CEO authority.
 
 Canonical site: https://rythm-os.com
 Product status: Public Beta
@@ -19,12 +19,24 @@ Business address: 1143 Budapest, Gizella út 35, Hungary
 
 ## Primary public pages
 
+- About: https://rythm-os.com/about
+- AI Workforce: https://rythm-os.com/ai-workforce
+- AI Agents for Business: https://rythm-os.com/ai-agents-for-business
+- How It Works: https://rythm-os.com/how-it-works
 - Product: https://rythm-os.com/product
+- AI Agent roles: https://rythm-os.com/product/ai-agents
+- Integrations: https://rythm-os.com/product/integrations
+- Product Architecture: https://rythm-os.com/product-architecture
+- Platform Comparisons: https://rythm-os.com/compare
 - Interactive Demo: https://rythm-os.com/demo
 - Solutions: https://rythm-os.com/solutions
+- Use Cases: https://rythm-os.com/use-cases
 - Templates: https://rythm-os.com/templates
 - Pricing: https://rythm-os.com/pricing
 - Enterprise AI Workforce: https://rythm-os.com/enterprise
+- FAQ: https://rythm-os.com/faq
+- Documentation: https://rythm-os.com/docs
+- Glossary: https://rythm-os.com/glossary
 - Live AI Meeting: https://rythm-os.com/live-ai-meeting
 - Trust Center: https://rythm-os.com/trust
 - Security: https://rythm-os.com/security
