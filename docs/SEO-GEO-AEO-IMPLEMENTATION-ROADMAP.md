@@ -1,7 +1,7 @@
 # RYTHM OS — SEO, GEO & AEO Implementation Roadmap
 
 Baseline audit date: 2026-09-01  
-Implementation branch: `feat/seo-geo-aeo-p0-foundation`  
+Production release: PR `#219`, commit `0693065b3d859ac4aa0fca3be9b36f3770d1affc`
 Canonical production origin: `https://rythm-os.com`  
 Legacy origin: `https://company.rythm-os.com`
 
@@ -11,7 +11,7 @@ In a future chat, ask the agent to open this file, inspect the current Git statu
 
 Status legend:
 
-- `DONE` — implemented and locally verified
+- `DONE` — implemented and verified at the acceptance boundary stated by the item
 - `READY` — specified and ready to implement
 - `TODO` — not started
 - `PARTIAL` — useful implementation exists, but a named dependency remains
@@ -48,16 +48,16 @@ Avoid rotating the primary category among “AI company platform,” “virtual 
 
 | ID | Status | Action | Acceptance criterion | Owner |
 |---|---|---|---|---|
-| P0-01 | VERIFY PROD | Publish and validate `robots.txt` | HTTP 200; canonical sitemap declared; Google, Bing, OpenAI Search, Perplexity and Claude Search user agents can crawl public pages; private/API paths remain excluded | Engineering |
-| P0-02 | VERIFY PROD | Publish and validate `sitemap.xml` | HTTP 200; only canonical `https://rythm-os.com` URLs; About and all intentional public pages included; no auth/app routes | Engineering |
-| P0-03 | VERIFY PROD | Enforce legacy-host redirect | Every `company.rythm-os.com/:path*` and `www.rythm-os.com/:path*` URL returns one permanent redirect to the same apex path; no chain | Engineering |
-| P0-04 | VERIFY PROD | Remove legacy host from structured data and runtime fallbacks | No canonical, schema, sitemap, Open Graph, internal link or auth fallback identifies the legacy host as the brand URL | Engineering |
-| P0-05 | VERIFY PROD | Unify homepage category | Title, H1, lead paragraph and schema use “governed AI workforce platform”; secondary copy retains “AI company operating system” | Content + Engineering |
-| P0-06 | VERIFY PROD | Publish an official About page | `/about` defines product, audience, operator, Human CEO authority and Public Beta status; linked from footer and sitemap | Founder + Content |
-| P0-07 | VERIFY PROD | Strengthen entity graph | Organization, Brand, WebSite, WebApplication and founder nodes use stable IDs and the canonical domain; claims match public legal pages | Engineering + Founder |
+| P0-01 | DONE | Publish and validate `robots.txt` | HTTP 200; canonical sitemap declared; Google, Bing, OpenAI Search, Perplexity and Claude Search user agents can crawl public pages; private/API paths remain excluded | Engineering |
+| P0-02 | DONE | Publish and validate `sitemap.xml` | HTTP 200; only canonical `https://rythm-os.com` URLs; About and all intentional public pages included; no auth/app routes | Engineering |
+| P0-03 | DONE | Enforce legacy-host redirect | Every `company.rythm-os.com/:path*` and `www.rythm-os.com/:path*` URL returns one permanent redirect to the same apex path; no chain | Engineering |
+| P0-04 | DONE | Remove legacy host from structured data and runtime fallbacks | No canonical, schema, sitemap, Open Graph, internal link or auth fallback identifies the legacy host as the brand URL | Engineering |
+| P0-05 | DONE | Unify homepage category | Title, H1, lead paragraph and schema use “governed AI workforce platform”; secondary copy retains “AI company operating system” | Content + Engineering |
+| P0-06 | DONE | Publish an official About page | `/about` defines product, audience, operator, Human CEO authority and Public Beta status; linked from footer and sitemap | Founder + Content |
+| P0-07 | DONE | Strengthen entity graph | Organization, Brand, WebSite, WebApplication and founder nodes use stable IDs and the canonical domain; claims match public legal pages | Engineering + Founder |
 | P0-08 | OWNER | Verify Google Search Console | Domain property verified; both sitemap and key URLs submitted; Page Indexing and manual-action baselines exported | Founder/Growth |
 | P0-09 | OWNER | Verify Bing Webmaster Tools | Site verified; sitemap submitted; URL Inspection baseline saved | Founder/Growth |
-| P0-10 | VERIFY PROD | Validate deployed output | Check response codes, rendered HTML metadata/schema, mobile layout, robots, sitemap, redirect and internal links on Production | Engineering |
+| P0-10 | DONE | Validate deployed output | Check response codes, rendered HTML metadata/schema, mobile layout, robots, sitemap, redirect and internal links on Production | Engineering |
 | P0-11 | OWNER | Create/verify official external entity profiles | Official LinkedIn company page and organization-level GitHub/profile URLs exist before adding them to Organization `sameAs` | Founder/Growth |
 
 ### Stage 1 local implementation log — 2026-09-01
@@ -80,10 +80,12 @@ Local validation:
 | Targeted ESLint | PASS | All changed TypeScript/TSX files passed |
 | `git diff --check` | PASS | No whitespace errors |
 | Legacy-host search in runtime/public code | PASS | No hard-coded legacy URL remains outside the redirect rule |
-| Full `next build` | BLOCKED BY ENVIRONMENT | This workspace could not download dependencies and the available cached dependency set lacks existing project packages `xlsx` and `jspdf`; the build reached the unrelated existing import and failed there |
-| Production verification | PENDING | No deployment or external webmaster mutation was performed in this stage |
+| Full `next build` | PASS IN CI | GitHub Actions run `33496623146` completed typecheck, lint, all configured test suites and the production build successfully |
+| Vercel Preview | PASS | Deployment for remote head `6b86084f565d236122d92ce1cd868e85e9a45d9f` reached Ready |
+| Production deployment | PASS | PR `#219` was squash-merged and Vercel marked production commit `0693065b3d859ac4aa0fca3be9b36f3770d1affc` successful |
+| Production verification | PASS | Public routes and discovery files returned 200; legacy hosts returned one 301 to the same apex path; rendered About page had content, canonical, JSON-LD and no application error overlay |
 
-Before merge/deploy, run a clean install and `npm run typecheck && npm run lint && npm run build` in the normal CI/development environment. The repository currently has no lockfile; Engineering should decide and commit the intended package-manager lockfile to make installs reproducible.
+The normal CI environment completed clean install, typecheck, lint, all configured tests and `next build`. Reproducible package-manager lockfile policy remains tracked as `T-10`.
 
 ### Stage 1 production verification commands/checks
 
@@ -100,22 +102,22 @@ Implement in this order; each page must add original product facts, examples or 
 
 | ID | Status | Proposed URL | Purpose / primary query | Required content | Owner |
 |---|---|---|---|---|---|
-| P1-01 | VERIFY PROD | `/ai-workforce` | Commercial category page: AI workforce platform | Definition, buyers, operating model, capabilities, governance, FAQ, demo/pricing links | Content |
-| P1-02 | VERIFY PROD | `/ai-agents-for-business` | AI agents for business | Role model, agent capabilities, human limits, examples, vs chatbots/automation | Content |
-| P1-03 | VERIFY PROD | `/how-it-works` | How RYTHM works | Intent → context → meeting → decision → approval → action → trace; screenshots and facts | Product + Content |
-| P1-04 | VERIFY PROD | `/product/ai-agents` | Individual AI Agent discovery hub | Available agent families, responsibilities, inputs, outputs, authority and escalation | Product + Content |
-| P1-05 | VERIFY PROD | `/product/integrations` | AI agent platform integrations | Current vs planned integrations, setup model, permissions, data boundaries; no unsupported claims | Product + Content |
-| P1-06 | VERIFY PROD | `/faq` | Direct-answer coverage | What is RYTHM, for whom, pricing, custom Agents, approvals, integrations, security, replacement claims | Content + Legal |
-| P1-07 | VERIFY PROD | `/docs` | First-party technical/product reference | Concepts, quick start, architecture, governance, Agent model, Company Memory, API/integration status | Engineering + Content |
-| P1-08 | VERIFY PROD | `/product-architecture` | Multi-agent business platform | Components, data/authority boundaries, orchestration, diagrams, current limits | Engineering + Content |
-| P1-09 | VERIFY PROD | `/use-cases` | AI workforce use cases | Hub that routes to substantive workflows and industries | Content |
-| P1-10 | VERIFY PROD | `/use-cases/startups` | AI team for startups | Validated workflows, roles, governance, implementation path | Content |
-| P1-11 | VERIFY PROD | `/use-cases/agencies` | AI workforce for agencies | Map to existing Advertising Agency template and governed delivery | Content |
-| P1-12 | VERIFY PROD | `/use-cases/software-companies` | AI agents for software companies | Map to existing Software Company template and governed delivery | Content |
-| P1-13 | VERIFY PROD | `/glossary` | Entity/definition coverage | AI workforce, AI Agent, agentic workflow, multi-agent system, Company Memory, human-in-the-loop | Content |
-| P1-14 | VERIFY PROD | `/security` | Improve existing security page | Add architecture evidence, control ownership, update date, reporting expectations and FAQs | Security + Content |
-| P1-15 | VERIFY PROD | `/pricing` | Improve existing pricing page | Add plain-language inclusions, limits, ideal buyer, implementation costs and pricing FAQs | Growth + Content |
-| P1-16 | VERIFY PROD | `/enterprise` | Improve enterprise intent match | Deployment model, governance review, integrations, security, implementation and procurement facts | Growth + Content |
+| P1-01 | DONE | `/ai-workforce` | Commercial category page: AI workforce platform | Definition, buyers, operating model, capabilities, governance, FAQ, demo/pricing links | Content |
+| P1-02 | DONE | `/ai-agents-for-business` | AI agents for business | Role model, agent capabilities, human limits, examples, vs chatbots/automation | Content |
+| P1-03 | DONE | `/how-it-works` | How RYTHM works | Intent → context → meeting → decision → approval → action → trace; screenshots and facts | Product + Content |
+| P1-04 | DONE | `/product/ai-agents` | Individual AI Agent discovery hub | Available agent families, responsibilities, inputs, outputs, authority and escalation | Product + Content |
+| P1-05 | DONE | `/product/integrations` | AI agent platform integrations | Current vs planned integrations, setup model, permissions, data boundaries; no unsupported claims | Product + Content |
+| P1-06 | DONE | `/faq` | Direct-answer coverage | What is RYTHM, for whom, pricing, custom Agents, approvals, integrations, security, replacement claims | Content + Legal |
+| P1-07 | DONE | `/docs` | First-party technical/product reference | Concepts, quick start, architecture, governance, Agent model, Company Memory, API/integration status | Engineering + Content |
+| P1-08 | DONE | `/product-architecture` | Multi-agent business platform | Components, data/authority boundaries, orchestration, diagrams, current limits | Engineering + Content |
+| P1-09 | DONE | `/use-cases` | AI workforce use cases | Hub that routes to substantive workflows and industries | Content |
+| P1-10 | DONE | `/use-cases/startups` | AI team for startups | Validated workflows, roles, governance, implementation path | Content |
+| P1-11 | DONE | `/use-cases/agencies` | AI workforce for agencies | Map to existing Advertising Agency template and governed delivery | Content |
+| P1-12 | DONE | `/use-cases/software-companies` | AI agents for software companies | Map to existing Software Company template and governed delivery | Content |
+| P1-13 | DONE | `/glossary` | Entity/definition coverage | AI workforce, AI Agent, agentic workflow, multi-agent system, Company Memory, human-in-the-loop | Content |
+| P1-14 | DONE | `/security` | Improve existing security page | Add architecture evidence, control ownership, update date, reporting expectations and FAQs | Security + Content |
+| P1-15 | DONE | `/pricing` | Improve existing pricing page | Add plain-language inclusions, limits, ideal buyer, implementation costs and pricing FAQs | Growth + Content |
+| P1-16 | DONE | `/enterprise` | Improve enterprise intent match | Deployment model, governance review, integrations, security, implementation and procurement facts | Growth + Content |
 
 ### Stage 2 local implementation log — 2026-09-01
 
@@ -124,7 +126,7 @@ Implement in this order; each page must add original product facts, examples or 
 - Added privacy-safe AI-referral event detection for ChatGPT, Perplexity, Gemini, Microsoft Copilot and Claude. A durable analytics sink is still required for reporting.
 - Added a fair comparison hub plus source-linked pages for Lindy, Relevance AI, CrewAI and Microsoft Copilot Studio. Competitor claims use official sources and a visible review date.
 - Added an automated SEO/GEO/AEO contract test covering 25 critical public routes, crawler policy, canonical host, sitemap source, redirects, internal discovery links, comparison sources and AI referrers.
-- Targeted TypeScript, ESLint, SEO contract and whitespace checks pass. Clean production/Preview build and browser verification remain required.
+- Targeted TypeScript, ESLint, SEO contract and whitespace checks pass. Full CI, Preview deployment and Production route/render verification also pass.
 
 ## P2 — Proof, comparisons and authority
 
@@ -132,11 +134,11 @@ Implement in this order; each page must add original product facts, examples or 
 |---|---|---|---|---|
 | P2-01 | TODO | Publish 2–3 verified customer stories | Named or permissioned customer, initial problem, implementation, workflow, measurable outcome and limitations | Founder/Growth |
 | P2-02 | BLOCKED | Publish `/customers` hub | At least two substantive, verifiable stories exist | Content |
-| P2-03 | VERIFY PROD | Build comparison framework | Fair comparison criteria: organization model, governance, memory, approvals, integrations, execution, pricing; source every changing competitor fact | Content/Growth |
-| P2-04 | VERIFY PROD | Publish RYTHM vs Lindy | Commercial comparison aligned to AI employee/workforce intent | Content/Growth |
-| P2-05 | VERIFY PROD | Publish RYTHM vs Relevance AI | Commercial comparison aligned to AI workforce/multi-agent intent | Content/Growth |
-| P2-06 | VERIFY PROD | Publish RYTHM vs CrewAI | Explain platform vs framework and managed operating environment vs developer orchestration | Content/Engineering |
-| P2-07 | VERIFY PROD | Publish RYTHM vs Microsoft Copilot Studio | Enterprise governance/orchestration comparison with verified sources | Content/Growth |
+| P2-03 | DONE | Build comparison framework | Fair comparison criteria: organization model, governance, memory, approvals, integrations, execution, pricing; source every changing competitor fact | Content/Growth |
+| P2-04 | DONE | Publish RYTHM vs Lindy | Commercial comparison aligned to AI employee/workforce intent | Content/Growth |
+| P2-05 | DONE | Publish RYTHM vs Relevance AI | Commercial comparison aligned to AI workforce/multi-agent intent | Content/Growth |
+| P2-06 | DONE | Publish RYTHM vs CrewAI | Explain platform vs framework and managed operating environment vs developer orchestration | Content/Engineering |
+| P2-07 | DONE | Publish RYTHM vs Microsoft Copilot Studio | Enterprise governance/orchestration comparison with verified sources | Content/Growth |
 | P2-08 | TODO | Create original benchmark/research asset | Reproducible AI workforce governance or multi-agent operations benchmark with methodology and data | Product/Growth |
 | P2-09 | TODO | Earn relevant third-party coverage | Founder interviews, partner pages, technical write-ups and reputable AI/SaaS directories; no paid link schemes | Founder/Growth |
 | P2-10 | TODO | Establish review presence | Accurate profiles on relevant software review platforms; request honest reviews from real users only | Growth |
@@ -166,9 +168,9 @@ Implement in this order; each page must add original product facts, examples or 
 | E-02 | OWNER | Decide whether the GitHub organization should be renamed/created as a company-level entity | Founder/Engineering |
 | E-03 | TODO | Add only verified organization profiles to `Organization.sameAs` | Engineering |
 | E-04 | PARTIAL | Verified founder/operator identity and LinkedIn link are published; relevant-experience bio still requires founder-approved facts | Founder/Content |
-| E-05 | VERIFY PROD | Publish visible reviewed/updated dates on high-change trust, pricing, support, comparison and documentation pages | Content/Engineering |
+| E-05 | DONE | Publish visible reviewed/updated dates on high-change trust, pricing, support, comparison and documentation pages | Content/Engineering |
 | E-06 | TODO | Add status/uptime page when operational monitoring is ready for customers | Engineering |
-| E-07 | VERIFY PROD | Publish support expectations and incident communication process appropriate to Public Beta | Operations/Content |
+| E-07 | DONE | Publish support expectations and incident communication process appropriate to Public Beta | Operations/Content |
 | E-08 | TODO | Add verifiable testimonials, logos or proof only after permission and evidence are recorded | Founder/Growth |
 
 ## Measurement and reporting
