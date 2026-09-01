@@ -30,6 +30,7 @@ const groups = [
   ]},
   { label: "Grow", items: [{ label: "CRM & Sales", href: "/crm", icon: "↗" }]},
   { label: "Govern", items: [
+    { label: "Approvals", href: "/approvals", icon: "✓" },
     { label: "Ideas", href: "/ideas", icon: "◎" },
     { label: "Boardroom", href: "/meetings/room", icon: "◉" },
     { label: "Traceability", href: "/workflow/traceability", icon: "↗" },
