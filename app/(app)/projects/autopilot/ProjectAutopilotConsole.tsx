@@ -31,7 +31,7 @@ export default function ProjectAutopilotConsole({ projectId, projectCode }: { pr
     <button onClick={runAutopilot} disabled={running || state.status === "approval_required"} style={{ marginTop: 12 }}>{running ? "Project autopilot running…" : "Run project autopilot"}</button>
     {running ? <div style={{ marginTop: 16 }}><div style={{ height: 8, borderRadius: 999, overflow: "hidden", background: "#e8edf7" }}><div style={{ width: "55%", height: "100%", background: "currentColor", animation: "pulse 1.2s ease-in-out infinite" }}/></div><p className="subtitle">Keep this page open while the current internal action completes. The next eligible action starts automatically.</p></div> : null}
     {state.message ? <p className={state.status === "error" ? "form-error" : state.status === "approval_required" ? "security-note" : "form-success"} style={{ marginTop: 14 }}>{state.message}</p> : null}
-    {state.status === "approval_required" ? <p style={{ marginTop: 10 }}><a className="secondary-button" href="/approvals">Open Human CEO approval gate</a></p> : null}
+    {state.status === "approval_required" ? <p style={{ marginTop: 10 }}><a className="secondary-button" href={`/approvals/decisions?project=${projectId}`}>Open CEO decision workspace</a></p> : null}
     {history.length ? <div style={{ marginTop: 20 }}><p className="label">Completed this run</p><div className="data-list">{history.map((item, index) => <details key={`${item.actionCode ?? index}`} className="data-row"><summary><strong>{item.actionCode ?? "Action"} · {item.title ?? "Completed"}</strong></summary><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", marginTop: 12 }}>{item.output}</pre></details>)}</div></div> : null}
   </section>;
 }
