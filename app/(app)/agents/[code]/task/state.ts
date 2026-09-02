@@ -5,6 +5,7 @@ export type AgentTaskState = {
   correlationId?: string;
   routing?: string;
   knowledgeCount?: number;
+  assignmentId?: string;
 };
 
 export const initialAgentTaskState: AgentTaskState = { status: "idle" };
