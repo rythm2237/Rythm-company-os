@@ -21,6 +21,9 @@ const vazirmatn = localFont({
   fallback: ["Tahoma", "Arial", "sans-serif"],
 });
 
+const googleSiteVerification = process.env.GOOGLE_SITE_VERIFICATION?.trim();
+const bingSiteVerification = process.env.BING_SITE_VERIFICATION?.trim();
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
   title: {
@@ -33,6 +36,15 @@ export const metadata: Metadata = {
   creator: SITE_NAME,
   publisher: SITE_NAME,
   referrer: "origin-when-cross-origin",
+  verification:
+    googleSiteVerification || bingSiteVerification
+      ? {
+          ...(googleSiteVerification ? { google: googleSiteVerification } : {}),
+          ...(bingSiteVerification
+            ? { other: { "msvalidate.01": bingSiteVerification } }
+            : {}),
+        }
+      : undefined,
   openGraph: {
     type: "website",
     url: "/",
