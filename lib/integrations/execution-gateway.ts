@@ -205,6 +205,7 @@ export async function requestToolExecution(
     { data: entitlement },
     { data: agent },
     { data: grant },
+    { data: autonomy },
   ] = (await Promise.all([
     supabase
       .from("organization_integrations")
@@ -246,6 +247,16 @@ export async function requestToolExecution(
           .eq("enabled", true)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    intent.agentId
+      ? supabase
+          .from("agent_autonomy_profiles")
+          .select(
+            "current_level,maximum_level,status,allowed_risk_levels,requires_approval_for_external_actions",
+          )
+          .eq("organization_id", intent.organizationId)
+          .eq("agent_id", intent.agentId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ])) as any[];
   if (!integration)
     throw new Error("Integration is not available to this company.");
@@ -271,6 +282,25 @@ export async function requestToolExecution(
     integration.provider_key,
   );
   const meta = registered.operation;
+  const autonomyLevel = Number(autonomy?.current_level ?? 0);
+  const autonomyActive = Boolean(
+    autonomy && !["locked", "suspended"].includes(String(autonomy.status)),
+  );
+  const autonomyAllowsRequest =
+    !intent.agentId ||
+    (autonomyActive &&
+      autonomyLevel >= 1 &&
+      (!meta.externalSideEffect || autonomyLevel >= 2) &&
+      (!["medium", "high", "restricted"].includes(meta.riskLevel) ||
+        autonomyLevel >= 2));
+  const autonomyRequiresApproval = Boolean(
+    intent.agentId &&
+      (meta.financialImpact ||
+        ["high", "restricted"].includes(meta.riskLevel) ||
+        (meta.externalSideEffect &&
+          (autonomyLevel < 3 ||
+            autonomy?.requires_approval_for_external_actions !== false))),
+  );
   const inputValidation = validateExecutionInput(
     toolId,
     intent.capabilityKey,
@@ -321,7 +351,8 @@ export async function requestToolExecution(
     requiredScopes: meta.requiredScopes,
     humanApprovalRequired:
       meta.approvalPolicy !== "not_required" ||
-      grant?.approval_mode === "approval_required",
+      grant?.approval_mode === "approval_required" ||
+      autonomyRequiresApproval,
     approvalPolicy: meta.approvalPolicy,
     idempotencyKey,
     timeoutMs: meta.timeoutMs,
@@ -397,7 +428,9 @@ export async function requestToolExecution(
     userAuthorized: Boolean(
       membership && membership.membership_status === "active",
     ),
-    agentAuthorized: !intent.agentId || Boolean(agent && grant?.enabled),
+    agentAuthorized:
+      !intent.agentId ||
+      Boolean(agent && grant?.enabled && autonomyAllowsRequest),
     agentEnabled:
       !intent.agentId ||
       Boolean(agent?.enabled && agent?.agent_status !== "archived"),
