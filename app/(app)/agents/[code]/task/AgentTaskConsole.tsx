@@ -14,7 +14,7 @@ export default function AgentTaskConsole({agentCode,agentName,assignments}:{agen
     <form action={action} className="stacked-form" style={{marginTop:14}}>
       <input type="hidden" name="agentCode" value={agentCode}/>
       <label>Governed assignment<select name="assignmentId" required defaultValue=""><option value="" disabled>Select an assignment</option>{assignments.map(assignment=><option key={assignment.id} value={assignment.id}>{assignment.title} · {assignment.risk_level} · {assignment.approval_mode}</option>)}</select></label>
-      <button className="primary-button" type="submit" disabled={pending||assignments.length===0}>{pending?"Working…":"Run governed assignment"}</button>
+      <button className="primary-button" type="submit" disabled={pending||assignments.length===0}>{pending?"Working…":"Run task"}</button>
     </form>
     {state.status==="error"?<p className="form-error" style={{marginTop:16}}>{state.error}</p>:null}
     {state.status==="success"?<div style={{marginTop:18}}>

@@ -138,10 +138,10 @@ export default async function AgentTaskPage({
     <main className="command-shell">
       <header className="command-header">
         <div>
-          <p className="eyebrow">GOVERNED POSITION WORK</p>
+          <p className="eyebrow">AGENT WORKSPACE · GOVERNED TASK</p>
           <h1>Assign work to {agent.display_name ?? agent.name}</h1>
           <p className="subtitle">
-            {agent.role_title} · {operationalReadinessLabel(readiness.readiness_state)}
+            {agent.role_title} · Adaptive Routing · {operationalReadinessLabel(readiness.readiness_state)}
           </p>
         </div>
         <Link className="secondary-button" href={`/agents/${code}`}>
@@ -172,7 +172,7 @@ export default async function AgentTaskPage({
         <article className="panel">
           <div className="panel-heading"><div><p className="label">Evidence rule</p><h2>No synthetic experience</h2></div></div>
           <p className="security-note">
-            Creating a task does not improve readiness. It counts only after a terminal Agent-owned execution is recorded, the result is independently verifiable, and the human owner validates the outcome.
+            Creating a task does not improve readiness. This workspace cannot publish, spend money, or make legal commitments. Work counts only after a terminal Agent-owned execution is recorded, the result is independently verifiable, and the human owner validates the outcome.
           </p>
         </article>
       </section>
