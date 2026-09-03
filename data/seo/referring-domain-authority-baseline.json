@@ -1,0 +1,48 @@
+{
+  "version": "2026-09-03.1",
+  "observed_on": "2026-09-03",
+  "canonical_domain": "rythm-os.com",
+  "scope": "publicly discoverable, evidence-backed referring-domain and authority baseline",
+  "claim_boundary": "This file does not claim a complete backlink index. Search-engine discovery can miss links. Third-party authority scores such as DR or DA must not be populated without provider, observation date, and evidence.",
+  "verified_third_party_referring_domains": [],
+  "controlled_entity_profiles": [
+    {
+      "domain": "linkedin.com",
+      "url": "https://www.linkedin.com/company/rythm-company-os",
+      "classification": "controlled_brand_profile",
+      "counts_as_third_party_authority": false
+    },
+    {
+      "domain": "github.com",
+      "url": "https://github.com/Rythm-os",
+      "classification": "controlled_organization_profile",
+      "counts_as_third_party_authority": false
+    }
+  ],
+  "public_search_observations": [
+    {
+      "query": "\"rythm-os.com\" -site:rythm-os.com",
+      "result": "no verified third-party referring-domain link identified"
+    },
+    {
+      "query": "\"RYTHM Company OS\" -site:rythm-os.com",
+      "result": "no verified third-party referring-domain link identified"
+    },
+    {
+      "query": "\"Governed AI Workforce Platform\" \"RYTHM\"",
+      "result": "no verified third-party referring-domain link identified"
+    }
+  ],
+  "authority_metrics": {
+    "domain_rating": null,
+    "domain_authority": null,
+    "authority_score": null,
+    "note": "No paid/connected SEO authority provider evidence was available for this baseline."
+  },
+  "status": "partial",
+  "next_evidence": [
+    "verified third-party editorial or directory links",
+    "Search Console Links report or equivalent first-party backlink evidence",
+    "provider-backed DR/DA/Authority Score with timestamp and evidence"
+  ]
+}
