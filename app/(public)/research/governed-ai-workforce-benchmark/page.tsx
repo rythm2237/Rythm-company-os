@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
 
+const description =
+  "A reproducible synthetic benchmark for evaluating evidence discipline, decision quality, multi-agent role differentiation, and human-governance behavior in AI workforce systems.";
+
 export const metadata: Metadata = {
-  title: "Governed AI Workforce Benchmark | RYTHM Company OS",
-  description:
-    "A reproducible synthetic benchmark for evaluating evidence discipline, decision quality, multi-agent role differentiation, and human-governance behavior in AI workforce systems.",
+  title: "Governed AI Workforce Benchmark",
+  description,
   alternates: { canonical: "/research/governed-ai-workforce-benchmark" },
+  openGraph: {
+    type: "website",
+    url: "/research/governed-ai-workforce-benchmark",
+    siteName: "RYTHM Company OS",
+    title: "Governed AI Workforce Benchmark",
+    description,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Governed AI Workforce Benchmark",
+    description,
+  },
 };
 
 const dimensions = [
