@@ -36,14 +36,12 @@ The scores above remain the original audit baseline. Do not silently rescore the
 
 Continue in this order:
 
-1. `M-07`: extend first-party conversion reporting from attributed demo/signup CTA/enterprise-inquiry initiation to confirmed signup and genuinely qualified enterprise lead outcomes.
-2. `T-10`: commit/enforce the intended package-manager lockfile and reproducible clean-install policy if it is still unresolved on `main`.
-3. `T-12`: reproduce/identify the single non-blocking homepage image-alt notice reported by Bing before making any markup change.
-4. `M-05`: establish the fixed answer-engine mention/citation benchmark using the query/prompt set in this file and a reproducible logged methodology.
-5. `T-09` / `M-01`–`M-03`: continue index coverage, query visibility and legacy-host retirement monitoring; the 90-day observation requirement cannot be closed early.
-6. `T-03`: retain the Lighthouse lab baseline and add Search Console/CrUX field monitoring when enough real-user field data becomes available.
-7. `P2-01` / `P2-02` / `E-08`: publish customer proof only after permission and measurable evidence exist.
-8. `P2-08`–`P2-12` / `M-06`: produce original research, integration/partner proof, legitimate third-party authority, referring-domain evidence and transparent community discovery.
+1. `T-12`: re-run Bing Live URL inspection and identify the reported homepage missing-alt instance. Current Production-rendered HTML has descriptive `alt` attributes on all three rendered `<img>` elements, so do not change markup without new Bing evidence.
+2. `M-05`: establish the fixed answer-engine mention/citation benchmark using the query/prompt set in this file and a reproducible logged methodology.
+3. `T-09` / `M-01`–`M-03`: continue index coverage, query visibility and legacy-host retirement monitoring; the 90-day observation requirement cannot be closed early.
+4. `T-03`: retain the Lighthouse lab baseline and add Search Console/CrUX field monitoring when enough real-user field data becomes available.
+5. `P2-01` / `P2-02` / `E-08`: publish customer proof only after permission and measurable evidence exist.
+6. `P2-08`–`P2-12` / `M-06`: produce original research, integration/partner proof, legitimate third-party authority, referring-domain evidence and transparent community discovery.
 
 ## Search foundation — current state
 
@@ -139,7 +137,7 @@ Operational policy: repeat submissions are safe; current automation submits the 
 
 ## Durable referral and conversion analytics — completed/extended 2026-09-03
 
-Status: `M-04 DONE`; `M-07 PARTIAL`
+Status: `M-04 DONE`; `M-07 DONE`
 
 Implementation evidence:
 
@@ -153,7 +151,37 @@ Implementation evidence:
 - Attributed public conversion events include demo, signup CTA and enterprise-inquiry initiation events.
 - The implementation intentionally does not persist identity, email, IP address, user-agent, raw referrer URL, tenant data or free-text content.
 
-Remaining `M-07` acceptance gap: connect attribution to **confirmed signup** and a genuinely **qualified enterprise lead** outcome, not merely CTA/initiation events.
+`M-07` completion evidence:
+
+- PR `#231` — `Complete M-07 confirmed conversion attribution`.
+- Production merge commit: `6f1b9dad90f5481a0271645651f0a3b7cdce672e`.
+- Production deployment reached `READY`; canonical `/enterprise` returned HTTP `200` with the new explicit intake form.
+- Confirmed-signup attribution is emitted server-side only after a real authenticated signup outcome, including email confirmation where required.
+- OAuth signup is distinguished from login and established OAuth users are not counted as new signups.
+- Enterprise contact identity is stored separately from identity-free analytics.
+- `qualified_enterprise_lead` is derived server-side only when the submitted intake satisfies the documented Public Beta qualification boundary: non-consumer work email, 50+ employees, deployment horizon within six months, and decision-maker or executive-sponsor responsibility.
+- No synthetic signup or Enterprise lead was created to close this item, and no real conversion volume is claimed until genuine user outcomes occur.
+
+## Reproducible npm installs — completed 2026-09-03
+
+Status: `T-10 DONE`
+
+Evidence:
+
+- Baseline `main` had no npm, pnpm or Yarn lockfile while CI used Node 22 with `npm install`.
+- Vercel consequently resolved floating package ranges independently; for example, `next` declared as `^15.4.6` resolved to `15.5.24` before lockfile enforcement.
+- A canonical npm `package-lock.json` with `lockfileVersion: 3` was generated through GitHub Actions using Node 22 and live npm registry resolution rather than being synthesized manually.
+- `.npmrc` declares `package-lock=true`.
+- CI now uses `npm ci` with npm cache enabled from the committed lockfile.
+- PR `#232` — `Enforce reproducible npm installs`.
+- PR CI run `33726076763`: `SUCCESS`; `npm ci`, typecheck, lint, all existing phase/routing/software-company tests and Production build passed from a clean checkout.
+- Production merge commit: `9d265a4984d30f7b8baa3585dd4ae58727a40d9c`.
+
+## Bing missing-alt reproduction — 2026-09-03
+
+Status: `T-12 PARTIAL`
+
+Current canonical homepage HTML was re-fetched after the M-07 Production deployment. The three rendered `<img>` elements are the sidebar, mobile-header and footer RYTHM logos, and all three render `alt="RYTHM Company OS"`. `og:image:alt` is also present. The historical Bing Live URL notice therefore could not be reproduced from current Production HTML. Do not change markup by inference; keep this item open until a fresh Bing Live URL inspection either identifies the exact instance or confirms that the notice has cleared.
 
 ## Full Production SEO crawl — completed 2026-09-03
 
