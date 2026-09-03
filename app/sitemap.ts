@@ -13,5 +13,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly" as const,
       priority: 0.76,
     },
+    {
+      url: absoluteUrl("/press"),
+      changeFrequency: "monthly" as const,
+      priority: 0.72,
+    },
   ];
 }
