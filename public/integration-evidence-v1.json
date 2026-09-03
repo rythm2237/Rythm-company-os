@@ -1,0 +1,85 @@
+{
+  "register": "RYTHM Integration Evidence Register",
+  "version": "1.0.0",
+  "reviewed_on": "2026-09-03",
+  "claim_boundary": "This register proves implemented RYTHM integration contracts/adapters. It does not claim official partnership, certification, marketplace approval, or universal customer availability unless separately evidenced.",
+  "source_of_truth": {
+    "tool_registry": "https://github.com/rythm2237/Rythm-company-os/blob/main/lib/integrations/registry.ts",
+    "provider_adapters": "https://github.com/rythm2237/Rythm-company-os/blob/main/lib/integrations/adapters/provider-adapters.ts",
+    "provider_executors": "https://github.com/rythm2237/Rythm-company-os/blob/main/lib/integrations/provider-executors.ts"
+  },
+  "providers": [
+    {
+      "provider": "GitHub",
+      "integration_id": "github",
+      "tool_ids": ["github.repository"],
+      "implemented_operations": ["repo.read", "branch.create", "code.write", "pull_request.create", "pull_request.merge"],
+      "default_execution_mode": "simulate",
+      "provider_api": "https://docs.github.com/en/rest",
+      "official_partner_claimed": false
+    },
+    {
+      "provider": "Vercel",
+      "integration_id": "vercel",
+      "tool_ids": ["vercel.deployment"],
+      "implemented_operations": ["deployment.read", "preview.deploy", "production.deploy"],
+      "default_execution_mode": "simulate",
+      "provider_api": "https://vercel.com/docs/rest-api",
+      "official_partner_claimed": false
+    },
+    {
+      "provider": "Supabase",
+      "integration_id": "supabase",
+      "tool_ids": ["supabase.database"],
+      "implemented_operations": ["schema.read", "sql.read", "migration.apply"],
+      "default_execution_mode": "simulate",
+      "provider_api": "https://supabase.com/docs/reference/api/introduction",
+      "official_partner_claimed": false
+    },
+    {
+      "provider": "Cloudflare",
+      "integration_id": "cloudflare",
+      "tool_ids": ["cloudflare.dns"],
+      "implemented_operations": ["dns.read", "dns.write"],
+      "default_execution_mode": "simulate",
+      "provider_api": "https://developers.cloudflare.com/api/overview/",
+      "official_partner_claimed": false
+    },
+    {
+      "provider": "Stripe",
+      "integration_id": "stripe",
+      "tool_ids": ["stripe.billing"],
+      "implemented_operations": ["billing.read", "refund.create"],
+      "default_execution_mode": "simulate",
+      "provider_api": "https://docs.stripe.com/api",
+      "official_partner_claimed": false
+    },
+    {
+      "provider": "Google Workspace",
+      "integration_id": "google_workspace",
+      "tool_ids": ["google_workspace.calendar", "google_workspace.email"],
+      "implemented_operations": ["calendar.read", "calendar.write", "email.send"],
+      "default_execution_mode": "simulate",
+      "provider_api": "https://developers.google.com/workspace",
+      "official_partner_claimed": false
+    },
+    {
+      "provider": "Microsoft 365",
+      "integration_id": "microsoft_365",
+      "tool_ids": ["microsoft_365.calendar", "microsoft_365.email"],
+      "implemented_operations": ["calendar.read", "calendar.write", "email.send"],
+      "default_execution_mode": "simulate",
+      "provider_api": "https://learn.microsoft.com/graph/overview",
+      "official_partner_claimed": false
+    },
+    {
+      "provider": "Resend",
+      "integration_id": "resend",
+      "tool_ids": ["resend.email"],
+      "implemented_operations": ["email.send"],
+      "default_execution_mode": "simulate",
+      "provider_api": "https://resend.com/docs/api-reference/introduction",
+      "official_partner_claimed": false
+    }
+  ]
+}
