@@ -28,6 +28,7 @@ const fetchBoundaries = new Set([
   "components/consumer-withdrawal-form.tsx",
   "components/project-pulse/ProjectPulse.tsx",
   "lib/ai/agent-provider.ts",
+  "lib/analytics/public-events.ts",
   "lib/billing/stripe-rest.ts",
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   "lib/integrations/adapters/http.ts",
