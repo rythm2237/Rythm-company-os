@@ -1,0 +1,25 @@
+name: Production SEO Crawl
+
+on:
+  pull_request:
+    paths:
+      - "scripts/crawl-production.mjs"
+      - ".github/workflows/production-seo-crawl.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Crawl canonical Production site
+        env:
+          SEO_CRAWL_ORIGIN: https://rythm-os.com
+        run: node scripts/crawl-production.mjs
