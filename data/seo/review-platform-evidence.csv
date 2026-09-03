@@ -1,5 +1,5 @@
 platform,status,eligibility,submission_date,live_profile_url,review_count,rating,evidence_note
 G2,not_submitted,blocked_beta,,,,0,,G2 excludes alpha/beta products; revisit at GA
-Capterra,not_submitted,eligible_beta,,,,0,,Eligible to apply subject to editorial acceptance and first-year real-review requirement
-GetApp,not_submitted,eligible_beta,,,,0,,Eligible to apply subject to editorial acceptance and first-year real-review requirement
+Capterra,submitted_under_review,eligible_beta,2026-09-03,,,0,,Submission confirmation captured in owner account; Capterra states review normally completes within 1-2 business days; public profile URL pending approval
+GetApp,pending_capterra_review,eligible_beta,2026-09-03,,,0,,Initial G2 Digital Markets flow states approved Capterra listing can later be added to GetApp; no public profile yet
 TrustRadius,not_submitted,candidate,,,,0,,Candidate for vendor profile; external account action required
