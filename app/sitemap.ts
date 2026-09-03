@@ -2,9 +2,16 @@ import type { MetadataRoute } from "next";
 import { absoluteUrl, PUBLIC_ROUTES } from "@/lib/seo/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return PUBLIC_ROUTES.map((route) => ({
-    url: absoluteUrl(route.path),
-    changeFrequency: route.changeFrequency,
-    priority: route.priority,
-  }));
+  return [
+    ...PUBLIC_ROUTES.map((route) => ({
+      url: absoluteUrl(route.path),
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
+    })),
+    {
+      url: absoluteUrl("/research/governed-ai-workforce-benchmark"),
+      changeFrequency: "monthly" as const,
+      priority: 0.76,
+    },
+  ];
 }
