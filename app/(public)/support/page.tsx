@@ -15,11 +15,11 @@ export default function SupportPage() {
         name="RYTHM Company OS Support"
         description="Public Beta support, account recovery, security reporting, and incident communication paths for RYTHM Company OS."
         breadcrumbLabel="Support"
-        dateModified="2026-09-01"
+        dateModified="2026-09-03"
       />
       <section className="public-page-hero enterprise-hero">
         <div><p className="marketing-kicker">RYTHM SUPPORT</p><h1>Get to the right recovery or support path without guessing.</h1></div>
-        <div><p>Public Beta support separates account recovery, product questions, commercial requests, and security reports so each request follows the correct boundary.</p><p className="contact-notice">Reviewed 1 September 2026</p></div>
+        <div><p>Public Beta support separates account recovery, product questions, commercial requests, and security reports so each request follows the correct boundary.</p><p className="contact-notice">Reviewed 3 September 2026</p></div>
       </section>
 
       <section className="marketing-section enterprise-model">
@@ -28,13 +28,13 @@ export default function SupportPage() {
       </section>
 
       <section className="marketing-section enterprise-model">
-        <div className="enterprise-capabilities"><p className="marketing-kicker">SUPPORT SCOPE</p><h2>What the Public Beta support path covers.</h2><ul><li>Account access and recovery guidance.</li><li>Product defects, unexpected behavior, and documentation questions.</li><li>Commercial activation and deployment questions.</li><li>Security and privacy reports routed to the dedicated contacts.</li></ul><p>RYTHM does not publish a guaranteed response or resolution SLA for the Public Beta. Enterprise support expectations must be agreed in the applicable order form or contract.</p></div>
-        <div className="enterprise-capabilities"><p className="marketing-kicker">INCIDENT COMMUNICATION</p><h2>How a reported issue is handled.</h2><ol><li>Report the affected page, approximate time, observed behavior, and safe reproduction steps.</li><li>RYTHM acknowledges and triages the report through the same contact thread when a reply is possible.</li><li>Material updates, required customer actions, and recovery status are communicated through that thread or the relevant customer contact.</li><li>When appropriate, a resolved report includes the known outcome and any follow-up action.</li></ol><p>Do not include passwords, one-time links, tokens, API keys, or customer-confidential data that is not necessary to reproduce the issue.</p></div>
+        <div className="enterprise-capabilities"><p className="marketing-kicker">SUPPORT SCOPE</p><h2>What the Public Beta support path covers.</h2><ul><li>Account access and recovery guidance.</li><li>Product defects, unexpected behavior, and documentation questions.</li><li>Commercial activation and deployment questions.</li><li>Security and privacy reports routed to the dedicated contacts.</li></ul><p>RYTHM does not publish a guaranteed response or resolution SLA for the Public Beta. Enterprise support expectations must be agreed in the applicable order form or contract.</p><div className="hero-actions"><Link href="/status">System status</Link></div></div>
+        <div className="enterprise-capabilities"><p className="marketing-kicker">INCIDENT COMMUNICATION</p><h2>How a reported issue is handled.</h2><ol><li>Check the public System Status page for the current Production readiness signal.</li><li>Report the affected page, approximate time, observed behavior, and safe reproduction steps.</li><li>RYTHM acknowledges and triages the report through the same contact thread when a reply is possible.</li><li>Material updates, required customer actions, and recovery status are communicated through that thread or the relevant customer contact.</li><li>When appropriate, a resolved report includes the known outcome and any follow-up action.</li></ol><p>Do not include passwords, one-time links, tokens, API keys, or customer-confidential data that is not necessary to reproduce the issue.</p></div>
       </section>
 
       <section className="enterprise-contact-section">
         <div><p className="marketing-kicker">BETA SUPPORT</p><h2>Need help that the self-service paths do not solve?</h2><p>Include the page URL, what you attempted, the exact message shown, and the approximate time of the issue. Never send a password, one-time authentication link, API key, or access token.</p></div>
-        <div className="enterprise-contact-card"><h3>Contact path</h3><a className="marketing-button" href={`mailto:${supportEmail}?subject=${encodeURIComponent("RYTHM Public Beta support")}`}>Email Support</a><p className="contact-notice">{supportEmail}</p><div className="hero-actions"><a href="mailto:sales@rythm-os.com">Sales</a><Link href="/security">Security issue?</Link></div></div>
+        <div className="enterprise-contact-card"><h3>Contact path</h3><a className="marketing-button" href={`mailto:${supportEmail}?subject=${encodeURIComponent("RYTHM Public Beta support")}`}>Email Support</a><p className="contact-notice">{supportEmail}</p><div className="hero-actions"><Link href="/status">System Status</Link><a href="mailto:sales@rythm-os.com">Sales</a><Link href="/security">Security issue?</Link></div></div>
       </section>
     </main>
   );
