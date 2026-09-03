@@ -1,0 +1,36 @@
+{
+  "benchmark_version": "2026-09-03.1",
+  "default_locale": "en-US",
+  "prompts": [
+    {
+      "id": "AE-01",
+      "family": "company_building",
+      "text": "What are the best platforms for building a company with AI agents?"
+    },
+    {
+      "id": "AE-02",
+      "family": "ai_workforce",
+      "text": "What software can create an AI workforce for a business?"
+    },
+    {
+      "id": "AE-03",
+      "family": "governed_ai_workforce",
+      "text": "What are the best governed AI workforce platforms?"
+    },
+    {
+      "id": "AE-04",
+      "family": "virtual_company",
+      "text": "What are alternatives for running a virtual company with AI employees?"
+    },
+    {
+      "id": "AE-05",
+      "family": "category_definition",
+      "text": "How is an AI company operating system different from ChatGPT or automation software?"
+    },
+    {
+      "id": "AE-06",
+      "family": "human_approval",
+      "text": "Which AI agent platforms keep consequential approvals with a human executive?"
+    }
+  ]
+}
