@@ -43,7 +43,8 @@ export async function signInWithOAuth(formData: FormData) {
   const provider = rawProvider as SupportedOAuthProvider;
   const callbackUrl = new URL("/auth/callback", SITE_ORIGIN);
   callbackUrl.searchParams.set("next", next);
-  callbackUrl.searchParams.set("flow", "oauth");
+  callbackUrl.searchParams.set("flow", source === "signup" ? "oauth_signup" : "oauth");
+  callbackUrl.searchParams.set("provider", provider);
 
   const supabase = await createAuthServerClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
