@@ -18,5 +18,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly" as const,
       priority: 0.72,
     },
+    {
+      url: absoluteUrl("/status"),
+      changeFrequency: "weekly" as const,
+      priority: 0.62,
+    },
   ];
 }
