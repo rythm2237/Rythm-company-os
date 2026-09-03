@@ -1,11 +1,11 @@
 # RYTHM OS — SEO, GEO & AEO Current Implementation Roadmap
 
-Current checkpoint: 2026-09-02  
+Current checkpoint: 2026-09-03  
 Baseline audit: 2026-09-01  
 Canonical production origin: `https://rythm-os.com`  
 Legacy origin: `https://company.rythm-os.com`
 
-This file is the current continuation checkpoint. In a future chat, open this file first, inspect `main` and Production, then continue with the first unblocked item in **Current next actions**. Do not close owner-, market-, or evidence-dependent work with synthetic evidence.
+This file is the current continuation checkpoint. In a future chat, open this file first, inspect `main` and Production, then continue with the first unblocked item in **Current next actions**. Do not close owner-, market-, recurring-monitoring-, or evidence-dependent work with synthetic evidence.
 
 ## Status legend
 
@@ -30,25 +30,27 @@ This file is the current continuation checkpoint. In a future chat, open this fi
 
 Baseline classification: **INDEXABLE BUT LOW AUTHORITY**.
 
+The scores above remain the original audit baseline. Do not silently rescore them from implementation progress; produce a new scored audit only when a comparable evidence-based reassessment is intentionally run.
+
 ## Current next actions
 
 Continue in this order:
 
-1. `P0-11` / `E-01`–`E-03`: create or verify official LinkedIn and organization-level GitHub profiles, then add only verified URLs to `Organization.sameAs`.
-2. `M-04` / `M-07`: connect the implemented privacy-safe AI/organic referral events to durable analytics and conversion reporting.
-3. `T-02`: complete a full Production crawl; fix broken links, orphans, unintended redirects or canonical defects found.
-4. `T-03`: capture mobile/desktop lab performance now; establish Search Console/CrUX monitoring when field data is sufficient.
-5. `T-09`: monitor index coverage and legacy-host retirement for at least 90 days.
-6. `T-12`: identify the single non-blocking homepage image-alt notice reported by Bing if it remains reproducible.
+1. `M-07`: extend first-party conversion reporting from attributed demo/signup CTA/enterprise-inquiry initiation to confirmed signup and genuinely qualified enterprise lead outcomes.
+2. `T-10`: commit/enforce the intended package-manager lockfile and reproducible clean-install policy if it is still unresolved on `main`.
+3. `T-12`: reproduce/identify the single non-blocking homepage image-alt notice reported by Bing before making any markup change.
+4. `M-05`: establish the fixed answer-engine mention/citation benchmark using the query/prompt set in this file and a reproducible logged methodology.
+5. `T-09` / `M-01`–`M-03`: continue index coverage, query visibility and legacy-host retirement monitoring; the 90-day observation requirement cannot be closed early.
+6. `T-03`: retain the Lighthouse lab baseline and add Search Console/CrUX field monitoring when enough real-user field data becomes available.
 7. `P2-01` / `P2-02` / `E-08`: publish customer proof only after permission and measurable evidence exist.
-8. `P2-08`–`P2-12`: produce original research, integration/partner proof and legitimate third-party authority.
+8. `P2-08`–`P2-12` / `M-06`: produce original research, integration/partner proof, legitimate third-party authority, referring-domain evidence and transparent community discovery.
 
 ## Search foundation — current state
 
 | ID | Status | Action / acceptance state | Owner |
 |---|---|---|---|
 | P0-01 | DONE | `robots.txt` published; canonical sitemap declared; public search/answer-engine crawlers allowed while private/API paths remain excluded | Engineering |
-| P0-02 | DONE | Canonical `sitemap.xml` published on `rythm-os.com`; current Bing discovery confirms 42 canonical URLs | Engineering |
+| P0-02 | DONE | Canonical `sitemap.xml` published on `rythm-os.com`; current discovery baseline contains 42 canonical URLs | Engineering |
 | P0-03 | DONE | Legacy and `www` hosts permanently redirect to the apex canonical origin | Engineering |
 | P0-04 | DONE | Legacy host removed from structured data, canonical metadata and runtime fallbacks | Engineering |
 | P0-05 | DONE | Primary category unified as **Governed AI workforce platform** | Content/Engineering |
@@ -57,7 +59,23 @@ Continue in this order:
 | P0-08 | DONE | Google Search Console property verified; canonical sitemap active; page-indexing and query baselines captured; `/templates` indexing requested | Founder/Growth |
 | P0-09 | DONE | Bing Webmaster Tools verified; canonical sitemap submitted; legacy sitemap removed; URL Inspection baseline captured | Founder/Growth |
 | P0-10 | DONE | Production metadata, redirects, robots, sitemap, public rendering and structured-data outputs verified | Engineering |
-| P0-11 | OWNER | Official external company/entity profiles still need verification before adding them to `Organization.sameAs` | Founder/Growth |
+| P0-11 | DONE | Official RYTHM LinkedIn Company Page and GitHub Organization were verified and their organization-level URLs were added to `Organization.sameAs` in PR `#227` | Founder/Growth/Engineering |
+
+## Verified organization profiles — completed 2026-09-03
+
+Status: **DONE**
+
+Verified organization-level profiles:
+
+- LinkedIn Company Page: `https://www.linkedin.com/company/rythm-company-os`
+- GitHub Organization: `https://github.com/Rythm-os`
+
+Implementation evidence:
+
+- PR `#227` — `Add verified organization profiles to structured data`
+- Merge commit: `2389bc457b47f3afe8de1f6f648845dcfe3475fb`
+- Both verified URLs are rendered in the Organization JSON-LD `sameAs` property.
+- Founder `Person.sameAs` remains separate and unchanged.
 
 ## Google Search Console baseline — 2026-09-02
 
@@ -119,6 +137,89 @@ Production evidence:
 
 Operational policy: repeat submissions are safe; current automation submits the live canonical sitemap after `main` updates and once daily, so newly published canonical pages do not depend only on scheduled crawler discovery.
 
+## Durable referral and conversion analytics — completed/extended 2026-09-03
+
+Status: `M-04 DONE`; `M-07 PARTIAL`
+
+Implementation evidence:
+
+- PR `#228` — `Add durable referral and conversion analytics`
+- Production merge commit: `b40299c968d4f38adef382a16c5330d24713fd44`
+- Production deployment reached `READY`.
+- First-party tables/views: `public_analytics_events`, `public_analytics_monthly`.
+- RLS is enabled; anonymous and authenticated direct reads are disabled; service-role server access is used for ingestion/reporting.
+- The public event stream is persisted through a server-only ingestion route.
+- Attribution covers AI referrers and major organic-search referrers and preserves session attribution across the public journey.
+- Attributed public conversion events include demo, signup CTA and enterprise-inquiry initiation events.
+- The implementation intentionally does not persist identity, email, IP address, user-agent, raw referrer URL, tenant data or free-text content.
+
+Remaining `M-07` acceptance gap: connect attribution to **confirmed signup** and a genuinely **qualified enterprise lead** outcome, not merely CTA/initiation events.
+
+## Full Production SEO crawl — completed 2026-09-03
+
+Status: **DONE**
+
+Implementation:
+
+- PR `#229` — `Add repeatable Production SEO crawl`
+- Production merge commit: `b5876100d34e958f0a24542f1181594b93cf59f7`
+- `scripts/crawl-production.mjs` reads the live canonical sitemap and validates Production HTTP status, redirects, self-referencing canonical tags, unintended `noindex`, internal public links and sitemap orphans.
+- `.github/workflows/production-seo-crawl.yml` makes the crawl repeatable after `main` changes and on a weekly schedule.
+
+First crawl found four real sitemap orphans:
+
+- `/product-architecture`
+- `/use-cases/startups`
+- `/use-cases/agencies`
+- `/use-cases/software-companies`
+
+They were given discoverable internal links in the public footer. The post-deployment crawl then passed with:
+
+| Metric | Result |
+|---|---:|
+| Sitemap URLs crawled | 42 |
+| Distinct internal URLs discovered | 42 |
+| Notices | 0 |
+| Failures | 0 |
+
+Final crawl evidence: **no broken sitemap pages, canonical defects, unintended `noindex` directives, or orphan sitemap pages detected**.
+
+## Production performance baseline — 2026-09-03
+
+Status: `T-03 PARTIAL` — lab baseline is complete; real-user field monitoring remains pending until sufficient Search Console/CrUX data exists.
+
+Methodology:
+
+- Canonical target: `https://rythm-os.com`
+- Lighthouse CLI: `12.8.2`
+- Chrome on runner: `151.0.7922.173`
+- Environment: GitHub Actions `ubuntu-24.04`
+- Samples: 3 mobile + 3 desktop runs
+- Reported baseline: median of the three samples for each strategy
+- Raw Lighthouse JSON plus normalized summary are retained as the `production-lighthouse-baseline` workflow artifact for 30 days.
+- Workflow run `33723524056`: **SUCCESS**
+
+### Median Lighthouse lab baseline
+
+| Metric | Mobile | Desktop |
+|---|---:|---:|
+| Performance score | 100 | 100 |
+| FCP | 1,091 ms | 321 ms |
+| LCP | 1,713 ms | 444 ms |
+| Speed Index | 1,491 ms | 570 ms |
+| TBT | 61 ms | 0 ms |
+| CLS | 0.000 | 0.000 |
+
+Raw Performance scores were `73 / 100 / 100` on mobile and `100 / 100 / 100` on desktop. The median baseline is therefore strong, but the mobile run variance is material enough that future comparisons should continue to use multiple samples rather than a single Lighthouse run.
+
+Implementation:
+
+- PR `#230` — `Capture Production performance baseline`
+- `scripts/summarize-lighthouse-baseline.mjs` normalizes the median measurements.
+- `.github/workflows/performance-baseline.yml` provides a reproducible Production benchmark.
+
+Do **not** interpret this lab result as CrUX/Core Web Vitals field evidence. Close `T-03` only after sufficient real-user field data can be observed and incorporated into recurring monitoring.
+
 ## Category, answer and conversion coverage
 
 Primary category: **Governed AI workforce platform**  
@@ -168,14 +269,14 @@ Comparison coverage already published for Lindy, Relevance AI, CrewAI and Micros
 | ID | Status | Action | Owner |
 |---|---|---|---|
 | T-01 | DONE | Automated SEO/GEO/AEO contract tests | Engineering |
-| T-02 | TODO | Full Production crawl and broken-link/orphan/redirect remediation | Engineering |
-| T-03 | TODO | Lab performance baseline now; CrUX/Search Console monitoring when field data is sufficient | Engineering |
+| T-02 | DONE | Full Production crawl implemented; four discovered orphans fixed; final 42/42 canonical crawl passed with zero failures/notices | Engineering |
+| T-03 | PARTIAL | Three-run mobile/desktop Lighthouse lab baseline captured; add Search Console/CrUX real-user field monitoring when sufficient data exists | Engineering |
 | T-04 | DONE | Public image dimensions/formats/lazy-loading/alt/transfer audit | Engineering/Content |
 | T-05 | DONE | Breadcrumb schema only where visible breadcrumbs exist | Engineering |
 | T-06 | DONE | Visible machine-readable FAQ answers without unsupported FAQ rich-result claims | Engineering/Content |
 | T-07 | TODO | Add `Article` schema + author + publish/modified dates when editorial content launches | Engineering/Content |
 | T-08 | DONE | Deliberate search vs training-crawler policy documented | Founder/Legal/Security |
-| T-09 | TODO | Monitor sitemap/index coverage and legacy-host retirement for at least 90 days | Growth/Engineering |
+| T-09 | PARTIAL | 90-day sitemap/index coverage and legacy-host retirement observation is underway; cannot be marked complete before the monitoring period is evidenced | Growth/Engineering |
 | T-10 | TODO | Commit intended package-manager lockfile and enforce reproducible clean installs | Engineering |
 | T-11 | DONE | Production IndexNow verification + automated canonical URL submission | Engineering |
 | T-12 | TODO | Reproduce/identify Bing homepage missing-alt notice before making any markup change | Engineering |
@@ -184,9 +285,9 @@ Comparison coverage already published for Lindy, Relevance AI, CrewAI and Micros
 
 | ID | Status | Action | Owner |
 |---|---|---|---|
-| E-01 | OWNER | Create/verify official LinkedIn company page with exact name, canonical URL, logo, category and description | Founder |
-| E-02 | OWNER | Decide/create/rename an organization-level GitHub entity appropriate for the company | Founder/Engineering |
-| E-03 | TODO | Add only verified company profiles to `Organization.sameAs` | Engineering |
+| E-01 | DONE | Official LinkedIn Company Page verified: `linkedin.com/company/rythm-company-os` | Founder |
+| E-02 | DONE | Organization-level GitHub entity verified: `github.com/Rythm-os` | Founder/Engineering |
+| E-03 | DONE | Verified company LinkedIn/GitHub profiles added to `Organization.sameAs` in PR `#227` | Engineering |
 | E-04 | PARTIAL | Founder/operator identity + LinkedIn link published; experience bio still requires founder-approved facts | Founder/Content |
 | E-05 | DONE | Reviewed/updated dates on high-change trust, pricing, support, comparison and docs pages | Content/Engineering |
 | E-06 | TODO | Add public status/uptime page when customer-facing operational monitoring is ready | Engineering |
@@ -200,10 +301,10 @@ Comparison coverage already published for Lindy, Relevance AI, CrewAI and Micros
 | M-01 | PARTIAL | Baseline captured; continue indexed canonical URLs, exclusions and crawl-error monitoring | Weekly for 8 weeks, then monthly | Google Search Console |
 | M-02 | PARTIAL | Branded baseline captured; continue clicks/impressions and query-variant tracking | Monthly | Google Search Console |
 | M-03 | PARTIAL | Google/Bing baseline captured; track non-branded category visibility by landing page | Monthly | GSC + Bing Webmaster Tools |
-| M-04 | PARTIAL | AI/organic referral detection exists; connect durable analytics sink/server reporting | Monthly | First-party analytics/logs |
+| M-04 | DONE | Privacy-safe AI/organic attribution now persists to first-party Production analytics with server-side reporting foundation | Monthly | First-party analytics/logs |
 | M-05 | TODO | Fixed answer-engine mention/citation benchmark | Monthly | Reproducible manual test log |
 | M-06 | TODO | New referring domains and unlinked brand mentions | Monthly | Reputable backlink/mention source |
-| M-07 | TODO | Demo/signup/qualified-enterprise conversion by organic landing page | Monthly | First-party analytics/CRM |
+| M-07 | PARTIAL | Attributed demo/signup CTA/enterprise-inquiry initiation events persist; connect confirmed signup and qualified-enterprise outcomes | Monthly | First-party analytics/CRM |
 
 ## Fixed query / answer-engine benchmark
 
@@ -221,6 +322,15 @@ Answer-engine prompts:
 - What are alternatives for running a virtual company with AI employees?
 - How is an AI company operating system different from ChatGPT or automation software?
 - Which AI agent platforms keep consequential approvals with a human executive?
+
+## Continuation protocol for the next chat
+
+1. Open this file first.
+2. Inspect current `main`, open PRs, latest Production deployment and relevant monitoring evidence before changing a status.
+3. Start with the first genuinely unblocked item in **Current next actions**.
+4. Preserve completed search foundations, canonical-host policy, IndexNow, analytics privacy boundaries, Production crawl automation and performance-baseline methodology.
+5. Never fabricate customer proof, rankings, AI citations, backlinks, CrUX data or third-party authority.
+6. After material progress, update this checkpoint again so the next chat can resume without reconstructing history.
 
 ## Definition of completion
 

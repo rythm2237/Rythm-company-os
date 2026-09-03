@@ -1,0 +1,61 @@
+name: Production Performance Baseline
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/summarize-lighthouse-baseline.mjs"
+      - ".github/workflows/performance-baseline.yml"
+  pull_request:
+    paths:
+      - "scripts/summarize-lighthouse-baseline.mjs"
+      - ".github/workflows/performance-baseline.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Confirm Chrome
+        run: google-chrome --version
+
+      - name: Run mobile and desktop Lighthouse samples
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/lighthouse
+          for run in 1 2 3; do
+            npx --yes lighthouse@12.8.2 https://rythm-os.com \
+              --quiet \
+              --chrome-flags="--headless --no-sandbox" \
+              --only-categories=performance \
+              --output=json \
+              --output-path="reports/lighthouse/mobile-${run}.json"
+          done
+          for run in 1 2 3; do
+            npx --yes lighthouse@12.8.2 https://rythm-os.com \
+              --quiet \
+              --preset=desktop \
+              --chrome-flags="--headless --no-sandbox" \
+              --only-categories=performance \
+              --output=json \
+              --output-path="reports/lighthouse/desktop-${run}.json"
+          done
+
+      - name: Summarize median baseline
+        run: node scripts/summarize-lighthouse-baseline.mjs reports/lighthouse
+
+      - name: Upload Lighthouse evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-lighthouse-baseline
+          path: reports/lighthouse
+          retention-days: 30
