@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { recordConfirmedPublicConversion } from "@/lib/analytics/server-conversions";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
 function safeInternalPath(value: string | null) {
@@ -7,7 +8,7 @@ function safeInternalPath(value: string | null) {
 }
 
 function authFailureUrl(origin: string, next: string, flow: string | null) {
-  const message = flow === "oauth"
+  const message = flow === "oauth" || flow === "oauth_signup"
     ? "Social sign-in could not be completed. Try again or use email and password."
     : "This email link is invalid, expired, or has already been used. Request a fresh link and use the newest email.";
 
@@ -26,10 +27,19 @@ function oauthDisplayName(user: { email?: string | null; user_metadata?: Record<
   return (localPart || "Human CEO").slice(0, 120);
 }
 
+function isFreshlyCreatedUser(createdAt: string | undefined) {
+  if (!createdAt) return false;
+  const timestamp = Date.parse(createdAt);
+  if (!Number.isFinite(timestamp)) return false;
+  const ageMs = Date.now() - timestamp;
+  return ageMs >= 0 && ageMs <= 10 * 60 * 1000;
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const next = safeInternalPath(request.nextUrl.searchParams.get("next"));
   const flow = request.nextUrl.searchParams.get("flow");
+  const provider = request.nextUrl.searchParams.get("provider") ?? "unknown";
   const origin = request.nextUrl.origin;
 
   if (!code) {
@@ -49,7 +59,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(authFailureUrl(origin, next, flow));
   }
 
-  if (flow === "oauth") {
+  if (flow === "signup") {
+    await recordConfirmedPublicConversion("confirmed_signup_conversion", "/signup", {
+      method: "email_confirmation",
+    });
+    return NextResponse.redirect(`${origin}${next}`);
+  }
+
+  if (flow === "oauth" || flow === "oauth_signup") {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       console.error("oauth_callback_user_missing", {
@@ -92,6 +109,13 @@ export async function GET(request: NextRequest) {
       console.error("oauth_profile_upsert_failed", {
         code: profileError.code,
         message: profileError.message,
+      });
+    }
+
+    if (flow === "oauth_signup" && isFreshlyCreatedUser(user.created_at)) {
+      await recordConfirmedPublicConversion("confirmed_signup_conversion", "/signup", {
+        method: "oauth",
+        provider,
       });
     }
 
