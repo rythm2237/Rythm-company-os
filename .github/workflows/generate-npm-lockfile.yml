@@ -1,0 +1,36 @@
+name: Generate npm lockfile
+
+on:
+  push:
+    branches: [chore/t10-reproducible-npm]
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/t10-reproducible-npm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Record npm runtime
+        run: npm --version
+      - name: Resolve canonical lockfile
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Commit generated lockfile
+        run: |
+          test -f package-lock.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "package-lock.json already matches package.json"
+            exit 0
+          fi
+          git commit -m "Generate canonical npm lockfile"
+          git push origin HEAD:chore/t10-reproducible-npm
