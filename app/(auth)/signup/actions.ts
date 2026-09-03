@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { recordConfirmedPublicConversion } from "@/lib/analytics/server-conversions";
 import { SITE_ORIGIN } from "@/lib/seo/site";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
@@ -62,7 +63,9 @@ export async function signup(formData: FormData) {
   const setupPath = templateKey
     ? `/setup/company?product=${encodeURIComponent(productCode)}&template=${encodeURIComponent(templateKey)}`
     : "/demo";
-  const confirmationRedirect = `${SITE_ORIGIN}/auth/callback?next=${encodeURIComponent(setupPath)}`;
+  const callbackUrl = new URL("/auth/callback", SITE_ORIGIN);
+  callbackUrl.searchParams.set("next", setupPath);
+  callbackUrl.searchParams.set("flow", "signup");
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -72,7 +75,7 @@ export async function signup(formData: FormData) {
         selected_product_code: productCode,
         ...(templateKey ? { selected_template_key: templateKey } : {}),
       },
-      emailRedirectTo: confirmationRedirect,
+      emailRedirectTo: callbackUrl.toString(),
     },
   });
 
@@ -91,6 +94,11 @@ export async function signup(formData: FormData) {
       full_name: fullName,
       onboarding_status: "company_pending",
       updated_at: new Date().toISOString(),
+    });
+    await recordConfirmedPublicConversion("confirmed_signup_conversion", "/signup", {
+      method: "email",
+      product: productCode,
+      template: templateKey || "none",
     });
     redirect(setupPath);
   }
