@@ -1,0 +1,35 @@
+{
+  "document": "RYTHM Press Facts",
+  "version": "1.0.0",
+  "reviewed_on": "2026-09-03",
+  "product": {
+    "name": "RYTHM Company OS",
+    "category": "Governed AI workforce platform",
+    "secondary_descriptor": "AI company operating system",
+    "status": "Public Beta",
+    "canonical_url": "https://rythm-os.com"
+  },
+  "operator": {
+    "founder_operator": "Yaser Tayyebialashti",
+    "legal_operator": "Tayyebialashti Yaser E.V.",
+    "jurisdiction": "Hungary",
+    "professional_profile": "https://hu.linkedin.com/in/tayyebialashti"
+  },
+  "governance": {
+    "human_authority": "Consequential authority remains with the Human CEO",
+    "unrestricted_autonomy_claimed": false
+  },
+  "verification_sources": {
+    "about": "https://rythm-os.com/about",
+    "trust": "https://rythm-os.com/trust",
+    "legal": "https://rythm-os.com/legal",
+    "research": "https://rythm-os.com/research/governed-ai-workforce-benchmark",
+    "integration_evidence": "https://rythm-os.com/product/integrations/evidence"
+  },
+  "coverage_policy": {
+    "self_published_material_counts_as_third_party_coverage": false,
+    "founder_authored_material_counts_as_third_party_coverage": false,
+    "external_coverage_requires_unaffiliated_publisher": true
+  },
+  "press_contact": "hello@rythm-os.com"
+}
