@@ -37,6 +37,7 @@ jobs:
       - run: npm run test:phase5:agency-specialist
       - run: npm run test:seo-answer-benchmark
       - run: npm run test:seo-authority
+      - run: npm run test:seo-community
       - run: npm run test:routing
       - run: npm run test:software-company
       - run: npm run build
