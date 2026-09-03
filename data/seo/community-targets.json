@@ -1,0 +1,54 @@
+{
+  "version": "2026-09-03.1",
+  "reviewed_on": "2026-09-03",
+  "claim_boundary": "Targets are opportunities for useful expert participation, not evidence of publication, endorsement, backlinks, reach or engagement.",
+  "targets": [
+    {
+      "platform": "Reddit",
+      "community": "r/AgentsOfAI",
+      "priority": "high",
+      "fit": ["AI agent governance", "production agent operations", "runtime controls"],
+      "mode": "comment_first",
+      "rules_check_required": true,
+      "affiliation_disclosure_required_if_rythm_mentioned": true
+    },
+    {
+      "platform": "Reddit",
+      "community": "r/AI_Agents",
+      "priority": "high",
+      "fit": ["AI agents", "governance", "permissions", "auditability"],
+      "mode": "comment_first",
+      "rules_check_required": true,
+      "affiliation_disclosure_required_if_rythm_mentioned": true
+    },
+    {
+      "platform": "Reddit",
+      "community": "r/aiagents",
+      "priority": "high",
+      "fit": ["agent builders", "runtime governance", "human approval"],
+      "mode": "comment_first",
+      "rules_check_required": true,
+      "affiliation_disclosure_required_if_rythm_mentioned": true
+    },
+    {
+      "platform": "Reddit",
+      "community": "r/AI_Governance",
+      "priority": "high",
+      "fit": ["AI governance", "agentic governance", "audit and policy enforcement"],
+      "mode": "discussion_or_comment",
+      "rules_check_required": true,
+      "affiliation_disclosure_required_if_rythm_mentioned": true
+    },
+    {
+      "platform": "Hacker News",
+      "community": "Hacker News",
+      "priority": "medium",
+      "fit": ["original technical work", "reproducible benchmark", "agent governance architecture"],
+      "mode": "founder_authored_only",
+      "rules_check_required": true,
+      "ai_generated_text_prohibited_for_final_submission": true,
+      "affiliation_disclosure_required_if_rythm_mentioned": true,
+      "official_guidelines": "https://news.ycombinator.com/newsguidelines.html"
+    }
+  ]
+}
