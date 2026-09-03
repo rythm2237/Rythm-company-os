@@ -6,7 +6,7 @@ import { getPublicStatusSnapshot } from "@/lib/public-status";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "System Status | RYTHM Company OS",
+  title: "System Status",
   description: "Current Production readiness signals, service-status boundaries, and incident communication expectations for RYTHM Company OS.",
   alternates: { canonical: "/status" },
   openGraph: {
