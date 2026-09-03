@@ -25,6 +25,7 @@
     "test:phase5:agency-specialist": "node --experimental-strip-types scripts/validate-phase5-agency-specialist.ts",
     "test:agent-readiness": "node --experimental-strip-types scripts/validate-operational-agent-readiness.ts",
     "test:seo": "node --experimental-strip-types scripts/validate-seo-geo-aeo-foundation.ts",
+    "test:seo-answer-benchmark": "node scripts/validate-answer-engine-benchmark.mjs",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",
     "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts"
