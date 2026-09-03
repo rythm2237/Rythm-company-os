@@ -1,10 +1,9 @@
 name: Production SEO Crawl
 
 on:
-  pull_request:
-    paths:
-      - "scripts/crawl-production.mjs"
-      - ".github/workflows/production-seo-crawl.yml"
+  push:
+    branches:
+      - main
   workflow_dispatch:
   schedule:
     - cron: "17 6 * * 1"
@@ -12,13 +11,20 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: production-seo-crawl
+  cancel-in-progress: true
+
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Allow Production deployment to become ready
+        if: github.event_name == 'push'
+        run: sleep 120
       - name: Crawl canonical Production site
         env:
           SEO_CRAWL_ORIGIN: https://rythm-os.com
