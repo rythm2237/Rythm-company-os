@@ -1,0 +1,5 @@
+platform,status,eligibility,submission_date,live_profile_url,review_count,rating,evidence_note
+G2,not_submitted,blocked_beta,,,,0,,G2 excludes alpha/beta products; revisit at GA
+Capterra,not_submitted,eligible_beta,,,,0,,Eligible to apply subject to editorial acceptance and first-year real-review requirement
+GetApp,not_submitted,eligible_beta,,,,0,,Eligible to apply subject to editorial acceptance and first-year real-review requirement
+TrustRadius,not_submitted,candidate,,,,0,,Candidate for vendor profile; external account action required
