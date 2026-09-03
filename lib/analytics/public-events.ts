@@ -23,7 +23,9 @@ export type PublicExperienceEventName =
   | "organic_referral_detected"
   | "demo_conversion"
   | "signup_conversion"
-  | "enterprise_inquiry_conversion";
+  | "enterprise_inquiry_conversion"
+  | "confirmed_signup_conversion"
+  | "qualified_enterprise_lead_conversion";
 
 export type PublicExperienceEvent = {
   name: PublicExperienceEventName;
@@ -38,6 +40,7 @@ export type PublicAttribution = {
 };
 
 export const PUBLIC_ATTRIBUTION_SESSION_KEY = "rythm:public-attribution";
+export const PUBLIC_ATTRIBUTION_COOKIE = "rythm_public_attribution";
 
 export function readPublicAttribution(): PublicAttribution | null {
   if (typeof window === "undefined") return null;
@@ -64,7 +67,9 @@ export function readPublicAttribution(): PublicAttribution | null {
 export function writePublicAttribution(attribution: PublicAttribution) {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(PUBLIC_ATTRIBUTION_SESSION_KEY, JSON.stringify(attribution));
+    const serialized = JSON.stringify(attribution);
+    window.sessionStorage.setItem(PUBLIC_ATTRIBUTION_SESSION_KEY, serialized);
+    document.cookie = `${PUBLIC_ATTRIBUTION_COOKIE}=${encodeURIComponent(serialized)}; Path=/; Max-Age=604800; SameSite=Lax; Secure`;
   } catch {
     // Analytics must never block the user journey.
   }
