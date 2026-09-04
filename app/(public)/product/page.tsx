@@ -23,7 +23,7 @@ export default function ProductPage() {
         <div>
           <p className="marketing-kicker">THE GOVERNED COMPANY OPERATING SYSTEM</p>
           <h1>AI becomes more useful when it has a role, context, and a human authority model.</h1>
-          <p>RYTHM brings an AI workforce into one operating environment for company memory, projects, meetings, decisions, approvals, actions, economics, and traceability.</p>
+          <p>RYTHM brings an AI workforce into one operating environment for company memory, projects, meetings, decisions, approvals, actions, economics, and traceability—without requiring ordinary business users to understand AI infrastructure.</p>
           <div className="hero-actions">
             <Link className="marketing-button marketing-button-large" href="/demo">Open the Demo Workspace</Link>
             <Link className="marketing-text-link" href="/solutions">Explore solution paths</Link>
@@ -33,8 +33,9 @@ export default function ProductPage() {
           <p className="marketing-kicker">OPERATING PRINCIPLES</p>
           <div><span>01</span><strong>Human CEO has final authority</strong></div>
           <div><span>02</span><strong>Agents are explicit organizational members</strong></div>
-          <div><span>03</span><strong>Commercial access fails closed</strong></div>
-          <div><span>04</span><strong>Every consequential handoff is traceable</strong></div>
+          <div><span>03</span><strong>Business users work through familiar company concepts</strong></div>
+          <div><span>04</span><strong>Commercial access fails closed</strong></div>
+          <div><span>05</span><strong>Every consequential handoff is traceable</strong></div>
         </aside>
       </section>
 
@@ -46,6 +47,22 @@ export default function ProductPage() {
         </div>
         <div className="operating-loop-grid">
           {OPERATING_SYSTEM.map((item) => <article key={item.step}><span>{item.step}</span><h3>{item.title}</h3><p>{item.detail}</p></article>)}
+        </div>
+      </section>
+
+      <section className="marketing-section how-section" aria-labelledby="natural-business-interface-title">
+        <div className="marketing-section-heading">
+          <p className="marketing-kicker">NO AI EXPERTISE REQUIRED TO OPERATE</p>
+          <h2 id="natural-business-interface-title">Run an AI workforce like a company—not like an AI engineering project.</h2>
+          <p>
+            RYTHM is designed so business users can work through familiar organizational concepts. Users assign responsibilities to roles, bring the right people and Agents into meetings, review recommendations, make decisions, and approve actions. Prompt frameworks, model orchestration, routing logic, MCP, and runtime policy remain behind the operating experience.
+          </p>
+        </div>
+        <div className="how-grid">
+          <article><span>01</span><h3>Roles instead of prompts</h3><p>Start from a defined business responsibility and Agent role rather than repeatedly engineering instructions.</p></article>
+          <article><span>02</span><h3>Departments instead of agent graphs</h3><p>Organize AI work through reporting relationships and company structure instead of building orchestration diagrams.</p></article>
+          <article><span>03</span><h3>Meetings instead of model coordination</h3><p>Bring relevant specialists together around an objective while RYTHM manages the underlying AI coordination.</p></article>
+          <article><span>04</span><h3>Approvals instead of execution plumbing</h3><p>Review what will happen and authorize consequential work without configuring the technical execution path yourself.</p></article>
         </div>
       </section>
 
