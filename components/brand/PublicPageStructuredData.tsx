@@ -1,11 +1,17 @@
 import { absoluteUrl, SITE_NAME, SITE_ORIGIN } from "@/lib/seo/site";
 
+type StructuredQuestion = Readonly<{
+  question: string;
+  answer: string;
+}>;
+
 type PublicPageStructuredDataProps = Readonly<{
   path: string;
   name: string;
   description: string;
   breadcrumbLabel: string;
   dateModified?: string;
+  questions?: readonly StructuredQuestion[];
 }>;
 
 export default function PublicPageStructuredData({
@@ -14,6 +20,7 @@ export default function PublicPageStructuredData({
   description,
   breadcrumbLabel,
   dateModified,
+  questions,
 }: PublicPageStructuredDataProps) {
   const pageUrl = absoluteUrl(path);
   const graph = {
@@ -27,6 +34,7 @@ export default function PublicPageStructuredData({
         description,
         isPartOf: { "@id": `${SITE_ORIGIN}/#website` },
         about: { "@id": `${SITE_ORIGIN}/#company-os` },
+        mainEntity: { "@id": `${SITE_ORIGIN}/#company-os` },
         publisher: { "@id": `${SITE_ORIGIN}/#organization` },
         inLanguage: "en",
         ...(dateModified ? { dateModified } : {}),
@@ -49,6 +57,24 @@ export default function PublicPageStructuredData({
           },
         ],
       },
+      ...(questions?.length
+        ? [
+            {
+              "@type": "FAQPage",
+              "@id": `${pageUrl}#faq`,
+              url: `${pageUrl}#frequently-asked-questions`,
+              isPartOf: { "@id": `${pageUrl}#webpage` },
+              mainEntity: questions.map((item) => ({
+                "@type": "Question",
+                name: item.question,
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: item.answer,
+                },
+              })),
+            },
+          ]
+        : []),
     ],
   };
 

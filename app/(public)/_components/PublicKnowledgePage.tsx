@@ -34,7 +34,18 @@ export type PublicKnowledgeContent = Readonly<{
 
 type Props = Readonly<{ content: PublicKnowledgeContent }>;
 
+const SEMANTIC_PATHS = [
+  { href: "/ai-workforce", label: "Governed AI workforce platform" },
+  { href: "/ai-company-operating-system", label: "AI company operating system" },
+  { href: "/ai-agents-for-business", label: "AI Agents for business" },
+  { href: "/how-it-works", label: "How governed AI work operates" },
+  { href: "/product-architecture", label: "Multi-agent product architecture" },
+  { href: "/compare", label: "Compare AI workforce and Agent platforms" },
+] as const;
+
 export default function PublicKnowledgePage({ content }: Props) {
+  const relatedPaths = SEMANTIC_PATHS.filter((item) => item.href !== content.path);
+
   return (
     <>
       <PublicPageStructuredData
@@ -43,6 +54,7 @@ export default function PublicKnowledgePage({ content }: Props) {
         description={content.summary}
         name={content.title}
         path={content.path}
+        questions={content.questions}
       />
       <main className="knowledge-page">
         <nav className="public-breadcrumbs" aria-label="Breadcrumb">
@@ -102,6 +114,19 @@ export default function PublicKnowledgePage({ content }: Props) {
             </div>
           </section>
         ) : null}
+
+        <section className="marketing-section" aria-labelledby="related-category-pages">
+          <div className="marketing-section-heading">
+            <p className="marketing-kicker">RELATED RYTHM CONCEPTS</p>
+            <h2 id="related-category-pages">Continue through the AI workforce operating model.</h2>
+            <p>These pages define the adjacent concepts, product boundaries, architecture, and platform comparisons used across RYTHM Company OS.</p>
+          </div>
+          <div className="hero-actions">
+            {relatedPaths.map((item) => (
+              <Link href={item.href} key={item.href}>{item.label}</Link>
+            ))}
+          </div>
+        </section>
 
         <section className="marketing-cta knowledge-cta">
           <p className="marketing-kicker">NEXT STEP</p>
