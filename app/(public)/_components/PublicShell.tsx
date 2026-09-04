@@ -12,6 +12,7 @@ import { PUBLIC_NAVIGATION } from "@/lib/public-experience/content";
 const NAVIGATION_GROUPS = [
   { label: "Explore", items: PUBLIC_NAVIGATION.filter((item) => ["/product", "/demo", "/solutions", "/templates"].includes(item.href)) },
   { label: "Choose", items: PUBLIC_NAVIGATION.filter((item) => ["/pricing", "/enterprise", "/live-ai-meeting"].includes(item.href)) },
+  { label: "Company", items: [{ label: "About", href: "/about" }] },
 ] as const;
 
 const FOOTER_GROUPS = [
@@ -77,7 +78,7 @@ const FOOTER_GROUPS = [
 ] as const;
 
 const NAVIGATION_ICONS: Record<string, string> = {
-  "/product": "⌁", "/demo": "✦", "/solutions": "⌘", "/templates": "◇", "/pricing": "€", "/enterprise": "▦", "/live-ai-meeting": "◉",
+  "/product": "⌁", "/demo": "✦", "/solutions": "⌘", "/templates": "◇", "/pricing": "€", "/enterprise": "▦", "/live-ai-meeting": "◉", "/about": "i",
 };
 
 const GUIDE_ENTRY_DELAY_MS = 3000;
@@ -168,5 +169,5 @@ function PublicShellFrame({ children }: PublicShellProps) {
 }
 
 export default function PublicShell({ children }: PublicShellProps) {
-  return <PublicEducationProvider><PublicShellFrame>{children}</PublicShellFrame></PublicEducationProvider>;
+  return <PublicEducationProvider><PublicShellFrame>{children}</PublicEducationProvider>;
 }
