@@ -1,4 +1,4 @@
-import styles from "../../(public)/boardroom-preview/preview.module.css";
+import styles from "./realistic.module.css";
 
 const people = [
   { name: "Ava", title: "Market Analyst", initials: "AV", active: true },
