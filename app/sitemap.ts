@@ -19,6 +19,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.93,
     },
     {
+      url: absoluteUrl("/compare/n8n"),
+      changeFrequency: "monthly" as const,
+      priority: 0.73,
+    },
+    {
+      url: absoluteUrl("/compare/langgraph"),
+      changeFrequency: "monthly" as const,
+      priority: 0.73,
+    },
+    {
       url: absoluteUrl("/research/governed-ai-workforce-benchmark"),
       changeFrequency: "monthly" as const,
       priority: 0.76,
