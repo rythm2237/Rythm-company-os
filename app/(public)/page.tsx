@@ -28,9 +28,9 @@ export default async function HomePage() {
           <p className="marketing-kicker">GOVERNED AI WORKFORCE PLATFORM</p>
           <h1>Build and operate an AI workforce—with human authority built in.</h1>
           <p>
-            RYTHM Company OS is a governed AI workforce platform for building and running
-            specialized AI Agent teams, Company Memory, meetings, approvals, and traceable
-            execution under a Human CEO.
+            RYTHM Company OS is a governed AI workforce platform and AI company operating system for
+            building and running specialized AI Agent teams, Company Memory, meetings, approvals,
+            and traceable execution under a Human CEO.
           </p>
           <div className="hero-actions">
             <Link className="marketing-button marketing-button-large" href="/product">Explore the Company OS</Link>
@@ -65,6 +65,29 @@ export default async function HomePage() {
           <article><span>04</span><h3>Preserve the operating trace</h3><p>Intent, meetings, decisions, approvals, actions, and outcomes remain connected.</p></article>
         </div>
         <div className="hero-actions"><Link href="/ai-workforce">Understand the AI workforce</Link><Link href="/how-it-works">Read the full operating model</Link><Link href="/ai-agents-for-business">Explore business AI Agents</Link></div>
+      </section>
+
+      <section className="marketing-section how-section" aria-labelledby="category-definition-title">
+        <div className="marketing-section-heading">
+          <p className="marketing-kicker">WHAT RYTHM IS</p>
+          <h2 id="category-definition-title">An AI company operating system—not an agent framework or automation builder.</h2>
+          <p>
+            RYTHM is software for creating and operating a business AI workforce as an organization:
+            AI roles have reporting lines, permissions, company context, approval boundaries, execution controls,
+            and a Human CEO who retains consequential authority.
+          </p>
+        </div>
+        <div className="how-grid">
+          <article><span>01</span><h3>Different from ChatGPT</h3><p>ChatGPT is a general AI assistant. RYTHM organizes multiple specialized AI Agents into persistent business roles with company context, governance, and accountable work.</p></article>
+          <article><span>02</span><h3>Different from n8n or Zapier</h3><p>Automation platforms connect triggers and actions. RYTHM adds organizational roles, deliberation, human decision rights, risk policy, approvals, and traceability around AI-driven work.</p></article>
+          <article><span>03</span><h3>Different from LangGraph or CrewAI</h3><p>Agent frameworks help developers build agent workflows. RYTHM is an operating product for companies that need an AI workforce, company structure, governance, and controlled execution.</p></article>
+          <article><span>04</span><h3>Different from Copilot Studio</h3><p>Copilot Studio builds agents inside the Microsoft ecosystem. RYTHM focuses on the company operating layer: AI departments, reporting relationships, Human CEO authority, meetings, decisions, approvals, and cross-system execution governance.</p></article>
+        </div>
+        <div className="hero-actions">
+          <Link href="/ai-company-operating-system">What is an AI company operating system?</Link>
+          <Link href="/compare">Compare AI workforce platforms</Link>
+          <Link href="/product-architecture">Review the architecture</Link>
+        </div>
       </section>
 
       <section className="governance-section">
