@@ -14,6 +14,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.94,
     },
     {
+      url: absoluteUrl("/ai-workforce-software"),
+      changeFrequency: "monthly" as const,
+      priority: 0.93,
+    },
+    {
       url: absoluteUrl("/research/governed-ai-workforce-benchmark"),
       changeFrequency: "monthly" as const,
       priority: 0.76,
