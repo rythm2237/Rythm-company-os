@@ -37,7 +37,7 @@ export default async function HomePage() {
             <Link className="marketing-text-link" href="/demo">Open the interactive Demo</Link>
           </div>
           <div className="trust-row" aria-label="RYTHM governance principles">
-            <span>Human CEO authority</span><span>AI identity disclosed</span><span>External actions locked by default</span>
+            <span>Human CEO authority</span><span>No AI expertise required to operate</span><span>External actions locked by default</span>
           </div>
         </div>
         <aside className="hero-system-card" aria-label="RYTHM company operating loop">
@@ -54,6 +54,23 @@ export default async function HomePage() {
         <Link href="/demo"><span>INTERACTIVE DEMO</span><strong>Enter Nova Commerce</strong><small>Explore a synthetic Company OS workspace <i aria-hidden="true">→</i></small></Link>
         <Link href="/product"><span>PRODUCT EXPLAINER</span><strong>Understand the operating loop</strong><small>Workforce, memory, meetings, governance <i aria-hidden="true">→</i></small></Link>
         <Link href="/live-ai-meeting"><span>LIVE AI MEETING</span><strong>Try RYTHM with your problem</strong><small>Preview the governed Boardroom experience <i aria-hidden="true">→</i></small></Link>
+      </section>
+
+      <section className="marketing-section how-section" aria-labelledby="business-native-title">
+        <div className="marketing-section-heading">
+          <p className="marketing-kicker">BUSINESS-NATIVE AI</p>
+          <h2 id="business-native-title">Run an AI workforce like you run a company—not like you build an AI system.</h2>
+          <p>
+            RYTHM is designed for business users, not only AI specialists. You work with familiar concepts—roles, departments, managers, meetings, decisions, approvals, and responsibilities—while model routing, orchestration, permissions, and execution infrastructure stay behind the product experience.
+          </p>
+        </div>
+        <div className="how-grid">
+          <article><span>01</span><h3>Roles, not prompt engineering</h3><p>Assign work to specialized business roles instead of learning how to construct agent prompts and chains.</p></article>
+          <article><span>02</span><h3>Departments, not orchestration graphs</h3><p>Organize the workforce with reporting relationships and responsibilities instead of designing technical agent networks.</p></article>
+          <article><span>03</span><h3>Meetings, not model coordination</h3><p>Bring the right AI and human roles together around an objective while RYTHM handles the underlying coordination.</p></article>
+          <article><span>04</span><h3>Approvals, not execution plumbing</h3><p>Review and authorize consequential work through normal decision boundaries without managing the technical execution path.</p></article>
+        </div>
+        <div className="hero-actions"><Link href="/product">See the business-native operating model</Link><Link href="/demo">Try the public demo</Link></div>
       </section>
 
       <section className="marketing-section how-section" id="how-it-works">
