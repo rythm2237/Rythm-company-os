@@ -3,6 +3,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const promptsPath = path.join(root, "data/seo/answer-engine-prompts.json");
+const baselinePath = path.join(root, "data/seo/answer-engine-baseline.json");
 const logPath = path.join(root, "data/seo/answer-engine-benchmark.csv");
 
 const requiredHeaders = [
@@ -64,6 +65,32 @@ for (const prompt of promptConfig.prompts) {
     throw new Error(`Invalid or duplicate prompt definition: ${prompt.id ?? "unknown"}`);
   }
   promptById.set(prompt.id, prompt.text);
+}
+
+const baseline = JSON.parse(fs.readFileSync(baselinePath, "utf8"));
+const requiredBaselineEngines = ["ChatGPT", "Gemini", "Perplexity", "Microsoft Copilot"];
+const requiredComparisonPrompts = ["AE-01", "AE-02", "AE-03", "AE-04"];
+
+if (baseline.status !== "fixed_historical_baseline") {
+  throw new Error("Answer-engine baseline must remain marked fixed_historical_baseline");
+}
+if (baseline.benchmark_version !== promptConfig.benchmark_version) {
+  throw new Error("Answer-engine baseline benchmark_version must match prompt configuration");
+}
+if (JSON.stringify(baseline.engines) !== JSON.stringify(requiredBaselineEngines)) {
+  throw new Error("Answer-engine baseline engine cohort changed unexpectedly");
+}
+if (JSON.stringify(baseline.comparison_prompt_ids) !== JSON.stringify(requiredComparisonPrompts)) {
+  throw new Error("Answer-engine comparison prompt cohort must remain AE-01 through AE-04");
+}
+for (const promptId of requiredComparisonPrompts) {
+  if (!promptById.has(promptId)) throw new Error(`Baseline references missing prompt ${promptId}`);
+}
+if (baseline.runs_expected !== 16 || baseline.rythm_mentions !== 0 || baseline.rythm_citations !== 0) {
+  throw new Error("Fixed historical answer-engine baseline must remain 0 mentions / 16 and 0 citations / 16");
+}
+if (baseline.mention_rate !== 0 || baseline.citation_rate !== 0) {
+  throw new Error("Fixed historical answer-engine baseline rates must remain zero");
 }
 
 const lines = fs.readFileSync(logPath, "utf8").split(/\r?\n/).filter((line, index) => index === 0 || line.trim() !== "");
@@ -134,4 +161,6 @@ for (let index = 1; index < lines.length; index += 1) {
   }
 }
 
-console.log(`Answer-engine benchmark validation passed: ${promptById.size} fixed prompts, ${lines.length - 1} logged runs.`);
+console.log(
+  `Answer-engine benchmark validation passed: fixed baseline ${baseline.rythm_mentions}/${baseline.runs_expected} mentions and ${baseline.rythm_citations}/${baseline.runs_expected} citations; ${promptById.size} fixed prompts; ${lines.length - 1} logged post-baseline runs.`,
+);
