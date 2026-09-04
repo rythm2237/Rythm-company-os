@@ -169,5 +169,5 @@ function PublicShellFrame({ children }: PublicShellProps) {
 }
 
 export default function PublicShell({ children }: PublicShellProps) {
-  return <PublicEducationProvider><PublicShellFrame>{children}</PublicEducationProvider>;
+  return <PublicEducationProvider><PublicShellFrame>{children}</PublicShellFrame></PublicEducationProvider>;
 }
