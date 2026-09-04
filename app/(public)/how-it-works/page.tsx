@@ -24,7 +24,12 @@ export default function HowItWorksPage() {
           <article><span>03</span><h3>Decide through meetings and approvals</h3><p>Users can review recommendations, make decisions, and approve consequential work without needing to reason about the underlying model stack.</p></article>
           <article><span>04</span><h3>Keep technical complexity behind the product</h3><p>Routing, permissions, policy checks, execution controls, and AI infrastructure remain implementation concerns rather than requirements for ordinary business users.</p></article>
         </div>
-        <div className="hero-actions"><Link href="/product">Explore the product</Link><Link href="/demo">Try the public demo</Link></div>
+        <div className="hero-actions">
+          <Link href="/product">Explore the product</Link>
+          <Link href="/ai-company-operating-system-vs-chatgpt-automation">Compare the Company OS model with ChatGPT and automation</Link>
+          <Link href="/human-approval-ai-agents">How human approval works for AI agents</Link>
+          <Link href="/demo">Try the public demo</Link>
+        </div>
       </section>
     </>
   );
