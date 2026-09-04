@@ -24,6 +24,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.92,
     },
     {
+      url: absoluteUrl("/ai-company-operating-system-vs-chatgpt-automation"),
+      changeFrequency: "monthly" as const,
+      priority: 0.92,
+    },
+    {
+      url: absoluteUrl("/human-approval-ai-agents"),
+      changeFrequency: "monthly" as const,
+      priority: 0.91,
+    },
+    {
       url: absoluteUrl("/platforms-for-building-company-with-ai-agents"),
       changeFrequency: "monthly" as const,
       priority: 0.91,
