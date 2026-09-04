@@ -1,19 +1,36 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SITE_NAME, SITE_ORIGIN } from "@/lib/seo/site";
+import { SITE_NAME, SITE_ORIGIN, SOCIAL_IMAGE_PATH } from "@/lib/seo/site";
+
+const pageTitle = "AI Company Operating System";
+const pageDescription =
+  "Learn what an AI company operating system is, how it differs from ChatGPT, automation software, agent frameworks, and agent builders, and how RYTHM governs an AI workforce under Human CEO authority.";
 
 export const metadata: Metadata = {
-  title: "AI Company Operating System | RYTHM Company OS",
-  description:
-    "Learn what an AI company operating system is, how it differs from ChatGPT, automation software, agent frameworks, and agent builders, and how RYTHM governs an AI workforce under Human CEO authority.",
+  title: pageTitle,
+  description: pageDescription,
   alternates: { canonical: "/ai-company-operating-system" },
   openGraph: {
     type: "website",
     url: "/ai-company-operating-system",
     siteName: SITE_NAME,
-    title: "AI Company Operating System | RYTHM Company OS",
+    title: `${pageTitle} | ${SITE_NAME}`,
     description:
       "RYTHM is a governed AI company operating system for organizing AI roles, company context, decisions, approvals, and controlled execution under human authority.",
+    images: [
+      {
+        url: SOCIAL_IMAGE_PATH,
+        width: 1200,
+        height: 630,
+        alt: "RYTHM Company OS — governed AI workforce platform",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${pageTitle} | ${SITE_NAME}`,
+    description: pageDescription,
+    images: [SOCIAL_IMAGE_PATH],
   },
 };
 
