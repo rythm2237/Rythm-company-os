@@ -22,7 +22,7 @@ export type ComparisonDefinition = Readonly<{
   sources: readonly ComparisonSource[];
 }>;
 
-export const COMPARISON_REVIEW_DATE = "2026-09-01";
+export const COMPARISON_REVIEW_DATE = "2026-09-04";
 
 export const COMPARISONS: readonly ComparisonDefinition[] = [
   {
@@ -141,6 +141,67 @@ export const COMPARISONS: readonly ComparisonDefinition[] = [
       { label: "Microsoft Copilot Studio documentation", href: "https://learn.microsoft.com/en-us/microsoft-copilot-studio/" },
       { label: "Microsoft Copilot Studio licensing", href: "https://learn.microsoft.com/en-us/microsoft-copilot-studio/billing-licensing" },
       { label: "Microsoft Copilot Studio pricing", href: "https://www.microsoft.com/en-gb/microsoft-365-copilot/pricing/copilot-studio" },
+    ],
+  },
+  {
+    slug: "n8n",
+    competitor: "n8n",
+    title: "RYTHM Company OS vs n8n",
+    summary:
+      "Compare a governed AI company operating system with a workflow automation platform that combines deterministic workflows, integrations, code, and AI Agents. The products can complement each other, but they start from different operating models.",
+    competitorSummary:
+      "n8n describes itself as a workflow automation platform where traditional automation meets AI. Its official AI Agent material emphasizes tool-connected agents, predefined logic, human-in-the-loop guardrails, integrations, code, and multi-agent workflows.",
+    bestForCompetitor:
+      "Technical teams that want to build and control workflow automations, connect many systems, combine deterministic logic with AI steps, and own the workflow design directly.",
+    bestForRythm:
+      "Business operators who want persistent AI roles inside departments and reporting structures, shared company context, meetings, decisions, human authority, approvals, and governed execution without starting from workflow engineering.",
+    rows: [
+      { criterion: "Primary product model", rythm: "Governed AI workforce and company operating system.", competitor: "Workflow automation platform with AI Agent capabilities." },
+      { criterion: "Primary organizing unit", rythm: "Company, departments, roles, managers, meetings, decisions, approvals, and accountable actions.", competitor: "Workflows composed from triggers, nodes, integrations, logic, code, and AI Agent steps." },
+      { criterion: "Typical builder", rythm: "Founder, operator, Human CEO, manager, and cross-functional business team.", competitor: "Technical automation builder, developer, operations engineer, and workflow owner." },
+      { criterion: "AI and deterministic work", rythm: "AI roles operate inside a governed organizational loop with permission, risk, approval, and execution boundaries.", competitor: "Deterministic workflow logic and AI Agent behavior can be combined in the same automation." },
+      { criterion: "Human oversight", rythm: "Consequential authority and approval boundaries are explicit product concepts tied to roles and execution policy.", competitor: "Official AI Agent materials describe human-in-the-loop guardrails and predefined logic that builders can add to workflows." },
+      { criterion: "Implementation responsibility", rythm: "RYTHM packages the company operating model and exposes business-native configuration.", competitor: "The customer designs the workflow graph, integrations, logic, credentials, and operational automation behavior." },
+    ],
+    questions: [
+      { question: "Is RYTHM an alternative to n8n?", answer: "They overlap around AI-powered business execution, but they are not direct substitutes in every use case. n8n is primarily a workflow automation environment; RYTHM is designed as the operating layer for a governed AI workforce. An organization could use both, with automation infrastructure behind governed company workflows." },
+      { question: "Which is better if I do not want to build automation workflows?", answer: "RYTHM is designed for business-native operation through roles, departments, meetings, approvals, and responsibilities. n8n is the more direct fit when a technical team wants explicit control over workflow construction, nodes, integrations, logic, and execution paths." },
+      { question: "Can n8n run multi-agent systems?", answer: "n8n's official AI Agent material says it can scale from simple automations to complex multi-agent systems. The key distinction is that n8n organizes that capability around workflows, while RYTHM organizes AI work around a persistent company model and authority structure." },
+    ],
+    sources: [
+      { label: "n8n AI Agents", href: "https://n8n.io/ai-agents/" },
+      { label: "n8n documentation", href: "https://docs.n8n.io/" },
+    ],
+  },
+  {
+    slug: "langgraph",
+    competitor: "LangGraph",
+    title: "RYTHM Company OS vs LangGraph",
+    summary:
+      "Compare a managed, business-native AI company operating system with a low-level orchestration framework and runtime for long-running, stateful Agents. The main decision is whether you want to engineer the agent runtime or operate an AI organization as a product.",
+    competitorSummary:
+      "LangChain's official documentation describes LangGraph as a low-level orchestration framework and runtime for building, managing, and deploying long-running, stateful Agents, with durable execution, persistence, streaming, and human-in-the-loop capabilities.",
+    bestForCompetitor:
+      "Engineering teams that need fine-grained control over custom agent graphs, state, nodes, edges, durable execution, persistence, human-in-the-loop behavior, and bespoke runtime architecture.",
+    bestForRythm:
+      "Organizations that want to configure and operate specialized AI employees through business concepts such as departments, reporting relationships, Company Memory, meetings, approvals, and Human CEO authority rather than constructing an orchestration runtime.",
+    rows: [
+      { criterion: "Primary product model", rythm: "Governed AI workforce and company operating system.", competitor: "Low-level Agent orchestration framework and runtime." },
+      { criterion: "Primary user", rythm: "Business operator, founder, manager, and Human CEO.", competitor: "Developer, AI engineer, application engineer, and platform team." },
+      { criterion: "Core abstraction", rythm: "Organization, roles, departments, projects, meetings, decisions, approvals, and execution records.", competitor: "State, nodes, edges, graphs, runtime persistence, and custom orchestration logic." },
+      { criterion: "Human-in-the-loop", rythm: "Human decision rights, approval gates, role authority, and risk ceilings are part of the operating model.", competitor: "Human-in-the-loop is a supported orchestration capability for inspecting, steering, or approving Agent state and actions." },
+      { criterion: "Runtime control", rythm: "Managed product boundaries with centralized AI and execution gateways.", competitor: "Fine-grained framework-level control over custom deterministic and agentic workflows." },
+      { criterion: "Starting effort", rythm: "Start by configuring the company, roles, knowledge, authority, and operating workflows.", competitor: "Start by designing and implementing the Agent application and its orchestration graph." },
+    ],
+    questions: [
+      { question: "Is RYTHM built on LangGraph?", answer: "RYTHM does not claim LangGraph as a runtime dependency. The products are compared because both can participate in multi-agent system design, but they operate at different layers: LangGraph is an orchestration framework/runtime, while RYTHM is an end-user company operating environment." },
+      { question: "Can LangGraph be used to build a system like RYTHM?", answer: "LangGraph provides low-level primitives that an engineering team can use to build sophisticated stateful and multi-agent applications. Reproducing RYTHM's company model would still require product work around organizational entities, permissions, UX, governance, records, integrations, economics, and operational workflows." },
+      { question: "Which is better for non-technical business users?", answer: "RYTHM is explicitly designed around business-native company concepts and does not require users to design orchestration graphs. LangGraph's own documentation describes it as low-level and focused on agent orchestration, which makes it a better fit for engineering-led implementation." },
+    ],
+    sources: [
+      { label: "LangGraph overview", href: "https://docs.langchain.com/oss/python/langgraph/overview" },
+      { label: "LangGraph product page", href: "https://www.langchain.com/langgraph" },
+      { label: "LangGraph workflows and agents", href: "https://docs.langchain.com/oss/python/langgraph/workflows-agents" },
     ],
   },
 ] as const;
