@@ -1,14 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicPageStructuredData from "@/components/brand/PublicPageStructuredData";
-import { createPublicMetadata } from "@/lib/seo/site";
+import { SITE_ORIGIN, createPublicMetadata } from "@/lib/seo/site";
 
 export const metadata: Metadata = createPublicMetadata("/about");
+
+const founderProfile = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": `${SITE_ORIGIN}/about#founder`,
+  name: "Yaser Tayyebialashti",
+  jobTitle: "Founder & Operator",
+  url: `${SITE_ORIGIN}/about`,
+  sameAs: ["https://hu.linkedin.com/in/tayyebialashti"],
+  worksFor: { "@id": `${SITE_ORIGIN}/#organization` },
+  knowsAbout: ["Business operations", "Data", "Automation", "Artificial intelligence systems"],
+  description:
+    "Founder and operator of RYTHM Company OS, working at the intersection of business operations, data, automation, and artificial intelligence systems.",
+};
 
 export default function AboutPage() {
   return (
     <main>
-      <PublicPageStructuredData path="/about" name="About RYTHM Company OS" description="What RYTHM Company OS is, who it serves, who operates it, and how its governed AI workforce keeps consequential authority with a Human CEO." breadcrumbLabel="About" dateModified="2026-09-01" />
+      <PublicPageStructuredData path="/about" name="About RYTHM Company OS" description="What RYTHM Company OS is, who it serves, who operates it, and how its governed AI workforce keeps consequential authority with a Human CEO." breadcrumbLabel="About" dateModified="2026-09-04" />
+      <script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(founderProfile).replace(/</g, "\\u003c") }}
+        type="application/ld+json"
+      />
       <section className="public-page-hero enterprise-hero">
         <div>
           <p className="marketing-kicker">ABOUT RYTHM COMPANY OS</p>
@@ -18,7 +36,7 @@ export default function AboutPage() {
           RYTHM Company OS helps a Human CEO build and operate specialized AI Agent teams
           with shared Company Memory, structured meetings, approvals, and traceable execution.
           It is currently available as a Public Beta.
-        </p><p className="contact-notice">Reviewed 1 September 2026</p></div>
+        </p><p className="contact-notice">Reviewed 4 September 2026</p></div>
       </section>
 
       <section className="marketing-section enterprise-model">
@@ -54,13 +72,25 @@ export default function AboutPage() {
           </p>
         </div>
         <div className="enterprise-capabilities">
-          <p className="marketing-kicker">OPERATOR</p>
-          <h2>Built and operated by Yaser Tayyebialashti.</h2>
+          <p className="marketing-kicker">FOUNDER & OPERATOR</p>
+          <h2>Yaser Tayyebialashti</h2>
           <p>
-            RYTHM Company OS is operated by Tayyebialashti Yaser E.V., a Hungarian individual
-            entrepreneur. Official registration, business identity, and contact channels are
-            published in the Legal Notice. The founder&apos;s verified professional profile is available on{" "}
-            <a href="https://hu.linkedin.com/in/tayyebialashti" rel="noreferrer">LinkedIn</a>.
+            Yaser Tayyebialashti is the founder and operator of RYTHM Company OS. His professional
+            work sits at the intersection of business operations, data, automation, and artificial
+            intelligence systems, with a practical focus on turning AI capabilities into governed,
+            usable operating workflows for organizations.
+          </p>
+          <p>
+            RYTHM Company OS is operated through Tayyebialashti Yaser E.V., a Hungarian individual
+            entrepreneur. The operating entity, registration details, and official contact channels
+            are published in the <Link href="/legal">Legal Notice</Link>. The founder&apos;s public
+            professional identity can be independently cross-checked on{" "}
+            <a href="https://hu.linkedin.com/in/tayyebialashti" rel="me noreferrer">LinkedIn</a>.
+          </p>
+          <p>
+            Founder-authored technical contributions and product research are kept distinct from
+            independent third-party coverage; RYTHM does not present self-authored material as
+            external validation.
           </p>
         </div>
       </section>
