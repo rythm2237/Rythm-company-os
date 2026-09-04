@@ -1,0 +1,24 @@
+{
+  "baseline_id": "pre-wave5-2026-09-03",
+  "status": "fixed_historical_baseline",
+  "benchmark_version": "2026-09-03.1",
+  "captured_before": "2026-09-04",
+  "engines": [
+    "ChatGPT",
+    "Gemini",
+    "Perplexity",
+    "Microsoft Copilot"
+  ],
+  "comparison_prompt_ids": [
+    "AE-01",
+    "AE-02",
+    "AE-03",
+    "AE-04"
+  ],
+  "runs_expected": 16,
+  "rythm_mentions": 0,
+  "rythm_citations": 0,
+  "mention_rate": 0,
+  "citation_rate": 0,
+  "notes": "Fixed pre-optimization comparison baseline. Do not add AE-05 or AE-06 to this denominator and do not overwrite this record with post-change observations."
+}
