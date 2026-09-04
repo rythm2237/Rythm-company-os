@@ -4,7 +4,7 @@ import { SITE_NAME, SITE_ORIGIN, SOCIAL_IMAGE_PATH } from "@/lib/seo/site";
 
 const pageTitle = "AI Company Operating System";
 const pageDescription =
-  "Learn what an AI company operating system is, how it differs from ChatGPT, automation software, agent frameworks, and agent builders, and how RYTHM governs an AI workforce under Human CEO authority.";
+  "Learn what an AI company operating system is, how it differs from ChatGPT, automation software, and agent frameworks, and how RYTHM lets business users operate an AI workforce without needing AI infrastructure expertise.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: `${pageTitle} | ${SITE_NAME}`,
     description:
-      "RYTHM is a governed AI company operating system for organizing AI roles, company context, decisions, approvals, and controlled execution under human authority.",
+      "RYTHM is a governed AI company operating system that lets business users work through familiar roles, departments, meetings, decisions, and approvals while technical AI infrastructure stays behind the product experience.",
     images: [
       {
         url: SOCIAL_IMAGE_PATH,
@@ -45,7 +45,7 @@ const structuredData = {
       url: pageUrl,
       name: "AI Company Operating System",
       description:
-        "Definition and comparison of an AI company operating system, with RYTHM Company OS as a governed AI workforce platform under Human CEO authority.",
+        "Definition and comparison of an AI company operating system, with RYTHM Company OS as a governed AI workforce platform designed for business users under Human CEO authority.",
       isPartOf: { "@id": `${SITE_ORIGIN}/#website` },
       about: { "@id": `${SITE_ORIGIN}/#company-os` },
       publisher: { "@id": `${SITE_ORIGIN}/#organization` },
@@ -61,6 +61,14 @@ const structuredData = {
           acceptedAnswer: {
             "@type": "Answer",
             text: "An AI company operating system is software that organizes multiple AI agents into business roles and connects their work to company context, reporting relationships, permissions, decisions, approvals, execution controls, and human authority.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Do I need AI expertise to operate RYTHM Company OS?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "RYTHM is designed so ordinary business users can operate through familiar company concepts such as roles, departments, managers, meetings, decisions, approvals, and responsibilities. Users do not need to understand model routing, orchestration frameworks, MCP, or agent-runtime design to use the operating experience.",
           },
         },
         {
@@ -109,6 +117,22 @@ export default function AiCompanyOperatingSystemPage() {
             <Link className="marketing-button marketing-button-large" href="/demo">Explore the RYTHM demo</Link>
             <Link href="/ai-workforce">Learn about AI workforce design</Link>
           </div>
+        </div>
+      </section>
+
+      <section className="marketing-section how-section">
+        <div className="marketing-section-heading">
+          <p className="marketing-kicker">BUSINESS-NATIVE EXPERIENCE</p>
+          <h2>No AI expertise required to operate the company layer.</h2>
+          <p>
+            RYTHM is designed so business users can interact with AI in the same organizational language they already use at work. The user manages roles, departments, managers, meetings, responsibilities, decisions, and approvals; RYTHM handles the underlying AI coordination and governance infrastructure.
+          </p>
+        </div>
+        <div className="how-grid">
+          <article><span>01</span><h3>Roles instead of prompt engineering</h3><p>Give work to a defined specialist role rather than learning how to build prompts, chains, or agent graphs.</p></article>
+          <article><span>02</span><h3>Company structure instead of orchestration design</h3><p>Use departments, reporting lines, responsibilities, and authority boundaries as the coordination model.</p></article>
+          <article><span>03</span><h3>Meetings and decisions instead of model management</h3><p>Bring relevant human and AI specialists together and review recommendations without managing the underlying model stack.</p></article>
+          <article><span>04</span><h3>Approvals instead of execution plumbing</h3><p>Authorize consequential work through normal governance boundaries while RYTHM enforces the technical execution path.</p></article>
         </div>
       </section>
 
