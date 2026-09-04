@@ -19,6 +19,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.93,
     },
     {
+      url: absoluteUrl("/governed-ai-workforce-platforms"),
+      changeFrequency: "monthly" as const,
+      priority: 0.92,
+    },
+    {
+      url: absoluteUrl("/platforms-for-building-company-with-ai-agents"),
+      changeFrequency: "monthly" as const,
+      priority: 0.91,
+    },
+    {
+      url: absoluteUrl("/virtual-company-ai-employees"),
+      changeFrequency: "monthly" as const,
+      priority: 0.9,
+    },
+    {
       url: absoluteUrl("/compare/n8n"),
       changeFrequency: "monthly" as const,
       priority: 0.73,
