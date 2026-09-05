@@ -79,7 +79,7 @@ export default function BoardroomPreviewPage() {
       </aside>
 
       <section className={styles.roomStage}>
-        <img className={styles.roomPhoto} src="/api/boardroom-preview-scene" alt="Executive boardroom with conference table, chairs, human meeting manager and presentation screen" />
+        <img className={styles.roomPhoto} src="/boardroom-room-final.webp" alt="Executive boardroom with conference table, chairs, human meeting manager and presentation screen" />
 
         <div className={styles.presentation}>
           <div><small>RYTHM OS · STRATEGY REVIEW</small><h2>Market Analysis & Key Trends</h2></div>
