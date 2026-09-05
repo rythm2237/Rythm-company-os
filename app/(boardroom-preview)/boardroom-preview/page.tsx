@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { BOARDROOM_SCENE_DATA_URI } from "@/lib/boardroom-scene-data";
 import styles from "./preview.module.css";
 
 const agents = [
@@ -80,7 +79,7 @@ export default function BoardroomPreviewPage() {
       </aside>
 
       <section className={styles.roomStage}>
-        <img className={styles.roomPhoto} src={BOARDROOM_SCENE_DATA_URI} alt="Executive boardroom with conference table, chairs, human meeting manager and presentation screen" />
+        <img className={styles.roomPhoto} src="/boardroom-room-final.webp?v=verified-1" alt="Executive boardroom with conference table, chairs, human meeting manager and presentation screen" />
 
         <div className={styles.presentation}>
           <div><small>RYTHM OS · STRATEGY REVIEW</small><h2>Market Analysis & Key Trends</h2></div>
