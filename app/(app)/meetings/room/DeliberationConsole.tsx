@@ -299,7 +299,7 @@ export default function DeliberationConsole({
       </aside>
 
       <main className={styles.roomStage}>
-        <Image src="/boardroom/boardroom-room.png" alt="RYTHM executive boardroom" fill priority unoptimized className={styles.roomScene} />
+        <Image src="/boardroom/boardroom-room-8bf0f8f2.png" alt="RYTHM executive boardroom" fill priority unoptimized className={styles.roomScene} />
         <div className={styles.screenOverlay}>
           <div className={styles.screenTop}><span>{meetingSlide.eyebrow}</span><span>{slideOffset + 1}/{slideDeck.length}</span></div>
           <h2>{meetingSlide.title}</h2>
