@@ -1,6 +1,7 @@
 "use server";
 
 import type { Provider } from "@supabase/supabase-js";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SITE_ORIGIN } from "@/lib/seo/site";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
@@ -23,6 +24,29 @@ function providerLabel(provider: SupportedOAuthProvider) {
   return provider === "google" ? "Google" : "Microsoft";
 }
 
+function isAllowedAuthHost(host: string) {
+  const hostname = host.split(":")[0]?.toLowerCase() ?? "";
+  return (
+    hostname === "rythm-os.com" ||
+    hostname === "www.rythm-os.com" ||
+    hostname === "company.rythm-os.com" ||
+    hostname.endsWith(".vercel.app") ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1"
+  );
+}
+
+async function requestOrigin() {
+  const requestHeaders = await headers();
+  const forwardedHost = requestHeaders.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || requestHeaders.get("host")?.trim() || "";
+  if (!host || !isAllowedAuthHost(host)) return SITE_ORIGIN;
+
+  const forwardedProto = requestHeaders.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  const protocol = forwardedProto === "http" && (host.startsWith("localhost") || host.startsWith("127.0.0.1")) ? "http" : "https";
+  return `${protocol}://${host}`;
+}
+
 export async function signInWithOAuth(formData: FormData) {
   const rawProvider = String(formData.get("provider") ?? "").toLowerCase();
   const source = formData.get("source") === "signup" ? "signup" : "login";
@@ -41,7 +65,7 @@ export async function signInWithOAuth(formData: FormData) {
   }
 
   const provider = rawProvider as SupportedOAuthProvider;
-  const callbackUrl = new URL("/auth/callback", SITE_ORIGIN);
+  const callbackUrl = new URL("/auth/callback", await requestOrigin());
   callbackUrl.searchParams.set("next", next);
   callbackUrl.searchParams.set("flow", source === "signup" ? "oauth_signup" : "oauth");
   callbackUrl.searchParams.set("provider", provider);
