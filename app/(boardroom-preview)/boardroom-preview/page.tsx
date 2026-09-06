@@ -80,7 +80,7 @@ export default function BoardroomPreviewPage() {
 
       <section className={styles.roomStage}>
         {/* The approved scene is intentionally served as an unchanged static binary. */}
-        <img className={styles.roomPhoto} src="/boardroom/boardroom-room.png" alt="Executive boardroom with conference table, chairs, meeting participants and presentation screen" />
+        <img className={styles.roomPhoto} src="/boardroom/boardroom-room-8bf0f8f2.png" alt="Executive boardroom with conference table, chairs, meeting participants and presentation screen" />
 
         <div className={styles.presentation}>
           <div><small>RYTHM OS · STRATEGY REVIEW</small><h2>Market Analysis & Key Trends</h2></div>
