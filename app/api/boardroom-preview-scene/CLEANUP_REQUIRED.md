@@ -1,1 +1,0 @@
-This temporary file will be removed before merge after the clean boardroom scene is installed.

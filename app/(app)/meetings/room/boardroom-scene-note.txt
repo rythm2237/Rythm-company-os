@@ -1,1 +1,0 @@
-Temporary note: approved clean boardroom scene is served from /api/boardroom-preview-scene and will be replaced in this branch before merge.
