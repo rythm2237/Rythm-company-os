@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:i18n": "node --import tsx scripts/validate-i18n-foundation.ts",
     "test:phase0": "node --experimental-strip-types scripts/validate-phase0-security.ts",
     "test:phase1a": "node --import tsx scripts/validate-ai-gateway-phase1a.ts",
     "test:phase1b": "node --import tsx scripts/validate-ai-gateway-phase1b.ts",

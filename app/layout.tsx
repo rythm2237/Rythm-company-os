@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { DEFAULT_LOCALE, getLocaleDefinition } from "@/lib/i18n/config";
+import { enMessages } from "@/lib/i18n/messages";
 import {
   DEFAULT_DESCRIPTION,
   SITE_NAME,
@@ -23,6 +25,7 @@ const vazirmatn = localFont({
 
 const googleSiteVerification = process.env.GOOGLE_SITE_VERIFICATION?.trim();
 const bingSiteVerification = process.env.BING_SITE_VERIFICATION?.trim();
+const defaultLocale = getLocaleDefinition(DEFAULT_LOCALE);
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
@@ -51,7 +54,7 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: "Governed AI Workforce Platform | RYTHM Company OS",
     description: DEFAULT_DESCRIPTION,
-    locale: "en_US",
+    locale: defaultLocale.openGraphLocale,
     images: [
       {
         url: SOCIAL_IMAGE_PATH,
@@ -92,9 +95,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={vazirmatn.variable}>
+    <html lang={defaultLocale.languageTag} dir={defaultLocale.direction} className={vazirmatn.variable}>
       <body>
-        <a className="skip-link" href="#main-content">Skip to main content</a>
+        <a className="skip-link" href="#main-content">{enMessages.common.skipToMainContent}</a>
         <div id="main-content">{children}</div>
       </body>
     </html>

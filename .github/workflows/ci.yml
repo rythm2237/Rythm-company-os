@@ -20,6 +20,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run test:i18n
       - run: npm run test:phase0
       - run: npm run test:phase1a
       - run: npm run test:phase1b
