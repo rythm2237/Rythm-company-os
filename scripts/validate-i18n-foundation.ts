@@ -41,12 +41,12 @@ assert.deepEqual(parseLocaleFromPathname("/hu/pricing"), {
 });
 
 const alternates = getLanguageAlternates("/pricing") as Record<string, string>;
+assert.equal(Object.hasOwn(alternates, "de"), false);
+assert.equal(Object.hasOwn(alternates, "fr"), false);
+assert.equal(Object.hasOwn(alternates, "hu"), false);
 assert.deepEqual(alternates, {
   en: "/pricing",
   "x-default": "/pricing",
 });
-assert.equal(alternates.de, undefined);
-assert.equal(alternates.fr, undefined);
-assert.equal(alternates.hu, undefined);
 
 console.log("i18n foundation validation passed");
