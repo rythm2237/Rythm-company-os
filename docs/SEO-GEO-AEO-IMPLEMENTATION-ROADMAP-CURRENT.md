@@ -1,6 +1,6 @@
 # RYTHM OS — SEO, GEO & AEO Updated Roadmap
 
-**Checkpoint:** 2026-09-04  
+**Checkpoint:** 2026-09-08  
 **Canonical Production:** `https://rythm-os.com`  
 **Historical audit baseline:** 2026-09-01 — fixed, not a current score
 
@@ -8,11 +8,11 @@
 
 Total original roadmap items: **66**.
 
-- `DONE`: **53**
-- `PARTIAL`: **9**
+- `DONE`: **54**
+- `PARTIAL`: **8**
 - `TODO/BLOCKED`: **4**
-- Strict completion: **53/66 ≈ 80.3%**
-- 50%-weighted operational progress: **≈87.1%**
+- Strict completion: **54/66 ≈ 81.8%**
+- 50%-weighted operational progress: **≈87.9%**
 
 Historical audit baseline remains:
 
@@ -108,6 +108,7 @@ E-07 DONE — Support & Incident Expectations
 ### Measurement
 
 M-04 DONE — Referral Attribution Analytics  
+M-05 DONE — Answer-engine benchmark completed with **24/24 observations, 0/24 RYTHM mentions, 0/24 RYTHM citations**  
 M-07 DONE — Confirmed Conversion Attribution
 
 ## Remaining original roadmap items
@@ -128,7 +129,6 @@ T-09 PARTIAL — 90-day index / legacy-host monitoring
 M-01 PARTIAL — Indexed URL monitoring  
 M-02 PARTIAL — Branded search visibility trend  
 M-03 PARTIAL — Non-branded category visibility trend  
-M-05 PARTIAL — Answer-engine benchmark  
 M-06 PARTIAL — Referring-domain / authority reporting; explicit backlink-source data still required
 
 ## GEO / AEO execution completed after the original roadmap
@@ -172,65 +172,80 @@ Completed and merged in PR `#250`:
 - Added semantic internal links across AI workforce, company OS, Agents, architecture, How It Works, and comparisons.
 - Merge commit: `7875ead0e154e96b1f6067c41dab80cab819dfc6`.
 
-## Answer-engine benchmark evidence captured
+### Wave 5 — Answer-first intent and comparison coverage
 
-Pre-optimization baseline evidence was captured across ChatGPT, Gemini, Perplexity, and Microsoft Copilot.
+Completed and merged through PRs `#251` and `#252`:
 
-Four fixed-category prompts were executed across four engines:
+- Added `/ai-workforce-software` targeting the benchmark intent **What software can create an AI workforce for a business?**
+- Added direct-answer coverage for governed AI workforce platforms, building a company with AI agents, and virtual companies with AI employees.
+- Added source-linked RYTHM comparison coverage for n8n and LangGraph using official competitor documentation.
+- Added FAQ/WebPage structured data and sitemap exposure.
+- PR `#251` merge commit: `db62ad9961dcc5c62cdc6744cf08704badd182ae`.
+- PR `#252` merge commit: `7fcb7af6d2282c3a1c5381fc10f294d480f6b5a1`.
+
+## Answer-engine benchmark evidence
+
+The initial pre-optimization benchmark captured four fixed-category prompts across four engines:
 
 1. What are the best platforms for building a company with AI agents?
 2. What software can create an AI workforce for a business?
 3. What are the best governed AI workforce platforms?
 4. What are alternatives for running a virtual company with AI employees?
 
-Observed RYTHM result before the current optimization waves:
+Original baseline observation:
 
 - Mentions: **0/16**
 - Citations: **0/16**
 
-This is the before-change baseline for those 16 runs. Do not mix later post-change runs into the same baseline wave.
+The completed M-05 benchmark checkpoint now contains:
 
-## Current execution in progress
+- Observations: **24/24**
+- RYTHM mentions: **0/24**
+- RYTHM citations: **0/24**
 
-### Wave 5 — Answer-first content
+Do not overwrite the historical `0/16` baseline with the completed `0/24` checkpoint; they represent different benchmark scopes.
 
-**IN PROGRESS**
+## External Authority / Third-Party Presence — Wave 1
 
-Branch: `seo/geo-answer-first-content`  
-PR: `#251 — SEO/GEO: add answer-first AI workforce software content`
+Current evidence as of 2026-09-08:
 
-Implemented so far:
+- **SaaSHub — LIVE**: public page independently opened and product verification confirmed; backlink not verified.
+- **AlternativeTo — PENDING REVIEW**: application accepted into the normal free review queue; no public app page verified yet.
+- **Uneed — SUBMITTED**: authenticated waiting-line record exists; no paid launch option selected; no public listing verified yet.
+- **SubmitStartup.io — PENDING REVIEW**: submission accepted into free review queue; no public listing verified yet.
+- **FreeStartupDirectories — APPROVED**: publisher email states the listing is approved and live and provides `https://freestartupdirectories.com/tool/rythm-company-os`; independent public-page inspection is still required before marking `LIVE` or confirming backlink type.
+- **Launchory — BLOCKED**: repeated unstable slug/verification behavior ended in `Listing not found`; badge removed from RYTHM production and no payment made.
 
-- New answer-first page: `/ai-workforce-software`.
-- Directly targets the query intent: **What software can create an AI workforce for a business?**
-- Explains four platform categories: Agent frameworks, Automation platforms, Enterprise agent suites, AI company operating systems.
-- Reinforces RYTHM's business-native UX and human-governed operating model.
-- Adds FAQ/WebPage structured data.
-- Added to sitemap.
+P2-09 remains `PARTIAL` until more of these third-party records are independently verifiable as public/live listings.
 
-Next within Wave 5:
+## Product Hunt launch integrity
 
-- Production-preview validation.
-- Merge PR `#251` if clean.
-- Add answer-first coverage for the remaining benchmark intents.
-- Strengthen comparison coverage for n8n and LangGraph using official-source evidence.
+Product Hunt launch-day execution remains scheduled separately for **2026-09-15 at 09:01 Budapest time**.
+
+A paid-upvote solicitation from Upvote.Network was received on 2026-09-08 offering approximately 300 profiles at `$1/upvote` and citing a claimed Product Hunt rank. This solicitation is **not authorized for use**. No paid votes, purchased upvotes, coordinated fake profiles, ranking manipulation, or similar services should be used for the RYTHM launch.
+
+## Monitoring status
+
+- T-09 monitoring evidence has been recorded and remains ongoing.
+- M-01 indexed URL monitoring evidence has been recorded and remains ongoing.
+- M-02 branded visibility monitoring evidence has been recorded and remains ongoing.
+- M-03 non-branded category visibility monitoring evidence has been recorded and remains ongoing.
+- M-06 remains `PARTIAL` because explicit backlink/referring-domain evidence is still required. Google Search Console Links was previously still processing data.
 
 ## Next actions in priority order
 
-1. Finish and merge Wave 5 answer-first content.
-2. Add RYTHM vs n8n and RYTHM vs LangGraph comparison coverage using official competitor sources.
-3. Expand answer-first pages/sections for governed AI workforce, virtual company with AI employees, AI company operating system vs ChatGPT/automation, and human consequential approval.
-4. P2-09 — obtain independent third-party coverage/listings.
-5. P2-10 — verify Capterra public listing if approved.
-6. M-06 — import explicit backlink/referring-domain evidence from Search Console Links, Ahrefs, Semrush, Moz, or another explicit backlink source.
-7. Complete the remaining M-05 post-change benchmark as a separate wave and compare it against the pre-change `0/16` baseline.
-8. Continue T-09 and M-01–M-03 recurring monitoring.
-9. Add CrUX/Search Console field monitoring when sufficient real-user data exists.
-10. Publish customer proof only when permission and evidence exist.
-11. Add Article schema only when genuine editorial content exists.
+1. Continue `M-01 / M-02 / M-03 / T-09` recurring monitoring without resetting prior evidence.
+2. Re-check `P2-09` Wave 1 listings as approvals arrive and independently verify public URLs and backlink presence/type.
+3. Verify Capterra public listing if/when approved.
+4. Complete `M-06` when Search Console Links or another explicit backlink/referring-domain source becomes available.
+5. Add CrUX/Search Console field monitoring when sufficient real-user data exists.
+6. Publish customer proof only when permission and evidence exist.
+7. Add Article schema only when genuine editorial content exists.
 
 ## Evidence rules
 
 Never fabricate rankings, backlinks or authority scores, reviews, customer outcomes, uptime percentages, AI citations, third-party coverage, or partnerships.
 
 A real-world dependency remains `PARTIAL` until evidence exists. Ordinary web search does not substitute for an answer-engine benchmark or exhaustive backlink source. Customer proof requires explicit permission and evidence.
+
+Do not purchase votes, upvotes, fake engagement, review manipulation, or ranking-manipulation services. Third-party approval emails may establish `APPROVED`, but `LIVE` and backlink presence/type should be recorded only after the actual public page is independently inspected.
