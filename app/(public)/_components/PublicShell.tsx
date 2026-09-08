@@ -158,8 +158,8 @@ function PublicShellFrame({ children }: PublicShellProps) {
             ))}
           </nav>
           <div className="marketing-footer-badge">
-            <a href="https://www.launchory.app/startups/rythm-company-os?ref=badge" target="_blank" rel="noopener noreferrer">
-              <img src="https://www.launchory.app/api/badge/rythm-company-os?theme=dark" alt="Featured on Launchory" width="240" height="54" />
+            <a href="https://www.launchory.app/startups/rythm-company-os-1?ref=badge" target="_blank" rel="noopener noreferrer">
+              <img src="https://www.launchory.app/api/badge/rythm-company-os-1?theme=dark" alt="Featured on Launchory" width="240" height="54" />
             </a>
           </div>
           <div className="marketing-footer-bottom">
