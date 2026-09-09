@@ -1,4 +1,9 @@
 -- Harden Admin Studio membership predicate: callers can only test their own auth identity.
+-- Drop dependent policies before replacing the function signature.
+drop policy if exists platform_admins_admin_read on public.platform_admins;
+drop policy if exists automation_tasks_admin_all on public.automation_tasks;
+drop policy if exists automation_task_runs_admin_all on public.automation_task_runs;
+
 drop function if exists public.is_platform_admin(uuid);
 
 create or replace function public.is_platform_admin()
@@ -16,11 +21,6 @@ $$;
 
 revoke all on function public.is_platform_admin() from public, anon;
 grant execute on function public.is_platform_admin() to authenticated, service_role;
-
--- Recreate policies against the self-only predicate.
-drop policy if exists platform_admins_admin_read on public.platform_admins;
-drop policy if exists automation_tasks_admin_all on public.automation_tasks;
-drop policy if exists automation_task_runs_admin_all on public.automation_task_runs;
 
 create policy platform_admins_admin_read on public.platform_admins
 for select to authenticated using (public.is_platform_admin());
