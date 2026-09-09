@@ -7,6 +7,7 @@ const NON_PUBLIC_PATHS = [
   "/organization-context/",
   "/actions/",
   "/activation/",
+  "/admin/",
   "/agents/",
   "/approvals/",
   "/attention/",
