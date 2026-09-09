@@ -44,22 +44,27 @@ const groups = [
     { label: "Routing Intelligence", href: "/operations/routing", icon: "◎" },
     { label: "Operations Health", href: "/operations/health", icon: "+" },
   ]},
+  { label: "Admin", items: [
+    { label: "Admin Studio", href: "/admin", icon: "◆" },
+    { label: "Automation Center", href: "/admin/automation", icon: "↻" },
+  ]},
 ] as const;
 
 const productLabel: Record<string, string> = { ready_company: "Ready Company", custom_company: "Custom Company", company_studio: "Company Studio" };
 
 type Props = {
-  access: { active: boolean; agentStudio: boolean; templates: boolean; companyBuilder: boolean; companyLaunch: boolean };
+  access: { active: boolean; agentStudio: boolean; templates: boolean; companyBuilder: boolean; companyLaunch: boolean; platformAdmin: boolean };
   organization: { activeOrganizationId: string; activeOrganizationName: string; activeRole: string; productCode?: string | null; entitlementStatus?: string | null; organizations: Array<{ id: string; name: string; role: string }> } | null;
 };
 
 function isRouteActive(pathname: string, href: string) {
-  if (href === "/command-center" || href === "/company") return pathname === href;
+  if (href === "/command-center" || href === "/company" || href === "/admin") return pathname === href;
   if (href === "/projects" || href === "/agents") return pathname === href || pathname.startsWith(`${href}/`);
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function canShowItem(href: string, access: Props["access"]) {
+  if (href.startsWith("/admin")) return access.platformAdmin;
   if (href === "/studio/agents") return access.agentStudio;
   if (href === "/studio/templates") return access.templates;
   if (href === "/studio/builder") return access.companyBuilder;
@@ -82,7 +87,7 @@ export default function ProductNav({ access, organization }: Props) {
         <div className="product-nav-footer">
           {organization ? <section className="workspace-context-card" aria-label="Active organization context"><div className="workspace-context-heading"><span className="workspace-context-avatar" aria-hidden="true">{organization.activeOrganizationName.slice(0, 1).toUpperCase()}</span><span><strong>{organization.activeOrganizationName}</strong><small>{organization.activeRole}</small></span></div><div className="workspace-context-meta"><span>{organization.productCode ? productLabel[organization.productCode] ?? organization.productCode : "Workspace"}</span><span className={`workspace-status workspace-status-${organization.entitlementStatus ?? "unavailable"}`}><i aria-hidden="true" />{organization.entitlementStatus ?? "Not provisioned"}</span></div>{organization.organizations.length > 1 ? <form action={switchOrganization} className="workspace-switcher"><input type="hidden" name="next" value="/command-center" /><label><span className="sr-only">Active company</span><select name="organizationId" defaultValue={organization.activeOrganizationId} aria-label="Active company">{organization.organizations.map((item) => <option key={item.id} value={item.id}>{item.name} — {item.role}</option>)}</select></label><button type="submit">Switch</button></form> : null}</section> : null}
           <Link className="product-onboarding-link" href={access.active ? "/onboarding" : "/activation"}><span aria-hidden="true">?</span><span><strong>{access.active ? "Workspace guide" : "Activation required"}</strong><small>{access.active ? "Review the operating flow" : "Commercial tools remain locked"}</small></span></Link>
-          <div className="workspace-system-state"><i aria-hidden="true" /><span>Tenant isolated</span><strong>{access.active ? "Entitlement active" : "Fail-closed"}</strong></div>
+          <div className="workspace-system-state"><i aria-hidden="true" /><span>Tenant isolated</span><strong>{access.platformAdmin ? "Platform admin" : access.active ? "Entitlement active" : "Fail-closed"}</strong></div>
           <form action={logout}><button className="product-signout" type="submit">Sign out <span aria-hidden="true">↗</span></button></form>
         </div>
       </div>

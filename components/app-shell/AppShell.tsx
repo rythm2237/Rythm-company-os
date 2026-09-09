@@ -4,6 +4,7 @@ import DecisionDraftGuard from "@/components/decision-draft-guard/DecisionDraftG
 import ProductNav from "@/components/product-nav/ProductNav";
 import ProjectPulse from "@/components/project-pulse/ProjectPulse";
 import BoardroomFocusBridge from "@/components/app-shell/BoardroomFocusBridge";
+import { getPlatformAdminContext } from "@/lib/admin/authorization";
 import {
   isOrganizationEntitlementActive,
   resolveOrganizationContext,
@@ -30,6 +31,13 @@ export default async function AppShell({ children }: Readonly<{ children: React.
   let pulseProject = null;
   let organizationContext: Awaited<ReturnType<typeof resolveOrganizationContext>> = null;
   let companyLaunchVisible = false;
+  let platformAdmin = false;
+
+  try {
+    platformAdmin = Boolean(await getPlatformAdminContext());
+  } catch {
+    platformAdmin = false;
+  }
 
   try {
     organizationContext = await resolveOrganizationContext();
@@ -90,6 +98,7 @@ export default async function AppShell({ children }: Readonly<{ children: React.
     templates: Boolean(commercialAccess && organizationContext?.entitlement?.company_template_access),
     companyBuilder: Boolean(commercialAccess && organizationContext?.entitlement?.company_builder_enabled),
     companyLaunch: Boolean(commercialAccess && companyLaunchVisible),
+    platformAdmin,
   };
 
   const organizationNavigation = organizationContext ? {
