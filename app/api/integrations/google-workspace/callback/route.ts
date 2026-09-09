@@ -1,6 +1,14 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { resolveOrganizationContext, isOrganizationEntitlementActive } from "@/lib/auth/organization-context";
+import { getPlatformAdminContext } from "@/lib/admin/authorization";
+import {
+  createGoogleSearchConsoleEnvelope,
+  googleOAuthServerCredentials,
+  storeGoogleSearchConsoleCredential,
+  verifyGoogleSearchConsolePropertyAccess,
+  verifyGoogleSearchConsoleState,
+} from "@/lib/admin/integrations/google-search-console";
 
 type GoogleTokenResponse = {
   access_token?: string;
@@ -28,6 +36,22 @@ function finish(request: Request, key: "error" | "message", message: string) {
     "rythm_google_oauth_integration",
     "rythm_google_oauth_user",
   ]) {
+    response.cookies.set(name, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/api/integrations/google-workspace",
+      maxAge: 0,
+    });
+  }
+  return response;
+}
+
+function finishSearchConsole(request: Request, key: "error" | "message", message: string) {
+  const url = new URL("/admin/automation", request.url);
+  url.searchParams.set(key, message);
+  const response = NextResponse.redirect(url, 303);
+  for (const name of ["rythm_gsc_oauth_state", "rythm_gsc_oauth_user"]) {
     response.cookies.set(name, "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -101,6 +125,70 @@ export async function GET(request: Request) {
   const expectedState = cookies.get("rythm_google_oauth_state") ?? "";
   const cookieIntegrationId = cookies.get("rythm_google_oauth_integration") ?? "";
   const cookieUserId = cookies.get("rythm_google_oauth_user") ?? "";
+  const searchConsolePayload = state ? verifyGoogleSearchConsoleState(state) : null;
+  const searchConsoleCookieState = cookies.get("rythm_gsc_oauth_state") ?? "";
+  const searchConsoleCookieUser = cookies.get("rythm_gsc_oauth_user") ?? "";
+
+  if (searchConsolePayload) {
+    if (providerError)
+      return finishSearchConsole(request, "error", `Google authorization was not completed: ${providerError}`);
+    if (
+      !code ||
+      !state ||
+      !searchConsoleCookieState ||
+      state !== searchConsoleCookieState ||
+      searchConsoleCookieUser !== searchConsolePayload.userId
+    ) return finishSearchConsole(request, "error", "Google Search Console OAuth state validation failed. Start the connection again from Admin Automation Center.");
+
+    const adminContext = await getPlatformAdminContext();
+    if (!adminContext || adminContext.user.id !== searchConsolePayload.userId)
+      return finishSearchConsole(request, "error", "Your platform-admin session changed during Google authorization. Sign in again and retry.");
+
+    let clientId: string;
+    let clientSecret: string;
+    try {
+      ({ clientId, clientSecret } = googleOAuthServerCredentials());
+    } catch (error) {
+      return finishSearchConsole(request, "error", error instanceof Error ? error.message : "Google OAuth is not configured.");
+    }
+    const redirectUri = `${url.origin}/api/integrations/google-workspace/callback`;
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, grant_type: "authorization_code" }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+    });
+    const tokens = await tokenResponse.json().catch(() => ({})) as GoogleTokenResponse;
+    if (!tokenResponse.ok || !tokens.access_token)
+      return finishSearchConsole(request, "error", `Google token exchange failed${tokens.error ? `: ${tokens.error}` : "."}`);
+    if (!tokens.refresh_token)
+      return finishSearchConsole(request, "error", "Google did not return an offline refresh token. Reconnect and approve read-only Search Console access again.");
+    const tokenScopes = new Set((tokens.scope ?? "").split(/\s+/).filter(Boolean));
+    if (!tokenScopes.has("https://www.googleapis.com/auth/webmasters.readonly") || tokenScopes.has("https://www.googleapis.com/auth/webmasters"))
+      return finishSearchConsole(request, "error", "Google did not return the required read-only Search Console scope.");
+
+    try {
+      const property = await verifyGoogleSearchConsolePropertyAccess(tokens.access_token);
+      const envelope = createGoogleSearchConsoleEnvelope({
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        tokenType: tokens.token_type,
+        scope: tokens.scope,
+        expiresIn: tokens.expires_in,
+      });
+      await storeGoogleSearchConsoleCredential({
+        envelope,
+        userId: adminContext.user.id,
+        accountRef: null,
+        permissionLevel: property.permissionLevel ?? null,
+      });
+      return finishSearchConsole(request, "message", "Google Search Console connected with read-only access to the canonical rythm-os.com property.");
+    } catch (error) {
+      return finishSearchConsole(request, "error", error instanceof Error ? error.message : "Google Search Console connection failed.");
+    }
+  }
+
   const signedPayload = state ? verifySignedState(state) : null;
   const cookieStateValid = Boolean(state && expectedState && state === expectedState);
   const integrationId = cookieStateValid ? cookieIntegrationId : signedPayload?.integrationId ?? "";

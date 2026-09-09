@@ -29,6 +29,7 @@
     "test:seo-answer-benchmark": "node scripts/validate-answer-engine-benchmark.mjs",
     "test:seo-authority": "node scripts/validate-referring-domain-authority.mjs",
     "test:seo-community": "node scripts/validate-community-participation.mjs",
+    "test:admin-automation": "node --import tsx scripts/validate-admin-automation-center.ts",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",
     "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts"
