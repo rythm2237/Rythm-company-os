@@ -5,6 +5,15 @@
     },
     "app/api/agents/[code]/benchmark/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/admin/automation/dispatch/route.ts": {
+      "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/admin/automation/dispatch",
+      "schedule": "0 * * * *"
+    }
+  ]
 }
