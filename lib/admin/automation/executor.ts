@@ -1,5 +1,8 @@
 import "server-only";
 import { createAnalyticsAdminClient } from "@/lib/supabase/analytics-admin";
+import { runCoreWebVitalsMonitoring, runSearchConsoleMonitoring } from "@/lib/admin/automation/google-monitoring";
+import { fetchPublicResource } from "@/lib/security/public-url";
+import { redactSecretText } from "@/lib/security/redaction";
 
 export type AutomationTrigger = "manual" | "scheduled" | "system";
 
@@ -31,10 +34,15 @@ function nextRun(mode: AutomationTask["schedule_mode"], from = new Date()) {
 async function fetchCheck(path: string) {
   const started = Date.now();
   try {
-    const response = await fetch(new URL(path, SITE_ORIGIN), { redirect: "follow", cache: "no-store", signal: AbortSignal.timeout(15000) });
-    return { path, ok: response.ok, status: response.status, finalUrl: response.url, durationMs: Date.now() - started };
+    const { response, finalUrl } = await fetchPublicResource(new URL(path, SITE_ORIGIN), {
+      allowedHosts: ["rythm-os.com"],
+      maxBytes: 1_000_000,
+      maxRedirects: 4,
+      timeoutMs: 15_000,
+    });
+    return { path, ok: response.ok, status: response.status, finalUrl: finalUrl.toString(), durationMs: Date.now() - started };
   } catch (error) {
-    return { path, ok: false, status: 0, durationMs: Date.now() - started, error: error instanceof Error ? error.message : "fetch failed" };
+    return { path, ok: false, status: 0, durationMs: Date.now() - started, error: redactSecretText(error instanceof Error ? error.message : "fetch failed") };
   }
 }
 
@@ -99,7 +107,13 @@ async function securityHealth(): Promise<HandlerResult> {
 }
 
 async function configurationRequired(task: AutomationTask): Promise<HandlerResult> {
-  return { status: "skipped", summary: `${task.name} needs an external provider or credential before it can run.`, output: { configurationStatus: task.configuration_status, config: task.config ?? {} } };
+  const requiredProvider = typeof task.config?.required_integration === "string" ? task.config.required_integration : null;
+  const requiredEnvironment = task.config?.required_env === "GOOGLE_PAGESPEED_API_KEY" ? "GOOGLE_PAGESPEED_API_KEY" : null;
+  return {
+    status: "skipped",
+    summary: `${task.name} needs an authorized external provider before it can run.`,
+    output: { configurationStatus: task.configuration_status, providerState: "CONFIGURATION_REQUIRED", requiredProvider, requiredEnvironment },
+  };
 }
 
 const handlers: Record<string, (task: AutomationTask) => Promise<HandlerResult>> = {
@@ -107,8 +121,8 @@ const handlers: Record<string, (task: AutomationTask) => Promise<HandlerResult>>
   seo_site_health: seoSiteHealth,
   ai_usage_cost: aiUsageCost,
   security_health: securityHealth,
-  core_web_vitals: configurationRequired,
-  search_index_monitoring: configurationRequired,
+  core_web_vitals: (task) => runCoreWebVitalsMonitoring(task.config),
+  search_index_monitoring: (task) => runSearchConsoleMonitoring(task.config),
   authority_monitoring: configurationRequired,
 };
 
@@ -136,15 +150,15 @@ export async function executeAutomationTask(taskId: string, triggerType: Automat
     const status = result.status ?? "succeeded";
     await Promise.all([
       admin.from("automation_task_runs").update({ status, finished_at: finishedAt.toISOString(), duration_ms: finishedAt.getTime() - startedAt.getTime(), summary: result.summary, output: result.output ?? {} }).eq("id", run.id),
-      admin.from("automation_tasks").update({ last_run_at: finishedAt.toISOString(), next_run_at: nextRun(typedTask.schedule_mode, finishedAt), updated_at: finishedAt.toISOString() }).eq("id", taskId),
+      admin.from("automation_tasks").update({ last_run_at: finishedAt.toISOString(), next_run_at: typedTask.enabled ? nextRun(typedTask.schedule_mode, finishedAt) : null, updated_at: finishedAt.toISOString() }).eq("id", taskId),
     ]);
     return { runId: run.id, status, summary: result.summary };
   } catch (error) {
     const finishedAt = new Date();
-    const message = error instanceof Error ? error.message : "Automation execution failed.";
+    const message = redactSecretText(error instanceof Error ? error.message : "Automation execution failed.");
     await Promise.all([
       admin.from("automation_task_runs").update({ status: "failed", finished_at: finishedAt.toISOString(), duration_ms: finishedAt.getTime() - startedAt.getTime(), error_message: message }).eq("id", run.id),
-      admin.from("automation_tasks").update({ last_run_at: finishedAt.toISOString(), next_run_at: nextRun(typedTask.schedule_mode, finishedAt), updated_at: finishedAt.toISOString() }).eq("id", taskId),
+      admin.from("automation_tasks").update({ last_run_at: finishedAt.toISOString(), next_run_at: typedTask.enabled ? nextRun(typedTask.schedule_mode, finishedAt) : null, updated_at: finishedAt.toISOString() }).eq("id", taskId),
     ]);
     throw error;
   }
@@ -156,6 +170,16 @@ export async function dispatchDueAutomationTasks() {
   const { data, error } = await admin.from("automation_tasks").select("id").eq("enabled", true).eq("configuration_status", "ready").lte("next_run_at", new Date().toISOString()).order("next_run_at").limit(10);
   if (error) throw new Error(error.message);
   const results = [];
-  for (const task of data ?? []) results.push(await executeAutomationTask(task.id, "scheduled", null));
+  for (const task of data ?? []) {
+    try {
+      results.push(await executeAutomationTask(task.id, "scheduled", null));
+    } catch (taskError) {
+      results.push({
+        taskId: task.id,
+        status: "failed",
+        error: redactSecretText(taskError instanceof Error ? taskError.message : "Scheduled automation failed."),
+      });
+    }
+  }
   return results;
 }
