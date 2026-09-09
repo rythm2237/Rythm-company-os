@@ -6,7 +6,7 @@ export async function getPlatformAdminContext() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: allowed, error } = await supabase.rpc("is_platform_admin", { p_user_id: user.id });
+  const { data: allowed, error } = await supabase.rpc("is_platform_admin");
   if (error || allowed !== true) return null;
   return { supabase, user };
 }
