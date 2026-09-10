@@ -115,7 +115,7 @@ function expiresSoon(expiresAt: string) {
 }
 
 export async function verifyGoogleSearchConsolePropertyAccess(accessToken: string) {
-  const url = await secureProviderUrl("https://www.googleapis.com/webmasters/v3/sites", ["www.googleapis.com"]);
+  const url = await secureProviderUrl("https://searchconsole.googleapis.com/webmasters/v3/sites", ["searchconsole.googleapis.com"]);
   const body = await executeJsonRequest(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   }, 20_000) as {
