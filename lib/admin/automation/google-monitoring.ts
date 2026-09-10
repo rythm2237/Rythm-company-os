@@ -6,7 +6,7 @@ import {
 import { executeJsonRequest, secureProviderUrl } from "@/lib/integrations/adapters/http";
 
 const SITE_ORIGIN = "https://rythm-os.com";
-const SEARCH_ANALYTICS_API = "https://www.googleapis.com/webmasters/v3/sites";
+const SEARCH_ANALYTICS_API = "https://searchconsole.googleapis.com/webmasters/v3/sites";
 const URL_INSPECTION_API = "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect";
 const PAGESPEED_API = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 

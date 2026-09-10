@@ -29,12 +29,16 @@ assert.match(executor, /for \(const task of data \?\? \[\]\)/, "Dispatcher must 
 assert.doesNotMatch(executor, /eval\(|new Function|child_process/, "Automation handlers must not execute arbitrary code.");
 
 assert.match(monitoring, /Google Search Console API/);
+assert.match(monitoring, /https:\/\/searchconsole\.googleapis\.com\/webmasters\/v3\/sites/);
+assert.doesNotMatch(monitoring, /https:\/\/www\.googleapis\.com\/webmasters\/v3\/sites/);
 assert.match(monitoring, /scope: "sampled_monitored_urls"/);
 assert.match(monitoring, /CrUX real-user field data/);
 assert.match(monitoring, /Lighthouse lab data/);
 assert.match(monitoring, /INP is reported only from CrUX field data/);
 assert.match(monitoring, /url\.origin === SITE_ORIGIN/);
 assert.match(searchConsole, /webmasters\.readonly/);
+assert.match(searchConsole, /https:\/\/searchconsole\.googleapis\.com\/webmasters\/v3\/sites/);
+assert.doesNotMatch(searchConsole, /https:\/\/www\.googleapis\.com\/webmasters\/v3\/sites/);
 assert.match(searchConsole, /get_platform_integration_secret_service_v1/);
 assert.match(callback, /verifyGoogleSearchConsoleState/);
 assert.match(callback, /getPlatformAdminContext/);
