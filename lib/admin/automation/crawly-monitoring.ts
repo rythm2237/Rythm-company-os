@@ -3,7 +3,7 @@ import { fetchPublicResource } from "@/lib/security/public-url";
 import { redactSecretText } from "@/lib/security/redaction";
 
 const CRAWLY_HOST = "www.getcrawly.com";
-const CRAWLY_ENDPOINT = `https://${CRAWLY_HOST}/api/v1/backlinks`;
+const CRAWLY_BASE = `https://${CRAWLY_HOST}/api/v1`;
 const DEFAULT_DOMAIN = "rythm-os.com";
 // Runtime credentials are read per invocation; production env changes require a fresh deployment.
 
@@ -62,7 +62,7 @@ function cleanDomain(value: unknown) {
   return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain) ? domain : null;
 }
 
-export function normalizeCrawlyBacklinks(payload: CrawlyResponse, requestedDomain: string): AuthoritySnapshot {
+function normalizeRows(payload: CrawlyResponse) {
   const rows = Array.isArray(payload.backlinks?.backlinks) ? payload.backlinks?.backlinks as CrawlyBacklink[] : [];
   const topReferringDomains = rows
     .map((row) => {
@@ -79,20 +79,55 @@ export function normalizeCrawlyBacklinks(payload: CrawlyResponse, requestedDomai
     .sort((a, b) => (b.links ?? 0) - (a.links ?? 0))
     .slice(0, 100);
 
+  return { rows, topReferringDomains };
+}
+
+export function normalizeCrawlyBacklinks(summaryPayload: CrawlyResponse, backlinkPayload: CrawlyResponse | null, requestedDomain: string): AuthoritySnapshot {
+  const detailPayload = backlinkPayload ?? {};
+  const { rows, topReferringDomains } = normalizeRows(detailPayload);
+
   return {
     provider: "crawly",
-    domain: cleanDomain(payload.domain) ?? requestedDomain,
+    domain: cleanDomain(summaryPayload.domain) ?? cleanDomain(detailPayload.domain) ?? requestedDomain,
     fetchedAt: new Date().toISOString(),
-    referringDomains: finiteNumber(payload.summary?.referring_domains),
-    totalBacklinks: finiteNumber(payload.summary?.total_links),
+    referringDomains: finiteNumber(summaryPayload.summary?.referring_domains) ?? finiteNumber(detailPayload.summary?.referring_domains),
+    totalBacklinks: finiteNumber(summaryPayload.summary?.total_links) ?? finiteNumber(detailPayload.summary?.total_links),
     listedReferringDomains: rows.length,
     topReferringDomains,
     authoritySignals: {
-      harmonicRank: finiteNumber(payload.score?.harmonic_rank),
-      pageRankRank: finiteNumber(payload.score?.pagerank_rank),
-      hostCount: finiteNumber(payload.score?.host_count),
+      harmonicRank: finiteNumber(summaryPayload.score?.harmonic_rank) ?? finiteNumber(detailPayload.score?.harmonic_rank),
+      pageRankRank: finiteNumber(summaryPayload.score?.pagerank_rank) ?? finiteNumber(detailPayload.score?.pagerank_rank),
+      hostCount: finiteNumber(summaryPayload.score?.host_count) ?? finiteNumber(detailPayload.score?.host_count),
     },
   };
+}
+
+async function fetchCrawlyJson(path: "domain-authority" | "backlinks", domain: string, apiKey: string) {
+  const endpoint = new URL(`${CRAWLY_BASE}/${path}`);
+  endpoint.searchParams.set("domain", domain);
+
+  const { response, bytes } = await fetchPublicResource(endpoint, {
+    allowedHosts: [CRAWLY_HOST],
+    timeoutMs: 15_000,
+    maxBytes: 2_000_000,
+    maxRedirects: 0,
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+
+  const raw = new TextDecoder().decode(bytes);
+  if (!response.ok) {
+    const safeBody = redactSecretText(raw).slice(0, 300);
+    throw new Error(`Crawly ${path} API returned HTTP ${response.status}${safeBody ? `: ${safeBody}` : ""}`);
+  }
+
+  try {
+    return JSON.parse(raw) as CrawlyResponse;
+  } catch {
+    throw new Error(`Crawly ${path} API returned invalid JSON.`);
+  }
 }
 
 export async function runCrawlyAuthorityMonitoring(config: Record<string, unknown> | null | undefined) {
@@ -110,42 +145,30 @@ export async function runCrawlyAuthorityMonitoring(config: Record<string, unknow
   }
 
   const configuredDomain = cleanDomain(config?.domain) ?? DEFAULT_DOMAIN;
-  const endpoint = new URL(CRAWLY_ENDPOINT);
-  endpoint.searchParams.set("domain", configuredDomain);
 
-  const { response, bytes } = await fetchPublicResource(endpoint, {
-    allowedHosts: [CRAWLY_HOST],
-    timeoutMs: 15_000,
-    maxBytes: 2_000_000,
-    maxRedirects: 0,
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-  });
+  // Use domain-authority as the canonical summary endpoint. The backlinks endpoint is optional detail enrichment
+  // because Crawly may return a reduced backlink payload for domains with sparse or not-yet-expanded link profiles.
+  const summaryPayload = await fetchCrawlyJson("domain-authority", configuredDomain, apiKey);
 
-  const raw = new TextDecoder().decode(bytes);
-  if (!response.ok) {
-    const safeBody = redactSecretText(raw).slice(0, 300);
-    throw new Error(`Crawly backlink API returned HTTP ${response.status}${safeBody ? `: ${safeBody}` : ""}`);
-  }
-
-  let payload: CrawlyResponse;
+  let backlinkPayload: CrawlyResponse | null = null;
+  let detailWarning: string | null = null;
   try {
-    payload = JSON.parse(raw) as CrawlyResponse;
-  } catch {
-    throw new Error("Crawly backlink API returned invalid JSON.");
+    backlinkPayload = await fetchCrawlyJson("backlinks", configuredDomain, apiKey);
+  } catch (error) {
+    detailWarning = error instanceof Error ? redactSecretText(error.message).slice(0, 300) : "Backlink detail endpoint unavailable.";
   }
 
-  const snapshot = normalizeCrawlyBacklinks(payload, configuredDomain);
+  const snapshot = normalizeCrawlyBacklinks(summaryPayload, backlinkPayload, configuredDomain);
   if (snapshot.referringDomains == null && snapshot.totalBacklinks == null) {
-    throw new Error("Crawly backlink API response did not include the expected backlink summary.");
+    throw new Error("Crawly domain-authority API response did not include the expected authority summary.");
   }
 
   return {
     summary: `Crawly authority snapshot: ${snapshot.referringDomains ?? "unknown"} referring domains and ${snapshot.totalBacklinks ?? "unknown"} backlinks.`,
     output: {
       providerState: "LIVE",
+      detailState: detailWarning ? "PARTIAL" : "LIVE",
+      detailWarning,
       ...snapshot,
     },
   };
