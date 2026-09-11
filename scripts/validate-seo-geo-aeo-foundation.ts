@@ -43,6 +43,10 @@ const requiredPublicRoutes = [
   "/security",
 ] as const;
 
+const customMetadataPages = new Map<string, string>([
+  ["app/(public)/ai-company-operating-system/page.tsx", "/ai-company-operating-system"],
+]);
+
 const siteSource = read("lib/seo/site.ts");
 const routePaths = [...siteSource.matchAll(/path:\s*"([^"]+)"/g)].map((match) => match[1]);
 assert.equal(new Set(routePaths).size, routePaths.length, "PUBLIC_ROUTES contains a duplicate path");
@@ -54,6 +58,12 @@ const publicPageFiles = filesBelow("app/(public)").filter((file) => file.endsWit
 for (const file of publicPageFiles) {
   const source = read(file);
   const metadataPath = source.match(/createPublicMetadata\("([^"]+)"\)/)?.[1];
+  const customCanonical = customMetadataPages.get(file);
+  if (customCanonical) {
+    assert(source.includes(`alternates: { canonical: "${customCanonical}" }`), `${file} custom metadata is missing canonical ${customCanonical}`);
+    assert(source.includes('type="application/ld+json"'), `${file} custom SEO page is missing structured data`);
+    continue;
+  }
   assert(metadataPath, `${file} does not use createPublicMetadata`);
   assert(routePaths.includes(metadataPath), `${file} metadata path ${metadataPath} is absent from PUBLIC_ROUTES`);
 }
