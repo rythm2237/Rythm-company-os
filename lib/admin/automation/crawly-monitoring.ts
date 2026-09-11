@@ -29,6 +29,9 @@ type CrawlyResponse = {
     pagerank_rank?: unknown;
     host_count?: unknown;
   };
+  error?: unknown;
+  message?: unknown;
+  status?: unknown;
 };
 
 export type AuthoritySnapshot = {
@@ -80,6 +83,11 @@ function normalizeRows(payload: CrawlyResponse) {
     .slice(0, 100);
 
   return { rows, topReferringDomains };
+}
+
+function safeProviderMessage(payload: CrawlyResponse) {
+  const candidate = typeof payload.message === "string" ? payload.message : typeof payload.error === "string" ? payload.error : null;
+  return candidate ? redactSecretText(candidate).slice(0, 200) : null;
 }
 
 export function normalizeCrawlyBacklinks(summaryPayload: CrawlyResponse, backlinkPayload: CrawlyResponse | null, requestedDomain: string): AuthoritySnapshot {
@@ -159,8 +167,20 @@ export async function runCrawlyAuthorityMonitoring(config: Record<string, unknow
   }
 
   const snapshot = normalizeCrawlyBacklinks(summaryPayload, backlinkPayload, configuredDomain);
-  if (snapshot.referringDomains == null && snapshot.totalBacklinks == null) {
-    throw new Error("Crawly domain-authority API response did not include the expected authority summary.");
+  const hasSummary = snapshot.referringDomains != null || snapshot.totalBacklinks != null;
+
+  if (!hasSummary) {
+    return {
+      summary: `Crawly is reachable, but no indexed backlink summary is currently available for ${configuredDomain}.`,
+      output: {
+        providerState: "LIVE_NO_DATA",
+        detailState: detailWarning ? "PARTIAL" : "NO_DATA",
+        detailWarning,
+        providerMessage: safeProviderMessage(summaryPayload) ?? safeProviderMessage(backlinkPayload ?? {}),
+        responseKeys: Object.keys(summaryPayload).slice(0, 20),
+        ...snapshot,
+      },
+    };
   }
 
   return {
