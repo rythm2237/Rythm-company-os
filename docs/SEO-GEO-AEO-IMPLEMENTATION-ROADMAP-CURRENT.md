@@ -1,6 +1,6 @@
 # RYTHM OS — SEO, GEO & AEO Updated Roadmap
 
-**Checkpoint:** 2026-09-08  
+**Checkpoint:** 2026-09-11  
 **Canonical Production:** `https://rythm-os.com`  
 **Historical audit baseline:** 2026-09-01 — fixed, not a current score
 
@@ -207,7 +207,7 @@ Do not overwrite the historical `0/16` baseline with the completed `0/24` checkp
 
 ## External Authority / Third-Party Presence — Wave 1
 
-Current evidence as of 2026-09-08:
+Current evidence as of 2026-09-11:
 
 - **SaaSHub — LIVE**: public page independently opened and product verification confirmed; backlink not verified.
 - **AlternativeTo — PENDING REVIEW**: application accepted into the normal free review queue; no public app page verified yet.
@@ -215,8 +215,28 @@ Current evidence as of 2026-09-08:
 - **SubmitStartup.io — PENDING REVIEW**: submission accepted into free review queue; no public listing verified yet.
 - **FreeStartupDirectories — APPROVED**: publisher email states the listing is approved and live and provides `https://freestartupdirectories.com/tool/rythm-company-os`; independent public-page inspection is still required before marking `LIVE` or confirming backlink type.
 - **Launchory — BLOCKED**: repeated unstable slug/verification behavior ended in `Listing not found`; badge removed from RYTHM production and no payment made.
+- **SellWithBoost — RESEARCHED / DEFERRED**: product fit is acceptable and the directory exposes public, SEO-oriented startup pages. The free tier requires a publicly accessible **do-follow backlink/badge from RYTHM to SellWithBoost** before approval. Current pricing page shows `Free $0`, `Standard $29 one-time`, and `Premium $99 one-time`; the FAQ currently shows inconsistent higher paid prices, so pricing should be reconfirmed before any purchase. Decision: **do not add a do-follow badge/backlink to RYTHM and do not purchase a listing at this stage**. Reconsider only if (a) a no-badge free/manual option becomes available, or (b) verified authority/referral evidence justifies the paid tier.
 
 P2-09 remains `PARTIAL` until more of these third-party records are independently verifiable as public/live listings.
+
+## SellWithBoost qualification note — 2026-09-11
+
+Assessment:
+
+- **Topical fit:** GOOD — startup/SaaS/product-discovery directory; RYTHM fits the audience.
+- **SEO value:** POSSIBLE BUT UNPROVEN — listings are public and intended to be search-indexable, but no independent authority score was accepted into evidence because a current Ahrefs DR lookup was unavailable under the connected plan.
+- **GEO/AEO value:** LOW–MODERATE — a third-party entity mention can help corroborate product/category language, but the site is not yet treated as a high-authority citation source.
+- **Referral value:** UNPROVEN — SellWithBoost claims a founder/maker audience and permanent listings, but no RYTHM-specific traffic evidence exists.
+- **Cost/risk:** Free tier creates a reciprocal-link requirement from RYTHM; paid tiers avoid the badge requirement but provide insufficient verified ROI at present.
+- **Recommended state:** `DEFERRED`, not rejected. No site modification, payment, or backlink should be made solely to obtain this listing.
+
+Evidence policy for future reconsideration:
+
+1. Verify current pricing and submission terms on the live site.
+2. Require a public listing URL and independently inspect whether the outbound link to RYTHM is crawlable and `follow`/`nofollow`.
+3. Prefer a listing without reciprocal-link requirements.
+4. If considering payment, compare expected value against Product Hunt, AlternativeTo, Uneed, SaaSHub, Capterra, and other stronger third-party authority opportunities.
+5. Record referral traffic/conversions after launch before upgrading or buying promotional placement.
 
 ## Product Hunt launch integrity
 
@@ -241,6 +261,7 @@ A paid-upvote solicitation from Upvote.Network was received on 2026-09-08 offeri
 5. Add CrUX/Search Console field monitoring when sufficient real-user data exists.
 6. Publish customer proof only when permission and evidence exist.
 7. Add Article schema only when genuine editorial content exists.
+8. Keep SellWithBoost deferred unless a no-badge free/manual path appears or verified referral/authority evidence supports a paid listing.
 
 ## Evidence rules
 
