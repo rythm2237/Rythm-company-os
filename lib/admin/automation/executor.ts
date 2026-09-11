@@ -1,6 +1,7 @@
 import "server-only";
 import { createAnalyticsAdminClient } from "@/lib/supabase/analytics-admin";
 import { runCoreWebVitalsMonitoring, runSearchConsoleMonitoring } from "@/lib/admin/automation/google-monitoring";
+import { runCrawlyAuthorityMonitoring } from "@/lib/admin/automation/crawly-monitoring";
 import { fetchPublicResource } from "@/lib/security/public-url";
 import { redactSecretText } from "@/lib/security/redaction";
 
@@ -108,7 +109,7 @@ async function securityHealth(): Promise<HandlerResult> {
 
 async function configurationRequired(task: AutomationTask): Promise<HandlerResult> {
   const requiredProvider = typeof task.config?.required_integration === "string" ? task.config.required_integration : null;
-  const requiredEnvironment = task.config?.required_env === "GOOGLE_PAGESPEED_API_KEY" ? "GOOGLE_PAGESPEED_API_KEY" : null;
+  const requiredEnvironment = typeof task.config?.required_env === "string" ? task.config.required_env : null;
   return {
     status: "skipped",
     summary: `${task.name} needs an authorized external provider before it can run.`,
@@ -123,7 +124,7 @@ const handlers: Record<string, (task: AutomationTask) => Promise<HandlerResult>>
   security_health: securityHealth,
   core_web_vitals: (task) => runCoreWebVitalsMonitoring(task.config),
   search_index_monitoring: (task) => runSearchConsoleMonitoring(task.config),
-  authority_monitoring: configurationRequired,
+  authority_monitoring: (task) => runCrawlyAuthorityMonitoring(task.config),
 };
 
 export async function executeAutomationTask(taskId: string, triggerType: AutomationTrigger, initiatedBy?: string | null) {
