@@ -5,6 +5,7 @@ import { redactSecretText } from "@/lib/security/redaction";
 const CRAWLY_HOST = "www.getcrawly.com";
 const CRAWLY_ENDPOINT = `https://${CRAWLY_HOST}/api/v1/backlinks`;
 const DEFAULT_DOMAIN = "rythm-os.com";
+// Runtime credentials are read per invocation; production env changes require a fresh deployment.
 
 type CrawlyBacklink = {
   source_domain?: unknown;
