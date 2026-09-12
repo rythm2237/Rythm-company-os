@@ -4,7 +4,7 @@ import { dispatchProjectWork } from "@/lib/projects/project-operating-system";
 import { dispatchProjectKnowledge } from "@/lib/projects/project-knowledge";
 import { dispatchAutonomousProjectMeetings } from "@/lib/projects/project-autonomous-meetings";
 import { dispatchApprovedProjectProposalActions } from "@/lib/projects/project-proposal-execution";
-import { dispatchApprovedProjectToolExecutions } from "@/lib/projects/project-tool-execution";
+import { dispatchApprovedProjectToolExecutions, reconcileDispatchedProjectProposals } from "@/lib/projects/project-tool-execution";
 
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
@@ -23,6 +23,8 @@ export async function GET(request:Request){
     // Proposal continuation state must converge before task claiming. Otherwise an approved proposal
     // could be claimed as generic AI work before its external action is durably handed to the Gateway.
     const proposalResults=await dispatchApprovedProjectProposalActions();
+    // This immediately catches Gateway outcomes such as simulate/deny before the continuation can run.
+    const proposalConvergence=await reconcileDispatchedProjectProposals();
     const [taskResults,meetingResults]=await Promise.all([
       dispatchProjectWork(service),
       dispatchAutonomousProjectMeetings(service),
@@ -34,13 +36,14 @@ export async function GET(request:Request){
     if(terminal.error)console.error("project_terminal_reconciliation_failed",terminal.error.message);
     return NextResponse.json({
       ok:true,
-      processed:knowledgeResults.length+taskResults.length+meetingResults.length+proposalResults.length+toolResults.length,
+      processed:knowledgeResults.length+taskResults.length+meetingResults.length+proposalResults.length+proposalConvergence.length+toolResults.length,
       healthEvents:Number(health.data??0),
       terminalExecutions:Number(terminal.data??0),
       knowledge:knowledgeResults,
       tasks:taskResults,
       meetings:meetingResults,
       proposals:proposalResults,
+      proposalConvergence,
       externalActions:toolResults,
     });
   }catch(error){
