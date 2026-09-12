@@ -16,8 +16,12 @@ export async function GET(request:Request){
   const service=createServerSupabaseClient();
   if(!service)return NextResponse.json({ok:false,error:"Project dispatcher is unavailable."},{status:503});
   try{
-    const health=await service.rpc("refresh_project_execution_health_v1");
+    const [health,meetingRecovery]=await Promise.all([
+      service.rpc("refresh_project_execution_health_v1"),
+      service.rpc("recover_stale_project_autonomous_meeting_jobs_v1"),
+    ]);
     if(health.error)console.error("project_health_refresh_failed",health.error.message);
+    if(meetingRecovery.error)console.error("project_meeting_recovery_failed",meetingRecovery.error.message);
     // Knowledge ingestion runs first so tasks claimed in this cycle can use newly indexed project files.
     const knowledgeResults=await dispatchProjectKnowledge(service,{claimLimit:4});
     // Proposal continuation state must converge before task claiming. Otherwise an approved proposal
@@ -38,6 +42,7 @@ export async function GET(request:Request){
       ok:true,
       processed:knowledgeResults.length+taskResults.length+meetingResults.length+proposalResults.length+proposalConvergence.length+toolResults.length,
       healthEvents:Number(health.data??0),
+      recoveredMeetings:Number(meetingRecovery.data??0),
       terminalExecutions:Number(terminal.data??0),
       knowledge:knowledgeResults,
       tasks:taskResults,
