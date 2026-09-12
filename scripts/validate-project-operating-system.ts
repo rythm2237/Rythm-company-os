@@ -11,11 +11,14 @@ const compat=requireFile("supabase/migrations/20260912204000_project_os_compatib
 const scheduler=requireFile("supabase/migrations/20260912205000_project_os_scheduler_hardening.sql");
 const databaseScheduler=requireFile("supabase/migrations/20260912206000_project_os_database_scheduler.sql");
 const meetingMigration=requireFile("supabase/migrations/20260912207000_project_os_autonomous_meetings.sql");
+const knowledgeMigration=requireFile("supabase/migrations/20260912208000_project_os_knowledge_ingestion.sql");
 const engine=requireFile("lib/projects/project-operating-system.ts");
+const knowledgeWorker=requireFile("lib/projects/project-knowledge.ts");
 const meetingWorker=requireFile("lib/projects/project-autonomous-meetings.ts");
 const toolWorker=requireFile("lib/projects/project-tool-execution.ts");
 const intake=requireFile("app/(app)/projects/page.tsx");
 const dashboard=requireFile("app/(app)/projects/operating/page.tsx");
+const analyzeRoute=requireFile("app/api/projects/analyze/route.ts");
 const vercel=requireFile("vercel.json");
 const authRoutes=["app/api/projects/analyze/route.ts","app/api/projects/run/route.ts","app/api/projects/files/route.ts","app/api/projects/connections/route.ts","app/api/projects/control/route.ts"].map(requireFile);
 const dispatcher=requireFile("app/api/projects/dispatch/route.ts");
@@ -39,6 +42,15 @@ requireText(databaseScheduler,"*/%s * * * *","database scheduler cadence");
 requireText(meetingMigration,"project_autonomous_meeting_jobs","durable autonomous meeting jobs");
 requireText(meetingMigration,"claim_project_autonomous_meeting_jobs_v1","autonomous meeting claim");
 requireText(meetingMigration,"AUTONOMOUS","autonomous meeting involvement mode");
+requireText(knowledgeMigration,"project_document_chunks","durable project file knowledge chunks");
+requireText(knowledgeMigration,"claim_project_document_ingestions_v1","document ingestion claim");
+requireText(knowledgeMigration,"recover_stale_project_document_ingestions_v1","document ingestion recovery");
+requireText(knowledgeMigration,"for update of d skip locked","document ingestion concurrency safety");
+requireText(knowledgeWorker,"extractCompanyDocument","existing company extraction pipeline reuse");
+requireText(knowledgeWorker,"chunkCompanyDocument","project knowledge chunking");
+requireText(knowledgeWorker,"project_context_documents","project knowledge context materialization");
+requireText(knowledgeWorker,"project_document_chunks","project knowledge search chunks");
+requireText(knowledgeWorker,"redactSecretText","knowledge worker error redaction");
 requireText(meetingWorker,"boardroom.deliberation","existing Boardroom deliberation reuse");
 requireText(meetingWorker,"boardroom.summary","existing Boardroom synthesis reuse");
 requireText(meetingWorker,"project_decision_memory","meeting decision memory");
@@ -54,6 +66,9 @@ requireText(engine,"project_context_documents","shared Project Knowledge reuse")
 requireText(engine,"approval_requests","Human CEO approval reuse");
 requireText(engine,"project_proposals","proactive proposal path");
 requireText(engine,"recover_stale_project_task_runs_v1","restart recovery");
+requireText(analyzeRoute,"dispatchProjectKnowledge","analysis consumes indexed project files");
+requireText(analyzeRoute,'from("project_agents").insert',"recommended project team materialization");
+requireText(analyzeRoute,'from("project_agent_capacity").insert',"recommended team capacity materialization");
 requireText(intake,"Client / Counterparty","rich intake client section");
 requireText(intake,"Contract & Commercial","rich intake contract section");
 requireText(intake,'name="files" multiple',"multi-file intake");
@@ -64,10 +79,13 @@ if(vercel.includes('"path": "/api/projects/dispatch"'))throw new Error("Frequent
 for(const route of authRoutes){requireText(route,"resolveOwnerApiOrganizationContext","owner authorization");requireText(route,"organizationId","tenant scope");}
 requireText(dispatcher,"CRON_SECRET","scheduler authentication");
 requireText(dispatcher,"refresh_project_execution_health_v1","scheduler health refresh");
+requireText(dispatcher,"dispatchProjectKnowledge","durable background knowledge ingestion");
+requireText(dispatcher,"dispatchProjectWork","durable background task execution");
 requireText(dispatcher,"dispatchAutonomousProjectMeetings","durable background meetings");
 requireText(dispatcher,"dispatchApprovedProjectToolExecutions","approval auto-execution");
 
 if(engine.includes("setInterval(")||engine.includes("window.")||engine.includes("localStorage"))throw new Error("Background execution must not depend on frontend/in-memory browser runtime.");
+if(knowledgeWorker.includes("setInterval(")||knowledgeWorker.includes("window.")||knowledgeWorker.includes("localStorage"))throw new Error("Project Knowledge ingestion must not depend on frontend/in-memory browser runtime.");
 if(meetingWorker.includes("cookie")||meetingWorker.includes("after("))throw new Error("Autonomous project meetings must not depend on browser cookies or request-lifetime continuations.");
 if(dashboard.includes("Watch Live")||dashboard.includes("Take Control"))throw new Error("Computer-use live controls must not be exposed before a real cloud provider exists.");
 console.log("Project Operating System static architecture validation passed.");
