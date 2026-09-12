@@ -20,12 +20,12 @@ export async function GET(request:Request){
     if(health.error)console.error("project_health_refresh_failed",health.error.message);
     // Knowledge ingestion runs first so tasks claimed in this cycle can use newly indexed project files.
     const knowledgeResults=await dispatchProjectKnowledge(service,{claimLimit:4});
-    // Approved business proposals are translated only into project-bound, capability-scoped intents.
-    // The Integration & Execution Gateway still performs its own policy/risk/approval evaluation.
-    const [taskResults,meetingResults,proposalResults]=await Promise.all([
+    // Proposal continuation state must converge before task claiming. Otherwise an approved proposal
+    // could be claimed as generic AI work before its external action is durably handed to the Gateway.
+    const proposalResults=await dispatchApprovedProjectProposalActions();
+    const [taskResults,meetingResults]=await Promise.all([
       dispatchProjectWork(service),
       dispatchAutonomousProjectMeetings(service),
-      dispatchApprovedProjectProposalActions(),
     ]);
     // Run after the proposal bridge so newly authorized requests can execute in this same scheduler cycle.
     const toolResults=await dispatchApprovedProjectToolExecutions();
