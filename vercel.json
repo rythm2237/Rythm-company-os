@@ -8,12 +8,28 @@
     },
     "app/api/admin/automation/dispatch/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/projects/analyze/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/projects/run/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/projects/files/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/projects/dispatch/route.ts": {
+      "maxDuration": 300
     }
   },
   "crons": [
     {
       "path": "/api/admin/automation/dispatch",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/projects/dispatch",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
