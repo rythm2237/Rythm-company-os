@@ -3,45 +3,65 @@ import { syncToolExecutionApproval } from "@/lib/integrations/execution-gateway"
 
 const record=(value:unknown):Record<string,unknown>=>value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{};
 const proposalIdPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const terminalFailures=new Set(["failed","denied","rejected","expired","cancelled","simulated"]);
 
-async function reconcileProposalContinuation(supabase:ReturnType<typeof createExecutionServiceClient>,request:{organization_id:string;project_id:string|null;originating_request_id:string|null}){
-  const proposalId=String(request.originating_request_id??"");
-  if(!request.project_id||!proposalIdPattern.test(proposalId))return;
-  const proposal=await supabase.from("project_proposals").select("id,status,title,execution_result,created_by_agent_id").eq("organization_id",request.organization_id).eq("project_id",request.project_id).eq("id",proposalId).maybeSingle();
-  if(!proposal.data)return;
-  const executions=await supabase.from("tool_execution_requests").select("id,status,capability_key,approval_request_id,safe_result,sanitized_error").eq("organization_id",request.organization_id).eq("project_id",request.project_id).eq("originating_request_id",proposalId).order("created_at");
-  if(executions.error||!(executions.data??[]).length)return;
+async function reconcileProjectProposal(supabase:ReturnType<typeof createExecutionServiceClient>,organizationId:string,projectId:string,proposalId:string){
+  if(!proposalIdPattern.test(proposalId))return "not_proposal";
+  const proposal=await supabase.from("project_proposals").select("id,status,title,execution_result,created_by_agent_id").eq("organization_id",organizationId).eq("project_id",projectId).eq("id",proposalId).maybeSingle();
+  if(!proposal.data)return "not_found";
+  const currentResult=record(proposal.data.execution_result);
+  if(["completed","blocked"].includes(String(currentResult.bridge_status??"")))return String(currentResult.bridge_status);
+  const executions=await supabase.from("tool_execution_requests").select("id,status,capability_key,approval_request_id,safe_result,sanitized_error,policy_reason_code").eq("organization_id",organizationId).eq("project_id",projectId).eq("originating_request_id",proposalId).order("created_at");
+  if(executions.error||!(executions.data??[]).length)return "no_requests";
   const rows=executions.data??[];
   const statuses=rows.map(row=>String(row.status));
-  const terminalFailure=statuses.some(status=>["failed","denied","rejected","expired","cancelled","simulated"].includes(status));
+  const terminalFailure=statuses.some(status=>terminalFailures.has(status));
   const allSucceeded=statuses.every(status=>status==="succeeded");
   const now=new Date().toISOString();
-  const taskRows=await supabase.from("project_task_runs").select("id,input").eq("organization_id",request.organization_id).eq("project_id",request.project_id).contains("input",{approved_proposal_id:proposalId});
-  const currentResult=record(proposal.data.execution_result);
+  const taskRows=await supabase.from("project_task_runs").select("id,input").eq("organization_id",organizationId).eq("project_id",projectId).contains("input",{approved_proposal_id:proposalId});
 
   if(allSucceeded){
     for(const task of taskRows.data??[]){
       await supabase.from("project_task_runs").update({status:"completed",safe_result:{proposal_id:proposalId,external_actions:rows.map(row=>({id:row.id,status:row.status,capability_key:row.capability_key,safe_result:row.safe_result}))},completed_at:now,error_class:null,error_message:null,lease_owner:null,lease_expires_at:null,updated_at:now}).eq("id",task.id).in("status",["waiting_for_agent","waiting_for_data","queued","retrying","blocked"]);
     }
-    await supabase.from("project_proposals").update({status:"completed",execution_result:{...currentResult,bridge_status:"completed",bridge_completed_at:now,tool_execution_requests:rows.map(row=>({id:row.id,status:row.status,capability_key:row.capability_key,approval_request_id:row.approval_request_id,safe_result:row.safe_result}))},updated_at:now}).eq("id",proposalId).eq("organization_id",request.organization_id);
-    await supabase.from("project_activity_events").insert({organization_id:request.organization_id,project_id:request.project_id,agent_id:proposal.data.created_by_agent_id,event_type:"proposal.execution.completed",headline:`Approved proposal executed: ${proposal.data.title}`,detail:`${rows.length} governed external action${rows.length===1?"":"s"} completed and verified.`,importance:"major",metadata:{proposal_id:proposalId,tool_execution_request_ids:rows.map(row=>row.id)}});
-    return;
+    await supabase.from("project_proposals").update({status:"completed",execution_result:{...currentResult,bridge_status:"completed",bridge_completed_at:now,tool_execution_requests:rows.map(row=>({id:row.id,status:row.status,capability_key:row.capability_key,approval_request_id:row.approval_request_id,safe_result:row.safe_result}))},updated_at:now}).eq("id",proposalId).eq("organization_id",organizationId);
+    await supabase.from("project_activity_events").insert({organization_id:organizationId,project_id:projectId,agent_id:proposal.data.created_by_agent_id,event_type:"proposal.execution.completed",headline:`Approved proposal executed: ${proposal.data.title}`,detail:`${rows.length} governed external action${rows.length===1?"":"s"} completed and verified.`,importance:"major",metadata:{proposal_id:proposalId,tool_execution_request_ids:rows.map(row=>row.id)}});
+    return "completed";
   }
 
   if(terminalFailure){
-    const failures=rows.filter(row=>["failed","denied","rejected","expired","cancelled","simulated"].includes(String(row.status)));
-    const message=failures.map(row=>`${row.capability_key}: ${row.sanitized_error||row.status}`).join(" · ").slice(0,1800)||"A governed external action could not complete.";
+    const failures=rows.filter(row=>terminalFailures.has(String(row.status)));
+    const message=failures.map(row=>`${row.capability_key}: ${row.sanitized_error||row.policy_reason_code||row.status}`).join(" · ").slice(0,1800)||"A governed external action could not complete.";
     for(const task of taskRows.data??[]){
-      await supabase.from("project_task_runs").update({status:"blocked",error_class:"external_action_failed",error_message:message,lease_owner:null,lease_expires_at:null,updated_at:now}).eq("id",task.id).in("status",["waiting_for_agent","waiting_for_data","queued","retrying"]);
+      await supabase.from("project_task_runs").update({status:"blocked",error_class:"external_action_not_executed",error_message:message,lease_owner:null,lease_expires_at:null,updated_at:now}).eq("id",task.id).in("status",["waiting_for_agent","waiting_for_data","queued","retrying","waiting_for_approval"]);
     }
-    await supabase.from("project_proposals").update({execution_result:{...currentResult,bridge_status:"blocked",bridge_error:message,bridge_blocked_at:now,tool_execution_requests:rows.map(row=>({id:row.id,status:row.status,capability_key:row.capability_key,approval_request_id:row.approval_request_id}))},updated_at:now}).eq("id",proposalId).eq("organization_id",request.organization_id);
-    await supabase.from("project_activity_events").insert({organization_id:request.organization_id,project_id:request.project_id,agent_id:proposal.data.created_by_agent_id,event_type:"proposal.execution.blocked",headline:`Approved proposal needs attention: ${proposal.data.title}`,detail:message,importance:"attention",metadata:{proposal_id:proposalId,tool_execution_request_ids:failures.map(row=>row.id)}});
-    return;
+    await supabase.from("project_proposals").update({execution_result:{...currentResult,bridge_status:"blocked",bridge_error:message,bridge_blocked_at:now,tool_execution_requests:rows.map(row=>({id:row.id,status:row.status,capability_key:row.capability_key,approval_request_id:row.approval_request_id,policy_reason_code:row.policy_reason_code}))},updated_at:now}).eq("id",proposalId).eq("organization_id",organizationId);
+    await supabase.from("project_activity_events").insert({organization_id:organizationId,project_id:projectId,agent_id:proposal.data.created_by_agent_id,event_type:"proposal.execution.blocked",headline:`Approved proposal needs attention: ${proposal.data.title}`,detail:message,importance:"attention",metadata:{proposal_id:proposalId,tool_execution_request_ids:failures.map(row=>row.id)}});
+    return "blocked";
   }
 
   for(const task of taskRows.data??[]){
     await supabase.from("project_task_runs").update({status:"waiting_for_agent",input:{...record(task.input),external_execution_state:"in_progress",tool_execution_request_ids:rows.map(row=>row.id)},waiting_on_approval_id:null,lease_owner:null,lease_expires_at:null,updated_at:now}).eq("id",task.id).in("status",["queued","retrying","waiting_for_agent","waiting_for_approval"]);
   }
+  return "in_progress";
+}
+
+async function reconcileProposalContinuation(supabase:ReturnType<typeof createExecutionServiceClient>,request:{organization_id:string;project_id:string|null;originating_request_id:string|null}){
+  const proposalId=String(request.originating_request_id??"");
+  if(!request.project_id||!proposalIdPattern.test(proposalId))return;
+  await reconcileProjectProposal(supabase,request.organization_id,request.project_id,proposalId);
+}
+
+export async function reconcileDispatchedProjectProposals(limit=16){
+  const supabase=createExecutionServiceClient();
+  const proposals=await supabase.from("project_proposals").select("id,organization_id,project_id").eq("status","approved").contains("execution_result",{bridge_status:"dispatched"}).order("decided_at",{ascending:true}).limit(Math.max(1,Math.min(limit,50)));
+  if(proposals.error)throw new Error(`Dispatched proposal convergence could not be loaded: ${proposals.error.message}`);
+  const results:Array<{proposalId:string;status:string}>=[];
+  for(const proposal of proposals.data??[]){
+    const status=await reconcileProjectProposal(supabase,proposal.organization_id,proposal.project_id,proposal.id);
+    results.push({proposalId:proposal.id,status});
+  }
+  return results;
 }
 
 export async function dispatchApprovedProjectToolExecutions(){
