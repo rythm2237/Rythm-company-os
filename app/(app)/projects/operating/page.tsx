@@ -2,90 +2,65 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { getProjectOperatingTimeline, getProjectRelationships, refreshProjectWorkflowState, type EntityRelationship, type WorkflowTimelineItem } from "@/lib/workflow/server";
+import { ProjectOsControls } from "@/components/projects/project-os-controls";
+import { ProjectGovernanceControls } from "@/components/projects/project-governance-controls";
 
-export const dynamic = "force-dynamic";
+export const dynamic="force-dynamic";
+type Props={searchParams:Promise<{project?:string}>};
+const label=(value:string)=>value.replaceAll("_"," ").replaceAll("."," · ");
+const formatDate=(value:string)=>new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short"}).format(new Date(value));
+function payloadSummary(item:WorkflowTimelineItem){const p=item.payload??{};const explicit=[p.event_label,p.label,p.reason,p.next_step,p.after_state].find(v=>typeof v==="string"&&v.trim());return typeof explicit==="string"?explicit:label(item.event_type);}
+function destinationForRelationship(edge:EntityRelationship,projectId:string){const c=[edge.source_type,edge.target_type];if(c.includes("meeting")||c.includes("meeting_session")||c.includes("decision")||c.includes("legal_review"))return "/meetings/room";if(c.includes("action_item"))return `/actions?project=${projectId}`;if(c.includes("memory_record"))return "/memory";return `/projects/operating?project=${projectId}`;}
+async function ownerContext(){const supabase=await createAuthServerClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login");const {data:membership}=await supabase.from("organization_members").select("organization_id,role").eq("user_id",user.id).eq("role","owner").maybeSingle();if(!membership)redirect("/login?error=Owner%20authorization%20required.");return{supabase,organizationId:membership.organization_id as string};}
 
-type ProjectRow = {
-  id: string; project_code: string; name: string; description: string; status: string; stage: string;
-  workflow_state: string; workflow_state_updated_at: string; progress_percent: number;
-  blocker_type: string | null; blocker_summary: string | null; resolution_required: string | null;
-};
-type Props = { searchParams: Promise<{ project?: string }> };
-type CountRow = { count: number | null };
-
-const stateExplanation: Record<string, string> = {
-  INTAKE: "A governed project or issue exists and is waiting to enter substantive discovery.",
-  DISCOVERY: "Context, evidence, resources, assumptions or project framing are being prepared.",
-  DELIBERATION: "A governed meeting or multi-agent deliberation is active or is the current required step.",
-  LEGAL_REVIEW: "The current path is waiting for or undergoing AI Legal Review.",
-  DECISION_PENDING: "A decision package exists and Human CEO action is required.",
-  APPROVAL_PENDING: "A governed approval gate is pending.",
-  EXECUTION: "An approved decision has active governed execution work.",
-  BLOCKED: "Progress cannot continue until an explicit governed blocker is resolved.",
-  COMPLETE: "The current governed objective has satisfied its completion conditions.",
-  CANCELLED: "The governed project or workflow was intentionally stopped.",
-};
-
-function label(value: string) { return value.replaceAll("_", " ").replaceAll(".", " · "); }
-function formatDate(value: string) { return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)); }
-function payloadSummary(item: WorkflowTimelineItem) {
-  const payload = item.payload ?? {};
-  const explicit = [payload.event_label, payload.label, payload.reason, payload.next_step, payload.after_state].find((value) => typeof value === "string" && value.trim().length > 0);
-  return typeof explicit === "string" ? explicit : label(item.event_type);
-}
-
-function destinationForRelationship(edge: EntityRelationship, projectId: string) {
-  const candidates = [edge.source_type, edge.target_type];
-  if (candidates.includes("meeting") || candidates.includes("meeting_session") || candidates.includes("decision") || candidates.includes("legal_review")) return "/meetings/room";
-  if (candidates.includes("project_progress_event") || candidates.includes("project_milestone")) return `/projects/operating?project=${projectId}`;
-  if (candidates.includes("action_item")) return `/actions?project=${projectId}`;
-  if (candidates.includes("memory_record")) return "/memory";
-  return `/projects/operating?project=${projectId}`;
-}
-
-async function ownerContext() {
-  const supabase = await createAuthServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { data: membership } = await supabase.from("organization_members").select("organization_id,role").eq("user_id", user.id).eq("role", "owner").maybeSingle();
-  if (!membership) redirect("/login?error=Owner%20authorization%20required.");
-  return { supabase, organizationId: membership.organization_id as string };
-}
-
-export default async function ProjectOperatingPage({ searchParams }: Props) {
-  const params = await searchParams;
-  const { supabase, organizationId } = await ownerContext();
-
-  let projectQuery = supabase.from("projects")
-    .select("id,project_code,name,description,status,stage,workflow_state,workflow_state_updated_at,progress_percent,blocker_type,blocker_summary,resolution_required")
-    .eq("organization_id", organizationId);
-  projectQuery = params.project ? projectQuery.eq("id", params.project) : projectQuery.order("priority", { ascending: true }).limit(1);
-  const { data: projectData } = await projectQuery.maybeSingle();
-
-  if (!projectData) return <main className="command-shell"><section className="panel"><h1>Project operating view unavailable</h1><p>Select a registered project from the Project Portfolio.</p><Link className="secondary-button" href="/projects">Back to Project Portfolio</Link></section></main>;
-
-  const project = projectData as ProjectRow;
-  let resolvedState = project.workflow_state;
-  try { resolvedState = await refreshProjectWorkflowState(supabase, project.id, { entityType: "ui", reason: "Project operating view convergence" }); } catch {}
-
-  const [timeline, relationships, meetings, decisions, actions, approvals, legalReviews] = await Promise.all([
-    getProjectOperatingTimeline(supabase, project.id, 40), getProjectRelationships(supabase, project.id),
-    supabase.from("meetings").select("id", { count: "exact", head: true }).eq("project_id", project.id),
-    supabase.from("decisions").select("id", { count: "exact", head: true }).eq("project_id", project.id),
-    supabase.from("action_items").select("id", { count: "exact", head: true }).eq("project_id", project.id),
-    supabase.from("approval_requests").select("id", { count: "exact", head: true }).eq("project_id", project.id),
-    supabase.from("meeting_legal_reviews").select("id,meeting_agent_sessions!inner(project_id)", { count: "exact", head: true }).eq("meeting_agent_sessions.project_id", project.id),
+export default async function ProjectOperatingPage({searchParams}:Props){
+  const params=await searchParams;const {supabase,organizationId}=await ownerContext();
+  let query=supabase.from("projects").select("*").eq("organization_id",organizationId);query=params.project?query.eq("id",params.project):query.order("priority").limit(1);const {data:project}=await query.maybeSingle();
+  if(!project)return <main className="command-shell"><section className="panel"><h1>Project operating view unavailable</h1><Link className="secondary-button" href="/projects">Back to Projects</Link></section></main>;
+  let workflowState=project.workflow_state??"INTAKE";try{workflowState=await refreshProjectWorkflowState(supabase,project.id,{entityType:"ui",reason:"Project Operating System convergence"});}catch{}
+  const [client,contract,documents,resources,bindings,readiness,clarifications,scope,execution,tasks,team,proposals,activity,health,integrations,capabilities,timeline,relationships,meetings,decisions,approvals]=await Promise.all([
+    supabase.from("project_clients").select("*").eq("project_id",project.id).maybeSingle(),
+    supabase.from("project_contracts").select("*").eq("project_id",project.id).maybeSingle(),
+    supabase.from("project_documents").select("id,category,file_name,mime_type,byte_size,extraction_status,legal_document,created_at").eq("project_id",project.id).order("created_at",{ascending:false}),
+    supabase.from("project_resources").select("*").eq("project_id",project.id).order("created_at"),
+    supabase.from("project_connection_bindings").select("*").eq("project_id",project.id).order("created_at"),
+    supabase.from("project_readiness_assessments").select("*").eq("project_id",project.id).order("created_at",{ascending:false}).limit(1).maybeSingle(),
+    supabase.from("project_clarification_requests").select("id,question,reason,input_type,options,materiality,status").eq("project_id",project.id).eq("status","open").order("created_at"),
+    supabase.from("project_scope_versions").select("*").eq("project_id",project.id).order("version",{ascending:false}).limit(1).maybeSingle(),
+    supabase.from("project_executions").select("*").eq("project_id",project.id).order("execution_no",{ascending:false}).limit(1).maybeSingle(),
+    supabase.from("project_task_runs").select("id,task_key,title,status,priority,assigned_agent_id,attempt_count,max_attempts,error_class,error_message,started_at,completed_at,agents(agent_code,display_name,name)").eq("project_id",project.id).order("priority").order("created_at"),
+    supabase.from("project_agents").select("assignment_role,status,authority_scope,agents(id,agent_code,display_name,name,role_title)").eq("project_id",project.id),
+    supabase.from("project_proposals").select("*").eq("project_id",project.id).order("created_at",{ascending:false}),
+    supabase.from("project_activity_events").select("*").eq("project_id",project.id).order("created_at",{ascending:false}).limit(60),
+    supabase.from("project_health_events").select("*").eq("project_id",project.id).eq("status","open").order("detected_at",{ascending:false}),
+    supabase.from("organization_integrations").select("id,provider_key,display_name,status").eq("organization_id",organizationId).order("provider_key"),
+    supabase.from("integration_capabilities").select("provider_key,capability_key,description,risk_level,default_approval_mode").eq("enabled",true),
+    getProjectOperatingTimeline(supabase,project.id,40),getProjectRelationships(supabase,project.id),
+    supabase.from("meetings").select("id",{count:"exact",head:true}).eq("project_id",project.id),supabase.from("decisions").select("id",{count:"exact",head:true}).eq("project_id",project.id),supabase.from("approval_requests").select("id,status",{count:"exact"}).eq("project_id",project.id)
   ]);
-
-  const counts: Record<string, CountRow> = { meetings: { count: meetings.count }, decisions: { count: decisions.count }, actions: { count: actions.count }, approvals: { count: approvals.count }, legal: { count: legalReviews.count } };
-
+  const openClarifications=clarifications.data??[];const latestReadiness=readiness.data;const latestScope=scope.data;const latestExecution=execution.data;const taskRows=tasks.data??[];const proposalRows=proposals.data??[];const attention=proposalRows.filter((p:any)=>["ready_for_executive","needs_revision","internal_review"].includes(p.status));const runningTasks=taskRows.filter((t:any)=>t.status==="running").length;const completedTasks=taskRows.filter((t:any)=>t.status==="completed").length;const waitingTasks=taskRows.filter((t:any)=>["waiting_for_approval","waiting_for_connection","waiting_for_data"].includes(t.status)).length;const pendingApprovals=(approvals.data??[]).filter((a:any)=>a.status==="pending").length;const canRun=Number(project.readiness_score??0)>=50&&openClarifications.filter((c:any)=>c.materiality==="required").length===0&&!latestExecution?.status?.match(/^(queued|running|paused)$/);
   return <main className="command-shell">
-    <header className="command-header"><div><p className="eyebrow">RYTHM PROJECT OPERATING VIEW · {project.project_code}</p><h1>{project.name}</h1><p className="subtitle">One governed view of workflow state, operating history and connected project entities.</p></div><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><Link className="secondary-button" href="/projects">Project Portfolio</Link><Link className="secondary-button" href={`/actions?project=${project.id}`}>Project Actions</Link><Link className="secondary-button" href="/meetings/room">Boardroom</Link><Link className="secondary-button" href="/command-center">Command Center</Link></div></header>
-    <section className="organization-banner"><div><span>Workflow state</span><strong>{label(resolvedState)}</strong></div><div><span>Project stage</span><strong>{label(project.stage)}</strong></div><div><span>Progress</span><strong>{project.progress_percent}%</strong></div></section>
-    <section className="panel" style={{ marginTop: 18 }}><div className="panel-heading"><div><p className="label">WF-005</p><h2>Current operating mode</h2></div><span className="pill">{resolvedState}</span></div><p style={{ color: "#596579", lineHeight: 1.7 }}>{stateExplanation[resolvedState] ?? "Canonical workflow state resolved from persisted governed records."}</p>{resolvedState === "BLOCKED" ? <div style={{ marginTop: 14 }}><strong>{project.blocker_type ?? "Governed blocker"}</strong><p>{project.blocker_summary ?? "A blocker is recorded for this project."}</p><p>{project.resolution_required ?? "Resolution is required before workflow continuation."}</p></div> : null}</section>
-    <section className="metrics-grid" style={{ marginTop: 18 }}><article className="metric-card"><span>Meetings</span><strong>{counts.meetings.count ?? 0}</strong></article><article className="metric-card"><span>Decisions</span><strong>{counts.decisions.count ?? 0}</strong></article><article className="metric-card"><span>Actions</span><strong>{counts.actions.count ?? 0}</strong></article><article className="metric-card"><span>Approvals</span><strong>{counts.approvals.count ?? 0}</strong></article><article className="metric-card"><span>AI legal reviews</span><strong>{counts.legal.count ?? 0}</strong></article><article className="metric-card"><span>Semantic links</span><strong>{relationships.length}</strong></article></section>
-    <section className="executive-grid" style={{ marginTop: 18 }}><article className="panel panel-wide"><div className="panel-heading"><div><p className="label">WF-004</p><h2>Operating Timeline</h2></div><span className="pill">{timeline.length} recent events</span></div><div className="data-list">{timeline.length === 0 ? <p className="subtitle">No operating events are available yet.</p> : timeline.map((item) => <div className="data-row" key={`${item.timeline_source}-${item.id}`}><div><strong>{payloadSummary(item)}</strong><span>{label(item.event_type)} · {label(item.entity_type)} · {formatDate(item.occurred_at)}</span></div><div className="row-meta"><span className="pill">{label(item.timeline_source)}</span><span className="pill">{item.risk_level}</span></div></div>)}</div></article>
-      <article className="panel"><div className="panel-heading"><div><p className="label">WF-003</p><h2>Project graph</h2></div><span className="pill">{relationships.length} edges</span></div><div className="data-list">{relationships.length === 0 ? <p className="subtitle">No semantic relationship edges are available yet.</p> : relationships.slice(0, 20).map((edge) => <Link className="data-row" href={destinationForRelationship(edge, project.id)} key={edge.id} style={{ textDecoration: "none" }}><div><strong>{label(edge.relationship_type)}</strong><span>{label(edge.source_type)} → {label(edge.target_type)}</span></div></Link>)}</div></article></section>
-    <section className="panel" style={{ marginTop: 18 }}><div className="panel-heading"><div><p className="label">Contextual navigation</p><h2>Continue the governed workflow</h2></div></div><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><Link className="secondary-button" href="/meetings/room">Open Boardroom</Link><Link className="secondary-button" href={`/actions?project=${project.id}`}>Project Actions</Link><Link className="secondary-button" href="/ideas">Idea / Issue Inbox</Link><Link className="secondary-button" href="/projects">All Projects</Link></div></section>
+    <header className="command-header"><div><p className="eyebrow">RYTHM PROJECT OPERATING SYSTEM · {project.project_code}</p><h1>{project.name}</h1><p className="subtitle">{project.objective||project.description||"Governed autonomous project."}</p></div><div style={{display:"flex",gap:10,flexWrap:"wrap"}}><Link className="secondary-button" href="/projects">All Projects</Link><Link className="secondary-button" href="/attention">Your Attention</Link><Link className="secondary-button" href={`/actions?project=${project.id}`}>Actions</Link><Link className="secondary-button" href="/meetings/room">Boardroom</Link></div></header>
+    <section className="organization-banner"><div><span>Status</span><strong>{label(project.status)}</strong></div><div><span>Readiness</span><strong>{project.readiness_score??0}%</strong></div><div><span>Agents active</span><strong>{(team.data??[]).filter((a:any)=>a.status==="active").length}</strong></div><div><span>Tasks completed</span><strong>{completedTasks}</strong></div><div><span>Running</span><strong>{runningTasks}</strong></div><div><span>Attention</span><strong>{attention.length+pendingApprovals}</strong></div></section>
+
+    <ProjectOsControls projectId={project.id} canRun={canRun} status={latestExecution?.status??project.stage}/>
+    <ProjectGovernanceControls projectId={project.id} projectStatus={project.status} clarifications={openClarifications as any} connections={(integrations.data??[]) as any} capabilities={(capabilities.data??[]) as any} latestScope={latestScope?{id:latestScope.id,status:latestScope.status}:null}/>
+
+    <section className="executive-grid" style={{marginTop:18}}><article className="panel"><div className="panel-heading"><div><p className="label">Execution Readiness</p><h2>{latestReadiness?.execution_readiness??project.readiness_score??0}% ready</h2></div><span className="pill">{openClarifications.length} clarification</span></div>{latestReadiness?<div className="data-list"><div className="data-row"><div><strong>Project understanding</strong><span>{latestReadiness.project_understanding}%</span></div></div><div className="data-row"><div><strong>Contract understanding</strong><span>{latestReadiness.contract_understanding}%</span></div></div><div className="data-row"><div><strong>Connections</strong><span>{latestReadiness.connections_available}/{latestReadiness.connections_total}</span></div></div><div className="data-row"><div><strong>Team readiness</strong><span>{latestReadiness.team_readiness}%</span></div></div></div>:<p className="subtitle">Run Project Analysis to create readiness, scope, team and connection recommendations.</p>}</article><article className="panel"><div className="panel-heading"><div><p className="label">Execution</p><h2>{latestExecution?`Execution #${latestExecution.execution_no}`:"Not started"}</h2></div><span className="pill">{latestExecution?.status??"pre-run"}</span></div><div className="project-card-metrics"><div><span>Completed</span><strong>{completedTasks}</strong></div><div><span>Running</span><strong>{runningTasks}</strong></div><div><span>Waiting</span><strong>{waitingTasks}</strong></div><div><span>Failed</span><strong>{taskRows.filter((t:any)=>t.status==="failed").length}</strong></div></div><p className="security-note">Execution state is persisted server-side. Browser close, logout or navigation does not own this runtime.</p></article></section>
+
+    <section className="executive-grid" style={{marginTop:18}}><article className="panel"><div className="panel-heading"><div><p className="label">Client</p><h2>{client.data?.client_name??"Internal / not specified"}</h2></div></div>{client.data?<div className="data-list"><div className="data-row"><div><strong>{client.data.legal_company_name||client.data.client_name}</strong><span>{label(client.data.relationship_type)} · {client.data.country||"Country not set"}</span></div></div>{client.data.contact_person?<div className="data-row"><div><strong>{client.data.contact_person}</strong><span>{client.data.email||"No email"}</span></div></div>:null}</div>:<p className="subtitle">No external counterparty was provided.</p>}</article><article className="panel"><div className="panel-heading"><div><p className="label">Contract</p><h2>{contract.data?.contract_number||"No structured contract"}</h2></div><span className="pill">{contract.data?.legal_review_status??"not requested"}</span></div>{contract.data?<><p className="subtitle">{contract.data.contract_value!=null?`${contract.data.contract_value} ${contract.data.currency||""}`:"Value not specified"}</p>{contract.data.legal_analysis?.recommendation?<p>{contract.data.legal_analysis.recommendation}</p>:null}</>:<p className="subtitle">Upload a contract or enter commercial terms; Project Analysis can extract obligations and risks.</p>}</article></section>
+
+    <section className="panel" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">Project Knowledge</p><h2>Files, resources and connected systems</h2></div><span className="pill">{(documents.data??[]).length+(resources.data??[]).length+(bindings.data??[]).length} items</span></div><div className="project-card-metrics"><div><span>Files</span><strong>{documents.data?.length??0}</strong></div><div><span>Resources</span><strong>{resources.data?.length??0}</strong></div><div><span>Scoped connections</span><strong>{bindings.data?.length??0}</strong></div><div><span>Legal docs</span><strong>{(documents.data??[]).filter((d:any)=>d.legal_document).length}</strong></div></div><div className="data-list" style={{marginTop:14}}>{(documents.data??[]).slice(0,8).map((d:any)=><div className="data-row" key={d.id}><div><strong>{d.file_name}</strong><span>{label(d.category)} · {d.extraction_status}</span></div>{d.legal_document?<span className="pill">Legal</span>:null}</div>)}{(bindings.data??[]).map((b:any)=><div className="data-row" key={b.id}><div><strong>{b.display_name}</strong><span>{b.resource_type} · {b.resource_ref}</span></div><span className="pill">{b.access_status}</span></div>)}</div></section>
+
+    <section className="panel" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">Scope</p><h2>{latestScope?`Version ${latestScope.version}`:"Awaiting analysis"}</h2></div>{latestScope?<span className="pill">{latestScope.status}</span>:null}</div>{latestScope?<div className="executive-grid"><div><strong>Included</strong><ul>{(latestScope.included??[]).map((v:any,i:number)=><li key={i}>{String(v)}</li>)}</ul></div><div><strong>Excluded</strong><ul>{(latestScope.excluded??[]).map((v:any,i:number)=><li key={i}>{String(v)}</li>)}</ul></div><div><strong>Deliverables</strong><ul>{(latestScope.deliverables??[]).map((v:any,i:number)=><li key={i}>{String(v)}</li>)}</ul></div><div><strong>Success criteria</strong><ul>{(latestScope.success_criteria??[]).map((v:any,i:number)=><li key={i}>{String(v)}</li>)}</ul></div></div>:<p className="subtitle">Scope is generated from objective, client/contract, files, resources and clarifications.</p>}</section>
+
+    <section className="executive-grid" style={{marginTop:18}}><article className="panel panel-wide"><div className="panel-heading"><div><p className="label">Plan & Tasks</p><h2>Durable execution graph</h2></div><span className="pill">{taskRows.length} tasks</span></div><div className="data-list">{taskRows.length?taskRows.map((t:any)=><div className="data-row" key={t.id}><div><strong>{t.title}</strong><span>{t.agents?.agent_code??"Unassigned"} · attempt {t.attempt_count}/{t.max_attempts}{t.error_class?` · ${t.error_class}`:""}</span></div><span className="pill">{label(t.status)}</span></div>):<p className="subtitle">The plan is generated dynamically when Run Project is authorized.</p>}</div></article><article className="panel"><div className="panel-heading"><div><p className="label">Team</p><h2>Project agents</h2></div><span className="pill">{team.data?.length??0}</span></div><div className="data-list">{(team.data??[]).map((row:any)=>{const a=Array.isArray(row.agents)?row.agents[0]:row.agents;return <div className="data-row" key={a?.id??row.assignment_role}><div><strong>{a?.display_name||a?.name||"Agent"}</strong><span>{a?.role_title||row.assignment_role}</span></div><span className="pill">{row.status}</span></div>})}</div></article></section>
+
+    <section className="panel" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">Executive Inbox</p><h2>Decisions, not task noise</h2></div><span className="pill">{attention.length} proposals</span></div><div className="data-list">{attention.length?attention.map((p:any)=><div className="data-row" key={p.id}><div><strong>{p.title}</strong><span>{p.executive_summary}</span><span>{p.estimated_cost!=null?`Cost ${p.estimated_cost} ${p.cost_currency||""} · `:""}Risk ${p.risk_level}</span></div><div className="row-meta"><span className="pill">{label(p.proposal_type)}</span><Link className="secondary-button" href="/attention">Review</Link></div></div>):<p className="subtitle">No executive proposal currently requires attention.</p>}</div></section>
+
+    <section className="executive-grid" style={{marginTop:18}}><article className="panel panel-wide"><div className="panel-heading"><div><p className="label">Activity</p><h2>Readable project timeline</h2></div><span className="pill">{activity.data?.length??0} recent</span></div><div className="data-list">{(activity.data??[]).map((e:any)=><div className="data-row" key={e.id}><div><strong>{e.headline}</strong><span>{e.detail||label(e.event_type)} · {formatDate(e.created_at)}</span></div><span className="pill">{e.importance}</span></div>)}</div></article><article className="panel"><div className="panel-heading"><div><p className="label">Health</p><h2>{health.data?.length?"Attention required":"Healthy"}</h2></div><span className="pill">{health.data?.length??0} open</span></div><div className="data-list">{(health.data??[]).map((h:any)=><div className="data-row" key={h.id}><div><strong>{h.summary}</strong><span>{label(h.health_type)}</span></div><span className="pill">{h.severity}</span></div>)}</div></article></section>
+
+    <section className="executive-grid" style={{marginTop:18}}><article className="panel panel-wide"><div className="panel-heading"><div><p className="label">Governed History</p><h2>Existing operating timeline</h2></div><span className="pill">{timeline.length}</span></div><div className="data-list">{timeline.map(item=><div className="data-row" key={`${item.timeline_source}-${item.id}`}><div><strong>{payloadSummary(item)}</strong><span>{label(item.event_type)} · {formatDate(item.occurred_at)}</span></div></div>)}</div></article><article className="panel"><div className="panel-heading"><div><p className="label">Project Graph</p><h2>Connected records</h2></div><span className="pill">{relationships.length}</span></div><div className="data-list">{relationships.slice(0,16).map(edge=><Link className="data-row" href={destinationForRelationship(edge,project.id)} key={edge.id} style={{textDecoration:"none"}}><div><strong>{label(edge.relationship_type)}</strong><span>{label(edge.source_type)} → {label(edge.target_type)}</span></div></Link>)}</div></article></section>
+    <section className="panel" style={{marginTop:18}}><div className="project-card-metrics"><div><span>Meetings</span><strong>{meetings.count??0}</strong></div><div><span>Decisions</span><strong>{decisions.count??0}</strong></div><div><span>Approvals</span><strong>{approvals.count??0}</strong></div><div><span>Workflow state</span><strong>{label(workflowState)}</strong></div></div></section>
   </main>;
 }
