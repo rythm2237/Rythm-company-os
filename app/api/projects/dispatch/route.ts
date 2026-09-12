@@ -12,8 +12,10 @@ export async function GET(request:Request){
   const service=createServerSupabaseClient();
   if(!service)return NextResponse.json({ok:false,error:"Project dispatcher is unavailable."},{status:503});
   try{
+    const health=await service.rpc("refresh_project_execution_health_v1");
+    if(health.error)console.error("project_health_refresh_failed",health.error.message);
     const results=await dispatchProjectWork(service);
-    return NextResponse.json({ok:true,processed:results.length,results});
+    return NextResponse.json({ok:true,processed:results.length,healthEvents:Number(health.data??0),results});
   }catch(error){
     console.error("project_dispatch_failed",error);
     return NextResponse.json({ok:false,error:error instanceof Error?error.message:"Project dispatcher failed."},{status:500});
