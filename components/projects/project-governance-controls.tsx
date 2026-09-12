@@ -9,7 +9,7 @@ type Capability={provider_key:string;capability_key:string;description:string|nu
 type Scope={id:string;status:string}|null;
 type Props={projectId:string;projectStatus:string;clarifications:Clarification[];connections:Connection[];capabilities:Capability[];latestScope:Scope;};
 
-async function post(url:string,body:unknown){const r=await fetch(url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});const d=await r.json() as {ok?:boolean;error?:string};if(!r.ok||!d.ok)throw new Error(d.error||"Request failed.");return d;}
+async function post(endpoint:string,body:unknown){const r=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});const d=await r.json() as {ok?:boolean;error?:string};if(!r.ok||!d.ok)throw new Error(d.error||"Request failed.");return d;}
 
 export function ProjectGovernanceControls({projectId,projectStatus,clarifications,connections,capabilities,latestScope}:Props){
   const router=useRouter();const [busy,setBusy]=useState<string|null>(null);const [notice,setNotice]=useState("");
