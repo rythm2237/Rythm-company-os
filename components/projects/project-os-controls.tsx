@@ -7,8 +7,8 @@ type Props={projectId:string;canRun:boolean;status:string};
 
 type ApiResult={ok?:boolean;error?:string;readiness?:number;execution?:{id:string;execution_no:number;taskCount?:number}};
 
-async function jsonRequest(url:string,body:unknown){
-  const response=await fetch(url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+async function jsonRequest(endpoint:string,body:unknown){
+  const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
   const data=await response.json() as ApiResult;
   if(!response.ok||!data.ok)throw new Error(data.error||"Request failed.");
   return data;
