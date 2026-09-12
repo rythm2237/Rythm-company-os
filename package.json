@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run test:project-os",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -30,6 +31,7 @@
     "test:seo-authority": "node scripts/validate-referring-domain-authority.mjs",
     "test:seo-community": "node scripts/validate-community-participation.mjs",
     "test:admin-automation": "node --import tsx scripts/validate-admin-automation-center.ts",
+    "test:project-os": "node --import tsx scripts/validate-project-operating-system.ts",
     "test:security-definer": "node --experimental-strip-types scripts/validate-security-definer-hardening.ts",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",
