@@ -13,6 +13,7 @@ const databaseScheduler=requireFile("supabase/migrations/20260912206000_project_
 const meetingMigration=requireFile("supabase/migrations/20260912207000_project_os_autonomous_meetings.sql");
 const engine=requireFile("lib/projects/project-operating-system.ts");
 const meetingWorker=requireFile("lib/projects/project-autonomous-meetings.ts");
+const toolWorker=requireFile("lib/projects/project-tool-execution.ts");
 const intake=requireFile("app/(app)/projects/page.tsx");
 const dashboard=requireFile("app/(app)/projects/operating/page.tsx");
 const vercel=requireFile("vercel.json");
@@ -43,6 +44,9 @@ requireText(meetingWorker,"boardroom.summary","existing Boardroom synthesis reus
 requireText(meetingWorker,"project_decision_memory","meeting decision memory");
 requireText(meetingWorker,"project_task_runs","meeting action handoff");
 requireText(meetingWorker,"project_context_documents","meeting knowledge feedback");
+requireText(toolWorker,"syncToolExecutionApproval","canonical tool approval sync");
+requireText(toolWorker,"executeApprovedToolRequest","canonical Integration & Execution Gateway execution");
+requireText(toolWorker,'["waiting_approval","approved","authorized"]',"approval-to-execution queue");
 requireText(engine,"executeAiRequest","AI Request Gateway reuse");
 requireText(engine,"organization_integrations","company-level connection reuse");
 requireText(engine,"project_connection_bindings","project-scoped connections");
@@ -61,6 +65,7 @@ for(const route of authRoutes){requireText(route,"resolveOwnerApiOrganizationCon
 requireText(dispatcher,"CRON_SECRET","scheduler authentication");
 requireText(dispatcher,"refresh_project_execution_health_v1","scheduler health refresh");
 requireText(dispatcher,"dispatchAutonomousProjectMeetings","durable background meetings");
+requireText(dispatcher,"dispatchApprovedProjectToolExecutions","approval auto-execution");
 
 if(engine.includes("setInterval(")||engine.includes("window.")||engine.includes("localStorage"))throw new Error("Background execution must not depend on frontend/in-memory browser runtime.");
 if(meetingWorker.includes("cookie")||meetingWorker.includes("after("))throw new Error("Autonomous project meetings must not depend on browser cookies or request-lifetime continuations.");
