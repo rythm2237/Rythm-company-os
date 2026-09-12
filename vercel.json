@@ -26,10 +26,6 @@
     {
       "path": "/api/admin/automation/dispatch",
       "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/projects/dispatch",
-      "schedule": "*/5 * * * *"
     }
   ]
 }
