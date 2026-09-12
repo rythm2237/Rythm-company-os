@@ -1,209 +1,98 @@
+import { createHash, randomUUID } from "node:crypto";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
+export const dynamic="force-dynamic";
 
-type Project = {
-  id: string;
-  project_code: string;
-  name: string;
-  description: string | null;
-  status: string;
-  stage: string;
-  priority: number;
-  progress_percent: number;
-  target_date: string | null;
-  updated_at: string;
-};
+type Project={id:string;project_code:string;name:string;description:string|null;status:string;stage:string;priority:number;progress_percent:number;readiness_score:number;target_date:string|null;updated_at:string;};
+type ProjectAgent={project_id:string;status:string;agents:{agent_code:string;display_name:string|null;name:string}|null;};
+type ProjectEntity={project_id:string|null;status?:string};
+const text=(form:FormData,key:string,max=5000)=>String(form.get(key)??"").trim().slice(0,max);
+const jsonLines=(value:string)=>value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
+const safeName=(value:string)=>value.normalize("NFKC").replace(/[^a-zA-Z0-9._-]+/g,"-").replace(/-+/g,"-").slice(-160)||"file";
+function formatDate(value:string|null){return value?new Intl.DateTimeFormat("en-GB",{dateStyle:"medium"}).format(new Date(value)):"No target date";}
+function label(value:string){return value.replaceAll("_"," ").replace(/\b\w/g,char=>char.toUpperCase());}
 
-type ProjectAgent = {
-  project_id: string;
-  status: string;
-  agents: { agent_code: string; display_name: string | null; name: string } | null;
-};
-
-type ProjectEntity = { project_id: string | null; status?: string };
-
-function formatDate(value: string | null) {
-  return value ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(value)) : "No target date";
-}
-
-function label(value: string) {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-async function ownerContext() {
-  const supabase = await createAuthServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .eq("role", "owner")
-    .maybeSingle();
-  if (!membership) redirect("/login?error=Owner%20authorization%20required.");
-  return { supabase, organizationId: membership.organization_id as string, user };
+async function ownerContext(){
+  const supabase=await createAuthServerClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login");
+  const {data:membership}=await supabase.from("organization_members").select("organization_id").eq("user_id",user.id).eq("role","owner").maybeSingle();
+  if(!membership)redirect("/login?error=Owner%20authorization%20required.");
+  return{supabase,organizationId:membership.organization_id as string,user};
 }
 
 async function createProject(formData:FormData){
   "use server";
   const {supabase,organizationId,user}=await ownerContext();
-  const projectCode=String(formData.get("projectCode")??"").trim().toUpperCase().replace(/[^A-Z0-9-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40);
-  const name=String(formData.get("name")??"").trim().slice(0,120);
-  const description=String(formData.get("description")??"").trim().slice(0,1200);
-  const objective=String(formData.get("objective")??"").trim().slice(0,1200);
+  const projectCode=text(formData,"projectCode",40).toUpperCase().replace(/[^A-Z0-9-]+/g,"-").replace(/^-+|-+$/g,"");
+  const name=text(formData,"name",120);const description=text(formData,"description",5000);const objective=text(formData,"objective",5000);
+  if(projectCode.length<3||name.length<3)redirect("/projects?error=Project%20code%20and%20name%20must%20contain%20at%20least%203%20characters.");
   const priority=Math.max(1,Math.min(5,Number(formData.get("priority")??3)));
-  if(projectCode.length<3||name.length<3) redirect("/projects?error=Project%20code%20and%20name%20must%20contain%20at%20least%203%20characters.");
-  const {data:project,error}=await supabase.from("projects").insert({organization_id:organizationId,project_code:projectCode,name,description,project_type:"internal_project",status:"planning",stage:"discovery",priority,owner_type:"human_ceo",objective,scope:{},success_criteria:[],constraints:["Human CEO retains consequential authority","External actions remain separately approval-gated"],progress_percent:0,created_by_user_id:user.id}).select("id").single();
-  if(error||!project){
-    console.error("project_create_failed",{projectCode,error});
-    redirect("/projects?error=Project%20could%20not%20be%20created.%20Confirm%20the%20project%20code%20is%20unique%20and%20retry.");
+  const startDate=text(formData,"startDate",20)||null;const targetDate=text(formData,"targetDate",20)||null;
+  const tags=text(formData,"tags",1000).split(",").map(v=>v.trim()).filter(Boolean).slice(0,30);
+  const autonomyMode=text(formData,"autonomyMode",80)||"approval_required";
+  const {data:project,error}=await supabase.from("projects").insert({organization_id:organizationId,project_code:projectCode,name,description,project_type:text(formData,"projectType",80)||"business_project",status:"planning",stage:"intake",priority,owner_type:"human_ceo",objective,scope:{},success_criteria:jsonLines(text(formData,"successCriteria",5000)),constraints:["Human CEO retains consequential authority","External actions remain governed by Integration & Execution Gateway",...jsonLines(text(formData,"constraints",5000))],progress_percent:0,created_by_user_id:user.id,start_date:startDate,target_date:targetDate,internal_owner_label:text(formData,"internalOwner",160)||null,responsible_department:text(formData,"responsibleDepartment",160)||null,tags,notes:text(formData,"notes",8000),autonomy_mode:autonomyMode,readiness_score:0}).select("id").single();
+  if(error||!project){console.error("project_create_failed",{projectCode,error});redirect("/projects?error=Project%20could%20not%20be%20created.%20Confirm%20the%20project%20code%20is%20unique%20and%20retry.");}
+
+  const clientName=text(formData,"clientName",240);
+  if(clientName){await supabase.from("project_clients").insert({organization_id:organizationId,project_id:project.id,client_name:clientName,legal_company_name:text(formData,"legalCompanyName",240)||null,trading_name:text(formData,"tradingName",240)||null,client_type:text(formData,"clientType",100)||null,contact_person:text(formData,"contactPerson",240)||null,email:text(formData,"clientEmail",320)||null,phone:text(formData,"clientPhone",100)||null,website:text(formData,"clientWebsite",1000)||null,country:text(formData,"clientCountry",160)||null,billing_entity:text(formData,"billingEntity",240)||null,relationship_type:text(formData,"relationshipType",80)||"other"});}
+
+  const contractNumber=text(formData,"contractNumber",160);const contractValue=text(formData,"contractValue",80);
+  const hasContract=Boolean(contractNumber||contractValue||text(formData,"deliverables")||text(formData,"paymentTerms")||text(formData,"specialClauses"));
+  if(hasContract){await supabase.from("project_contracts").insert({organization_id:organizationId,project_id:project.id,contract_number:contractNumber||null,contract_start_date:text(formData,"contractStartDate",20)||null,contract_end_date:text(formData,"contractEndDate",20)||null,contract_value:contractValue?Number(contractValue):null,currency:text(formData,"currency",12)||null,payment_terms:text(formData,"paymentTerms",3000)||null,deliverables:jsonLines(text(formData,"deliverables",8000)),sla:{text:text(formData,"sla",4000)},milestones:jsonLines(text(formData,"contractMilestones",8000)),provider_obligations:jsonLines(text(formData,"providerObligations",8000)),client_obligations:jsonLines(text(formData,"clientObligations",8000)),exclusions:jsonLines(text(formData,"exclusions",8000)),dependencies:jsonLines(text(formData,"dependencies",8000)),approval_requirements:jsonLines(text(formData,"approvalRequirements",8000)),termination_conditions:text(formData,"terminationConditions",4000)||null,confidentiality_requirements:text(formData,"confidentiality",4000)||null,ip_ownership:text(formData,"ipOwnership",4000)||null,data_protection_requirements:text(formData,"dataProtection",4000)||null,special_clauses:jsonLines(text(formData,"specialClauses",8000)),notes:text(formData,"contractNotes",8000)});}
+
+  const resources=[
+    {type:"website",name:"Website",url:text(formData,"website",1200)},
+    {type:"github",name:"GitHub repository",url:text(formData,"github",1200)},
+    {type:"google_drive",name:"Google Drive",url:text(formData,"drive",1200)},
+    {type:"figma",name:"Figma",url:text(formData,"figma",1200)},
+  ].filter(r=>r.url);
+  if(resources.length)await supabase.from("project_resources").insert(resources.map(r=>({organization_id:organizationId,project_id:project.id,resource_type:r.type,name:r.name,url:r.url,status:"connected",source:"project_intake",access_status:"unknown"})));
+
+  const files=formData.getAll("files").filter((item):item is File=>item instanceof File&&item.size>0).slice(0,20);
+  if(files.length){
+    const service=createServerSupabaseClient();
+    if(service){for(const file of files){if(file.size>50*1024*1024)continue;const bytes=Buffer.from(await file.arrayBuffer());const storagePath=`${organizationId}/${project.id}/${randomUUID()}-${safeName(file.name)}`;const uploaded=await service.storage.from("project-files").upload(storagePath,bytes,{contentType:file.type||"application/octet-stream",upsert:false});if(!uploaded.error){const category=text(formData,"fileCategory",80)||"other";await service.from("project_documents").insert({organization_id:organizationId,project_id:project.id,category,file_name:file.name,storage_path:storagePath,mime_type:file.type,byte_size:file.size,checksum:createHash("sha256").update(bytes).digest("hex"),legal_document:["contract","amendment","nda","statement_of_work"].includes(category),uploaded_by_user_id:user.id});}}}
   }
-  await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"project.created",object_type:"project",object_id:project.id,risk_level:"low",payload:{project_code:projectCode,name,human_authority:"Human CEO / Owner",external_actions:false}});
-  revalidatePath("/projects");
-  redirect(`/projects/operating?project=${project.id}`);
+  await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"project.created",object_type:"project",object_id:project.id,risk_level:"low",payload:{project_code:projectCode,name,human_authority:"Human CEO / Owner",autonomy_mode:autonomyMode,files:files.length}});
+  revalidatePath("/projects");redirect(`/projects/operating?project=${project.id}`);
 }
 
-export default async function ProjectsPortfolioPage({searchParams}:{searchParams:Promise<{error?:string}>}) {
-  const query=await searchParams;
-  const { supabase, organizationId } = await ownerContext();
-
-  const [projectsResult, agentsResult, actionsResult, decisionsResult, meetingsResult] = await Promise.all([
-    supabase.from("projects")
-      .select("id,project_code,name,description,status,stage,priority,progress_percent,target_date,updated_at")
-      .eq("organization_id", organizationId)
-      .order("priority", { ascending: true })
-      .order("updated_at", { ascending: false }),
-    supabase.from("project_agents")
-      .select("project_id,status,agents(agent_code,display_name,name)")
-      .eq("organization_id", organizationId),
-    supabase.from("action_items")
-      .select("project_id,status")
-      .eq("organization_id", organizationId),
-    supabase.from("decisions")
-      .select("project_id")
-      .eq("organization_id", organizationId),
-    supabase.from("meetings")
-      .select("project_id")
-      .eq("organization_id", organizationId),
+export default async function ProjectsPortfolioPage({searchParams}:{searchParams:Promise<{error?:string}>}){
+  const query=await searchParams;const {supabase,organizationId}=await ownerContext();
+  const [projectsResult,agentsResult,actionsResult,decisionsResult,meetingsResult,attentionResult]=await Promise.all([
+    supabase.from("projects").select("id,project_code,name,description,status,stage,priority,progress_percent,readiness_score,target_date,updated_at").eq("organization_id",organizationId).order("priority").order("updated_at",{ascending:false}),
+    supabase.from("project_agents").select("project_id,status,agents(agent_code,display_name,name)").eq("organization_id",organizationId),
+    supabase.from("action_items").select("project_id,status").eq("organization_id",organizationId),supabase.from("decisions").select("project_id").eq("organization_id",organizationId),supabase.from("meetings").select("project_id").eq("organization_id",organizationId),
+    supabase.from("project_proposals").select("project_id,status").eq("organization_id",organizationId).in("status",["ready_for_executive","needs_revision"])
   ]);
-
-  const projects = (projectsResult.data ?? []) as Project[];
-  const projectAgents = (agentsResult.data ?? []) as unknown as ProjectAgent[];
-  const actions = (actionsResult.data ?? []) as ProjectEntity[];
-  const decisions = (decisionsResult.data ?? []) as ProjectEntity[];
-  const meetings = (meetingsResult.data ?? []) as ProjectEntity[];
-
-  const countFor = (rows: ProjectEntity[], projectId: string) => rows.filter((row) => row.project_id === projectId).length;
-  const activeActionsFor = (projectId: string) => actions.filter((row) => row.project_id === projectId && !["completed", "cancelled"].includes(row.status ?? "")).length;
-  const agentsFor = (projectId: string) => projectAgents.filter((row) => row.project_id === projectId && ["assigned", "active"].includes(row.status));
-
-  const activeProjects = projects.filter((project) => ["active", "planning", "idea", "blocked", "on_hold"].includes(project.status)).length;
-  const averageProgress = projects.length ? Math.round(projects.reduce((sum, project) => sum + Number(project.progress_percent ?? 0), 0) / projects.length) : 0;
-  const totalOpenActions = actions.filter((action) => !["completed", "cancelled"].includes(action.status ?? "")).length;
-
+  const projects=(projectsResult.data??[]) as Project[];const projectAgents=(agentsResult.data??[]) as unknown as ProjectAgent[];const actions=(actionsResult.data??[]) as ProjectEntity[];const decisions=(decisionsResult.data??[]) as ProjectEntity[];const meetings=(meetingsResult.data??[]) as ProjectEntity[];const attention=(attentionResult.data??[]) as ProjectEntity[];
+  const countFor=(rows:ProjectEntity[],projectId:string)=>rows.filter(row=>row.project_id===projectId).length;const activeActionsFor=(id:string)=>actions.filter(row=>row.project_id===id&&!["completed","cancelled"].includes(row.status??"")).length;const agentsFor=(id:string)=>projectAgents.filter(row=>row.project_id===id&&["assigned","active"].includes(row.status));
+  const running=projects.filter(p=>p.status==="active").length;const blocked=projects.filter(p=>p.status==="blocked").length;const completed=projects.filter(p=>p.status==="completed").length;
   return <main className="command-shell">
-    <header className="command-header">
-      <div>
-        <p className="eyebrow">RYTHM PROJECT PORTFOLIO</p>
-        <h1>Projects across the company</h1>
-        <p className="subtitle">A portfolio-level view of governed work. Open a project to enter its operating context, history, agents and execution flow.</p>
-      </div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Link className="secondary-button" href="/actions">All actions</Link>
-        <Link className="secondary-button" href="/executive-review">Executive review</Link>
-        <Link className="secondary-button" href="/command-center">Command Center</Link>
-      </div>
-    </header>
-
+    <header className="command-header"><div><p className="eyebrow">RYTHM PROJECT OPERATING SYSTEM</p><h1>Company Projects</h1><p className="subtitle">Define the business outcome and authority. RYTHM analyzes, forms the team and executes governed work server-side.</p></div><div style={{display:"flex",gap:10,flexWrap:"wrap"}}><Link className="secondary-button" href="/attention">Your Attention</Link><Link className="secondary-button" href="/actions">All actions</Link><Link className="secondary-button" href="/command-center">Command Center</Link></div></header>
     {query.error?<p className="form-error">{query.error}</p>:null}
+    <section className="organization-banner"><div><span>Active Projects</span><strong>{projects.length}</strong></div><div><span>Running</span><strong>{running}</strong></div><div><span>Needs attention</span><strong>{attention.length}</strong></div><div><span>Blocked</span><strong>{blocked}</strong></div><div><span>Completed</span><strong>{completed}</strong></div></section>
 
-    <section className="organization-banner">
-      <div><span>Total projects</span><strong>{projects.length}</strong></div>
-      <div><span>Active / governed</span><strong>{activeProjects}</strong></div>
-      <div><span>Portfolio progress</span><strong>{averageProgress}%</strong></div>
-      <div><span>Open actions</span><strong>{totalOpenActions}</strong></div>
-    </section>
+    <section className="panel panel-wide" style={{marginTop:18}}><details><summary style={{cursor:"pointer",fontWeight:800,fontSize:18}}>Create Project</summary><form action={createProject} className="auth-form" style={{marginTop:18}}>
+      <div className="panel-heading"><div><p className="label">1 · Project Identity</p><h2>Outcome and ownership</h2></div><span className="pill">Only name and code are required</span></div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}><label>Project code<input name="projectCode" required minLength={3} maxLength={40} placeholder="AI-CAREER-SEO"/></label><label>Project name<input name="name" required minLength={3} maxLength={120}/></label><label>Project type<input name="projectType" placeholder="SEO, campaign, product, client delivery…"/></label><label>Priority<select name="priority" defaultValue="3"><option value="1">P1 · Critical</option><option value="2">P2 · High</option><option value="3">P3 · Normal</option><option value="4">P4 · Low</option><option value="5">P5 · Backlog</option></select></label><label>Start date<input type="date" name="startDate"/></label><label>Target completion<input type="date" name="targetDate"/></label><label>Internal owner<input name="internalOwner"/></label><label>Responsible department<input name="responsibleDepartment"/></label><label>Tags<input name="tags" placeholder="SEO, Growth, AI Career"/></label><label>Autonomy<select name="autonomyMode" defaultValue="approval_required"><option value="observe_only">Observe Only</option><option value="approval_required">Approval Required</option><option value="limited_autonomy">Limited Autonomy</option><option value="full_autonomy_within_policy">Full Autonomy Within Policy</option></select></label></div>
+      <label>Description<textarea name="description" rows={3}/></label><label>Objective / desired outcome<textarea name="objective" rows={3}/></label><label>Success criteria · one per line<textarea name="successCriteria" rows={3}/></label><label>Constraints · one per line<textarea name="constraints" rows={3}/></label><label>Notes<textarea name="notes" rows={3}/></label>
 
-    <section className="panel panel-wide" style={{marginTop:18}}>
-      <details>
-        <summary style={{cursor:"pointer",fontWeight:800}}>Create a governed project</summary>
-        <form action={createProject} className="auth-form" style={{marginTop:16}}>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}>
-            <label>Project code<input name="projectCode" required minLength={3} maxLength={40} placeholder="e.g. MVP-VAL-002"/></label>
-            <label>Project name<input name="name" required minLength={3} maxLength={120} placeholder="Project name"/></label>
-            <label>Priority<select name="priority" defaultValue="3"><option value="1">P1</option><option value="2">P2</option><option value="3">P3</option><option value="4">P4</option><option value="5">P5</option></select></label>
-          </div>
-          <label>Description<textarea name="description" rows={3} maxLength={1200} style={{width:"100%",maxWidth:"100%",boxSizing:"border-box",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10}}/></label>
-          <label>Objective<textarea name="objective" rows={3} maxLength={1200} style={{width:"100%",maxWidth:"100%",boxSizing:"border-box",resize:"vertical",padding:12,border:"1px solid #cfd6e2",borderRadius:10}}/></label>
-          <button>Create project</button>
-          <p className="security-note">Creates an internal governed project under Human CEO authority. It does not authorize agents or external actions.</p>
-        </form>
-      </details>
-    </section>
+      <div className="panel-heading" style={{marginTop:24}}><div><p className="label">2 · Client / Counterparty</p><h2>Who receives the work?</h2></div><span className="pill">Optional</span></div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}><label>Client name<input name="clientName"/></label><label>Legal company name<input name="legalCompanyName"/></label><label>Trading name<input name="tradingName"/></label><label>Client type<input name="clientType"/></label><label>Relationship<select name="relationshipType" defaultValue="other"><option value="internal">Internal</option><option value="b2b_client">B2B Client</option><option value="b2c_customer">B2C Customer</option><option value="partner">Partner</option><option value="vendor">Vendor</option><option value="contractor">Contractor</option><option value="other">Other</option></select></label><label>Contact person<input name="contactPerson"/></label><label>Email<input type="email" name="clientEmail"/></label><label>Phone<input name="clientPhone"/></label><label>Website<input type="url" name="clientWebsite"/></label><label>Country<input name="clientCountry"/></label><label>Billing entity<input name="billingEntity"/></label></div>
 
-    <section className="panel panel-wide" style={{ marginTop: 18 }}>
-      <div className="panel-heading">
-        <div><p className="label">Project office</p><h2>Project portfolio</h2></div>
-        <span className="pill">{projects.length} projects</span>
-      </div>
+      <div className="panel-heading" style={{marginTop:24}}><div><p className="label">3 · Contract & Commercial</p><h2>Commercial boundaries</h2></div><span className="pill">Optional · documents can supply this</span></div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}><label>Contract number<input name="contractNumber"/></label><label>Start<input type="date" name="contractStartDate"/></label><label>End<input type="date" name="contractEndDate"/></label><label>Contract value<input type="number" min="0" step="0.01" name="contractValue"/></label><label>Currency<input name="currency" placeholder="EUR"/></label><label>Payment terms<input name="paymentTerms"/></label></div>
+      <label>Deliverables · one per line<textarea name="deliverables" rows={3}/></label><label>SLA<textarea name="sla" rows={2}/></label><label>Milestones · one per line<textarea name="contractMilestones" rows={3}/></label><label>Our obligations · one per line<textarea name="providerObligations" rows={3}/></label><label>Client obligations · one per line<textarea name="clientObligations" rows={3}/></label><label>Exclusions / dependencies<textarea name="exclusions" rows={2}/><textarea name="dependencies" rows={2}/></label><label>Approval requirements<textarea name="approvalRequirements" rows={2}/></label><label>Termination / confidentiality / IP / data protection<textarea name="terminationConditions" rows={2} placeholder="Termination conditions"/><textarea name="confidentiality" rows={2} placeholder="Confidentiality requirements"/><textarea name="ipOwnership" rows={2} placeholder="IP ownership"/><textarea name="dataProtection" rows={2} placeholder="Data protection requirements"/></label><label>Special clauses · one per line<textarea name="specialClauses" rows={3}/></label><label>Contract notes<textarea name="contractNotes" rows={2}/></label>
 
-      {projects.length === 0 ? <p className="empty-state">No projects have been registered for this organization yet.</p> : (
-        <div className="project-portfolio-grid">
-          {projects.map((project) => {
-            const assignedAgents = agentsFor(project.id);
-            const openActions = activeActionsFor(project.id);
-            const decisionCount = countFor(decisions, project.id);
-            const meetingCount = countFor(meetings, project.id);
-            return <article className="project-portfolio-card" key={project.id}>
-              <div className="project-card-heading">
-                <div>
-                  <p className="label">{project.project_code}</p>
-                  <h2>{project.name}</h2>
-                </div>
-                <span className="pill">P{project.priority}</span>
-              </div>
+      <div className="panel-heading" style={{marginTop:24}}><div><p className="label">4 · Resources & Files</p><h2>Project Knowledge inputs</h2></div><span className="pill">Optional</span></div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}><label>Website<input type="url" name="website"/></label><label>GitHub repository<input type="url" name="github"/></label><label>Google Drive<input type="url" name="drive"/></label><label>Figma<input type="url" name="figma"/></label><label>File category<select name="fileCategory" defaultValue="other"><option value="contract">Contract</option><option value="amendment">Amendment</option><option value="nda">NDA</option><option value="statement_of_work">Statement of Work</option><option value="client_brief">Client Brief</option><option value="brand_guidelines">Brand Guidelines</option><option value="research">Research</option><option value="analytics">Analytics</option><option value="financial">Financial</option><option value="creative_asset">Creative Asset</option><option value="technical_documentation">Technical Documentation</option><option value="report">Report</option><option value="other">Other</option></select></label><label>Project files<input type="file" name="files" multiple accept=".pdf,.docx,.xlsx,.xls,.csv,.pptx,.txt,.png,.jpg,.jpeg,.webp"/></label></div>
+      <button>Create Project</button><p className="security-note">Creation does not start autonomous execution. RYTHM first analyzes readiness, scope, team and required connections. Human CEO authority remains intact.</p>
+    </form></details></section>
 
-              <p className="project-card-copy">{project.description ?? "No project description recorded."}</p>
-
-              <div className="project-progress-row">
-                <div><span>Progress</span><strong>{project.progress_percent}%</strong></div>
-                <div className="project-progress-track" aria-label={`${project.name} progress ${project.progress_percent}%`}><span style={{ width: `${Math.max(0, Math.min(100, project.progress_percent))}%` }} /></div>
-              </div>
-
-              <div className="project-card-metrics">
-                <div><span>Status</span><strong>{label(project.status)}</strong></div>
-                <div><span>Stage</span><strong>{label(project.stage)}</strong></div>
-                <div><span>Open actions</span><strong>{openActions}</strong></div>
-                <div><span>Decisions</span><strong>{decisionCount}</strong></div>
-                <div><span>Meetings</span><strong>{meetingCount}</strong></div>
-                <div><span>Target</span><strong>{formatDate(project.target_date)}</strong></div>
-              </div>
-
-              <div className="project-agent-strip">
-                <span>Assigned agents</span>
-                <div>
-                  {assignedAgents.length ? assignedAgents.slice(0, 5).map((assignment) => (
-                    <span className="agent-chip" key={`${project.id}-${assignment.agents?.agent_code ?? "agent"}`} title={assignment.agents?.display_name ?? assignment.agents?.name ?? "Assigned agent"}>
-                      {assignment.agents?.agent_code ?? "AI"}
-                    </span>
-                  )) : <span className="muted-copy">No active agent assignment</span>}
-                  {assignedAgents.length > 5 ? <span className="agent-chip">+{assignedAgents.length - 5}</span> : null}
-                </div>
-              </div>
-
-              <div className="project-card-actions">
-                <Link className="primary-link" href={`/projects/operating?project=${project.id}`}>Open project</Link>
-                {project.project_code === "AI-RP-GTM-001" ? <Link className="secondary-button" href={`/projects/autopilot?code=${project.project_code}`}>Project autopilot</Link> : null}
-                <Link className="secondary-button" href={`/actions?project=${project.id}`}>Project actions</Link>
-              </div>
-            </article>;
-          })}
-        </div>
-      )}
-    </section>
+    <section className="panel panel-wide" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">Project office</p><h2>Portfolio</h2></div><span className="pill">{projects.length} projects</span></div>{projects.length===0?<p className="empty-state">No projects registered.</p>:<div className="project-portfolio-grid">{projects.map(project=>{const assignedAgents=agentsFor(project.id);return <article className="project-portfolio-card" key={project.id}><div className="project-card-heading"><div><p className="label">{project.project_code}</p><h2>{project.name}</h2></div><span className="pill">P{project.priority}</span></div><p className="project-card-copy">{project.description||"No description recorded."}</p><div className="project-progress-row"><div><span>Progress</span><strong>{project.progress_percent}%</strong></div><div className="project-progress-track"><span style={{width:`${Math.max(0,Math.min(100,project.progress_percent))}%`}}/></div></div><div className="project-card-metrics"><div><span>Status</span><strong>{label(project.status)}</strong></div><div><span>Stage</span><strong>{label(project.stage)}</strong></div><div><span>Readiness</span><strong>{project.readiness_score}%</strong></div><div><span>Open actions</span><strong>{activeActionsFor(project.id)}</strong></div><div><span>Attention</span><strong>{countFor(attention,project.id)}</strong></div><div><span>Target</span><strong>{formatDate(project.target_date)}</strong></div></div><div className="project-agent-strip"><span>Team</span><div>{assignedAgents.length?assignedAgents.slice(0,5).map(a=><span className="agent-chip" key={`${project.id}-${a.agents?.agent_code??"agent"}`}>{a.agents?.agent_code??"AI"}</span>):<span className="muted-copy">Team forms after analysis</span>}</div></div><div className="project-card-actions"><Link className="primary-link" href={`/projects/operating?project=${project.id}`}>Open Project</Link><Link className="secondary-button" href={`/actions?project=${project.id}`}>Actions</Link></div></article>})}</div>}</section>
   </main>;
 }
