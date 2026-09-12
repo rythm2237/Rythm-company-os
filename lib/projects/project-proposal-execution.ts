@@ -67,6 +67,13 @@ function proposalHasExecutionSignal(proposal:ProposalRow){
   const type=proposal.proposal_type.toLowerCase();
   return ["execution","campaign","client communication","production","deployment","integration","external action"].some(token=>type.includes(token));
 }
+async function holdProposalContinuation(supabase:ReturnType<typeof createExecutionServiceClient>,proposal:ProposalRow,status:"waiting_for_agent"|"waiting_for_data"|"queued",patch:JsonRecord={}){
+  const tasks=await supabase.from("project_task_runs").select("id,input,status").eq("organization_id",proposal.organization_id).eq("project_id",proposal.project_id).contains("input",{approved_proposal_id:proposal.id});
+  for(const task of tasks.data??[]){
+    const currentInput=record(task.input);
+    await supabase.from("project_task_runs").update({status,input:{...currentInput,...patch},waiting_on_approval_id:null,lease_owner:null,lease_expires_at:null,next_attempt_at:status==="queued"?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq("id",task.id).in("status",["queued","running","retrying","waiting_for_agent","waiting_for_data","waiting_for_approval"]);
+  }
+}
 
 async function planApprovedProposalActions(proposal:ProposalRow,bindings:BindingRow[],knowledge:unknown[]){
   const candidates:Candidate[]=bindings.flatMap(binding=>bindingCapabilities(binding).map(capabilityKey=>({
@@ -134,11 +141,13 @@ export async function dispatchApprovedProjectProposalActions(){
   const results:Array<{proposalId:string;status:string;requests?:string[];error?:string}>=[];
   for(const proposal of (proposals??[]) as ProposalRow[]){
     const current=record(proposal.execution_result);
-    if(["dispatched","no_external_action"].includes(String(current.bridge_status??"")))continue;
+    if(["dispatched","completed","no_external_action"].includes(String(current.bridge_status??"")))continue;
     if(!proposal.decided_by_user_id){
       results.push({proposalId:proposal.id,status:"waiting_for_human_identity"});
       continue;
     }
+    const hasExecutionSignal=proposalHasExecutionSignal(proposal);
+    if(hasExecutionSignal)await holdProposalContinuation(supabase,proposal,"waiting_for_agent",{external_execution_state:"planning"});
     try{
       const [bindingsResult,knowledgeResult]=await Promise.all([
         supabase.from("project_connection_bindings")
@@ -157,7 +166,14 @@ export async function dispatchApprovedProjectProposalActions(){
         const status=plan.missingInputs.length?"needs_data":"no_external_action";
         await supabase.from("project_proposals").update({execution_result:mergeExecutionResult(current,{bridge_status:status,bridge_missing_inputs:plan.missingInputs,bridge_correlation_id:plan.correlationId,bridge_checked_at:new Date().toISOString()}),updated_at:new Date().toISOString()}).eq("id",proposal.id).eq("organization_id",proposal.organization_id);
         if(plan.missingInputs.length){
+          await holdProposalContinuation(supabase,proposal,"waiting_for_data",{external_execution_state:"needs_data",missing_inputs:plan.missingInputs});
+          for(let index=0;index<plan.missingInputs.length;index++){
+            const question=plan.missingInputs[index];
+            await supabase.from("project_clarification_requests").upsert({organization_id:proposal.organization_id,project_id:proposal.project_id,question_key:`proposal:${proposal.id}:execution:${index}`,question,reason:`Required to execute approved proposal: ${proposal.title}`,input_type:"text",options:[],materiality:"required",status:"open"},{onConflict:"project_id,question_key,status"});
+          }
           await supabase.from("project_activity_events").insert({organization_id:proposal.organization_id,project_id:proposal.project_id,agent_id:proposal.created_by_agent_id,event_type:"proposal.execution.needs_data",headline:`Approved proposal needs execution data: ${proposal.title}`,detail:plan.missingInputs.join(" · ").slice(0,2000),importance:"attention",correlation_id:plan.correlationId,metadata:{proposal_id:proposal.id,missing_inputs:plan.missingInputs}});
+        }else if(hasExecutionSignal){
+          await holdProposalContinuation(supabase,proposal,"queued",{external_execution_state:"not_required"});
         }
         results.push({proposalId:proposal.id,status});
         continue;
@@ -196,13 +212,17 @@ export async function dispatchApprovedProjectProposalActions(){
       const bridgeStatus=requestStates.length?"dispatched":"no_external_action";
       await supabase.from("project_proposals").update({execution_result:mergeExecutionResult(current,{bridge_status:bridgeStatus,bridge_dispatched_at:new Date().toISOString(),bridge_correlation_id:plan.correlationId,tool_execution_requests:requestStates}),updated_at:new Date().toISOString()}).eq("id",proposal.id).eq("organization_id",proposal.organization_id);
       if(requestStates.length){
+        await holdProposalContinuation(supabase,proposal,"waiting_for_agent",{external_execution_state:"dispatched",tool_execution_request_ids:requestIds});
         await supabase.from("project_activity_events").insert({organization_id:proposal.organization_id,project_id:proposal.project_id,agent_id:proposal.created_by_agent_id,event_type:"proposal.execution.dispatched",headline:`Approved proposal entered governed execution: ${proposal.title}`,detail:`${requestStates.length} scoped action${requestStates.length===1?"":"s"} sent through the Integration & Execution Gateway.`,importance:"major",correlation_id:plan.correlationId,metadata:{proposal_id:proposal.id,tool_execution_requests:requestStates}});
+      }else if(hasExecutionSignal){
+        await holdProposalContinuation(supabase,proposal,"queued",{external_execution_state:"not_required"});
       }
       results.push({proposalId:proposal.id,status:bridgeStatus,requests:requestIds});
     }catch(error){
       const message=redactSecretText(error instanceof Error?error.message:"Proposal execution bridge failed.",900);
       const attempts=finite(current.bridge_attempts,0)+1;
       await supabase.from("project_proposals").update({execution_result:mergeExecutionResult(current,{bridge_status:"retrying",bridge_attempts:attempts,bridge_error:message,bridge_last_attempt_at:new Date().toISOString()}),updated_at:new Date().toISOString()}).eq("id",proposal.id).eq("organization_id",proposal.organization_id);
+      if(hasExecutionSignal)await holdProposalContinuation(supabase,proposal,"waiting_for_agent",{external_execution_state:"retrying",external_execution_error:message});
       await supabase.from("project_activity_events").insert({organization_id:proposal.organization_id,project_id:proposal.project_id,agent_id:proposal.created_by_agent_id,event_type:"proposal.execution.retrying",headline:`Approved proposal execution will retry: ${proposal.title}`,detail:message,importance:attempts>=3?"attention":"normal",metadata:{proposal_id:proposal.id,attempts}});
       results.push({proposalId:proposal.id,status:"retrying",error:message});
     }
