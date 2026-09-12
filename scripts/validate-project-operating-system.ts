@@ -12,6 +12,8 @@ const scheduler=requireFile("supabase/migrations/20260912205000_project_os_sched
 const databaseScheduler=requireFile("supabase/migrations/20260912206000_project_os_database_scheduler.sql");
 const meetingMigration=requireFile("supabase/migrations/20260912207000_project_os_autonomous_meetings.sql");
 const knowledgeMigration=requireFile("supabase/migrations/20260912208000_project_os_knowledge_ingestion.sql");
+const proposalMigration=requireFile("supabase/migrations/20260912209000_project_os_proposal_governance.sql");
+const terminalMigration=requireFile("supabase/migrations/20260912210000_project_os_terminal_reconciliation.sql");
 const engine=requireFile("lib/projects/project-operating-system.ts");
 const knowledgeWorker=requireFile("lib/projects/project-knowledge.ts");
 const meetingWorker=requireFile("lib/projects/project-autonomous-meetings.ts");
@@ -46,6 +48,12 @@ requireText(knowledgeMigration,"project_document_chunks","durable project file k
 requireText(knowledgeMigration,"claim_project_document_ingestions_v1","document ingestion claim");
 requireText(knowledgeMigration,"recover_stale_project_document_ingestions_v1","document ingestion recovery");
 requireText(knowledgeMigration,"for update of d skip locked","document ingestion concurrency safety");
+requireText(proposalMigration,"ensure_project_proposal_continuation_v1","proposal continuation reservation");
+requireText(proposalMigration,"sync_project_proposal_approval_v1","proposal approval convergence");
+requireText(proposalMigration,"project_decision_memory","proposal decision memory");
+requireText(proposalMigration,"approved_by_human_ceo","human authorization context");
+requireText(terminalMigration,"reconcile_project_execution_terminal_states_v1","terminal execution reconciliation");
+requireText(terminalMigration,"completed','cancelled","cancelled work terminal semantics");
 requireText(knowledgeWorker,"extractCompanyDocument","existing company extraction pipeline reuse");
 requireText(knowledgeWorker,"chunkCompanyDocument","project knowledge chunking");
 requireText(knowledgeWorker,"project_context_documents","project knowledge context materialization");
@@ -83,6 +91,7 @@ requireText(dispatcher,"dispatchProjectKnowledge","durable background knowledge 
 requireText(dispatcher,"dispatchProjectWork","durable background task execution");
 requireText(dispatcher,"dispatchAutonomousProjectMeetings","durable background meetings");
 requireText(dispatcher,"dispatchApprovedProjectToolExecutions","approval auto-execution");
+requireText(dispatcher,"reconcile_project_execution_terminal_states_v1","terminal-state reconciliation dispatch");
 
 if(engine.includes("setInterval(")||engine.includes("window.")||engine.includes("localStorage"))throw new Error("Background execution must not depend on frontend/in-memory browser runtime.");
 if(knowledgeWorker.includes("setInterval(")||knowledgeWorker.includes("window.")||knowledgeWorker.includes("localStorage"))throw new Error("Project Knowledge ingestion must not depend on frontend/in-memory browser runtime.");
