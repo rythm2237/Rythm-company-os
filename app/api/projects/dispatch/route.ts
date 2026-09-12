@@ -24,10 +24,15 @@ export async function GET(request:Request){
       dispatchAutonomousProjectMeetings(service),
       dispatchApprovedProjectToolExecutions(),
     ]);
+    // The task worker's legacy completion pass only recognizes `completed`.
+    // Reconcile all durable terminal states here so cancelled optional work cannot strand a project.
+    const terminal=await service.rpc("reconcile_project_execution_terminal_states_v1");
+    if(terminal.error)console.error("project_terminal_reconciliation_failed",terminal.error.message);
     return NextResponse.json({
       ok:true,
       processed:knowledgeResults.length+taskResults.length+meetingResults.length+toolResults.length,
       healthEvents:Number(health.data??0),
+      terminalExecutions:Number(terminal.data??0),
       knowledge:knowledgeResults,
       tasks:taskResults,
       meetings:meetingResults,
