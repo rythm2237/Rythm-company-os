@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { dispatchProjectWork } from "@/lib/projects/project-operating-system";
 import { dispatchProjectKnowledge } from "@/lib/projects/project-knowledge";
 import { dispatchAutonomousProjectMeetings } from "@/lib/projects/project-autonomous-meetings";
+import { dispatchApprovedProjectProposalActions } from "@/lib/projects/project-proposal-execution";
 import { dispatchApprovedProjectToolExecutions } from "@/lib/projects/project-tool-execution";
 
 export const dynamic="force-dynamic";
@@ -19,23 +20,27 @@ export async function GET(request:Request){
     if(health.error)console.error("project_health_refresh_failed",health.error.message);
     // Knowledge ingestion runs first so tasks claimed in this cycle can use newly indexed project files.
     const knowledgeResults=await dispatchProjectKnowledge(service,{claimLimit:4});
-    const [taskResults,meetingResults,toolResults]=await Promise.all([
+    // Approved business proposals are translated only into project-bound, capability-scoped intents.
+    // The Integration & Execution Gateway still performs its own policy/risk/approval evaluation.
+    const [taskResults,meetingResults,proposalResults]=await Promise.all([
       dispatchProjectWork(service),
       dispatchAutonomousProjectMeetings(service),
-      dispatchApprovedProjectToolExecutions(),
+      dispatchApprovedProjectProposalActions(),
     ]);
-    // The task worker's legacy completion pass only recognizes `completed`.
-    // Reconcile all durable terminal states here so cancelled optional work cannot strand a project.
+    // Run after the proposal bridge so newly authorized requests can execute in this same scheduler cycle.
+    const toolResults=await dispatchApprovedProjectToolExecutions();
+    // Reconcile all durable terminal states so cancelled optional work cannot strand a project.
     const terminal=await service.rpc("reconcile_project_execution_terminal_states_v1");
     if(terminal.error)console.error("project_terminal_reconciliation_failed",terminal.error.message);
     return NextResponse.json({
       ok:true,
-      processed:knowledgeResults.length+taskResults.length+meetingResults.length+toolResults.length,
+      processed:knowledgeResults.length+taskResults.length+meetingResults.length+proposalResults.length+toolResults.length,
       healthEvents:Number(health.data??0),
       terminalExecutions:Number(terminal.data??0),
       knowledge:knowledgeResults,
       tasks:taskResults,
       meetings:meetingResults,
+      proposals:proposalResults,
       externalActions:toolResults,
     });
   }catch(error){
