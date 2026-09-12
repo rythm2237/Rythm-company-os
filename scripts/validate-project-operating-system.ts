@@ -17,10 +17,12 @@ const terminalMigration=requireFile("supabase/migrations/20260912210000_project_
 const engine=requireFile("lib/projects/project-operating-system.ts");
 const knowledgeWorker=requireFile("lib/projects/project-knowledge.ts");
 const meetingWorker=requireFile("lib/projects/project-autonomous-meetings.ts");
+const proposalWorker=requireFile("lib/projects/project-proposal-execution.ts");
 const toolWorker=requireFile("lib/projects/project-tool-execution.ts");
 const intake=requireFile("app/(app)/projects/page.tsx");
 const dashboard=requireFile("app/(app)/projects/operating/page.tsx");
 const analyzeRoute=requireFile("app/api/projects/analyze/route.ts");
+const connectionRoute=requireFile("app/api/projects/connections/route.ts");
 const vercel=requireFile("vercel.json");
 const authRoutes=["app/api/projects/analyze/route.ts","app/api/projects/run/route.ts","app/api/projects/files/route.ts","app/api/projects/connections/route.ts","app/api/projects/control/route.ts"].map(requireFile);
 const dispatcher=requireFile("app/api/projects/dispatch/route.ts");
@@ -64,6 +66,12 @@ requireText(meetingWorker,"boardroom.summary","existing Boardroom synthesis reus
 requireText(meetingWorker,"project_decision_memory","meeting decision memory");
 requireText(meetingWorker,"project_task_runs","meeting action handoff");
 requireText(meetingWorker,"project_context_documents","meeting knowledge feedback");
+requireText(proposalWorker,"requestToolExecution","proposal execution must reuse canonical Integration & Execution Gateway");
+requireText(proposalWorker,"project_connection_bindings","proposal execution must be project-connection scoped");
+requireText(proposalWorker,"permission_match_confidence","proposal-to-capability mapping must fail closed on ambiguity");
+requireText(proposalWorker,"decided_by_user_id","proposal execution must retain accountable Human CEO identity");
+requireText(proposalWorker,"idempotencyKey","proposal execution must be idempotent");
+requireText(proposalWorker,'bridge_status:"retrying"',"proposal execution retry visibility");
 requireText(toolWorker,"syncToolExecutionApproval","canonical tool approval sync");
 requireText(toolWorker,"executeApprovedToolRequest","canonical Integration & Execution Gateway execution");
 requireText(toolWorker,'["waiting_approval","approved","authorized"]',"approval-to-execution queue");
@@ -77,6 +85,8 @@ requireText(engine,"recover_stale_project_task_runs_v1","restart recovery");
 requireText(analyzeRoute,"dispatchProjectKnowledge","analysis consumes indexed project files");
 requireText(analyzeRoute,'from("project_agents").insert',"recommended project team materialization");
 requireText(analyzeRoute,'from("project_agent_capacity").insert',"recommended team capacity materialization");
+requireText(connectionRoute,"project_context_documents","confirmed connections feed Project Knowledge");
+requireText(connectionRoute,"capabilities:requested","connection knowledge must expose only confirmed capability keys");
 requireText(intake,"Client / Counterparty","rich intake client section");
 requireText(intake,"Contract & Commercial","rich intake contract section");
 requireText(intake,'name="files" multiple',"multi-file intake");
@@ -90,11 +100,13 @@ requireText(dispatcher,"refresh_project_execution_health_v1","scheduler health r
 requireText(dispatcher,"dispatchProjectKnowledge","durable background knowledge ingestion");
 requireText(dispatcher,"dispatchProjectWork","durable background task execution");
 requireText(dispatcher,"dispatchAutonomousProjectMeetings","durable background meetings");
+requireText(dispatcher,"dispatchApprovedProjectProposalActions","approved proposal bridge dispatch");
 requireText(dispatcher,"dispatchApprovedProjectToolExecutions","approval auto-execution");
 requireText(dispatcher,"reconcile_project_execution_terminal_states_v1","terminal-state reconciliation dispatch");
 
 if(engine.includes("setInterval(")||engine.includes("window.")||engine.includes("localStorage"))throw new Error("Background execution must not depend on frontend/in-memory browser runtime.");
 if(knowledgeWorker.includes("setInterval(")||knowledgeWorker.includes("window.")||knowledgeWorker.includes("localStorage"))throw new Error("Project Knowledge ingestion must not depend on frontend/in-memory browser runtime.");
+if(proposalWorker.includes("window.")||proposalWorker.includes("localStorage"))throw new Error("Proposal execution must be server-side and browser-independent.");
 if(meetingWorker.includes("cookie")||meetingWorker.includes("after("))throw new Error("Autonomous project meetings must not depend on browser cookies or request-lifetime continuations.");
 if(dashboard.includes("Watch Live")||dashboard.includes("Take Control"))throw new Error("Computer-use live controls must not be exposed before a real cloud provider exists.");
 console.log("Project Operating System static architecture validation passed.");
