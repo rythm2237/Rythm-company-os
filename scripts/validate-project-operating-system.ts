@@ -45,6 +45,7 @@ requireText(databaseScheduler,"configure_project_os_scheduler_v1","explicit sche
 requireText(databaseScheduler,"*/%s * * * *","database scheduler cadence");
 requireText(meetingMigration,"project_autonomous_meeting_jobs","durable autonomous meeting jobs");
 requireText(meetingMigration,"claim_project_autonomous_meeting_jobs_v1","autonomous meeting claim");
+requireText(meetingMigration,"recover_stale_project_autonomous_meeting_jobs_v1","autonomous meeting crash recovery");
 requireText(meetingMigration,"AUTONOMOUS","autonomous meeting involvement mode");
 requireText(knowledgeMigration,"project_document_chunks","durable project file knowledge chunks");
 requireText(knowledgeMigration,"claim_project_document_ingestions_v1","document ingestion claim");
@@ -75,6 +76,8 @@ requireText(proposalWorker,'bridge_status:"retrying"',"proposal execution retry 
 requireText(toolWorker,"syncToolExecutionApproval","canonical tool approval sync");
 requireText(toolWorker,"executeApprovedToolRequest","canonical Integration & Execution Gateway execution");
 requireText(toolWorker,'["waiting_approval","approved","authorized"]',"approval-to-execution queue");
+requireText(toolWorker,'"simulated"',"simulation must never be treated as a real external side effect");
+requireText(toolWorker,"reconcileDispatchedProjectProposals","immediate proposal policy convergence");
 requireText(engine,"executeAiRequest","AI Request Gateway reuse");
 requireText(engine,"organization_integrations","company-level connection reuse");
 requireText(engine,"project_connection_bindings","project-scoped connections");
@@ -97,10 +100,12 @@ if(vercel.includes('"path": "/api/projects/dispatch"'))throw new Error("Frequent
 for(const route of authRoutes){requireText(route,"resolveOwnerApiOrganizationContext","owner authorization");requireText(route,"organizationId","tenant scope");}
 requireText(dispatcher,"CRON_SECRET","scheduler authentication");
 requireText(dispatcher,"refresh_project_execution_health_v1","scheduler health refresh");
+requireText(dispatcher,"recover_stale_project_autonomous_meeting_jobs_v1","scheduler meeting recovery");
 requireText(dispatcher,"dispatchProjectKnowledge","durable background knowledge ingestion");
 requireText(dispatcher,"dispatchProjectWork","durable background task execution");
 requireText(dispatcher,"dispatchAutonomousProjectMeetings","durable background meetings");
 requireText(dispatcher,"dispatchApprovedProjectProposalActions","approved proposal bridge dispatch");
+requireText(dispatcher,"reconcileDispatchedProjectProposals","proposal policy convergence before task claim");
 requireText(dispatcher,"dispatchApprovedProjectToolExecutions","approval auto-execution");
 requireText(dispatcher,"reconcile_project_execution_terminal_states_v1","terminal-state reconciliation dispatch");
 
