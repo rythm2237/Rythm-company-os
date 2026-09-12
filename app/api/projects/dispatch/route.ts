@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { dispatchProjectWork } from "@/lib/projects/project-operating-system";
@@ -10,11 +11,33 @@ export const dynamic="force-dynamic";
 export const runtime="nodejs";
 export const maxDuration=300;
 
+function secureEqual(left:string,right:string){
+  const a=Buffer.from(left),b=Buffer.from(right);
+  return a.length===b.length&&timingSafeEqual(a,b);
+}
+
+async function authorizeDispatcher(request:Request,service:NonNullable<ReturnType<typeof createServerSupabaseClient>>){
+  const authorization=request.headers.get("authorization")??"";
+  const prefix="Bearer ";
+  if(!authorization.startsWith(prefix))return false;
+  const token=authorization.slice(prefix.length).trim();
+  if(token.length<24)return false;
+
+  // Existing Vercel/Admin Automation CRON_SECRET remains a valid operational fallback.
+  const legacySecret=process.env.CRON_SECRET?.trim();
+  if(legacySecret&&secureEqual(token,legacySecret))return true;
+
+  // Database scheduler plaintext exists only in Supabase Vault. The app receives only its hash.
+  const config=await service.from("project_scheduler_config").select("dispatcher_secret_hash,enabled").eq("id",true).maybeSingle();
+  if(config.error||!config.data?.enabled||!config.data.dispatcher_secret_hash)return false;
+  const presentedHash=createHash("sha256").update(token).digest("hex");
+  return secureEqual(presentedHash,String(config.data.dispatcher_secret_hash));
+}
+
 export async function GET(request:Request){
-  const secret=process.env.CRON_SECRET?.trim();
-  if(!secret||request.headers.get("authorization")!==`Bearer ${secret}`)return NextResponse.json({ok:false,error:"Unauthorized scheduler request."},{status:401});
   const service=createServerSupabaseClient();
   if(!service)return NextResponse.json({ok:false,error:"Project dispatcher is unavailable."},{status:503});
+  if(!(await authorizeDispatcher(request,service)))return NextResponse.json({ok:false,error:"Unauthorized scheduler request."},{status:401});
   try{
     const [health,meetingRecovery]=await Promise.all([
       service.rpc("refresh_project_execution_health_v1"),
