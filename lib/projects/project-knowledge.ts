@@ -57,13 +57,13 @@ async function extractImage(buffer:Buffer,document:ClaimedProjectDocument,userId
   return {text,hash:createHash("sha256").update(buffer).digest("hex"),summary:text.slice(0,1400),gateway:response};
 }
 
-async function resolveExtractionContext(supabase:SupabaseClient,document:ClaimedProjectDocument){
+async function resolveExtractionContext(supabase:SupabaseClient,document:ClaimedProjectDocument):Promise<{entitlement:OrganizationEntitlement;userId:string}>{
   const [entitlementResult,organizationResult]=await Promise.all([
     supabase.from("organization_entitlements").select("*").eq("organization_id",document.organization_id).maybeSingle(),
     document.uploaded_by_user_id?Promise.resolve({data:null,error:null}):supabase.from("organizations").select("owner_user_id").eq("id",document.organization_id).maybeSingle(),
   ]);
   const entitlement=entitlementResult.data as OrganizationEntitlement|null;
-  if(!isOrganizationEntitlementActive(entitlement))throw new Error("Project document ingestion requires an active organization entitlement.");
+  if(!entitlement||!isOrganizationEntitlementActive(entitlement))throw new Error("Project document ingestion requires an active organization entitlement.");
   const userId=document.uploaded_by_user_id||String(organizationResult.data?.owner_user_id??"");
   if(!userId)throw new Error("Project document ingestion could not resolve an accountable user identity.");
   return {entitlement,userId};
