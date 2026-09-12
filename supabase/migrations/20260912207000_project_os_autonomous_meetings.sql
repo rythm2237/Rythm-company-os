@@ -53,6 +53,28 @@ revoke all on function public.enqueue_project_autonomous_meeting_v1() from publi
 drop trigger if exists trg_enqueue_project_autonomous_meeting on public.project_activity_events;
 create trigger trg_enqueue_project_autonomous_meeting after insert on public.project_activity_events for each row execute function public.enqueue_project_autonomous_meeting_v1();
 
+create or replace function public.recover_stale_project_autonomous_meeting_jobs_v1()
+returns integer
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare recovered integer;
+begin
+  update public.project_autonomous_meeting_jobs
+  set status=case when attempt_count>=max_attempts then 'failed' else 'retrying' end,
+      error_message=case when attempt_count>=max_attempts then 'Autonomous meeting retry limit reached after worker lease expiry.' else 'Autonomous meeting worker lease expired.' end,
+      lease_owner=null,
+      lease_expires_at=null,
+      next_attempt_at=case when attempt_count>=max_attempts then null else now()+make_interval(secs=>least(1800,60*(2^least(attempt_count,5)))) end,
+      updated_at=now()
+  where status='running' and lease_expires_at<now();
+  get diagnostics recovered=row_count;
+  return recovered;
+end $$;
+revoke all on function public.recover_stale_project_autonomous_meeting_jobs_v1() from public,anon,authenticated;
+grant execute on function public.recover_stale_project_autonomous_meeting_jobs_v1() to service_role;
+
 create or replace function public.claim_project_autonomous_meeting_jobs_v1(worker_id text, claim_limit integer default 2, lease_seconds integer default 240)
 returns setof public.project_autonomous_meeting_jobs language plpgsql security definer set search_path=public as $$
 begin
