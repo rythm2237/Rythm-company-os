@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { startProjectExecution } from "@/lib/projects/project-operating-system";
+import { startProjectExecutionWithoutGlobalGate } from "@/lib/projects/project-execution-start";
 
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
@@ -18,11 +18,11 @@ export async function POST(request:Request){
   const service=createServerSupabaseClient();
   if(!service)return NextResponse.json({ok:false,error:"Project execution service is unavailable."},{status:503});
   try{
-    const execution=await startProjectExecution(service,auth.organizationId,projectId,auth.user.id);
-    await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.execution.authorized",object_type:"project",object_id:projectId,risk_level:"medium",payload:{execution_id:execution.id,execution_no:execution.execution_no,task_count:"taskCount" in execution?execution.taskCount:null}});
+    const execution=await startProjectExecutionWithoutGlobalGate(service,auth.organizationId,projectId,auth.user.id);
+    await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.execution.authorized",object_type:"project",object_id:projectId,risk_level:"medium",payload:{execution_id:execution.id,execution_no:execution.execution_no,task_count:"taskCount" in execution?execution.taskCount:null,global_readiness_gate:false}});
     return NextResponse.json({ok:true,execution});
   }catch(error){
     const message=error instanceof Error?error.message:"Unable to run project.";
-    return NextResponse.json({ok:false,error:message},{status:/clarification|readiness|safe start/i.test(message)?409:500});
+    return NextResponse.json({ok:false,error:message},{status:500});
   }
 }
