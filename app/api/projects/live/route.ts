@@ -81,10 +81,10 @@ export async function POST(request:Request){
     if(task){
       if(resolution==="approved"){
         await auth.supabase.from("project_task_runs").update({status:"queued",waiting_on_approval_id:null,error_class:null,error_message:null,next_attempt_at:null,updated_at:resolvedAt}).eq("id",task.id);
-        if(task.action_item_id)await auth.supabase.from("action_items").update({status:"open",updated_at:resolvedAt}).eq("id",task.action_item_id);
+        if(task.action_item_id)await auth.supabase.from("action_items").update({status:"open"}).eq("id",task.action_item_id);
       }else{
         await auth.supabase.from("project_task_runs").update({status:"blocked",error_class:"approval_rejected",error_message:responseNote,updated_at:resolvedAt}).eq("id",task.id);
-        if(task.action_item_id)await auth.supabase.from("action_items").update({status:"blocked",updated_at:resolvedAt}).eq("id",task.action_item_id);
+        if(task.action_item_id)await auth.supabase.from("action_items").update({status:"blocked"}).eq("id",task.action_item_id);
       }
     }
   }
