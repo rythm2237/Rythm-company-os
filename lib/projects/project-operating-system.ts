@@ -3,7 +3,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { executeAiRequest } from "@/lib/ai/request-gateway";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
-const cleanJson = (value:string) => value.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/```$/i,"").trim();
+const cleanJson = (value:string) => {
+  const stripped=value.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/```\s*$/i,"").trim();
+  try{JSON.parse(stripped);return stripped;}catch{}
+  const starts=[stripped.indexOf("{"),stripped.indexOf("[")].filter(index=>index>=0).sort((a,b)=>a-b);
+  for(const start of starts){
+    const open=stripped[start];const close=open==="{"?"}":"]";let depth=0;let inString=false;let escaped=false;
+    for(let i=start;i<stripped.length;i++){
+      const ch=stripped[i];
+      if(inString){if(escaped){escaped=false;continue;}if(ch==="\\"){escaped=true;continue;}if(ch==='"')inString=false;continue;}
+      if(ch==='"'){inString=true;continue;}if(ch===open)depth+=1;else if(ch===close){depth-=1;if(depth===0)return stripped.slice(start,i+1).replace(/,\s*([}\]])/g,"$1");}
+    }
+  }
+  return stripped.replace(/,\s*([}\]])/g,"$1");
+};
 const list = (value:unknown) => Array.isArray(value) ? value : [];
 const str = (value:unknown,fallback="") => typeof value === "string" ? value : fallback;
 const num = (value:unknown,fallback=0) => typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -28,7 +41,7 @@ async function gatewayJson(input:{organizationId:string;projectId:string;feature
     actor:{type:"system"},
     context:{projectId:input.projectId},
     feature:input.feature??"internal.unspecified",
-    systemInstructions:input.system,
+    systemInstructions:`${input.system}\nOutput contract: emit exactly one valid JSON object or array. Do not use Markdown fences, commentary, prefaces or trailing text.`,
     prompt:input.prompt,
     attachments:input.attachments,
     attachmentFailurePolicy:"fail",
@@ -38,8 +51,13 @@ async function gatewayJson(input:{organizationId:string;projectId:string;feature
     legacyFallback:{provider:"openai",model:config.dryRunModel,reason:"compatibility"},
     telemetryPolicy:"required",
   });
-  try{return {data:JSON.parse(cleanJson(response.outputText)) as Record<string,unknown>,correlationId:response.correlationId,costUsd:response.actualCostUsd??0};}
-  catch{throw new Error("Project intelligence returned an invalid structured response.");}
+  try{
+    const parsed=JSON.parse(cleanJson(response.outputText));
+    if(!parsed||typeof parsed!=="object")throw new Error("Structured response must be an object or array.");
+    return {data:parsed as Record<string,unknown>,correlationId:response.correlationId,costUsd:response.actualCostUsd??0};
+  }catch{
+    throw new Error(`Project intelligence returned an invalid structured response. Correlation: ${response.correlationId}`);
+  }
 }
 
 export async function analyzeProjectOS(supabase:SupabaseClient,organizationId:string,projectId:string) {
@@ -158,7 +176,6 @@ export async function startProjectExecution(supabase:SupabaseClient,organization
   if(project.error||!project.data) throw new Error("Project not found.");
   const openClarifications=await supabase.from("project_clarification_requests").select("id",{count:"exact",head:true}).eq("project_id",projectId).eq("organization_id",organizationId).eq("status","open").eq("materiality","required");
   if((openClarifications.count??0)>0) throw new Error("Required project clarifications must be answered before execution.");
-  if(Number(project.data.readiness_score??0)<50) throw new Error("Project execution readiness is below the safe start threshold. Run Project Analysis first.");
   const active=await supabase.from("project_executions").select("id,execution_no,status").eq("project_id",projectId).in("status",["queued","running","paused"]).maybeSingle();
   if(active.data) return active.data;
   const latest=await supabase.from("project_executions").select("execution_no").eq("project_id",projectId).order("execution_no",{ascending:false}).limit(1).maybeSingle();
@@ -183,7 +200,7 @@ export async function startProjectExecution(supabase:SupabaseClient,organization
     await supabase.from("project_task_runs").insert({organization_id:organizationId,project_id:projectId,execution_id:execution.data.id,action_item_id:actionId,task_key:task.key,title:task.title,assigned_agent_id:task.agentId??null,status:approvalId?"waiting_for_approval":"queued",priority:task.priority,dependencies:task.dependencies,waiting_on_approval_id:approvalId,idempotency_key:`project:${projectId}:execution:${executionNo}:task:${task.key}`,input:{description:task.description,risk:task.risk}});
   }
   await supabase.from("projects").update({status:"active",stage:"execution",last_heartbeat_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",projectId).eq("organization_id",organizationId);
-  await supabase.from("project_activity_events").insert({organization_id:organizationId,project_id:projectId,execution_id:execution.data.id,event_type:"project.execution.started",headline:"Project execution started",detail:`Execution #${executionNo} started with ${tasks.length} tasks.`,importance:"major"});
+  await supabase.from("project_activity_events").insert({organization_id:organizationId,project_id:projectId,execution_id:execution.data.id,event_type:"project.execution.started",headline:"Project execution started",detail:`Execution #${executionNo} started with ${tasks.length} tasks. Readiness is advisory and does not globally block independent work.`,importance:"major"});
   return {...execution.data,taskCount:tasks.length};
 }
 
