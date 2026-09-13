@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -53,11 +54,13 @@ export async function POST(request:Request){
   const resolvedAt=now.toISOString();
 
   let taskStatus:string|null=null;
+  let releasedTaskId:string|null=null;
   if(approval.subject_type==="project_task"){
     const taskResult=await auth.supabase.from("project_task_runs").select("id,action_item_id,status").eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("waiting_on_approval_id",approvalId).maybeSingle();
     if(taskResult.error)return NextResponse.json({ok:false,error:`Task lookup failed: ${taskResult.error.message}`},{status:409});
     const task=taskResult.data;
     if(!task)return NextResponse.json({ok:false,error:"The approval is no longer linked to an active project task. Refresh the page and try again."},{status:409});
+    releasedTaskId=task.id;
     taskStatus=resolution==="approved"?"queued":"blocked";
     const taskUpdate=await auth.supabase.from("project_task_runs").update(resolution==="approved"?{status:"queued",waiting_on_approval_id:null,error_class:null,error_message:null,next_attempt_at:null,updated_at:resolvedAt}:{status:"blocked",waiting_on_approval_id:null,error_class:"approval_rejected",error_message:responseNote,next_attempt_at:null,updated_at:resolvedAt}).eq("id",task.id).eq("organization_id",auth.organizationId).eq("project_id",projectId).eq("status","waiting_for_approval").select("id,status").maybeSingle();
     if(taskUpdate.error||!taskUpdate.data)return NextResponse.json({ok:false,error:taskUpdate.error?.message??"The project task could not be released from its approval gate."},{status:409});
@@ -72,7 +75,7 @@ export async function POST(request:Request){
 
   const resolved=await auth.supabase.from("approval_requests").update({status:resolution,response_note:responseNote,resolved_at:resolvedAt,approver_user_id:auth.user.id}).eq("id",approvalId).eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("status","pending").select("id,status").maybeSingle();
   if(resolved.error||!resolved.data){
-    if(approval.subject_type==="project_task")await auth.supabase.from("project_task_runs").update({status:"waiting_for_approval",waiting_on_approval_id:approvalId,updated_at:new Date().toISOString()}).eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("subject_id",approval.subject_id);
+    if(releasedTaskId)await auth.supabase.from("project_task_runs").update({status:"waiting_for_approval",waiting_on_approval_id:approvalId,updated_at:new Date().toISOString()}).eq("id",releasedTaskId).eq("organization_id",auth.organizationId).eq("project_id",projectId);
     return NextResponse.json({ok:false,error:resolved.error?.message??"Approval could not be resolved."},{status:409});
   }
 
@@ -80,5 +83,10 @@ export async function POST(request:Request){
     auth.supabase.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:`approval.${resolution}`,object_type:"approval_request",object_id:approvalId,risk_level:approval.risk_level,payload:{title:approval.title,resolution,response_note:responseNote,human_authority:"Human CEO / Owner",source:"project_operating_view",resolved_at:resolvedAt}}),
     auth.supabase.from("project_activity_events").insert({organization_id:auth.organizationId,project_id:projectId,event_type:`approval.${resolution}`,headline:`CEO ${resolution}: ${approval.title}`,detail:responseNote,importance:resolution==="approved"?"major":"attention"}),
   ]);
+
+  if(resolution==="approved"){
+    const service=createServerSupabaseClient();
+    if(service)void service.rpc("dispatch_project_os_from_database_v1").then(({error})=>{if(error)console.warn("project_approval_dispatch_trigger_failed",error.message);});
+  }
   return NextResponse.json({ok:true,resolution,taskStatus});
 }
