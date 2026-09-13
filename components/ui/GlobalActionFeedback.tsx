@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const MIN_VISIBLE_MS=320;
+const ACTION_WINDOW_MS=1800;
 
 function findActionElement(target:EventTarget|null){
   if(!(target instanceof Element))return null;
@@ -17,7 +18,7 @@ export default function GlobalActionFeedback(){
 
   useEffect(()=>{
     const originalFetch=window.fetch.bind(window);
-    let inFlight=0;
+    let actionFetches=0;
 
     const clearElement=(element:HTMLElement|null)=>{
       if(!element)return;
@@ -40,25 +41,31 @@ export default function GlobalActionFeedback(){
       startedRef.current=Date.now();
       const text=(element.getAttribute("data-processing-label")||element.textContent||"Working").trim().replace(/\s+/g," ").slice(0,42);
       setLabel(text||"Working");
-      setPending(value=>Math.max(1,value));
+      setPending(1);
       window.setTimeout(()=>{
-        if(inFlight===0){clearElement(element);setPending(0);}
+        if(actionFetches===0&&clickedRef.current===element){clearElement(element);clickedRef.current=null;setPending(0);}
       },1400);
     };
 
     window.fetch=async(...args)=>{
-      inFlight+=1;
       const actionElement=clickedRef.current;
-      if(actionElement){actionElement.dataset.rythmProcessing="true";actionElement.setAttribute("aria-busy","true");}
-      setPending(inFlight);
+      const actionLinked=Boolean(actionElement&&Date.now()-startedRef.current<=ACTION_WINDOW_MS);
+      if(actionLinked){
+        actionFetches+=1;
+        actionElement!.dataset.rythmProcessing="true";
+        actionElement!.setAttribute("aria-busy","true");
+        setPending(actionFetches);
+      }
       try{return await originalFetch(...args);}
       finally{
-        inFlight=Math.max(0,inFlight-1);
-        const elapsed=Date.now()-startedRef.current;
-        const finish=()=>{
-          if(inFlight===0){clearElement(actionElement);clickedRef.current=null;setPending(0);}else setPending(inFlight);
-        };
-        if(elapsed<MIN_VISIBLE_MS)window.setTimeout(finish,MIN_VISIBLE_MS-elapsed);else finish();
+        if(actionLinked){
+          actionFetches=Math.max(0,actionFetches-1);
+          const elapsed=Date.now()-startedRef.current;
+          const finish=()=>{
+            if(actionFetches===0){clearElement(actionElement);if(clickedRef.current===actionElement)clickedRef.current=null;setPending(0);}else setPending(actionFetches);
+          };
+          if(elapsed<MIN_VISIBLE_MS)window.setTimeout(finish,MIN_VISIBLE_MS-elapsed);else finish();
+        }
       }
     };
 
