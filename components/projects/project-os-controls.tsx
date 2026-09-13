@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ProjectLiveOperations } from "@/components/projects/project-live-operations";
 
 type Props={projectId:string;canRun?:boolean;status:string};
 
@@ -56,21 +57,24 @@ export function ProjectOsControls({projectId,status}:Props){
     finally{setBusy(null);}
   };
 
-  return <section className="panel" style={{marginTop:18}}>
-    <div className="panel-heading"><div><p className="label">Project Control</p><h2>Run or pause project</h2></div><span className="pill">{status.replaceAll("_"," ")}</span></div>
-    <p className="subtitle">Run starts or resumes durable server-side execution. Readiness is advisory: approvals and dependencies block only the work that depends on them, while independent work continues.</p>
-    <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}>
-      {isRunning
-        ? <button type="button" onClick={pause} disabled={busy!==null}>{busy==="pause"?"Pausing…":"Pause"}</button>
-        : <button type="button" onClick={run} disabled={busy!==null}>{busy==="run"?(isPaused?"Resuming…":"Starting…"):"Run"}</button>}
-    </div>
-    <form action={upload} className="auth-form" style={{marginTop:18}}>
-      <div style={{display:"grid",gridTemplateColumns:"minmax(180px,260px) 1fr",gap:12,alignItems:"end"}}>
-        <label>Document category<select name="category" defaultValue="other"><option value="contract">Contract</option><option value="amendment">Amendment</option><option value="nda">NDA</option><option value="statement_of_work">Statement of Work</option><option value="client_brief">Client Brief</option><option value="brand_guidelines">Brand Guidelines</option><option value="research">Research</option><option value="analytics">Analytics</option><option value="financial">Financial</option><option value="creative_asset">Creative Asset</option><option value="technical_documentation">Technical Documentation</option><option value="report">Report</option><option value="other">Other</option></select></label>
-        <label>Add project files<input name="files" type="file" multiple required accept=".pdf,.docx,.xlsx,.xls,.csv,.pptx,.txt,.png,.jpg,.jpeg,.webp"/></label>
+  return <>
+    <section className="panel" style={{marginTop:18}}>
+      <div className="panel-heading"><div><p className="label">Project Control</p><h2>Run or pause project</h2></div><span className="pill">{status.replaceAll("_"," ")}</span></div>
+      <p className="subtitle">Run starts or resumes durable server-side execution. Readiness is advisory: approvals and dependencies block only the work that depends on them, while independent work continues.</p>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}>
+        {isRunning
+          ? <button type="button" onClick={pause} disabled={busy!==null}>{busy==="pause"?"Pausing…":"Pause"}</button>
+          : <button type="button" onClick={run} disabled={busy!==null}>{busy==="run"?(isPaused?"Resuming…":"Starting…"):"Run"}</button>}
       </div>
-      <button disabled={busy!==null}>{busy==="upload"?"Uploading…":"Add to Project Knowledge"}</button>
-    </form>
-    {message?<p className="security-note" role="status">{message}</p>:null}
-  </section>;
+      <form action={upload} className="auth-form" style={{marginTop:18}}>
+        <div style={{display:"grid",gridTemplateColumns:"minmax(180px,260px) 1fr",gap:12,alignItems:"end"}}>
+          <label>Document category<select name="category" defaultValue="other"><option value="contract">Contract</option><option value="amendment">Amendment</option><option value="nda">NDA</option><option value="statement_of_work">Statement of Work</option><option value="client_brief">Client Brief</option><option value="brand_guidelines">Brand Guidelines</option><option value="research">Research</option><option value="analytics">Analytics</option><option value="financial">Financial</option><option value="creative_asset">Creative Asset</option><option value="technical_documentation">Technical Documentation</option><option value="report">Report</option><option value="other">Other</option></select></label>
+          <label>Add project files<input name="files" type="file" multiple required accept=".pdf,.docx,.xlsx,.xls,.csv,.pptx,.txt,.png,.jpg,.jpeg,.webp"/></label>
+        </div>
+        <button disabled={busy!==null}>{busy==="upload"?"Uploading…":"Add to Project Knowledge"}</button>
+      </form>
+      {message?<p className="security-note" role="status">{message}</p>:null}
+    </section>
+    <ProjectLiveOperations projectId={projectId} initialStatus={status}/>
+  </>;
 }
