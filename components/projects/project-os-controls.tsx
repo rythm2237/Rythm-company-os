@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Props={projectId:string;canRun:boolean;status:string};
+type Props={projectId:string;canRun?:boolean;status:string};
 
-type ApiResult={ok?:boolean;error?:string;readiness?:number;execution?:{id:string;execution_no:number;taskCount?:number}};
+type ApiResult={ok?:boolean;error?:string;execution?:{id:string;execution_no:number;taskCount?:number}};
 
 async function jsonRequest(endpoint:string,body:unknown){
   const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
@@ -14,21 +14,35 @@ async function jsonRequest(endpoint:string,body:unknown){
   return data;
 }
 
-export function ProjectOsControls({projectId,canRun,status}:Props){
+export function ProjectOsControls({projectId,status}:Props){
   const router=useRouter();
-  const [busy,setBusy]=useState<"analyze"|"run"|"upload"|null>(null);
+  const [busy,setBusy]=useState<"run"|"pause"|"upload"|null>(null);
   const [message,setMessage]=useState<string>("");
+  const normalizedStatus=status.toLowerCase();
+  const isRunning=normalizedStatus==="running"||normalizedStatus==="queued";
+  const isPaused=normalizedStatus==="paused";
 
-  const analyze=async()=>{
-    setBusy("analyze");setMessage("");
-    try{const result=await jsonRequest("/api/projects/analyze",{projectId});setMessage(`Analysis complete · readiness ${result.readiness??0}%`);router.refresh();}
-    catch(error){setMessage(error instanceof Error?error.message:"Analysis failed.");}
-    finally{setBusy(null);}
-  };
   const run=async()=>{
     setBusy("run");setMessage("");
-    try{const result=await jsonRequest("/api/projects/run",{projectId});setMessage(`Execution #${result.execution?.execution_no??""} started.`);router.refresh();}
-    catch(error){setMessage(error instanceof Error?error.message:"Project could not start.");}
+    try{
+      if(isPaused){
+        await jsonRequest("/api/projects/control",{projectId,action:"resume"});
+        setMessage("Project resumed. Independent work continues server-side.");
+      }else{
+        const result=await jsonRequest("/api/projects/run",{projectId});
+        setMessage(`Execution #${result.execution?.execution_no??""} started.`);
+      }
+      router.refresh();
+    }catch(error){setMessage(error instanceof Error?error.message:"Project could not start.");}
+    finally{setBusy(null);}
+  };
+  const pause=async()=>{
+    setBusy("pause");setMessage("");
+    try{
+      await jsonRequest("/api/projects/control",{projectId,action:"pause"});
+      setMessage("Project paused. Completed work is preserved and execution can be resumed.");
+      router.refresh();
+    }catch(error){setMessage(error instanceof Error?error.message:"Project could not be paused.");}
     finally{setBusy(null);}
   };
   const upload=async(formData:FormData)=>{
@@ -43,13 +57,13 @@ export function ProjectOsControls({projectId,canRun,status}:Props){
   };
 
   return <section className="panel" style={{marginTop:18}}>
-    <div className="panel-heading"><div><p className="label">Project Control</p><h2>Analyze, prepare and run</h2></div><span className="pill">{status.replaceAll("_"," ")}</span></div>
-    <p className="subtitle">RYTHM analyzes context first. Running creates a durable server-side execution that continues without this browser being open.</p>
+    <div className="panel-heading"><div><p className="label">Project Control</p><h2>Run or pause project</h2></div><span className="pill">{status.replaceAll("_"," ")}</span></div>
+    <p className="subtitle">Run starts or resumes durable server-side execution. Readiness is advisory: approvals and dependencies block only the work that depends on them, while independent work continues.</p>
     <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}>
-      <button type="button" onClick={analyze} disabled={busy!==null}>{busy==="analyze"?"Analyzing…":"Analyze Project"}</button>
-      <button type="button" onClick={run} disabled={busy!==null||!canRun}>{busy==="run"?"Starting…":"Run Project"}</button>
+      {isRunning
+        ? <button type="button" onClick={pause} disabled={busy!==null}>{busy==="pause"?"Pausing…":"Pause"}</button>
+        : <button type="button" onClick={run} disabled={busy!==null}>{busy==="run"?(isPaused?"Resuming…":"Starting…"):"Run"}</button>}
     </div>
-    {!canRun?<p className="security-note">Run Project becomes available after material clarifications are resolved and readiness reaches the safe start threshold.</p>:null}
     <form action={upload} className="auth-form" style={{marginTop:18}}>
       <div style={{display:"grid",gridTemplateColumns:"minmax(180px,260px) 1fr",gap:12,alignItems:"end"}}>
         <label>Document category<select name="category" defaultValue="other"><option value="contract">Contract</option><option value="amendment">Amendment</option><option value="nda">NDA</option><option value="statement_of_work">Statement of Work</option><option value="client_brief">Client Brief</option><option value="brand_guidelines">Brand Guidelines</option><option value="research">Research</option><option value="analytics">Analytics</option><option value="financial">Financial</option><option value="creative_asset">Creative Asset</option><option value="technical_documentation">Technical Documentation</option><option value="report">Report</option><option value="other">Other</option></select></label>
