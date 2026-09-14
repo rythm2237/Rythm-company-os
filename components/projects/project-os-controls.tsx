@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProjectLiveOperations } from "@/components/projects/project-live-operations";
 
@@ -20,8 +20,8 @@ export function ProjectOsControls({projectId,status,roadmap=null,showLiveOperati
   const [progress,setProgress]=useState<ProjectProgress|null>(null);
   const normalizedStatus=status.toLowerCase();const isRunning=normalizedStatus==="running"||normalizedStatus==="queued";const isPaused=normalizedStatus==="paused";const awaitingRoadmap=roadmapState?.status==="in_review"||roadmapState?.status==="draft";
 
-  const refreshRoadmap=async()=>{try{const response=await fetch(`/api/projects/roadmap?projectId=${encodeURIComponent(projectId)}`,{cache:"no-store"});const data=await response.json() as ApiResult;if(response.ok&&data.ok){setRoadmapState(data.roadmap??null);setProgress(data.progress??null);}}catch{}};
-  useEffect(()=>{void refreshRoadmap();const timer=window.setInterval(()=>void refreshRoadmap(),15000);return()=>window.clearInterval(timer);},[projectId]);
+  const refreshRoadmap=useCallback(async()=>{try{const response=await fetch(`/api/projects/roadmap?projectId=${encodeURIComponent(projectId)}`,{cache:"no-store"});const data=await response.json() as ApiResult;if(response.ok&&data.ok){setRoadmapState(data.roadmap??null);setProgress(data.progress??null);}}catch{}},[projectId]);
+  useEffect(()=>{void refreshRoadmap();const timer=window.setInterval(()=>void refreshRoadmap(),15000);return()=>window.clearInterval(timer);},[refreshRoadmap]);
 
   const run=async()=>{setBusy("run");setMessage("");try{if(isPaused&&roadmapState?.isBaseline){await jsonRequest("/api/projects/control",{projectId,action:"resume"});setMessage("Project resumed. Independent work continues server-side.");}else{const result=await jsonRequest("/api/projects/run",{projectId});if(result.roadmap)setRoadmapState(result.roadmap);setMessage(result.mode==="roadmap_review"?`Roadmap v${result.roadmap?.version??""} is ready for manager review. Execution has not started from this baseline yet.`:`Execution #${result.execution?.execution_no??""} started from the approved roadmap.`);}await refreshRoadmap();router.refresh();}catch(error){setMessage(error instanceof Error?error.message:"Project could not start.");}finally{setBusy(null);}};
   const approveAndStart=async()=>{if(!roadmapState)return;setBusy("approve");setMessage("");try{const result=await jsonRequest("/api/projects/roadmap",{projectId,roadmapId:roadmapState.id,action:"approve_and_start"});if(result.roadmap)setRoadmapState({...roadmapState,...result.roadmap,isBaseline:true});setMessage(`Roadmap v${result.roadmap?.version??roadmapState.version} approved as baseline. Execution #${result.execution?.execution_no??""} started.`);await refreshRoadmap();router.refresh();}catch(error){setMessage(error instanceof Error?error.message:"Roadmap could not be approved.");}finally{setBusy(null);}};
