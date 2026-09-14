@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { calculateProjectProgressSnapshot } from "@/lib/projects/project-progress";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -10,7 +11,7 @@ type Resolution = "approved" | "rejected";
 async function projectContext(projectId:string){
   const auth=await resolveOwnerApiOrganizationContext();
   if(!auth.ok)return {ok:false as const,response:NextResponse.json({ok:false,error:auth.error},{status:auth.status})};
-  const project=await auth.supabase.from("projects").select("id,name,project_code,status,stage,progress_percent,last_heartbeat_at").eq("id",projectId).eq("organization_id",auth.organizationId).maybeSingle();
+  const project=await auth.supabase.from("projects").select("id,name,project_code,status,stage,progress_percent,last_heartbeat_at,updated_at").eq("id",projectId).eq("organization_id",auth.organizationId).maybeSingle();
   if(!project.data)return {ok:false as const,response:NextResponse.json({ok:false,error:"Project not found."},{status:404})};
   return {ok:true as const,auth,project:project.data};
 }
@@ -28,8 +29,11 @@ export async function GET(request:Request){
     auth.supabase.from("project_agents").select("agent_id,status,assignment_role,agents(agent_code,display_name,name,role_title)").eq("project_id",projectId).eq("organization_id",auth.organizationId),
   ]);
   const tasks=tasksResult.data??[];
-  const counts={running:tasks.filter((t:any)=>t.status==="running").length,queued:tasks.filter((t:any)=>["queued","retrying"].includes(t.status)).length,waitingApproval:tasks.filter((t:any)=>t.status==="waiting_for_approval").length,waitingOther:tasks.filter((t:any)=>["waiting_for_connection","waiting_for_data"].includes(t.status)).length,completed:tasks.filter((t:any)=>t.status==="completed").length,failed:tasks.filter((t:any)=>["failed","blocked"].includes(t.status)).length,total:tasks.length};
-  return NextResponse.json({ok:true,project,execution:executionResult.data??null,counts,tasks:tasks.slice(0,24),approvals:approvalsResult.data??[],activity:activityResult.data??[],agents:agentsResult.data??[],serverTime:new Date().toISOString()});
+  const approvals=approvalsResult.data??[];
+  const activity=activityResult.data??[];
+  const progressSnapshot=calculateProjectProgressSnapshot(tasks as any[],approvals.length,project.status,activity[0]?.created_at??project.last_heartbeat_at??project.updated_at);
+  const counts={running:progressSnapshot.runningTasks,queued:progressSnapshot.queuedTasks,waitingApproval:progressSnapshot.awaitingApproval,waitingOther:progressSnapshot.blockedTasks,completed:progressSnapshot.completedTasks,failed:progressSnapshot.failedTasks,total:progressSnapshot.totalTasks};
+  return NextResponse.json({ok:true,project:{...project,progress_percent:progressSnapshot.progressPercent},progressSnapshot,execution:executionResult.data??null,counts,tasks:tasks.slice(0,24),approvals,activity,agents:agentsResult.data??[],serverTime:new Date().toISOString()});
 }
 
 export async function POST(request:Request){
