@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { calculateProjectProgressSnapshot } from "../lib/projects/project-progress";
 
 const root=process.cwd();
 const read=(file:string)=>fs.readFileSync(path.join(root,file),"utf8");
@@ -14,6 +15,8 @@ const meetingMigration=requireFile("supabase/migrations/20260912207000_project_o
 const knowledgeMigration=requireFile("supabase/migrations/20260912208000_project_os_knowledge_ingestion.sql");
 const proposalMigration=requireFile("supabase/migrations/20260912209000_project_os_proposal_governance.sql");
 const terminalMigration=requireFile("supabase/migrations/20260912210000_project_os_terminal_reconciliation.sql");
+const progressMigration=requireFile("supabase/migrations/20260914160000_project_progress_snapshot.sql");
+const progressContract=requireFile("lib/projects/project-progress.ts");
 const engine=requireFile("lib/projects/project-operating-system.ts");
 const knowledgeWorker=requireFile("lib/projects/project-knowledge.ts");
 const meetingWorker=requireFile("lib/projects/project-autonomous-meetings.ts");
@@ -56,6 +59,10 @@ requireText(proposalMigration,"sync_project_proposal_approval_v1","proposal appr
 requireText(proposalMigration,"project_decision_memory","proposal decision memory");
 requireText(proposalMigration,"approved_by_human_ceo","human authorization context");
 requireText(terminalMigration,"reconcile_project_execution_terminal_states_v1","terminal execution reconciliation");
+requireText(progressMigration,"project_task_runs_sync_progress_v1","project progress trigger");
+requireText(progressMigration,"refresh_project_progress_percent_v1","project progress backfill");
+requireText(progressContract,"getProjectProgressSnapshots","canonical progress query");
+requireText(progressContract,"awaitingApproval","approval-visible progress snapshot");
 requireText(terminalMigration,"completed','cancelled","cancelled work terminal semantics");
 requireText(knowledgeWorker,"extractCompanyDocument","existing company extraction pipeline reuse");
 requireText(knowledgeWorker,"chunkCompanyDocument","project knowledge chunking");
@@ -96,6 +103,9 @@ requireText(intake,'name="files" multiple',"multi-file intake");
 requireText(dashboard,"Execution Readiness","readiness UX");
 requireText(dashboard,"Executive Inbox","executive attention UX");
 requireText(dashboard,"persisted server-side","offline execution UX");
+for(const view of ["Overview","Live AI","Agents","Tasks","Approvals","Actions","Files","Activity"])requireText(dashboard,view,`mission control view ${view}`);
+requireText(dashboard,"progress.progressPercent","canonical operating progress");
+requireText(intake,"progressSnapshots","canonical portfolio progress");
 if(vercel.includes('"path": "/api/projects/dispatch"'))throw new Error("Frequent project dispatch must not rely on Vercel Hobby Cron.");
 for(const route of authRoutes){requireText(route,"resolveOwnerApiOrganizationContext","owner authorization");requireText(route,"organizationId","tenant scope");}
 requireText(dispatcher,"CRON_SECRET","scheduler authentication");
@@ -114,4 +124,8 @@ if(knowledgeWorker.includes("setInterval(")||knowledgeWorker.includes("window.")
 if(proposalWorker.includes("window.")||proposalWorker.includes("localStorage"))throw new Error("Proposal execution must be server-side and browser-independent.");
 if(meetingWorker.includes("cookie")||meetingWorker.includes("after("))throw new Error("Autonomous project meetings must not depend on browser cookies or request-lifetime continuations.");
 if(dashboard.includes("Watch Live")||dashboard.includes("Take Control"))throw new Error("Computer-use live controls must not be exposed before a real cloud provider exists.");
+const oneOfTwelve=calculateProjectProgressSnapshot(Array.from({length:12},(_,index)=>({project_id:"p",execution_id:"e",status:index===0?"completed":"queued"})),0,"active");
+if(oneOfTwelve.progressPercent!==8||oneOfTwelve.completedTasks!==1||oneOfTwelve.totalTasks!==12)throw new Error("Canonical progress must represent 1 completed task of 12 as 8%, never 0%.");
+const approvalBlocked=calculateProjectProgressSnapshot([{project_id:"p",execution_id:"e",status:"completed"},{project_id:"p",execution_id:"e",status:"waiting_for_approval"}],1,"active");
+if(approvalBlocked.progressPercent!==50||approvalBlocked.awaitingApproval!==1)throw new Error("Approvals must remain visible without resetting or inflating progress.");
 console.log("Project Operating System static architecture validation passed.");
