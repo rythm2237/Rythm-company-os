@@ -3,6 +3,7 @@ import AppShell from "@/components/app-shell/AppShell";
 import CommunicationDeliveryDock from "@/components/communication/CommunicationDeliveryDock";
 import GoogleWorkspaceConnectEnhancer from "@/components/integrations/GoogleWorkspaceConnectEnhancer";
 import ActiveWorkspaceGuide from "@/components/onboarding/ActiveWorkspaceGuide";
+import ProjectExecutiveSignalEnhancer from "@/components/projects/ProjectExecutiveSignalEnhancer";
 import "../mobile-workspace.css";
 import "../mobile-navigation-footer.css";
 import "../workspace-form-hardening.css";
@@ -25,6 +26,7 @@ export default function CompanyWorkspaceLayout({ children }: Readonly<{ children
       <CommunicationDeliveryDock />
       <GoogleWorkspaceConnectEnhancer />
       <ActiveWorkspaceGuide />
+      <ProjectExecutiveSignalEnhancer />
     </AppShell>
   );
 }
