@@ -21,9 +21,18 @@ export async function POST(request:Request){
   try{
     const approved=await getApprovedProjectRoadmap(service,auth.organizationId,projectId);
     if(!approved){
+      // A legacy pre-roadmap run must not keep advancing while the manager is defining
+      // the new official baseline. Pause it first; completed work remains historical.
+      const legacyActive=await service.from("project_executions").select("id,execution_no,status,roadmap_id").eq("organization_id",auth.organizationId).eq("project_id",projectId).in("status",["queued","running"]).is("roadmap_id",null).order("execution_no",{ascending:false}).limit(1).maybeSingle();
+      if(legacyActive.data){
+        const now=new Date().toISOString();
+        await service.from("project_executions").update({status:"paused",updated_at:now,last_heartbeat_at:now}).eq("organization_id",auth.organizationId).eq("id",legacyActive.data.id);
+        await service.from("project_activity_events").insert({organization_id:auth.organizationId,project_id:projectId,execution_id:legacyActive.data.id,event_type:"project.execution.paused_for_roadmap_review",headline:`Execution #${legacyActive.data.execution_no} paused for roadmap review`,detail:"Unbaselined execution is paused while the manager reviews and finalizes the official roadmap. Completed legacy work remains in history and will not inflate roadmap progress.",importance:"major"});
+      }
+
       const current=await getLatestProjectRoadmap(service,auth.organizationId,projectId);
       const roadmap=current&&["draft","in_review"].includes(current.status)?current:await createProjectRoadmapDraft(service,auth.organizationId,projectId,auth.user.id);
-      await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.roadmap.requested",object_type:"project",object_id:projectId,risk_level:"low",payload:{roadmap_id:roadmap?.id,roadmap_version:roadmap?.version,status:roadmap?.status}});
+      await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.roadmap.requested",object_type:"project",object_id:projectId,risk_level:"low",payload:{roadmap_id:roadmap?.id,roadmap_version:roadmap?.version,status:roadmap?.status,legacy_execution_paused:Boolean(legacyActive.data)}});
       return NextResponse.json({ok:true,mode:"roadmap_review",roadmap});
     }
 
