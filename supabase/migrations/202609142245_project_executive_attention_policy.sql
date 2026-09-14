@@ -25,19 +25,10 @@ returns text language sql immutable as $$
 $$;
 
 create or replace function public.project_approval_is_delegatable_v1(
-  p_subject_type text,
-  p_risk text,
-  p_title text,
-  p_summary text,
-  p_conditions jsonb,
-  p_execution_tool text,
-  p_execution_operation text,
-  p_execution_target text
+  p_subject_type text,p_risk text,p_title text,p_summary text,p_conditions jsonb,p_execution_tool text,p_execution_operation text,p_execution_target text
 ) returns boolean language sql immutable as $$
-  select
-    p_subject_type='project_task'
-    and coalesce(p_risk,'') in ('low','medium','high')
-    and coalesce(p_risk,'') <> 'critical'
+  select p_subject_type='project_task'
+    and coalesce(p_risk,'') in ('low','medium','high') and coalesce(p_risk,'') <> 'critical'
     and nullif(trim(coalesce(p_execution_tool,'')),'') is null
     and nullif(trim(coalesce(p_execution_operation,'')),'') is null
     and nullif(trim(coalesce(p_execution_target,'')),'') is null
@@ -69,7 +60,7 @@ $$;
 
 drop trigger if exists trg_project_executive_attention_policy on public.approval_requests;
 create trigger trg_project_executive_attention_policy
-before insert or update of title,summary,risk_level,status,conditions,execution_tool,execution_operation,execution_target
+before insert or update of title,summary,risk_level,conditions,execution_tool,execution_operation,execution_target
 on public.approval_requests for each row execute function public.apply_project_executive_attention_policy_v1();
 
 create or replace function public.release_auto_delegated_project_task_v1()
@@ -95,24 +86,10 @@ create trigger trg_release_auto_delegated_project_task
 before insert or update of waiting_on_approval_id on public.project_task_runs
 for each row execute function public.release_auto_delegated_project_task_v1();
 
--- Reclassify existing pending approvals and automatically release only safe internal task gates.
-update public.approval_requests a
-set decision_group=public.project_approval_decision_group_v1(a.title,a.summary),
-    attention_tier=case
-      when a.risk_level::text='critical' then 'executive_critical'
-      when public.project_approval_is_delegatable_v1(a.subject_type,a.risk_level::text,a.title,a.summary,a.conditions,a.execution_tool,a.execution_operation,a.execution_target) then 'delegated'
-      when a.risk_level::text='low' then 'manager'
-      else 'executive' end,
-    auto_resolved_by_policy=case when public.project_approval_is_delegatable_v1(a.subject_type,a.risk_level::text,a.title,a.summary,a.conditions,a.execution_tool,a.execution_operation,a.execution_target) then true else a.auto_resolved_by_policy end,
-    delegation_reason=case when public.project_approval_is_delegatable_v1(a.subject_type,a.risk_level::text,a.title,a.summary,a.conditions,a.execution_tool,a.execution_operation,a.execution_target) then 'Internal, reversible project work within delegated authority; downstream material side effects remain separately governed.' else a.delegation_reason end,
-    status=case when a.status::text='pending' and public.project_approval_is_delegatable_v1(a.subject_type,a.risk_level::text,a.title,a.summary,a.conditions,a.execution_tool,a.execution_operation,a.execution_target) then 'approved'::public.approval_status else a.status end,
-    response_note=case when a.status::text='pending' and public.project_approval_is_delegatable_v1(a.subject_type,a.risk_level::text,a.title,a.summary,a.conditions,a.execution_tool,a.execution_operation,a.execution_target) then coalesce(a.response_note,'Automatically delegated by Project Executive Attention Policy.') else a.response_note end,
-    resolved_at=case when a.status::text='pending' and public.project_approval_is_delegatable_v1(a.subject_type,a.risk_level::text,a.title,a.summary,a.conditions,a.execution_tool,a.execution_operation,a.execution_target) then coalesce(a.resolved_at,now()) else a.resolved_at end
-where a.status::text='pending';
-
-update public.project_task_runs t
-set status='queued',waiting_on_approval_id=null,error_class=null,error_message=null,next_attempt_at=null,updated_at=now()
-from public.approval_requests a
-where t.waiting_on_approval_id=a.id and a.status::text='approved' and a.auto_resolved_by_policy=true and t.status='waiting_for_approval';
+-- Existing unresolved requests are categorized for batching/attention, but are not silently resolved because legacy guardrails require a Human Owner on resolution.
+update public.approval_requests
+set decision_group=public.project_approval_decision_group_v1(title,summary),
+    attention_tier=case when risk_level::text='critical' then 'executive_critical' when risk_level::text='low' then 'manager' else 'executive' end
+where status::text='pending';
 
 create index if not exists approval_requests_project_attention_idx on public.approval_requests(project_id,status,attention_tier,decision_group,created_at desc);
