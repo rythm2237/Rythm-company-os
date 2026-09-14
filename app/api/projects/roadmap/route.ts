@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { approveProjectRoadmap, getLatestProjectRoadmap } from "@/lib/projects/project-roadmap";
+import { getProjectProgressSnapshot } from "@/lib/projects/project-progress";
 import { startProjectExecutionWithoutGlobalGate } from "@/lib/projects/project-execution-start";
 
 export const dynamic="force-dynamic";
@@ -9,6 +10,20 @@ export const runtime="nodejs";
 export const maxDuration=300;
 
 type Body={projectId?:string;roadmapId?:string;action?:"approve_and_start"|"request_changes";feedback?:string};
+
+export async function GET(request:Request){
+  const auth=await resolveOwnerApiOrganizationContext();
+  if(!auth.ok)return NextResponse.json({ok:false,error:auth.error},{status:auth.status});
+  const projectId=new URL(request.url).searchParams.get("projectId")?.trim()??"";
+  if(!projectId)return NextResponse.json({ok:false,error:"projectId is required."},{status:400});
+  const project=await auth.supabase.from("projects").select("id,status,updated_at").eq("organization_id",auth.organizationId).eq("id",projectId).maybeSingle();
+  if(!project.data)return NextResponse.json({ok:false,error:"Project not found."},{status:404});
+  const service=createServerSupabaseClient();if(!service)return NextResponse.json({ok:false,error:"Project service is unavailable."},{status:503});
+  try{
+    const [roadmap,progress]=await Promise.all([getLatestProjectRoadmap(service,auth.organizationId,projectId),getProjectProgressSnapshot(service,auth.organizationId,project.data)]);
+    return NextResponse.json({ok:true,roadmap,progress});
+  }catch(error){return NextResponse.json({ok:false,error:error instanceof Error?error.message:"Unable to load roadmap."},{status:500});}
+}
 
 export async function POST(request:Request){
   const auth=await resolveOwnerApiOrganizationContext();
