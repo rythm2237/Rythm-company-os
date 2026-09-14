@@ -19,9 +19,6 @@ export async function POST(request:Request){
   const service=createServerSupabaseClient();
   if(!service)return NextResponse.json({ok:false,error:"Project execution service is unavailable."},{status:503});
   try{
-    const active=await service.from("project_executions").select("id,execution_no,status").eq("organization_id",auth.organizationId).eq("project_id",projectId).in("status",["queued","running","paused"]).order("execution_no",{ascending:false}).limit(1).maybeSingle();
-    if(active.data)return NextResponse.json({ok:true,mode:"execution_started",execution:active.data});
-
     const approved=await getApprovedProjectRoadmap(service,auth.organizationId,projectId);
     if(!approved){
       const current=await getLatestProjectRoadmap(service,auth.organizationId,projectId);
@@ -29,6 +26,9 @@ export async function POST(request:Request){
       await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.roadmap.requested",object_type:"project",object_id:projectId,risk_level:"low",payload:{roadmap_id:roadmap?.id,roadmap_version:roadmap?.version,status:roadmap?.status}});
       return NextResponse.json({ok:true,mode:"roadmap_review",roadmap});
     }
+
+    const active=await service.from("project_executions").select("id,execution_no,status,roadmap_id").eq("organization_id",auth.organizationId).eq("project_id",projectId).in("status",["queued","running","paused"]).order("execution_no",{ascending:false}).limit(1).maybeSingle();
+    if(active.data)return NextResponse.json({ok:true,mode:"execution_started",execution:active.data,roadmap:{id:approved.id,version:approved.version,status:approved.status}});
 
     const execution=await startProjectExecutionWithoutGlobalGate(service,auth.organizationId,projectId,auth.user.id);
     await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.execution.authorized",object_type:"project",object_id:projectId,risk_level:"medium",payload:{execution_id:execution.id,execution_no:execution.execution_no,task_count:"taskCount" in execution?execution.taskCount:null,roadmap_id:approved.id,roadmap_version:approved.version,global_readiness_gate:false}});
