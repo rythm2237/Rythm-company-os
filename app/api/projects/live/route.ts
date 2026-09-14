@@ -23,12 +23,13 @@ export async function GET(request:Request){
   const {auth,project}=context;
   const [executionResult,tasksResult,approvalsResult,activityResult,agentsResult]=await Promise.all([
     auth.supabase.from("project_executions").select("id,execution_no,status,started_at,last_heartbeat_at,updated_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("execution_no",{ascending:false}).limit(1).maybeSingle(),
-    auth.supabase.from("project_task_runs").select("id,task_key,title,status,priority,assigned_agent_id,waiting_on_approval_id,started_at,completed_at,updated_at,agents(agent_code,display_name,name)").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("priority").order("created_at"),
+    auth.supabase.from("project_task_runs").select("id,execution_id,task_key,title,status,priority,assigned_agent_id,waiting_on_approval_id,started_at,completed_at,updated_at,agents(agent_code,display_name,name)").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("priority").order("created_at"),
     auth.supabase.from("approval_requests").select("id,subject_type,subject_id,title,summary,risk_level,status,conditions,created_at,expires_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("status","pending").order("created_at",{ascending:false}),
     auth.supabase.from("project_activity_events").select("id,event_type,headline,detail,importance,agent_id,created_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("created_at",{ascending:false}).limit(12),
     auth.supabase.from("project_agents").select("agent_id,status,assignment_role,agents(agent_code,display_name,name,role_title)").eq("project_id",projectId).eq("organization_id",auth.organizationId),
   ]);
-  const tasks=tasksResult.data??[];
+  const allTasks=tasksResult.data??[];
+  const tasks=executionResult.data?allTasks.filter((task:any)=>task.execution_id===executionResult.data.id):allTasks;
   const approvals=approvalsResult.data??[];
   const activity=activityResult.data??[];
   const progressSnapshot=calculateProjectProgressSnapshot(tasks as any[],approvals.length,project.status,activity[0]?.created_at??project.last_heartbeat_at??project.updated_at);
