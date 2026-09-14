@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProjectLiveOperations } from "@/components/projects/project-live-operations";
 
-type Props={projectId:string;canRun?:boolean;status:string};
+type Props={projectId:string;canRun?:boolean;status:string;showLiveOperations?:boolean;liveMode?:"full"|"approvals"};
 
 type ApiResult={ok?:boolean;error?:string;execution?:{id:string;execution_no:number;taskCount?:number}};
 
@@ -15,7 +15,7 @@ async function jsonRequest(endpoint:string,body:unknown){
   return data;
 }
 
-export function ProjectOsControls({projectId,status}:Props){
+export function ProjectOsControls({projectId,status,showLiveOperations=false,liveMode="full"}:Props){
   const router=useRouter();
   const [busy,setBusy]=useState<"run"|"pause"|"upload"|null>(null);
   const [message,setMessage]=useState<string>("");
@@ -75,6 +75,6 @@ export function ProjectOsControls({projectId,status}:Props){
       </form>
       {message?<p className="security-note" role="status">{message}</p>:null}
     </section>
-    <ProjectLiveOperations projectId={projectId} initialStatus={status}/>
+    {showLiveOperations?<ProjectLiveOperations projectId={projectId} initialStatus={status} mode={liveMode}/>:null}
   </>;
 }
