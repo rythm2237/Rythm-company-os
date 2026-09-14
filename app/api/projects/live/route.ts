@@ -29,7 +29,8 @@ export async function GET(request:Request){
     auth.supabase.from("project_agents").select("agent_id,status,assignment_role,agents(agent_code,display_name,name,role_title)").eq("project_id",projectId).eq("organization_id",auth.organizationId),
   ]);
   const allTasks=tasksResult.data??[];
-  const tasks=executionResult.data?allTasks.filter((task:any)=>task.execution_id===executionResult.data.id):allTasks;
+  const latestExecutionId=executionResult.data?.id;
+  const tasks=latestExecutionId?allTasks.filter((task:any)=>task.execution_id===latestExecutionId):allTasks;
   const approvals=approvalsResult.data??[];
   const activity=activityResult.data??[];
   const progressSnapshot=calculateProjectProgressSnapshot(tasks as any[],approvals.length,project.status,activity[0]?.created_at??project.last_heartbeat_at??project.updated_at);
