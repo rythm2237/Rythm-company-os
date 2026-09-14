@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProjectLiveOperations } from "@/components/projects/project-live-operations";
 
-type Props={projectId:string;canRun?:boolean;status:string;showLiveOperations?:boolean;liveMode?:"full"|"approvals"};
+type Props={projectId:string;canRun?:boolean;status:string;showLiveOperations?:boolean;liveMode?:"full"|"approvals";showFileUpload?:boolean};
 
 type ApiResult={ok?:boolean;error?:string;execution?:{id:string;execution_no:number;taskCount?:number}};
 
@@ -15,7 +15,7 @@ async function jsonRequest(endpoint:string,body:unknown){
   return data;
 }
 
-export function ProjectOsControls({projectId,status,showLiveOperations=false,liveMode="full"}:Props){
+export function ProjectOsControls({projectId,status,showLiveOperations=false,liveMode="full",showFileUpload=false}:Props){
   const router=useRouter();
   const [busy,setBusy]=useState<"run"|"pause"|"upload"|null>(null);
   const [message,setMessage]=useState<string>("");
@@ -66,13 +66,13 @@ export function ProjectOsControls({projectId,status,showLiveOperations=false,liv
           ? <button type="button" onClick={pause} disabled={busy!==null}>{busy==="pause"?"Pausing…":"Pause"}</button>
           : <button type="button" onClick={run} disabled={busy!==null}>{busy==="run"?(isPaused?"Resuming…":"Starting…"):"Run"}</button>}
       </div>
-      <form action={upload} className="auth-form" style={{marginTop:18}}>
+      {showFileUpload?<form action={upload} className="auth-form" style={{marginTop:18}}>
         <div style={{display:"grid",gridTemplateColumns:"minmax(180px,260px) 1fr",gap:12,alignItems:"end"}}>
           <label>Document category<select name="category" defaultValue="other"><option value="contract">Contract</option><option value="amendment">Amendment</option><option value="nda">NDA</option><option value="statement_of_work">Statement of Work</option><option value="client_brief">Client Brief</option><option value="brand_guidelines">Brand Guidelines</option><option value="research">Research</option><option value="analytics">Analytics</option><option value="financial">Financial</option><option value="creative_asset">Creative Asset</option><option value="technical_documentation">Technical Documentation</option><option value="report">Report</option><option value="other">Other</option></select></label>
           <label>Add project files<input name="files" type="file" multiple required accept=".pdf,.docx,.xlsx,.xls,.csv,.pptx,.txt,.png,.jpg,.jpeg,.webp"/></label>
         </div>
         <button disabled={busy!==null}>{busy==="upload"?"Uploading…":"Add to Project Knowledge"}</button>
-      </form>
+      </form>:null}
       {message?<p className="security-note" role="status">{message}</p>:null}
     </section>
     {showLiveOperations?<ProjectLiveOperations projectId={projectId} initialStatus={status} mode={liveMode}/>:null}
