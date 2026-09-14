@@ -50,7 +50,7 @@ export async function startProjectExecutionWithoutGlobalGate(
       phaseByTaskKey.set(executionKey, { phaseId: phase.id, phaseKey: phase.key, task });
     }
   }
-  const tasks = [...phaseByTaskKey.entries()].map(([key, value]) => ({ key, ...value.task, phaseId: value.phaseId, phaseKey: value.phaseKey }));
+  const tasks = [...phaseByTaskKey.entries()].map(([executionKey, value]) => ({ ...value.task, key: executionKey, phaseId: value.phaseId, phaseKey: value.phaseKey }));
   if (!tasks.length) throw new Error("The approved roadmap has no executable tasks. Revise the roadmap before starting execution.");
 
   const executionNo = Number(latest.data?.execution_no ?? 0) + 1;
