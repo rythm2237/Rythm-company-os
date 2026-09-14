@@ -1,10 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createDynamicExecutionPlan } from "@/lib/projects/project-operating-system";
+import { getApprovedProjectRoadmap, type RoadmapTask } from "@/lib/projects/project-roadmap";
 
 /**
- * Starts durable project execution without using readiness as a global gate.
- * Readiness and clarifications remain planning signals; task-level dependencies,
- * approvals and connection/data waits determine which work can execute.
+ * Starts durable project execution from the manager-approved roadmap baseline.
+ * Readiness remains advisory; task-level dependencies, approvals and connection/data
+ * waits determine which branches can execute. Project progress is measured against
+ * the same approved roadmap, so task count can never masquerade as project progress.
  */
 export async function startProjectExecutionWithoutGlobalGate(
   supabase: SupabaseClient,
@@ -23,12 +24,15 @@ export async function startProjectExecutionWithoutGlobalGate(
 
   const active = await supabase
     .from("project_executions")
-    .select("id,execution_no,status")
+    .select("id,execution_no,status,roadmap_id")
     .eq("project_id", projectId)
     .in("status", ["queued", "running", "paused"])
     .maybeSingle();
 
   if (active.data) return active.data;
+
+  const roadmap = await getApprovedProjectRoadmap(supabase, organizationId, projectId);
+  if (!roadmap) throw new Error("Approve a project roadmap before execution can start.");
 
   const latest = await supabase
     .from("project_executions")
@@ -38,7 +42,17 @@ export async function startProjectExecutionWithoutGlobalGate(
     .limit(1)
     .maybeSingle();
 
-  const tasks = await createDynamicExecutionPlan(supabase, organizationId, projectId);
+  const phaseByTaskKey = new Map<string, { phaseId: string; phaseKey: string; task: RoadmapTask }>();
+  for (const phase of roadmap.phases) {
+    if (!phase.id) continue;
+    for (const task of phase.tasks) {
+      const executionKey = `${phase.key}:${task.key}`.slice(0, 180);
+      phaseByTaskKey.set(executionKey, { phaseId: phase.id, phaseKey: phase.key, task });
+    }
+  }
+  const tasks = [...phaseByTaskKey.entries()].map(([key, value]) => ({ key, ...value.task, phaseId: value.phaseId, phaseKey: value.phaseKey }));
+  if (!tasks.length) throw new Error("The approved roadmap has no executable tasks. Revise the roadmap before starting execution.");
+
   const executionNo = Number(latest.data?.execution_no ?? 0) + 1;
   const now = new Date().toISOString();
 
@@ -47,6 +61,7 @@ export async function startProjectExecutionWithoutGlobalGate(
     .insert({
       organization_id: organizationId,
       project_id: projectId,
+      roadmap_id: roadmap.id,
       execution_no: executionNo,
       status: "running",
       execution_context: {
@@ -54,14 +69,19 @@ export async function startProjectExecutionWithoutGlobalGate(
         autonomy_mode: project.data.autonomy_mode,
         readiness_at_start: Number(project.data.readiness_score ?? 0),
         global_readiness_gate: false,
+        roadmap_id: roadmap.id,
+        roadmap_version: roadmap.version,
       },
-      plan_snapshot: { tasks },
+      plan_snapshot: {
+        roadmap: { id: roadmap.id, version: roadmap.version, title: roadmap.title, phases: roadmap.phases },
+        tasks,
+      },
       budget_snapshot: { ai_budget_usd: project.data.budget_cap_usd },
       started_by_user_id: userId,
       started_at: now,
       last_heartbeat_at: now,
     })
-    .select("id,execution_no,status")
+    .select("id,execution_no,status,roadmap_id")
     .single();
 
   if (execution.error || !execution.data) {
@@ -141,22 +161,25 @@ export async function startProjectExecutionWithoutGlobalGate(
       organization_id: organizationId,
       project_id: projectId,
       execution_id: execution.data.id,
+      roadmap_id: roadmap.id,
+      roadmap_phase_id: task.phaseId,
       action_item_id: actionId,
       task_key: task.key,
       title: task.title,
       assigned_agent_id: task.agentId ?? null,
       status: approvalId ? "waiting_for_approval" : "queued",
       priority: task.priority,
-      dependencies: task.dependencies,
+      dependencies: task.dependencies.map(dep => `${task.phaseKey}:${dep}`),
       waiting_on_approval_id: approvalId,
+      work_weight: Math.max(0.1, Number(task.workWeight || 1)),
       idempotency_key: `project:${projectId}:execution:${executionNo}:task:${task.key}`,
-      input: { description: task.description, risk: task.risk },
+      input: { description: task.description, risk: task.risk, roadmap_id: roadmap.id, roadmap_version: roadmap.version, roadmap_phase_id: task.phaseId, roadmap_phase_key: task.phaseKey },
     });
   }
 
   await supabase
     .from("projects")
-    .update({ status: "active", stage: "execution", last_heartbeat_at: now, updated_at: now })
+    .update({ status: "active", stage: "execution", progress_percent: 0, last_heartbeat_at: now, updated_at: now })
     .eq("id", projectId)
     .eq("organization_id", organizationId);
 
@@ -165,11 +188,11 @@ export async function startProjectExecutionWithoutGlobalGate(
     project_id: projectId,
     execution_id: execution.data.id,
     event_type: "project.execution.started",
-    headline: "Project execution started",
-    detail: `Execution #${executionNo} started with ${tasks.length} tasks. Readiness is advisory and does not globally block independent work.`,
+    headline: "Project execution started from approved roadmap",
+    detail: `Execution #${executionNo} started from roadmap v${roadmap.version} with ${tasks.length} tasks. Progress is measured against weighted roadmap work, not raw task count.`,
     importance: "major",
-    metadata: { readiness_at_start: Number(project.data.readiness_score ?? 0), global_readiness_gate: false },
+    metadata: { readiness_at_start: Number(project.data.readiness_score ?? 0), global_readiness_gate: false, roadmap_id: roadmap.id, roadmap_version: roadmap.version },
   });
 
-  return { ...execution.data, taskCount: tasks.length };
+  return { ...execution.data, taskCount: tasks.length, roadmapVersion: roadmap.version };
 }
