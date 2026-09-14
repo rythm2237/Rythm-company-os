@@ -43,7 +43,7 @@ export async function POST(request:Request){
   const {supabase,organizationId}=auth;
   const [projectResult,approvalResult]=await Promise.all([
     supabase.from("projects").select("id,name,project_code,description,objective,status,stage,autonomy_mode,budget_cap_usd,target_date,scope,success_criteria,constraints").eq("id",projectId).eq("organization_id",organizationId).maybeSingle(),
-    supabase.from("approval_requests").select("id,project_id,subject_type,subject_id,title,summary,risk_level,status,conditions,created_at,expires_at,execution_expected_impact,execution_reversibility,execution_target,execution_tool,execution_operation").eq("id",approvalId).eq("project_id",projectId).eq("organization_id",organizationId).maybeSingle(),
+    supabase.from("approval_requests").select("id,project_id,subject_type,subject_id,title,summary,risk_level,status,conditions,created_at,expires_at,execution_expected_impact,execution_reversibility,execution_target,execution_tool,execution_operation,attention_tier,decision_group").eq("id",approvalId).eq("project_id",projectId).eq("organization_id",organizationId).maybeSingle(),
   ]);
   const project=projectResult.data,approval=approvalResult.data;
   if(!project)return jsonError("Project not found.",404);
@@ -59,9 +59,9 @@ export async function POST(request:Request){
     supabase.from("project_task_runs").select("id,title,task_key,status,priority,dependencies,input,safe_result,error_class,error_message,roadmap_id,roadmap_phase_id,work_weight,assigned_agent_id").eq("organization_id",organizationId).eq("project_id",projectId).eq("waiting_on_approval_id",approvalId).maybeSingle(),
     supabase.from("project_scope_versions").select("version,included,excluded,assumptions,dependencies,deliverables,success_criteria,status").eq("organization_id",organizationId).eq("project_id",projectId).order("version",{ascending:false}).limit(1).maybeSingle(),
     supabase.from("project_documents").select("file_name,category,extracted_summary,extraction_status").eq("organization_id",organizationId).eq("project_id",projectId).order("created_at",{ascending:false}).limit(6),
-    supabase.from("project_roadmaps").select("id,version,status,title,objective,total_weight,approved_at").eq("organization_id",organizationId).eq("project_id",projectId).order("version",{ascending:false}).limit(1).maybeSingle(),
-    supabase.from("decisions").select("title,decision,status,rationale,created_at").eq("organization_id",organizationId).eq("project_id",projectId).order("created_at",{ascending:false}).limit(8),
-    supabase.from("project_proposals").select("title,executive_summary,rationale,expected_impact,estimated_cost,risk_level,status,created_at").eq("organization_id",organizationId).eq("project_id",projectId).order("created_at",{ascending:false}).limit(8),
+    supabase.from("project_roadmaps").select("id,version,title,summary,status,is_baseline,generated_from,approved_at").eq("organization_id",organizationId).eq("project_id",projectId).order("version",{ascending:false}).limit(1).maybeSingle(),
+    supabase.from("decisions").select("title,context,options,recommendation,rationale,risk_level,status,requires_human_approval,decided_at,created_at").eq("organization_id",organizationId).eq("project_id",projectId).order("created_at",{ascending:false}).limit(8),
+    supabase.from("project_proposals").select("title,executive_summary,rationale,expected_impact,estimated_cost,cost_currency,alternatives_considered,risk_level,status,created_at").eq("organization_id",organizationId).eq("project_id",projectId).order("created_at",{ascending:false}).limit(8),
   ]);
 
   const docContext=(documentsResult.data??[]).filter((r:any)=>r.extracted_summary).map((r:any)=>`${r.category}: ${r.file_name}\n${String(r.extracted_summary).slice(0,1200)}`).join("\n\n");
