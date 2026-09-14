@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { DEFAULT_LOCALE, getLocaleDefinition } from "@/lib/i18n/config";
 import { enMessages } from "@/lib/i18n/messages";
+import GlobalActionFeedback from "@/components/ui/GlobalActionFeedback";
 import {
   DEFAULT_DESCRIPTION,
   SITE_NAME,
@@ -29,66 +30,22 @@ const defaultLocale = getLocaleDefinition(DEFAULT_LOCALE);
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
-  title: {
-    default: "Governed AI Workforce Platform | RYTHM Company OS",
-    template: `%s | ${SITE_NAME}`,
-  },
+  title: {default: "Governed AI Workforce Platform | RYTHM Company OS",template: `%s | ${SITE_NAME}`},
   description: DEFAULT_DESCRIPTION,
   applicationName: SITE_NAME,
   category: "technology",
   creator: SITE_NAME,
   publisher: SITE_NAME,
   referrer: "origin-when-cross-origin",
-  verification:
-    googleSiteVerification || bingSiteVerification
-      ? {
-          ...(googleSiteVerification ? { google: googleSiteVerification } : {}),
-          ...(bingSiteVerification
-            ? { other: { "msvalidate.01": bingSiteVerification } }
-            : {}),
-        }
-      : undefined,
-  openGraph: {
-    type: "website",
-    url: "/",
-    siteName: SITE_NAME,
-    title: "Governed AI Workforce Platform | RYTHM Company OS",
-    description: DEFAULT_DESCRIPTION,
-    locale: defaultLocale.openGraphLocale,
-    images: [
-      {
-        url: SOCIAL_IMAGE_PATH,
-        width: 1200,
-        height: 630,
-        alt: "RYTHM Company OS — governed AI workforce platform",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Governed AI Workforce Platform | RYTHM Company OS",
-    description: DEFAULT_DESCRIPTION,
-    images: [SOCIAL_IMAGE_PATH],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
-  },
+  verification: googleSiteVerification || bingSiteVerification ? {...(googleSiteVerification ? { google: googleSiteVerification } : {}),...(bingSiteVerification ? { other: { "msvalidate.01": bingSiteVerification } } : {})} : undefined,
+  openGraph: {type: "website",url: "/",siteName: SITE_NAME,title: "Governed AI Workforce Platform | RYTHM Company OS",description: DEFAULT_DESCRIPTION,locale: defaultLocale.openGraphLocale,images: [{url: SOCIAL_IMAGE_PATH,width: 1200,height: 630,alt: "RYTHM Company OS — governed AI workforce platform"}]},
+  twitter: {card: "summary_large_image",title: "Governed AI Workforce Platform | RYTHM Company OS",description: DEFAULT_DESCRIPTION,images: [SOCIAL_IMAGE_PATH]},
+  robots: {index: true,follow: true,googleBot: {index: true,follow: true,"max-image-preview": "large","max-snippet": -1,"max-video-preview": -1}},
 };
 
 export const viewport: Viewport = {
   colorScheme: "light dark",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F5F7FB" },
-    { media: "(prefers-color-scheme: dark)", color: "#0B1220" },
-  ],
+  themeColor: [{ media: "(prefers-color-scheme: light)", color: "#F5F7FB" },{ media: "(prefers-color-scheme: dark)", color: "#0B1220" }],
   width: "device-width",
   initialScale: 1,
 };
@@ -99,6 +56,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <a className="skip-link" href="#main-content">{enMessages.common.skipToMainContent}</a>
         <div id="main-content">{children}</div>
+        <GlobalActionFeedback />
       </body>
     </html>
   );
