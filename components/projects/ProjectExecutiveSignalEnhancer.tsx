@@ -44,22 +44,27 @@ export default function ProjectExecutiveSignalEnhancer(){
       const consoleEl=runtime.querySelector(".console") as HTMLElement|null;
       const tasks=runtime.querySelector(".tasks") as HTMLElement|null;
       if(consoleEl){consoleEl.classList.add("rythm-runtime-hidden");const b=document.createElement("button");b.className="rythm-runtime-toggle";b.textContent="Show live AI map";b.onclick=()=>{const hidden=consoleEl.classList.toggle("rythm-runtime-hidden");b.textContent=hidden?"Show live AI map":"Hide live AI map";};top?.appendChild(b);}
-      if(tasks){tasks.classList.add("rythm-runtime-hidden");const head=tasks.querySelector(".tasksHead") as HTMLElement|null;const b=document.createElement("button");b.className="rythm-runtime-toggle";b.textContent="Show workstreams";b.onclick=()=>{const hidden=tasks.classList.toggle("rythm-runtime-hidden");if(!hidden)tasks.classList.remove("rythm-runtime-hidden");b.textContent=hidden?"Show workstreams":"Hide workstreams";};top?.appendChild(b);}
+      if(tasks){tasks.classList.add("rythm-runtime-hidden");const b=document.createElement("button");b.className="rythm-runtime-toggle";b.textContent="Show workstreams";b.onclick=()=>{const hidden=tasks.classList.toggle("rythm-runtime-hidden");b.textContent=hidden?"Show workstreams":"Hide workstreams";};top?.appendChild(b);}
     };
 
     const enhanceApprovals=()=>{
       const approvals=document.querySelector(".aiRuntime .approvals") as HTMLElement|null;if(!approvals)return;
       const grid=approvals.querySelector(".approvalGrid") as HTMLElement|null;if(!grid)return;
       const cards=Array.from(grid.querySelectorAll(":scope > .approval")) as HTMLElement[];if(!cards.length)return;
+      const expanded=approvals.dataset.rythmExpanded==="1";
+      const signature=cards.map(card=>`${card.querySelector("[data-approval-id]")?.getAttribute("data-approval-id")??"?"}:${(card.querySelector(".risk")?.textContent??"").trim().toLowerCase()}`).join("|")+`:${expanded}`;
+      if(approvals.dataset.rythmSignature===signature)return;
+      approvals.dataset.rythmSignature=signature;
+
       cards.forEach(card=>{const risk=(card.querySelector(".risk")?.textContent??"").trim().toLowerCase();card.style.order=String(10-riskWeight(risk));});
       const sorted=[...cards].sort((a,b)=>riskWeight((b.querySelector(".risk")?.textContent??"").trim().toLowerCase())-riskWeight((a.querySelector(".risk")?.textContent??"").trim().toLowerCase()));
-      const expanded=approvals.dataset.rythmExpanded==="1";sorted.forEach((card,index)=>card.classList.toggle("rythm-approval-hidden",!expanded&&index>=4));
+      sorted.forEach((card,index)=>card.classList.toggle("rythm-approval-hidden",!expanded&&index>=4));
 
       let toolbar=approvals.querySelector(".rythm-attention-toolbar") as HTMLElement|null;
       if(!toolbar){toolbar=document.createElement("div");toolbar.className="rythm-attention-toolbar";const head=approvals.querySelector(".approvalHead");head?.insertAdjacentElement("afterend",toolbar);}
       const risks=cards.reduce((acc,card)=>{const r=(card.querySelector(".risk")?.textContent??"other").trim().toLowerCase();acc[r]=(acc[r]??0)+1;return acc;},{} as Record<string,number>);
       toolbar.innerHTML=`<div class="rythm-attention-summary"><strong>${cards.length} executive decision${cards.length===1?"":"s"}</strong><span>${risks.critical??0} critical · ${risks.high??0} high · ${risks.medium??0} medium</span></div>`;
-      if(cards.length>4){const toggle=document.createElement("button");toggle.type="button";toggle.className="rythm-package-button secondary";toggle.textContent=expanded?"Show priority only":`Show all ${cards.length}`;toggle.onclick=()=>{approvals.dataset.rythmExpanded=expanded?"0":"1";enhanceApprovals();};toolbar.appendChild(toggle);}
+      if(cards.length>4){const toggle=document.createElement("button");toggle.type="button";toggle.className="rythm-package-button secondary";toggle.textContent=expanded?"Show priority only":`Show all ${cards.length}`;toggle.onclick=()=>{approvals.dataset.rythmExpanded=expanded?"0":"1";approvals.dataset.rythmSignature="";enhanceApprovals();};toolbar.appendChild(toggle);}
 
       const groups=new Map<string,HTMLElement[]>();cards.forEach(card=>{const key=groupFor(card.textContent??"");const list=groups.get(key)??[];list.push(card);groups.set(key,list);});
       groups.forEach((items,key)=>{
