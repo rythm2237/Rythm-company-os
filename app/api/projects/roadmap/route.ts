@@ -46,19 +46,19 @@ export async function POST(request:Request){
 
     const roadmap=await approveProjectRoadmap(service,auth.organizationId,projectId,roadmapId,auth.user.id);if(!roadmap)throw new Error("Unable to approve roadmap.");
 
-    // Existing executions created before roadmap baselines are historical only. Once the
-    // manager explicitly approves a baseline, stop the legacy run and begin a clean,
-    // roadmap-scoped execution so setup/admin task completion cannot inflate progress.
-    const legacy=await service.from("project_executions").select("id,execution_no,status,roadmap_id").eq("organization_id",auth.organizationId).eq("project_id",projectId).in("status",["queued","running","paused"]).is("roadmap_id",null).order("execution_no",{ascending:false}).limit(1).maybeSingle();
-    if(legacy.data){
+    // If a legacy run or an older roadmap version is still active, preserve its completed
+    // history but stop unfinished work before starting the newly approved baseline.
+    const active=await service.from("project_executions").select("id,execution_no,status,roadmap_id").eq("organization_id",auth.organizationId).eq("project_id",projectId).in("status",["queued","running","paused"]).order("execution_no",{ascending:false}).limit(1).maybeSingle();
+    const supersededExecution=active.data&&active.data.roadmap_id!==roadmap.id?active.data:null;
+    if(supersededExecution){
       const now=new Date().toISOString();
-      await service.from("project_executions").update({status:"cancelled",cancelled_at:now,updated_at:now}).eq("id",legacy.data.id).eq("organization_id",auth.organizationId);
-      await service.from("project_task_runs").update({status:"cancelled",updated_at:now}).eq("execution_id",legacy.data.id).neq("status","completed");
-      await service.from("project_activity_events").insert({organization_id:auth.organizationId,project_id:projectId,execution_id:legacy.data.id,event_type:"project.execution.rebaselined",headline:`Legacy execution #${legacy.data.execution_no} superseded by approved roadmap`,detail:`Roadmap v${roadmap.version} is now the official baseline. Previously completed legacy tasks remain in history but do not count toward roadmap progress.`,importance:"major"});
+      await service.from("project_executions").update({status:"cancelled",cancelled_at:now,updated_at:now}).eq("id",supersededExecution.id).eq("organization_id",auth.organizationId);
+      await service.from("project_task_runs").update({status:"cancelled",updated_at:now}).eq("execution_id",supersededExecution.id).neq("status","completed");
+      await service.from("project_activity_events").insert({organization_id:auth.organizationId,project_id:projectId,execution_id:supersededExecution.id,event_type:"project.execution.rebaselined",headline:`Execution #${supersededExecution.execution_no} superseded by roadmap v${roadmap.version}`,detail:`Roadmap v${roadmap.version} is now the official baseline. Completed work from the previous execution remains in history but does not inflate the new roadmap progress.`,importance:"major"});
     }
 
     const execution=await startProjectExecutionWithoutGlobalGate(service,auth.organizationId,projectId,auth.user.id);
-    await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.roadmap.approved_and_execution_started",object_type:"project",object_id:projectId,risk_level:"medium",payload:{roadmap_id:roadmap.id,roadmap_version:roadmap.version,execution_id:execution.id,execution_no:execution.execution_no,legacy_execution_rebaselined:Boolean(legacy.data)}});
+    await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.roadmap.approved_and_execution_started",object_type:"project",object_id:projectId,risk_level:"medium",payload:{roadmap_id:roadmap.id,roadmap_version:roadmap.version,execution_id:execution.id,execution_no:execution.execution_no,prior_execution_rebaselined:Boolean(supersededExecution)}});
     return NextResponse.json({ok:true,mode:"execution_started",roadmap:{id:roadmap.id,version:roadmap.version,status:roadmap.status},execution});
   }catch(error){return NextResponse.json({ok:false,error:error instanceof Error?error.message:"Unable to update roadmap."},{status:500});}
 }
