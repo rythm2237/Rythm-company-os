@@ -47,11 +47,46 @@ export async function startProjectExecutionWithoutGlobalGate(
     if (!phase.id) continue;
     for (const task of phase.tasks) {
       const executionKey = `${phase.key}:${task.key}`.slice(0, 180);
+      if (phaseByTaskKey.has(executionKey)) throw new Error(`Duplicate roadmap task key: ${executionKey}`);
       phaseByTaskKey.set(executionKey, { phaseId: phase.id, phaseKey: phase.key, task });
     }
   }
-  const tasks = [...phaseByTaskKey.entries()].map(([executionKey, value]) => ({ ...value.task, key: executionKey, phaseId: value.phaseId, phaseKey: value.phaseKey }));
-  if (!tasks.length) throw new Error("The approved roadmap has no executable tasks. Revise the roadmap before starting execution.");
+
+  const unresolvedTasks = [...phaseByTaskKey.entries()].map(([executionKey, value]) => ({
+    ...value.task,
+    key: executionKey,
+    rawTaskKey: value.task.key,
+    phaseId: value.phaseId,
+    phaseKey: value.phaseKey,
+  }));
+  if (!unresolvedTasks.length) throw new Error("The approved roadmap has no executable tasks. Revise the roadmap before starting execution.");
+
+  const executionKeys = new Set(unresolvedTasks.map((task) => task.key));
+  const keysByRawTask = new Map<string, string[]>();
+  for (const task of unresolvedTasks) {
+    const matches = keysByRawTask.get(task.rawTaskKey) ?? [];
+    matches.push(task.key);
+    keysByRawTask.set(task.rawTaskKey, matches);
+  }
+
+  const tasks = unresolvedTasks.map((task) => ({
+    ...task,
+    dependencies: task.dependencies.map((dependency) => {
+      const dep = String(dependency).trim();
+      if (!dep) throw new Error(`Roadmap task ${task.key} contains an empty dependency.`);
+      if (executionKeys.has(dep)) return dep;
+
+      const samePhaseKey = `${task.phaseKey}:${dep}`;
+      if (executionKeys.has(samePhaseKey)) return samePhaseKey;
+
+      const globalMatches = keysByRawTask.get(dep) ?? [];
+      if (globalMatches.length === 1) return globalMatches[0];
+      if (globalMatches.length > 1) {
+        throw new Error(`Roadmap dependency ${dep} for ${task.key} is ambiguous across phases. Use an explicit phase:task key.`);
+      }
+      throw new Error(`Roadmap dependency ${dep} for ${task.key} does not exist in the approved roadmap.`);
+    }),
+  }));
 
   const executionNo = Number(latest.data?.execution_no ?? 0) + 1;
   const now = new Date().toISOString();
@@ -169,7 +204,7 @@ export async function startProjectExecutionWithoutGlobalGate(
       assigned_agent_id: task.agentId ?? null,
       status: approvalId ? "waiting_for_approval" : "queued",
       priority: task.priority,
-      dependencies: task.dependencies.map(dep => `${task.phaseKey}:${dep}`),
+      dependencies: task.dependencies,
       waiting_on_approval_id: approvalId,
       work_weight: Math.max(0.1, Number(task.workWeight || 1)),
       idempotency_key: `project:${projectId}:execution:${executionNo}:task:${task.key}`,
