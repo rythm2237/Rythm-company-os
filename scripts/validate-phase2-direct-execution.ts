@@ -30,6 +30,7 @@ const fetchBoundaries = new Set([
   // Project OS client controls call only same-origin, authenticated RYTHM API routes.
   // They do not call providers or execute external side effects directly.
   "components/projects/project-governance-controls.tsx",
+  "components/projects/project-live-operations.tsx",
   "components/projects/project-os-controls.tsx",
   "lib/ai/agent-provider.ts",
   "lib/analytics/public-events.ts",
