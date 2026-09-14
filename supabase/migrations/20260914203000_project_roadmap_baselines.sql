@@ -142,7 +142,7 @@ begin
       where p.roadmap_id=v_roadmap_id
       group by p.id,p.weight,p.status
     )
-    select coalesce(sum(weight * pct) / nullif(sum(weight),0) / 100 * 100,0)
+    select coalesce(sum(weight * pct) / nullif(sum(weight),0),0)
       into v_percent from phase_progress;
   end if;
 
@@ -161,8 +161,12 @@ security definer
 set search_path=public
 as $$
 begin
-  perform public.refresh_project_progress_percent_v1(coalesce(new.project_id,old.project_id));
-  return coalesce(new,old);
+  if tg_op='DELETE' then
+    perform public.refresh_project_progress_percent_v1(old.project_id);
+    return old;
+  end if;
+  perform public.refresh_project_progress_percent_v1(new.project_id);
+  return new;
 end;
 $$;
 
