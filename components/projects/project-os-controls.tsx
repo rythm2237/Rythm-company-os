@@ -1,78 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProjectLiveOperations } from "@/components/projects/project-live-operations";
 
-type Props={projectId:string;canRun?:boolean;status:string;showLiveOperations?:boolean;liveMode?:"full"|"approvals";showFileUpload?:boolean};
+type RoadmapPhase={id?:string;key:string;order:number;title:string;milestone:string;weight:number;estimatedDuration:string;status?:string;outcomeProgressPercent?:number|null;tasks?:unknown[]};
+type RoadmapSummary={id:string;version:number;status:string;isBaseline:boolean;title:string;summary?:string;phases?:RoadmapPhase[]};
+type ProjectProgress={progressPercent:number;outcomeProgressPercent:number|null;hasApprovedRoadmap:boolean;roadmapVersion:number|null;roadmapStatus:string|null;currentPhase:string|null;nextMilestone:string|null;completedTasks:number;totalTasks:number;taskCompletionPercent:number};
+type Props={projectId:string;canRun?:boolean;status:string;roadmap?:RoadmapSummary|null;showLiveOperations?:boolean;liveMode?:"full"|"approvals";showFileUpload?:boolean};
+type ApiResult={ok?:boolean;error?:string;mode?:string;roadmap?:RoadmapSummary;progress?:ProjectProgress;execution?:{id:string;execution_no:number;taskCount?:number}};
 
-type ApiResult={ok?:boolean;error?:string;execution?:{id:string;execution_no:number;taskCount?:number}};
+async function jsonRequest(endpoint:string,body:unknown){const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});const data=await response.json() as ApiResult;if(!response.ok||!data.ok)throw new Error(data.error||"Request failed.");return data;}
 
-async function jsonRequest(endpoint:string,body:unknown){
-  const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
-  const data=await response.json() as ApiResult;
-  if(!response.ok||!data.ok)throw new Error(data.error||"Request failed.");
-  return data;
-}
-
-export function ProjectOsControls({projectId,status,showLiveOperations=false,liveMode="full",showFileUpload=false}:Props){
+export function ProjectOsControls({projectId,status,roadmap=null,showLiveOperations=false,liveMode="full",showFileUpload=false}:Props){
   const router=useRouter();
-  const [busy,setBusy]=useState<"run"|"pause"|"upload"|null>(null);
+  const [busy,setBusy]=useState<"run"|"pause"|"approve"|"revise"|"upload"|null>(null);
   const [message,setMessage]=useState<string>("");
-  const normalizedStatus=status.toLowerCase();
-  const isRunning=normalizedStatus==="running"||normalizedStatus==="queued";
-  const isPaused=normalizedStatus==="paused";
+  const [roadmapState,setRoadmapState]=useState<RoadmapSummary|null>(roadmap);
+  const [progress,setProgress]=useState<ProjectProgress|null>(null);
+  const normalizedStatus=status.toLowerCase();const isRunning=normalizedStatus==="running"||normalizedStatus==="queued";const isPaused=normalizedStatus==="paused";const awaitingRoadmap=roadmapState?.status==="in_review"||roadmapState?.status==="draft";
 
-  const run=async()=>{
-    setBusy("run");setMessage("");
-    try{
-      if(isPaused){
-        await jsonRequest("/api/projects/control",{projectId,action:"resume"});
-        setMessage("Project resumed. Independent work continues server-side.");
-      }else{
-        const result=await jsonRequest("/api/projects/run",{projectId});
-        setMessage(`Execution #${result.execution?.execution_no??""} started.`);
-      }
-      router.refresh();
-    }catch(error){setMessage(error instanceof Error?error.message:"Project could not start.");}
-    finally{setBusy(null);}
-  };
-  const pause=async()=>{
-    setBusy("pause");setMessage("");
-    try{
-      await jsonRequest("/api/projects/control",{projectId,action:"pause"});
-      setMessage("Project paused. Completed work is preserved and execution can be resumed.");
-      router.refresh();
-    }catch(error){setMessage(error instanceof Error?error.message:"Project could not be paused.");}
-    finally{setBusy(null);}
-  };
-  const upload=async(formData:FormData)=>{
-    setBusy("upload");setMessage("");formData.set("projectId",projectId);
-    try{
-      const response=await fetch("/api/projects/files",{method:"POST",body:formData});
-      const data=await response.json() as {ok?:boolean;error?:string;files?:unknown[]};
-      if(!response.ok||!data.ok)throw new Error(data.error||"Upload failed.");
-      setMessage(`${data.files?.length??0} file(s) added to Project Knowledge.`);router.refresh();
-    }catch(error){setMessage(error instanceof Error?error.message:"Upload failed.");}
-    finally{setBusy(null);}
-  };
+  const refreshRoadmap=useCallback(async()=>{try{const response=await fetch(`/api/projects/roadmap?projectId=${encodeURIComponent(projectId)}`,{cache:"no-store"});const data=await response.json() as ApiResult;if(response.ok&&data.ok){setRoadmapState(data.roadmap??null);setProgress(data.progress??null);}}catch{}},[projectId]);
+  useEffect(()=>{void refreshRoadmap();const timer=window.setInterval(()=>void refreshRoadmap(),15000);return()=>window.clearInterval(timer);},[refreshRoadmap]);
+
+  const run=async()=>{setBusy("run");setMessage("");try{if(isPaused&&roadmapState?.isBaseline){await jsonRequest("/api/projects/control",{projectId,action:"resume"});setMessage("Project resumed. Independent work continues server-side.");}else{const result=await jsonRequest("/api/projects/run",{projectId});if(result.roadmap)setRoadmapState(result.roadmap);setMessage(result.mode==="roadmap_review"?`Roadmap v${result.roadmap?.version??""} is ready for manager review. Execution has not started from this baseline yet.`:`Execution #${result.execution?.execution_no??""} started from the approved roadmap.`);}await refreshRoadmap();router.refresh();}catch(error){setMessage(error instanceof Error?error.message:"Project could not start.");}finally{setBusy(null);}};
+  const approveAndStart=async()=>{if(!roadmapState)return;setBusy("approve");setMessage("");try{const result=await jsonRequest("/api/projects/roadmap",{projectId,roadmapId:roadmapState.id,action:"approve_and_start"});if(result.roadmap)setRoadmapState({...roadmapState,...result.roadmap,isBaseline:true});setMessage(`Roadmap v${result.roadmap?.version??roadmapState.version} approved as baseline. Execution #${result.execution?.execution_no??""} started.`);await refreshRoadmap();router.refresh();}catch(error){setMessage(error instanceof Error?error.message:"Roadmap could not be approved.");}finally{setBusy(null);}};
+  const requestChanges=async()=>{if(!roadmapState)return;const feedback=window.prompt("What should the project team change in this roadmap?")?.trim();if(!feedback)return;setBusy("revise");setMessage("");try{await jsonRequest("/api/projects/roadmap",{projectId,roadmapId:roadmapState.id,action:"request_changes",feedback});setRoadmapState({...roadmapState,status:"rejected"});setMessage("Roadmap revision requested. Execution remains stopped until a new version is approved.");await refreshRoadmap();router.refresh();}catch(error){setMessage(error instanceof Error?error.message:"Revision request failed.");}finally{setBusy(null);}};
+  const pause=async()=>{setBusy("pause");setMessage("");try{await jsonRequest("/api/projects/control",{projectId,action:"pause"});setMessage("Project paused. Completed work is preserved and execution can be resumed.");router.refresh();}catch(error){setMessage(error instanceof Error?error.message:"Project could not be paused.");}finally{setBusy(null);}};
+  const upload=async(formData:FormData)=>{setBusy("upload");setMessage("");formData.set("projectId",projectId);try{const response=await fetch("/api/projects/files",{method:"POST",body:formData});const data=await response.json() as {ok?:boolean;error?:string;files?:unknown[]};if(!response.ok||!data.ok)throw new Error(data.error||"Upload failed.");setMessage(`${data.files?.length??0} file(s) added to Project Knowledge.`);router.refresh();}catch(error){setMessage(error instanceof Error?error.message:"Upload failed.");}finally{setBusy(null);}};
 
   return <>
     <section className="panel" style={{marginTop:18}}>
-      <div className="panel-heading"><div><p className="label">Project Control</p><h2>Run or pause project</h2></div><span className="pill">{status.replaceAll("_"," ")}</span></div>
-      <p className="subtitle">Run starts or resumes durable server-side execution. Readiness is advisory: approvals and dependencies block only the work that depends on them, while independent work continues.</p>
-      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}>
-        {isRunning
-          ? <button type="button" onClick={pause} disabled={busy!==null}>{busy==="pause"?"Pausing…":"Pause"}</button>
-          : <button type="button" onClick={run} disabled={busy!==null}>{busy==="run"?(isPaused?"Resuming…":"Starting…"):"Run"}</button>}
-      </div>
-      {showFileUpload?<form action={upload} className="auth-form" style={{marginTop:18}}>
-        <div style={{display:"grid",gridTemplateColumns:"minmax(180px,260px) 1fr",gap:12,alignItems:"end"}}>
-          <label>Document category<select name="category" defaultValue="other"><option value="contract">Contract</option><option value="amendment">Amendment</option><option value="nda">NDA</option><option value="statement_of_work">Statement of Work</option><option value="client_brief">Client Brief</option><option value="brand_guidelines">Brand Guidelines</option><option value="research">Research</option><option value="analytics">Analytics</option><option value="financial">Financial</option><option value="creative_asset">Creative Asset</option><option value="technical_documentation">Technical Documentation</option><option value="report">Report</option><option value="other">Other</option></select></label>
-          <label>Add project files<input name="files" type="file" multiple required accept=".pdf,.docx,.xlsx,.xls,.csv,.pptx,.txt,.png,.jpg,.jpeg,.webp"/></label>
-        </div>
-        <button disabled={busy!==null}>{busy==="upload"?"Uploading…":"Add to Project Knowledge"}</button>
-      </form>:null}
+      <div className="panel-heading"><div><p className="label">Project Roadmap & Control</p><h2>{awaitingRoadmap?"Review roadmap before execution":roadmapState?.isBaseline?`Roadmap v${roadmapState.version} · approved baseline`:"Create execution roadmap"}</h2></div><span className="pill">{awaitingRoadmap?`roadmap v${roadmapState?.version} · review`:roadmapState?.isBaseline?"approved baseline":status.replaceAll("_"," ")}</span></div>
+      <p className="subtitle">{awaitingRoadmap?"The project team has prepared the execution roadmap. Approving it establishes the official baseline used for phases, milestones and weighted progress. No new autonomous execution starts from this roadmap before approval.":roadmapState?.isBaseline?"Execution progress is calculated from weighted roadmap work, not from raw task count. Outcome progress is tracked separately when measurable evidence becomes available.":isRunning?"This project is running under the legacy task-count model. Create a roadmap baseline now; the existing run stays historical until you approve the new baseline.":"Run Project first creates a manager-reviewable roadmap. Autonomous execution starts only after the roadmap is finalized and approved."}</p>
+      {roadmapState?.summary?<p className="security-note">{roadmapState.summary}</p>:null}
+      {roadmapState?.phases?.length?<div className="data-list" style={{marginTop:16}}>{roadmapState.phases.map(phase=><div className="data-row" key={phase.id??phase.key}><div style={{width:"100%"}}><strong>{phase.order}. {phase.title} · {Number(phase.weight).toFixed(Number(phase.weight)%1?1:0)}%</strong><span>{phase.milestone||phase.estimatedDuration||"Milestone defined in roadmap"}</span></div><span className="pill">{(phase.status??"not_started").replaceAll("_"," ")}</span></div>)}</div>:null}
+      {progress?<div className="project-card-metrics" style={{marginTop:16}}><div><span>Roadmap progress</span><strong>{progress.hasApprovedRoadmap?`${progress.progressPercent}%`:"Not baselined"}</strong></div><div><span>Outcome progress</span><strong>{progress.outcomeProgressPercent==null?"Pending evidence":`${progress.outcomeProgressPercent}%`}</strong></div><div><span>Task count</span><strong>{progress.completedTasks}/{progress.totalTasks}</strong></div><div><span>Task completion</span><strong>{progress.taskCompletionPercent}%</strong></div><div><span>Current phase</span><strong>{progress.currentPhase??"—"}</strong></div><div><span>Next milestone</span><strong>{progress.nextMilestone??"—"}</strong></div></div>:null}
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}>{awaitingRoadmap?<><button type="button" onClick={approveAndStart} disabled={busy!==null}>{busy==="approve"?"Approving…":"Approve & Start"}</button><button type="button" className="secondary-button" onClick={requestChanges} disabled={busy!==null}>{busy==="revise"?"Submitting…":"Request changes"}</button></>:isRunning?<>{!roadmapState?.isBaseline?<button type="button" onClick={run} disabled={busy!==null}>{busy==="run"?"Creating roadmap…":"Create roadmap baseline"}</button>:null}<button type="button" className={roadmapState?.isBaseline?undefined:"secondary-button"} onClick={pause} disabled={busy!==null}>{busy==="pause"?"Pausing…":"Pause"}</button></>:<button type="button" onClick={run} disabled={busy!==null}>{busy==="run"?(isPaused&&roadmapState?.isBaseline?"Resuming…":roadmapState?.isBaseline?"Starting…":"Creating roadmap…"):(isPaused&&roadmapState?.isBaseline?"Resume":"Run Project")}</button>}</div>
+      {!roadmapState&&!isRunning?<p className="security-note">First run creates a manager-reviewable roadmap. Execution begins only after the roadmap is finalized and approved.</p>:null}
+      {showFileUpload?<form action={upload} className="auth-form" style={{marginTop:18}}><div style={{display:"grid",gridTemplateColumns:"minmax(180px,260px) 1fr",gap:12,alignItems:"end"}}><label>Document category<select name="category" defaultValue="other"><option value="contract">Contract</option><option value="amendment">Amendment</option><option value="nda">NDA</option><option value="statement_of_work">Statement of Work</option><option value="client_brief">Client Brief</option><option value="brand_guidelines">Brand Guidelines</option><option value="research">Research</option><option value="analytics">Analytics</option><option value="financial">Financial</option><option value="creative_asset">Creative Asset</option><option value="technical_documentation">Technical Documentation</option><option value="report">Report</option><option value="other">Other</option></select></label><label>Add project files<input name="files" type="file" multiple required accept=".pdf,.docx,.xlsx,.xls,.csv,.pptx,.txt,.png,.jpg,.jpeg,.webp"/></label></div><button disabled={busy!==null}>{busy==="upload"?"Uploading…":"Add to Project Knowledge"}</button></form>:null}
       {message?<p className="security-note" role="status">{message}</p>:null}
     </section>
     {showLiveOperations?<ProjectLiveOperations projectId={projectId} initialStatus={status} mode={liveMode}/>:null}
