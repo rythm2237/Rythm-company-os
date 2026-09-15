@@ -151,6 +151,14 @@ export function ConnectionFlightDeck({
         const payload = await response.json() as {session:LiveStatus|null};
         if (active && payload.session) {
           const incoming = payload.session;
+          const incomingTerminal = ["completed","failed","cancelled","expired"].includes(incoming.sessionStatus);
+          if (incomingTerminal) {
+            viewerUrlRef.current = null;
+            browserSessionRef.current = null;
+            setLive({ ...incoming, browser:null, browserSessionId:null, browserSessionExists:false });
+            setPollError(null);
+            return;
+          }
           if (incoming.browserSessionId && browserSessionRef.current && incoming.browserSessionId !== browserSessionRef.current) {
             viewerUrlRef.current = null;
           }
@@ -176,12 +184,15 @@ export function ConnectionFlightDeck({
   },[]);
 
   const terminal = ["completed","failed","cancelled","expired"].includes(live.sessionStatus);
-  const viewer = live.browser?.viewerUrl ?? null;
-  const currentDomain = domainOf(live.browser?.currentUrl);
-  const providerError = isProviderOAuthError(live.browser?.currentUrl);
+  const completed = live.sessionStatus === "completed";
+  const viewer = terminal ? null : live.browser?.viewerUrl ?? null;
+  const currentDomain = terminal ? null : domainOf(live.browser?.currentUrl);
+  const providerError = !terminal && isProviderOAuthError(live.browser?.currentUrl);
   const autoHuman = Boolean(viewer) && !terminal && live.requiresUserAction && live.sessionStatus === "waiting_for_user";
   const humanInteractive = live.controlMode === "human" || autoHuman;
   const noResources = live.userActionType === "RESOURCE_CHOICE_REQUIRED" && /no matching provider resource/i.test(live.humanTakeoverReason ?? "");
+  const discoveryEvidence = live.events.find(event => event.event_type === "resource.discovered")?.safe_message ?? null;
+  const verificationEvidence = live.events.find(event => event.event_type === "connection.verified")?.safe_message ?? null;
   const progress = useMemo(() => {
     if (!live.totalSteps) return 0;
     return Math.max(4,Math.min(100,Math.round(((live.currentStep + (live.sessionStatus === "completed" ? 1 : 0))/live.totalSteps)*100)));
@@ -202,7 +213,7 @@ export function ConnectionFlightDeck({
           </div>
           <div className="flight-deck-window-controls">
             <button type="button" onClick={() => setFull(value => !value)} aria-label={full?"Exit expanded mode":"Expand Flight Deck"}>{full?"↙":"↗"}</button>
-            <button type="button" onClick={() => setOpen(false)} title="The agent continues unless paused or stopped">Minimize</button>
+            <button type="button" onClick={() => setOpen(false)} title={terminal?"Close Flight Deck":"The agent continues unless paused or stopped"}>{terminal?"Close":"Minimize"}</button>
           </div>
         </header>
 
@@ -212,11 +223,18 @@ export function ConnectionFlightDeck({
           <section className="flight-deck-browser-shell">
             <div className="flight-deck-browser-toolbar">
               <span className="flight-deck-browser-lights" aria-hidden="true"><i/><i/><i/></span>
-              <div className="flight-deck-browser-address"><span>SECURE CLOUD BROWSER</span><strong>{currentDomain ?? "Provisioning isolated browser…"}</strong></div>
-              <span className={`flight-deck-control-badge ${humanInteractive?"is-human":"is-agent"}`}>{humanInteractive?"YOU HAVE CONTROL":"AI CONTROL"}</span>
+              <div className="flight-deck-browser-address"><span>{completed?"VERIFIED CONNECTION":"SECURE CLOUD BROWSER"}</span><strong>{completed?"Execution channel closed safely":currentDomain ?? "Provisioning isolated browser…"}</strong></div>
+              <span className={`flight-deck-control-badge ${humanInteractive?"is-human":"is-agent"}`}>{completed?"COMPLETE":humanInteractive?"YOU HAVE CONTROL":"AI CONTROL"}</span>
             </div>
             <div className={`flight-deck-browser${humanInteractive?" is-interactive":" is-observe"}`}>
-              {viewer ? <>
+              {completed ? <div className="flight-deck-provisioning">
+                <div className="flight-deck-reactor" aria-hidden="true"><span/><i/><b/></div>
+                <p>CONNECTION VERIFIED</p>
+                <h3>{providerName} is connected.</h3>
+                <span>{verificationEvidence ?? "Provider access was verified before the mission completed."}</span>
+                {discoveryEvidence ? <span>{discoveryEvidence}</span> : null}
+                <span>The secure cloud browser session has been closed. No reconnect or further browser action is required.</span>
+              </div> : viewer ? <>
                 <iframe src={viewer} title={`${providerName} live secure browser`} referrerPolicy="no-referrer" allow="clipboard-read; clipboard-write" />
                 {!humanInteractive && !terminal ? <div className="flight-deck-observe-shield"><span><i/>Live · Agent operating</span><small>When a Human-only step appears, RYTHM pauses and hands the browser to you automatically.</small></div> : null}
               </> : <div className="flight-deck-provisioning">
@@ -233,15 +251,15 @@ export function ConnectionFlightDeck({
             <section className="flight-deck-mission-card">
               <div className="flight-deck-section-kicker"><span>CURRENT MISSION</span><b>{live.totalSteps ? `${Math.min(live.currentStep+1,live.totalSteps)}/${live.totalSteps}` : "—"}</b></div>
               <h3>{live.step?.title ?? statusText(live)}</h3>
-              <p>{live.humanTakeoverReason ?? live.step?.description ?? "RYTHM is synchronizing the provider connection state."}</p>
-              {live.requiresUserAction ? <div className="flight-deck-human-callout"><i/>{autoHuman ? "Control automatically handed to you" : "Human decision boundary reached"}</div> : <div className="flight-deck-agent-intent"><i/>Agent intent: advance only after verifiable provider evidence.</div>}
+              <p>{completed?"Provider access is verified and the connection mission is complete.":live.humanTakeoverReason ?? live.step?.description ?? "RYTHM is synchronizing the provider connection state."}</p>
+              {completed ? <div className="flight-deck-agent-intent"><i/>Verification evidence recorded. Secure browser closed.</div> : live.requiresUserAction ? <div className="flight-deck-human-callout"><i/>{autoHuman ? "Control automatically handed to you" : "Human decision boundary reached"}</div> : <div className="flight-deck-agent-intent"><i/>Agent intent: advance only after verifiable provider evidence.</div>}
             </section>
 
             {noResources ? <section className="flight-deck-provider-error"><div className="flight-deck-section-kicker"><span>RESOURCE RECOVERY</span><b>ACTION</b></div><h3>No accessible provider resource was found</h3><p>The account is authorized, but it does not expose the required resource to RYTHM. Restart the connection and choose an account that owns or has access to the required property.</p><form action={restartCustomerConnectionAgent}><input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<button className="flight-deck-primary" type="submit">Restart & choose another account</button></form></section> : null}
 
             <section className="flight-deck-controls-card">
-              <div className="flight-deck-section-kicker"><span>CONTROL PLANE</span><b>{humanInteractive?"HUMAN":live.controlMode.toUpperCase()}</b></div>
-              {autoHuman ? <p>RYTHM has paused browser automation for this Human-only step. Complete the provider action directly in the live browser; verified completion returns control to AI automatically.</p> : null}
+              <div className="flight-deck-section-kicker"><span>CONTROL PLANE</span><b>{completed?"CLOSED":humanInteractive?"HUMAN":live.controlMode.toUpperCase()}</b></div>
+              {completed ? <p>Mission complete. The secure execution channel is closed and no further action is required.</p> : autoHuman ? <p>RYTHM has paused browser automation for this Human-only step. Complete the provider action directly in the live browser; verified completion returns control to AI automatically.</p> : null}
               <div className="flight-deck-controls">
                 {!terminal && viewer && !humanInteractive && !providerError ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="take_control"/>
@@ -268,7 +286,7 @@ export function ConnectionFlightDeck({
             </section>
 
             <section className="flight-deck-timeline-card">
-              <div className="flight-deck-section-kicker"><span>AGENT TRACE</span><b>LIVE</b></div>
+              <div className="flight-deck-section-kicker"><span>AGENT TRACE</span><b>{completed?"RECORDED":"LIVE"}</b></div>
               <div className="flight-deck-timeline">
                 {live.events.length ? live.events.slice(0,7).map((event,index)=><article key={event.id} className={index===0?"is-latest":""}>
                   <i/><div><strong>{event.safe_message ?? event.event_type}</strong><small>{new Date(event.created_at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})}</small></div>
@@ -287,9 +305,9 @@ export function ConnectionFlightDeck({
         <footer className="flight-deck-footer">
           <form action={askCustomerConnectionAgent} className="flight-deck-ask">
             <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}
-            <span>ASK CONNECTION AGENT</span><input name="question" maxLength={300} placeholder="What are you doing right now?"/><button type="submit">Ask</button>
+            <span>ASK CONNECTION AGENT</span><input name="question" maxLength={300} placeholder={completed?"Ask about this completed connection…":"What are you doing right now?"}/><button type="submit">Ask</button>
           </form>
-          <div className="flight-deck-background-note"><i/>You can leave this page. Durable execution continues until RYTHM needs you, completes, pauses, or is stopped.</div>
+          <div className="flight-deck-background-note"><i/>{completed?"Mission complete. Verification evidence has been recorded and the secure browser is closed.":"You can leave this page. Durable execution continues until RYTHM needs you, completes, pauses, or is stopped."}</div>
           {pollError ? <div className="flight-deck-poll-error">{pollError}</div> : null}
         </footer>
       </section>
