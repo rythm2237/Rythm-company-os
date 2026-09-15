@@ -78,6 +78,7 @@ export default function ProductNav({ access, organization }: Props) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+  const [desktopPreferenceLoaded, setDesktopPreferenceLoaded] = useState(false);
 
   useEffect(() => setMobileOpen(false), [pathname]);
   useEffect(() => {
@@ -86,13 +87,16 @@ export default function ProductNav({ access, organization }: Props) {
       setDesktopCollapsed(stored === "1");
     } catch {
       setDesktopCollapsed(false);
+    } finally {
+      setDesktopPreferenceLoaded(true);
     }
   }, []);
   useEffect(() => {
+    if (!desktopPreferenceLoaded) return;
     document.documentElement.classList.toggle("rythm-nav-collapsed", desktopCollapsed);
     try { window.localStorage.setItem(DESKTOP_NAV_STORAGE_KEY, desktopCollapsed ? "1" : "0"); } catch { /* storage may be unavailable */ }
     return () => document.documentElement.classList.remove("rythm-nav-collapsed");
-  }, [desktopCollapsed]);
+  }, [desktopCollapsed, desktopPreferenceLoaded]);
 
   const visibleGroups = groups.map((group) => ({ ...group, items: group.items.filter((item) => canShowItem(item.href, access)) })).filter((group) => group.items.length > 0);
 
