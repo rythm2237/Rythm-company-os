@@ -16,3 +16,7 @@ The Connection Flight Deck is the universal live execution surface for governed 
 ## Internal rollout providers
 
 Google Search Console, Google Analytics 4, Google Workspace, Microsoft 365, GitHub, Vercel, Supabase and Cloudflare share this experience. The rollout remains `internal` and organization-allowlisted until provider E2E validation is complete.
+
+## Release gate
+
+The implementation must pass the repository CI build, direct-execution classification guard, Customer Connection Phase 1/2 validation, and production deployment readiness before provider E2E rollout advances.
