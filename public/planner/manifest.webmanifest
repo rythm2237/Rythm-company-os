@@ -1,12 +1,12 @@
 {
   "name": "Life Rhythm Planner",
   "short_name": "Life Rhythm",
-  "description": "Private, adaptive weekly planning that works offline.",
-  "start_url": "/planner/index.html",
+  "description": "Private, adaptive life planning with projects and visual weekly capacity.",
+  "start_url": "/planner/v2.html",
   "scope": "/planner/",
   "display": "standalone",
   "background_color": "#080b12",
-  "theme_color": "#0b1020",
+  "theme_color": "#0a0d14",
   "orientation": "any",
   "icons": [
     {"src":"/planner/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
