@@ -12,8 +12,8 @@ alter table public.integration_providers drop constraint if exists integration_p
 alter table public.integration_providers add constraint integration_providers_ai_setup_rollout_check
   check (ai_setup_rollout in ('off','internal','beta','limited','general'));
 
--- Start conservatively. OAuth-first providers can use the orchestrator internally while
--- Computer Use remains dependent on a separately configured secure cloud-browser runtime.
+-- Conservative rollout: OAuth-first providers are INTERNAL only. Token/manual-handoff
+-- providers remain OFF until their customer flow has been validated in the secure runtime.
 update public.integration_providers
 set ai_setup_enabled = provider_key in ('google_search_console','google_analytics','google_workspace','microsoft_365'),
     ai_setup_rollout = case when provider_key in ('google_search_console','google_analytics','google_workspace','microsoft_365') then 'internal' else 'off' end,
@@ -55,7 +55,7 @@ set started_by_user_id = coalesce(started_by_user_id, created_by_user_id),
     automation_mode = coalesce(nullif(automation_mode,''),'manual'),
     last_heartbeat_at = coalesce(last_heartbeat_at, updated_at, created_at),
     started_at = coalesce(started_at, created_at)
-where started_by_user_id is null or session_status='queued';
+where started_by_user_id is null;
 
 alter table public.integration_setup_sessions drop constraint if exists integration_setup_sessions_session_status_check;
 alter table public.integration_setup_sessions add constraint integration_setup_sessions_session_status_check check (session_status in (
@@ -104,14 +104,15 @@ create policy connection_setup_session_events_owner_write on public.connection_s
   for all to authenticated using (public.is_org_owner(organization_id)) with check (public.is_org_owner(organization_id));
 create index if not exists connection_setup_session_events_session_idx on public.connection_setup_session_events(session_id,created_at desc);
 
--- Prevent accidental secret-shaped telemetry. This is a coarse defense in depth rule; the
--- application also emits allowlisted metadata only.
+-- Defense in depth: only structured metadata is secret-scanned. Human-readable safety
+-- explanations may legitimately contain words such as "password" or "MFA" and must not
+-- break the audit path. The application emits allowlisted/redacted metadata as well.
 create or replace function public.reject_connection_setup_secret_metadata_v1()
 returns trigger language plpgsql security invoker set search_path=public as $$
 declare serialized text;
 begin
-  serialized := lower(coalesce(new.metadata,'{}'::jsonb)::text || ' ' || coalesce(new.safe_message,''));
-  if serialized ~ '(password|passcode|otp|mfa[_ -]?code|access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|private[_ -]?key)' then
+  serialized := lower(coalesce(new.metadata,'{}'::jsonb)::text);
+  if serialized ~ '(password|passcode|otp|mfa[_ -]?code|access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|private[_ -]?key|cookie)' then
     raise exception 'Sensitive connection setup telemetry is forbidden';
   end if;
   return new;
@@ -120,8 +121,8 @@ drop trigger if exists trg_reject_connection_setup_secret_metadata on public.con
 create trigger trg_reject_connection_setup_secret_metadata before insert or update on public.connection_setup_session_events
 for each row execute function public.reject_connection_setup_secret_metadata_v1();
 
--- Atomically claim one runnable AI setup session. service_role only; customer sessions are
--- controlled through tenant-scoped application routes.
+-- Atomically claim one runnable AI setup session. service_role only; user-facing routes
+-- remain tenant-scoped. A global concurrency cap is enforced by the dispatcher.
 create or replace function public.claim_connection_setup_session_v1()
 returns setof public.integration_setup_sessions
 language plpgsql security definer set search_path=public as $$
@@ -135,7 +136,8 @@ begin
     and (s.next_attempt_at is null or s.next_attempt_at<=now())
     and (s.expires_at is null or s.expires_at>now())
     and p.ai_setup_enabled=true and p.ai_setup_rollout<>'off'
-  order by case s.session_status when 'running' then 0 when 'verifying' then 1 when 'retrying' then 2 else 3 end, s.updated_at asc
+  order by case s.session_status when 'running' then 0 when 'verifying' then 1 when 'retrying' then 2 else 3 end,
+           s.updated_at asc
   for update skip locked
   limit 1;
   if selected_id is null then return; end if;
