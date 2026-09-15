@@ -34,6 +34,7 @@ const GOOGLE_WORKSPACE_SCOPES = [
   "https://www.googleapis.com/auth/calendar.readonly",
 ];
 const MICROSOFT_SCOPES = ["openid", "profile", "email", "offline_access", "User.Read"];
+const GOOGLE_SHARED_CALLBACK = "/api/integrations/google-workspace/callback";
 
 export const AGENT_OAUTH_COOKIE_NAMES = [
   "rythm_agent_oauth_state",
@@ -46,6 +47,10 @@ export const AGENT_OAUTH_COOKIE_NAMES = [
 
 export function isAgentOAuthProvider(providerKey: string): providerKey is AgentOAuthProviderKey {
   return ["google_search_console", "google_analytics", "google_workspace", "microsoft_365"].includes(providerKey);
+}
+
+export function agentOAuthCallbackPath(providerKey: AgentOAuthProviderKey) {
+  return providerKey === "microsoft_365" ? "/api/integrations/microsoft-365/callback" : GOOGLE_SHARED_CALLBACK;
 }
 
 export function connectionAgentOrigin() {
@@ -76,7 +81,7 @@ function config(providerKey: AgentOAuthProviderKey): ProviderConfig {
     return {
       clientId,
       clientSecret,
-      redirectPath: "/api/integrations/microsoft-365/callback",
+      redirectPath: agentOAuthCallbackPath(providerKey),
       scopes: MICROSOFT_SCOPES,
       authorizationUrl: `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/authorize`,
       prompt: "select_account",
@@ -84,15 +89,15 @@ function config(providerKey: AgentOAuthProviderKey): ProviderConfig {
   }
   const { clientId, clientSecret } = googleCredentials();
   if (providerKey === "google_search_console") return {
-    clientId, clientSecret, redirectPath: "/api/integrations/google-search-console/callback",
+    clientId, clientSecret, redirectPath: agentOAuthCallbackPath(providerKey),
     scopes: ["openid", "email", GOOGLE_GSC_SCOPE], authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "consent",
   };
   if (providerKey === "google_analytics") return {
-    clientId, clientSecret, redirectPath: "/api/integrations/google-analytics/callback",
+    clientId, clientSecret, redirectPath: agentOAuthCallbackPath(providerKey),
     scopes: ["openid", "email", GOOGLE_GA_SCOPE], authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "consent",
   };
   return {
-    clientId, clientSecret, redirectPath: "/api/integrations/google-workspace/callback",
+    clientId, clientSecret, redirectPath: agentOAuthCallbackPath(providerKey),
     scopes: GOOGLE_WORKSPACE_SCOPES, authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "consent",
   };
 }
