@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { askCustomerConnectionAgent, controlCustomerConnectionAgent } from "./connection-agent-actions";
 import type { ProviderSetupPlan } from "@/lib/integrations/connections/setup-plans";
 
@@ -33,6 +34,7 @@ type LiveStatus = {
   requiresUserAction:boolean;
   userActionType:string|null;
   humanTakeoverReason:string|null;
+  browserSessionId:string|null;
   browserSessionExists:boolean;
   step:{stepKey:string;title:string;description:string;risk:string}|null;
   securityNote:string;
@@ -70,6 +72,14 @@ function domainOf(url:string|null|undefined) {
   try { return new URL(url).hostname; } catch { return null; }
 }
 
+function isProviderOAuthError(url:string|null|undefined) {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.endsWith("google.com") && parsed.pathname.includes("/oauth/error");
+  } catch { return false; }
+}
+
 export function ConnectionFlightDeck({
   integrationId,
   projectId,
@@ -91,9 +101,12 @@ export function ConnectionFlightDeck({
   initialBrowser:BrowserView;
   openInitially?:boolean;
 }) {
+  const [mounted,setMounted] = useState(false);
   const [open,setOpen] = useState(openInitially);
-  const [full,setFull] = useState(false);
+  const [full,setFull] = useState(openInitially);
   const [pollError,setPollError] = useState<string|null>(null);
+  const viewerUrlRef = useRef<string|null>(initialBrowser?.viewerUrl ?? null);
+  const browserSessionRef = useRef<string|null>(null);
   const [live,setLive] = useState<LiveStatus>({
     id:initialSession.id,
     integrationId,
@@ -108,6 +121,7 @@ export function ConnectionFlightDeck({
     requiresUserAction:initialSession.requires_user_action,
     userActionType:initialSession.user_action_type,
     humanTakeoverReason:initialSession.human_takeover_reason ?? null,
+    browserSessionId:null,
     browserSessionExists:Boolean(initialBrowser),
     step:plan?.steps[initialSession.current_step] ? {
       stepKey:plan.steps[initialSession.current_step].stepKey,
@@ -120,6 +134,14 @@ export function ConnectionFlightDeck({
     events:initialEvents,
   });
 
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open || !mounted) return;
+    document.body.classList.add("flight-deck-is-open");
+    return () => document.body.classList.remove("flight-deck-is-open");
+  },[open,mounted]);
+
   useEffect(() => {
     let active = true;
     const poll = async () => {
@@ -128,7 +150,14 @@ export function ConnectionFlightDeck({
         if (!response.ok) throw new Error(`Live status unavailable (${response.status})`);
         const payload = await response.json() as {session:LiveStatus|null};
         if (active && payload.session) {
-          setLive(payload.session);
+          const incoming = payload.session;
+          if (incoming.browserSessionId && browserSessionRef.current && incoming.browserSessionId !== browserSessionRef.current) {
+            viewerUrlRef.current = null;
+          }
+          if (incoming.browserSessionId) browserSessionRef.current = incoming.browserSessionId;
+          if (!viewerUrlRef.current && incoming.browser?.viewerUrl) viewerUrlRef.current = incoming.browser.viewerUrl;
+          const browser = incoming.browser ? { ...incoming.browser, viewerUrl: viewerUrlRef.current ?? incoming.browser.viewerUrl } : incoming.browser;
+          setLive({ ...incoming, browser });
           setPollError(null);
         }
       } catch (error) {
@@ -136,7 +165,7 @@ export function ConnectionFlightDeck({
       }
     };
     poll();
-    const timer = window.setInterval(poll, 3500);
+    const timer = window.setInterval(poll, 5000);
     return () => { active=false; window.clearInterval(timer); };
   },[initialSession.id]);
 
@@ -149,20 +178,15 @@ export function ConnectionFlightDeck({
   const terminal = ["completed","failed","cancelled","expired"].includes(live.sessionStatus);
   const viewer = live.browser?.viewerUrl ?? null;
   const currentDomain = domainOf(live.browser?.currentUrl);
+  const providerError = isProviderOAuthError(live.browser?.currentUrl);
   const humanInteractive = live.controlMode === "human";
   const progress = useMemo(() => {
     if (!live.totalSteps) return 0;
     return Math.max(4,Math.min(100,Math.round(((live.currentStep + (live.sessionStatus === "completed" ? 1 : 0))/live.totalSteps)*100)));
   },[live.currentStep,live.totalSteps,live.sessionStatus]);
 
-  return <>
-    <button type="button" className="flight-deck-launch" onClick={() => setOpen(true)}>
-      <span className="flight-deck-launch-orb" aria-hidden="true"><i/><i/><i/></span>
-      <span><strong>Open Connection Flight Deck</strong><small>{statusText(live)}</small></span>
-      <b aria-hidden="true">↗</b>
-    </button>
-
-    {open ? <div className="flight-deck-backdrop" role="dialog" aria-modal="true" aria-label={`${providerName} Connection Flight Deck`}>
+  const deck = open && mounted ? createPortal(
+    <div className="flight-deck-backdrop" role="dialog" aria-modal="true" aria-label={`${providerName} Connection Flight Deck`}>
       <section className={`flight-deck${full ? " is-full" : ""}`}>
         <div className="flight-deck-ambient" aria-hidden="true"><i/><i/><i/></div>
         <header className="flight-deck-header">
@@ -171,7 +195,7 @@ export function ConnectionFlightDeck({
             <div><p>RYTHM CONNECTION FLIGHT DECK</p><h2>{providerName}</h2></div>
           </div>
           <div className="flight-deck-header-state">
-            <span className={`flight-deck-status is-${statusTone(live)}`}><i/>{statusText(live)}</span>
+            <span className={`flight-deck-status is-${providerError ? "danger" : statusTone(live)}`}><i/>{providerError ? "Provider authorization error" : statusText(live)}</span>
             {currentDomain ? <span className="flight-deck-domain">{currentDomain}</span> : null}
           </div>
           <div className="flight-deck-window-controls">
@@ -203,6 +227,7 @@ export function ConnectionFlightDeck({
           </section>
 
           <aside className="flight-deck-sidecar">
+            {providerError ? <section className="flight-deck-provider-error"><div className="flight-deck-section-kicker"><span>PROVIDER SIGNAL</span><b>BLOCKED</b></div><h3>Authorization request was rejected</h3><p>The provider returned an OAuth error. RYTHM will not loop or pretend the browser is progressing. Stop this session and restart after the authorization configuration is corrected.</p></section> : null}
             <section className="flight-deck-mission-card">
               <div className="flight-deck-section-kicker"><span>CURRENT MISSION</span><b>{live.totalSteps ? `${Math.min(live.currentStep+1,live.totalSteps)}/${live.totalSteps}` : "—"}</b></div>
               <h3>{live.step?.title ?? statusText(live)}</h3>
@@ -213,7 +238,7 @@ export function ConnectionFlightDeck({
             <section className="flight-deck-controls-card">
               <div className="flight-deck-section-kicker"><span>CONTROL PLANE</span><b>{live.controlMode.toUpperCase()}</b></div>
               <div className="flight-deck-controls">
-                {!terminal && viewer && live.controlMode !== "human" ? <form action={controlCustomerConnectionAgent}>
+                {!terminal && viewer && live.controlMode !== "human" && !providerError ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="take_control"/>
                   <button className="flight-deck-primary" type="submit">Take Control</button>
                 </form> : null}
@@ -263,6 +288,16 @@ export function ConnectionFlightDeck({
           {pollError ? <div className="flight-deck-poll-error">{pollError}</div> : null}
         </footer>
       </section>
-    </div> : null}
+    </div>,
+    document.body,
+  ) : null;
+
+  return <>
+    <button type="button" className="flight-deck-launch" onClick={() => setOpen(true)}>
+      <span className="flight-deck-launch-orb" aria-hidden="true"><i/><i/><i/></span>
+      <span><strong>Open Connection Flight Deck</strong><small>{statusText(live)}</small></span>
+      <b aria-hidden="true">↗</b>
+    </button>
+    {deck}
   </>;
 }
