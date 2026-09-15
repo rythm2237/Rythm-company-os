@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -12,6 +13,8 @@ const COOKIE_PREFIX = "rythm_connection_resume_";
 function text(value: FormDataEntryValue | null) { return String(value ?? "").trim(); }
 function setupUrl(id:string,projectId:string,key:"message"|"error"|"agentAnswer",message:string){const query=new URLSearchParams({[key]:message});if(projectId)query.set("project",projectId);return `/integrations/${encodeURIComponent(id)}/setup?${query.toString()}`;}
 function cookieName(sessionId:string){return `${COOKIE_PREFIX}${sessionId.replace(/[^a-zA-Z0-9_-]/g,"")}`;}
+function hashToken(token:string){return createHash("sha256").update(token).digest("hex");}
+function secureEqual(left:string,right:string){const a=Buffer.from(left);const b=Buffer.from(right);return a.length===b.length&&timingSafeEqual(a,b);}
 
 export async function startCustomerConnectionAgent(formData:FormData){
   const context=await requireActiveOwnerOrganizationContext();
@@ -19,6 +22,7 @@ export async function startCustomerConnectionAgent(formData:FormData){
   if(!integrationId)redirect("/integrations?error=Connection%20is%20required.");
   const connection=await context.supabase.from("organization_integrations").select("id").eq("id",integrationId).eq("organization_id",context.organizationId).maybeSingle();
   if(!connection.data)redirect(setupUrl(integrationId,projectId,"error","Connection not found."));
+  let message="AI setup started.";
   try{
     const service=createExecutionServiceClient();
     const started=await startConnectionSetupAgent(service,{organizationId:context.organizationId,projectId:projectId||null,connectionId:integrationId,userId:context.user.id});
@@ -26,8 +30,11 @@ export async function startCustomerConnectionAgent(formData:FormData){
     jar.set(cookieName(started.sessionId),started.resumeToken,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"strict",path:`/integrations/${integrationId}/setup`,maxAge:10*60});
     await dispatchConnectionSetupSessions(service,{limit:1});
     revalidatePath(`/integrations/${integrationId}/setup`);
-    redirect(setupUrl(integrationId,projectId,"message",started.resumed?"AI setup session resumed.":"AI setup started."));
-  }catch(error){redirect(setupUrl(integrationId,projectId,"error",error instanceof Error?error.message:"AI setup could not be started."));}
+    message=started.resumed?"AI setup session resumed.":"AI setup started.";
+  }catch(error){
+    redirect(setupUrl(integrationId,projectId,"error",error instanceof Error?error.message:"AI setup could not be started."));
+  }
+  redirect(setupUrl(integrationId,projectId,"message",message));
 }
 
 export async function controlCustomerConnectionAgent(formData:FormData){
@@ -35,14 +42,25 @@ export async function controlCustomerConnectionAgent(formData:FormData){
   const integrationId=text(formData.get("integrationId"));const projectId=text(formData.get("projectId"));const sessionId=text(formData.get("sessionId"));
   const command=text(formData.get("command")) as "take_control"|"return_control"|"pause"|"resume"|"stop";
   if(!integrationId||!sessionId||!["take_control","return_control","pause","resume","stop"].includes(command))redirect(setupUrl(integrationId,projectId,"error","Invalid Connection Agent command."));
+  let message="Connection Agent updated.";
   try{
     const service=createExecutionServiceClient();const jar=await cookies();const resumeToken=jar.get(cookieName(sessionId))?.value;
+    if(command==="take_control"||command==="return_control"){
+      if(!resumeToken)throw new Error("A valid short-lived resume token is required for browser control transfer.");
+      const stored=await context.supabase.from("integration_setup_sessions").select("resume_token_hash").eq("id",sessionId).eq("organization_id",context.organizationId).maybeSingle();
+      const expected=String(stored.data?.resume_token_hash??"");
+      const presented=hashToken(resumeToken);
+      if(!expected||!secureEqual(expected,presented))throw new Error("The browser control resume token is no longer valid for this setup session.");
+    }
     await controlConnectionSetupSession(service,{organizationId:context.organizationId,userId:context.user.id,sessionId,command,resumeToken});
     if(command==="return_control"||command==="resume")await dispatchConnectionSetupSessions(service,{limit:1});
     if(command==="stop")jar.delete(cookieName(sessionId));
     revalidatePath(`/integrations/${integrationId}/setup`);
-    redirect(setupUrl(integrationId,projectId,"message",command==="take_control"?"You have control.":command==="return_control"?"AI resumed.":command==="pause"?"AI setup paused.":command==="resume"?"AI setup resumed.":"AI setup stopped."));
-  }catch(error){redirect(setupUrl(integrationId,projectId,"error",error instanceof Error?error.message:"Connection Agent command failed."));}
+    message=command==="take_control"?"You have control.":command==="return_control"?"AI resumed.":command==="pause"?"AI setup paused.":command==="resume"?"AI setup resumed.":"AI setup stopped.";
+  }catch(error){
+    redirect(setupUrl(integrationId,projectId,"error",error instanceof Error?error.message:"Connection Agent command failed."));
+  }
+  redirect(setupUrl(integrationId,projectId,"message",message));
 }
 
 export async function askCustomerConnectionAgent(formData:FormData){
