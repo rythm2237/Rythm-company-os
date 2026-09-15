@@ -92,15 +92,15 @@ function config(providerKey: AgentOAuthProviderKey): ProviderConfig {
   const { clientId, clientSecret } = googleCredentials();
   if (providerKey === "google_search_console") return {
     clientId, clientSecret, redirectPath: agentOAuthCallbackPath(providerKey),
-    scopes: ["openid", "email", GOOGLE_GSC_SCOPE], authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "consent",
+    scopes: ["openid", "email", GOOGLE_GSC_SCOPE], authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "select_account consent",
   };
   if (providerKey === "google_analytics") return {
     clientId, clientSecret, redirectPath: agentOAuthCallbackPath(providerKey),
-    scopes: ["openid", "email", GOOGLE_GA_SCOPE], authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "consent",
+    scopes: ["openid", "email", GOOGLE_GA_SCOPE], authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "select_account consent",
   };
   return {
     clientId, clientSecret, redirectPath: agentOAuthCallbackPath(providerKey),
-    scopes: GOOGLE_WORKSPACE_SCOPES, authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "consent",
+    scopes: GOOGLE_WORKSPACE_SCOPES, authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "select_account consent",
   };
 }
 
@@ -174,7 +174,7 @@ export function prepareAgentOAuthLaunch(input: {
   } else {
     authorizationUrl.searchParams.set("access_type", "offline");
     authorizationUrl.searchParams.set("include_granted_scopes", "true");
-    authorizationUrl.searchParams.set("prompt", provider.prompt || "consent");
+    authorizationUrl.searchParams.set("prompt", provider.prompt || "select_account consent");
   }
 
   const callbackUrl = `${origin}${provider.redirectPath}`;
