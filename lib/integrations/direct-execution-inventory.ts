@@ -19,6 +19,17 @@ export type DirectExecutionInventoryItem = {
 
 export const DIRECT_EXECUTION_INVENTORY: DirectExecutionInventoryItem[] = [
   {
+    path: "lib/integrations/computer-use/runtime.ts",
+    classification: ["B", "D", "H"],
+    disposition: "platform_control_boundary",
+    owner: "Integration Gateway / Connection Setup Agent",
+    scope: "Allowlisted secure cloud-browser session lifecycle used only for connection setup control-plane navigation, observation, and Human Takeover",
+    risk: "External browser infrastructure network access; provider credentials remain Human-only and browser recording/logging is disabled",
+    reason: "Computer Use is infrastructure for establishing a verified connection, not authority to execute business actions. URLs/actions are allowlisted and consequential provider actions remain governed by the Integration & Execution Gateway.",
+    migrationPlan: "Permanent platform control-plane boundary. Any future business-action capability discovered through Computer Use must be represented as a registered governed tool and executed through the Gateway.",
+    reviewPoint: "Every browser provider, allowlist, Human Takeover, recording, credential-handling, or action-capability change",
+  },
+  {
     path: "lib/integrations/adapters/customer-connections.ts",
     classification: ["B", "D"],
     disposition: "adapter_boundary",
