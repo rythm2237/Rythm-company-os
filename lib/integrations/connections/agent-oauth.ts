@@ -54,10 +54,12 @@ export function agentOAuthCallbackPath(providerKey: AgentOAuthProviderKey) {
 }
 
 export function connectionAgentOrigin() {
-  const configured = process.env.RYTHM_PUBLIC_APP_ORIGIN?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configured) return new URL(configured).origin;
+  const explicit = process.env.RYTHM_PUBLIC_APP_ORIGIN?.trim();
+  if (explicit) return new URL(explicit).origin;
   if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "https://rythm-os.com";
+  if (process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production") return "https://rythm-os.com";
+  const local = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  return local ? new URL(local).origin : "https://rythm-os.com";
 }
 
 function googleCredentials() {
