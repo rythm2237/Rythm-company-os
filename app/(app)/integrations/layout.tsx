@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "./integration-guide.css";
 import { GoogleWorkspaceFormEnhancer } from "./google-workspace-form-enhancer";
 import { IntegrationSetupGuide } from "./integration-setup-guide";
 
