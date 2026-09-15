@@ -107,8 +107,10 @@ function verifySignedState(state: string): OAuthStatePayload | null {
 }
 
 export async function GET(request: Request) {
-  const agentResponse = await maybeHandleAgentOAuthCallback(request, "google_workspace");
-  if (agentResponse) return agentResponse;
+  for (const providerKey of ["google_search_console", "google_analytics", "google_workspace"] as const) {
+    const agentResponse = await maybeHandleAgentOAuthCallback(request, providerKey);
+    if (agentResponse) return agentResponse;
+  }
 
   const url = new URL(request.url);
   const code = url.searchParams.get("code")?.trim();

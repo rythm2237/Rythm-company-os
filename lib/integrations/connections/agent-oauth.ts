@@ -34,6 +34,7 @@ const GOOGLE_WORKSPACE_SCOPES = [
   "https://www.googleapis.com/auth/calendar.readonly",
 ];
 const MICROSOFT_SCOPES = ["openid", "profile", "email", "offline_access", "User.Read"];
+const GOOGLE_SHARED_CALLBACK = "/api/integrations/google-workspace/callback";
 
 export const AGENT_OAUTH_COOKIE_NAMES = [
   "rythm_agent_oauth_state",
@@ -48,11 +49,17 @@ export function isAgentOAuthProvider(providerKey: string): providerKey is AgentO
   return ["google_search_console", "google_analytics", "google_workspace", "microsoft_365"].includes(providerKey);
 }
 
+export function agentOAuthCallbackPath(providerKey: AgentOAuthProviderKey) {
+  return providerKey === "microsoft_365" ? "/api/integrations/microsoft-365/callback" : GOOGLE_SHARED_CALLBACK;
+}
+
 export function connectionAgentOrigin() {
-  const configured = process.env.RYTHM_PUBLIC_APP_ORIGIN?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configured) return new URL(configured).origin;
+  const explicit = process.env.RYTHM_PUBLIC_APP_ORIGIN?.trim();
+  if (explicit) return new URL(explicit).origin;
   if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "https://rythm-os.com";
+  if (process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production") return "https://rythm-os.com";
+  const local = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  return local ? new URL(local).origin : "https://rythm-os.com";
 }
 
 function googleCredentials() {
@@ -76,7 +83,7 @@ function config(providerKey: AgentOAuthProviderKey): ProviderConfig {
     return {
       clientId,
       clientSecret,
-      redirectPath: "/api/integrations/microsoft-365/callback",
+      redirectPath: agentOAuthCallbackPath(providerKey),
       scopes: MICROSOFT_SCOPES,
       authorizationUrl: `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/authorize`,
       prompt: "select_account",
@@ -84,15 +91,15 @@ function config(providerKey: AgentOAuthProviderKey): ProviderConfig {
   }
   const { clientId, clientSecret } = googleCredentials();
   if (providerKey === "google_search_console") return {
-    clientId, clientSecret, redirectPath: "/api/integrations/google-search-console/callback",
+    clientId, clientSecret, redirectPath: agentOAuthCallbackPath(providerKey),
     scopes: ["openid", "email", GOOGLE_GSC_SCOPE], authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "consent",
   };
   if (providerKey === "google_analytics") return {
-    clientId, clientSecret, redirectPath: "/api/integrations/google-analytics/callback",
+    clientId, clientSecret, redirectPath: agentOAuthCallbackPath(providerKey),
     scopes: ["openid", "email", GOOGLE_GA_SCOPE], authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "consent",
   };
   return {
-    clientId, clientSecret, redirectPath: "/api/integrations/google-workspace/callback",
+    clientId, clientSecret, redirectPath: agentOAuthCallbackPath(providerKey),
     scopes: GOOGLE_WORKSPACE_SCOPES, authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", prompt: "consent",
   };
 }
