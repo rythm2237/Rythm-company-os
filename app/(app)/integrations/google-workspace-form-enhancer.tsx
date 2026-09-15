@@ -13,6 +13,7 @@ export function GoogleWorkspaceFormEnhancer() {
     const submit = form.querySelector<HTMLButtonElement>('button[type="submit"], button:not([type])');
     const originalAction = form.getAttribute("action") || "";
     const originalMethod = form.getAttribute("method") || "post";
+    const originalTarget = form.getAttribute("target") || "";
     const originalButtonText = submit?.textContent || "Create connection";
     const fields = ["accountRef", "baseUrl", "authType", "grantedScopes", "secret"] as const;
     const labels = new Map<string, HTMLElement | null>();
@@ -25,7 +26,7 @@ export function GoogleWorkspaceFormEnhancer() {
     note.setAttribute("data-google-workspace-oauth-note", "true");
     note.className = "security-note";
     note.innerHTML =
-      '<strong>Google OAuth · read-only access</strong><span>RYTHM will request Gmail metadata and Google Calendar read access directly from Google. No API key, password, or access token needs to be pasted here.</span>';
+      '<strong>Google OAuth · read-only access</strong><span>Authorization opens in a separate tab so this RYTHM setup page and its guide stay available. RYTHM never asks for your Google password.</span>';
     note.style.display = "none";
     submit?.parentElement?.insertBefore(note, submit);
 
@@ -47,13 +48,18 @@ export function GoogleWorkspaceFormEnhancer() {
       if (google) {
         form.setAttribute("action", "/api/integrations/google-workspace/connect");
         form.setAttribute("method", "post");
-        if (submit) submit.textContent = "Connect with Google";
+        form.setAttribute("target", "_blank");
+        form.setAttribute("rel", "opener");
+        if (submit) submit.textContent = "Connect with Google in new tab";
         const displayName = form.querySelector<HTMLInputElement>('input[name="displayName"]');
         if (displayName && !displayName.value.trim()) displayName.value = "Google Workspace";
       } else {
         if (originalAction) form.setAttribute("action", originalAction);
         else form.removeAttribute("action");
         form.setAttribute("method", originalMethod);
+        if (originalTarget) form.setAttribute("target", originalTarget);
+        else form.removeAttribute("target");
+        form.removeAttribute("rel");
         if (submit) submit.textContent = originalButtonText;
       }
     };
