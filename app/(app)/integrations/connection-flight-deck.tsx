@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { askCustomerConnectionAgent, controlCustomerConnectionAgent, restartCustomerConnectionAgent } from "./connection-agent-actions";
 import type { ProviderSetupPlan } from "@/lib/integrations/connections/setup-plans";
 
@@ -101,6 +102,7 @@ export function ConnectionFlightDeck({
   initialBrowser:BrowserView;
   openInitially?:boolean;
 }) {
+  const router = useRouter();
   const [mounted,setMounted] = useState(false);
   const [open,setOpen] = useState(openInitially);
   const [full,setFull] = useState(openInitially);
@@ -193,10 +195,27 @@ export function ConnectionFlightDeck({
   const noResources = live.userActionType === "RESOURCE_CHOICE_REQUIRED" && /no matching provider resource/i.test(live.humanTakeoverReason ?? "");
   const discoveryEvidence = live.events.find(event => event.event_type === "resource.discovered")?.safe_message ?? null;
   const verificationEvidence = live.events.find(event => event.event_type === "connection.verified")?.safe_message ?? null;
+  const completionVerificationText = projectId
+    ? verificationEvidence ?? "Provider access and the required project binding are verified."
+    : "Provider access is verified at organization level and discovered resources are available.";
   const progress = useMemo(() => {
     if (!live.totalSteps) return 0;
     return Math.max(4,Math.min(100,Math.round(((live.currentStep + (live.sessionStatus === "completed" ? 1 : 0))/live.totalSteps)*100)));
   },[live.currentStep,live.totalSteps,live.sessionStatus]);
+
+  const minimizeFlightDeck = () => {
+    setOpen(false);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("live");
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    router.replace(next, { scroll:false });
+  };
+
+  const exitCompletedFlightDeck = () => {
+    setOpen(false);
+    router.push("/integrations");
+  };
 
   const deck = open && mounted ? createPortal(
     <div className="flight-deck-backdrop" role="dialog" aria-modal="true" aria-label={`${providerName} Connection Flight Deck`}>
@@ -213,7 +232,7 @@ export function ConnectionFlightDeck({
           </div>
           <div className="flight-deck-window-controls">
             <button type="button" onClick={() => setFull(value => !value)} aria-label={full?"Exit expanded mode":"Expand Flight Deck"}>{full?"↙":"↗"}</button>
-            <button type="button" onClick={() => setOpen(false)} title={terminal?"Close Flight Deck":"The agent continues unless paused or stopped"}>{terminal?"Close":"Minimize"}</button>
+            <button type="button" onClick={terminal ? exitCompletedFlightDeck : minimizeFlightDeck} title={terminal?"Return to Integrations":"The agent continues unless paused or stopped"}>{terminal?"Done":"Minimize"}</button>
           </div>
         </header>
 
@@ -231,9 +250,10 @@ export function ConnectionFlightDeck({
                 <div className="flight-deck-reactor" aria-hidden="true"><span/><i/><b/></div>
                 <p>CONNECTION VERIFIED</p>
                 <h3>{providerName} is connected.</h3>
-                <span>{verificationEvidence ?? "Provider access was verified before the mission completed."}</span>
+                <span>{completionVerificationText}</span>
                 {discoveryEvidence ? <span>{discoveryEvidence}</span> : null}
                 <span>The secure cloud browser session has been closed. No reconnect or further browser action is required.</span>
+                <button type="button" className="flight-deck-primary" onClick={exitCompletedFlightDeck}>Done · Back to Integrations</button>
               </div> : viewer ? <>
                 <iframe src={viewer} title={`${providerName} live secure browser`} referrerPolicy="no-referrer" allow="clipboard-read; clipboard-write" />
                 {!humanInteractive && !terminal ? <div className="flight-deck-observe-shield"><span><i/>Live · Agent operating</span><small>When a Human-only step appears, RYTHM pauses and hands the browser to you automatically.</small></div> : null}
@@ -277,7 +297,7 @@ export function ConnectionFlightDeck({
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="resume"/>
                   <button className="flight-deck-primary" type="submit">Resume Agent</button>
                 </form> : null}
-                {!terminal ? <button type="button" onClick={() => setOpen(false)}>Continue in Background</button> : null}
+                {!terminal ? <button type="button" onClick={minimizeFlightDeck}>Continue in Background</button> : null}
                 {!terminal ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="stop"/>
                   <button className="is-danger" type="submit">Stop</button>
