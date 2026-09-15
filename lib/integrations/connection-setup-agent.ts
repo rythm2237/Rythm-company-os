@@ -136,7 +136,7 @@ export async function startConnectionSetupAgent(client: Db, input: { organizatio
   }).select(sessionSelect()).single();
   if (created.error || !created.data) throw new Error(created.error?.message ?? "Connection Setup Agent session could not be created.");
 
-  const session = created.data as SetupSession;
+  const session = created.data as unknown as SetupSession;
   await event(client, session, "connection.agent.started", "Connection Setup Agent queued.", { stepKey: plan.steps[0]?.stepKey ?? "start" });
   await audit(client, session, "connection.agent.started", { setup_plan_id: plan.setupPlanId, setup_plan_version: plan.version });
   return { sessionId: session.id, resumed: false, resumeToken: issued.token };
@@ -292,7 +292,7 @@ export async function dispatchConnectionSetupSessions(service: Db, input: { limi
     if (claimed.error) throw new Error(claimed.error.message);
     const row = Array.isArray(claimed.data) ? claimed.data[0] : claimed.data;
     if (!row?.id) break;
-    const session = row as SetupSession;
+    const session = row as unknown as SetupSession;
     await processSession(service, session);
     const latest = await service.from("integration_setup_sessions").select("session_status").eq("id", session.id).maybeSingle();
     results.push({ sessionId: session.id, status: String(latest.data?.session_status ?? session.session_status) });
@@ -302,7 +302,7 @@ export async function dispatchConnectionSetupSessions(service: Db, input: { limi
 
 export async function signalConnectionAuthorizationCompleted(client: Db, input: { organizationId: string; connectionId: string; providerKey: string }) {
   const sessions = await client.from("integration_setup_sessions").select(sessionSelect()).eq("organization_id", input.organizationId).eq("connection_id", input.connectionId).eq("automation_mode", "ai").in("session_status", ["waiting_for_user","waiting_for_provider","running","verifying"]).order("created_at", { ascending: false }).limit(1);
-  const session = sessions.data?.[0] as SetupSession | undefined;
+  const session = sessions.data?.[0] as unknown as SetupSession | undefined;
   if (!session) return;
   const plan = getCanonicalSetupPlan(input.providerKey);
   if (!plan) return;
@@ -318,7 +318,7 @@ export async function signalConnectionAuthorizationCompleted(client: Db, input: 
 export async function controlConnectionSetupSession(client: Db, input: { organizationId: string; userId: string; sessionId: string; resumeToken?: string; command: "take_control"|"return_control"|"pause"|"resume"|"stop" }) {
   const result = await client.from("integration_setup_sessions").select(sessionSelect()).eq("id", input.sessionId).eq("organization_id", input.organizationId).maybeSingle();
   if (!result.data) throw new Error("Connection setup session not found.");
-  const session = result.data as SetupSession;
+  const session = result.data as unknown as SetupSession;
   if (["completed","failed","cancelled","expired"].includes(session.session_status)) throw new Error("This setup session is already terminal.");
   if ((input.command === "take_control" || input.command === "return_control") && input.resumeToken) verifyConnectionResumeToken(input.resumeToken, { sessionId: session.id, organizationId: input.organizationId, userId: input.userId });
   if ((input.command === "take_control" || input.command === "return_control") && !input.resumeToken) throw new Error("A valid short-lived resume token is required for browser control transfer.");
