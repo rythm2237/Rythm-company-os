@@ -10,6 +10,7 @@ import {
   verifyGoogleSearchConsoleState,
 } from "@/lib/admin/integrations/google-search-console";
 import {createExecutionServiceClient} from "@/lib/integrations/service-runner";
+import {maybeHandleAgentOAuthCallback} from "@/lib/integrations/connections/agent-oauth-callback";
 
 type GoogleTokenResponse = {
   access_token?: string;
@@ -106,6 +107,9 @@ function verifySignedState(state: string): OAuthStatePayload | null {
 }
 
 export async function GET(request: Request) {
+  const agentResponse = await maybeHandleAgentOAuthCallback(request, "google_workspace");
+  if (agentResponse) return agentResponse;
+
   const url = new URL(request.url);
   const code = url.searchParams.get("code")?.trim();
   const state = url.searchParams.get("state")?.trim();

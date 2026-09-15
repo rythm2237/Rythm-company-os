@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { GOOGLE_OAUTH_REFRESH_BOUNDARY } from "../lib/company-bootstrap/direct-execution-boundary";
+import { CONNECTION_AGENT_OAUTH_BOUNDARY } from "../lib/integrations/connection-agent-direct-boundary";
 import { DIRECT_EXECUTION_INVENTORY } from "../lib/integrations/direct-execution-inventory";
 
 function files(root: string): string[] {
@@ -16,6 +17,10 @@ const fetchBoundaries = new Set([
   "app/(app)/agents/[code]/benchmark/BenchmarkConsole.tsx",
   "app/(app)/meetings/room/DeliberationConsole.tsx",
   "app/(app)/readiness/ExecuteValidationButton.tsx",
+  // Flight Deck and global dock poll only an authenticated same-origin RYTHM status route.
+  // They cannot call providers or execute external business actions directly.
+  "app/(app)/integrations/connection-flight-deck.tsx",
+  "components/integrations/ConnectionAgentDock.tsx",
   "app/api/integrations/google-workspace/callback/route.ts",
   "app/api/integrations/google-analytics/callback/route.ts",
   "app/api/integrations/google-search-console/callback/route.ts",
@@ -38,6 +43,8 @@ const fetchBoundaries = new Set([
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   "lib/integrations/adapters/http.ts",
   "lib/integrations/adapters/customer-connections.ts",
+  // Classified as a permanent Connection Agent OAuth control-plane boundary.
+  CONNECTION_AGENT_OAUTH_BOUNDARY.path,
   // Classified in DIRECT_EXECUTION_INVENTORY as a platform control-plane boundary.
   // It may create/read secure cloud-browser infrastructure sessions, but it grants no
   // business-action authority and every provider URL/action remains allowlisted.
@@ -68,6 +75,7 @@ const discovered = sourceFiles
 const inventoried = new Set([
   ...DIRECT_EXECUTION_INVENTORY.map((item) => item.path),
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
+  CONNECTION_AGENT_OAUTH_BOUNDARY.path,
 ]);
 const unknown = discovered.filter((path) => !path.startsWith("lib/integrations/adapters/") && !inventoried.has(path));
 assert.deepEqual(unknown, [], `Unknown direct provider/external execution paths: ${unknown.join(", ")}`);
@@ -78,6 +86,11 @@ assert.equal(computerUseBoundary.disposition, "platform_control_boundary");
 assert.match(computerUseBoundary.scope, /connection setup control-plane/i);
 assert.match(computerUseBoundary.reason, /not authority to execute business actions/i);
 assert.match(computerUseBoundary.reviewPoint, /credential-handling/i);
+
+assert.equal(CONNECTION_AGENT_OAUTH_BOUNDARY.disposition, "platform_control_boundary");
+assert.match(CONNECTION_AGENT_OAUTH_BOUNDARY.scope, /Human-authorized OAuth code exchange/i);
+assert.match(CONNECTION_AGENT_OAUTH_BOUNDARY.reason, /cannot execute business actions/i);
+assert.match(CONNECTION_AGENT_OAUTH_BOUNDARY.reviewPoint, /Human Takeover/i);
 
 assert.equal(GOOGLE_OAUTH_REFRESH_BOUNDARY.disposition, "platform_control_boundary");
 assert.match(GOOGLE_OAUTH_REFRESH_BOUNDARY.scope, /OAuth access-token refresh/);

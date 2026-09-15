@@ -6,6 +6,16 @@ export type BrowserControlMode = "ai" | "human" | "paused";
 export type BrowserActionKind = "navigate" | "read" | "click" | "type_safe_value" | "select" | "scroll" | "wait" | "upload_safe_file";
 export type BrowserRuntimeState = "starting" | "running" | "waiting_for_user" | "paused" | "stopped" | "failed" | "expired";
 
+export type BrowserBootstrapCookie = {
+  name: string;
+  value: string;
+  url: string;
+  path?: string;
+  httpOnly?: boolean;
+  secure?: boolean;
+  sameSite?: "Strict" | "Lax" | "None";
+};
+
 export type BrowserAction = {
   kind: BrowserActionKind;
   url?: string;
@@ -32,9 +42,17 @@ export type BrowserActionResult = {
   requiresUserAction?: boolean;
 };
 
+export type CreateBrowserSessionInput = {
+  sessionId: string;
+  providerKey: string;
+  allowedHosts: string[];
+  startUrl: string;
+  bootstrapCookies?: BrowserBootstrapCookie[];
+};
+
 export interface ComputerUseRuntime {
   readonly available: boolean;
-  createSession(input: { sessionId: string; providerKey: string; allowedHosts: string[]; startUrl: string }): Promise<BrowserSession>;
+  createSession(input: CreateBrowserSessionInput): Promise<BrowserSession>;
   getSession(browserSessionId: string): Promise<BrowserSession>;
   execute(browserSessionId: string, action: BrowserAction, plan: ProviderSetupPlan): Promise<BrowserActionResult>;
   setControl(browserSessionId: string, mode: BrowserControlMode): Promise<BrowserSession>;
@@ -66,6 +84,13 @@ export function assertSafeBrowserUrl(rawUrl: string, allowedHosts: string[]) {
   if (host === "localhost" || host.endsWith(".localhost") || isPrivateIpv4(host) || (isIP(host) && !hostAllowed(host, allowedHosts))) throw new Error("Private or local network navigation is blocked.");
   if (!hostAllowed(host, allowedHosts)) throw new Error(`Unexpected browser domain blocked: ${host}`);
   return url;
+}
+
+function assertSafeBootstrapCookie(cookie: BrowserBootstrapCookie, allowedHosts: string[]) {
+  if (!cookie.name || cookie.name.length > 128) throw new Error("Browser bootstrap cookie name is invalid.");
+  if (!cookie.value || cookie.value.length > 8192) throw new Error("Browser bootstrap cookie value is invalid.");
+  assertSafeBrowserUrl(cookie.url, allowedHosts);
+  if (cookie.path && !cookie.path.startsWith("/")) throw new Error("Browser bootstrap cookie path is invalid.");
 }
 
 export function assertSafeBrowserAction(action: BrowserAction, plan: ProviderSetupPlan) {
@@ -106,8 +131,9 @@ class HttpComputerUseRuntime implements ComputerUseRuntime {
     return await response.json() as T;
   }
 
-  async createSession(input: { sessionId: string; providerKey: string; allowedHosts: string[]; startUrl: string }) {
+  async createSession(input: CreateBrowserSessionInput) {
     assertSafeBrowserUrl(input.startUrl, input.allowedHosts);
+    for (const cookie of input.bootstrapCookies ?? []) assertSafeBootstrapCookie(cookie, input.allowedHosts);
     return this.request<BrowserSession>("/v1/sessions", { method: "POST", body: JSON.stringify({ ...input, credentialCapture: false, screenshotRedaction: "sensitive-fields", privateNetworkAccess: false }) });
   }
   async getSession(browserSessionId: string) { return this.request<BrowserSession>(`/v1/sessions/${encodeURIComponent(browserSessionId)}`, { method: "GET" }); }
@@ -217,8 +243,9 @@ class BrowserbaseComputerUseRuntime implements ComputerUseRuntime {
     } finally { cdp.close(); }
   }
 
-  async createSession(input: { sessionId: string; providerKey: string; allowedHosts: string[]; startUrl: string }) {
+  async createSession(input: CreateBrowserSessionInput) {
     assertSafeBrowserUrl(input.startUrl, input.allowedHosts);
+    for (const cookie of input.bootstrapCookies ?? []) assertSafeBootstrapCookie(cookie, input.allowedHosts);
     const region = ["us-west-2","us-east-1","eu-central-1","ap-southeast-1"].includes(process.env.BROWSERBASE_REGION ?? "") ? process.env.BROWSERBASE_REGION : "eu-central-1";
     const created = await this.api<BrowserbaseSessionResponse>("/sessions", {
       method: "POST",
@@ -233,6 +260,21 @@ class BrowserbaseComputerUseRuntime implements ComputerUseRuntime {
     });
     if (!created.id) throw new Error("Cloud browser provider did not return a session ID.");
     await this.withPage(created.id, async (cdp, pageSessionId) => {
+      if (input.bootstrapCookies?.length) {
+        await cdp.request("Network.enable", {}, pageSessionId);
+        for (const cookie of input.bootstrapCookies) {
+          const result = await cdp.request("Network.setCookie", {
+            name: cookie.name,
+            value: cookie.value,
+            url: cookie.url,
+            ...(cookie.path ? { path: cookie.path } : {}),
+            httpOnly: cookie.httpOnly ?? true,
+            secure: cookie.secure ?? true,
+            sameSite: cookie.sameSite ?? "Lax",
+          }, pageSessionId) as { success?: boolean };
+          if (result.success === false) throw new Error("Cloud browser OAuth bootstrap cookie could not be installed.");
+        }
+      }
       await cdp.request("Page.navigate", { url: input.startUrl }, pageSessionId);
     });
     const session = await this.getSession(created.id);

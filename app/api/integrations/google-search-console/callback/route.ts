@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
 import {createExecutionServiceClient} from "@/lib/integrations/service-runner";
+import { maybeHandleAgentOAuthCallback } from "@/lib/integrations/connections/agent-oauth-callback";
 
 const GSC_SCOPE="https://www.googleapis.com/auth/webmasters.readonly";
 type StatePayload={integrationId:string;userId:string;nonce:string;issuedAt:number};
@@ -13,6 +14,7 @@ function finish(request:Request,integrationId:string,key:"message"|"error",messa
 function cookieMap(request:Request){const raw=request.headers.get("cookie")??"";return new Map(raw.split(";").map(v=>v.trim()).filter(Boolean).map(v=>{const i=v.indexOf("=");return i<0?[v,""]:[v.slice(0,i),decodeURIComponent(v.slice(i+1))];}));}
 
 export async function GET(request:Request){
+  const agentResponse=await maybeHandleAgentOAuthCallback(request,"google_search_console");if(agentResponse)return agentResponse;
   const url=new URL(request.url);const code=url.searchParams.get("code")?.trim()||"";const state=url.searchParams.get("state")?.trim()||"";const providerError=url.searchParams.get("error")?.trim();
   const payload=state?verifyState(state):null;const cookies=cookieMap(request);const integrationId=payload?.integrationId||cookies.get("rythm_gsc_customer_integration")||"";
   if(providerError)return finish(request,integrationId,"error",`Google authorization was not completed: ${providerError}`);
