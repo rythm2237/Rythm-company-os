@@ -12,15 +12,21 @@ const runtime=read("lib/integrations/computer-use/runtime.ts");
 for(const value of ["https:","localhost","isPrivateIpv4","allowedHosts","redirect: \"error\"","credentialCapture: false","screenshotRedaction: \"sensitive-fields\"","privateNetworkAccess: false"])expect(runtime,value,"browser security boundary");
 for(const value of ["password","passcode","otp","mfa","passkey","captcha","private key"])expect(runtime,value,"credential input blocklist");
 expect(runtime,"< 0.8","action confidence threshold");
-for(const value of ["BROWSERBASE_API_KEY","BrowserbaseComputerUseRuntime","eu-central-1","solveCaptchas: false","recordSession: false","logSession: false","REQUEST_RELEASE","debuggerFullscreenUrl","Target.attachToTarget"])expect(runtime,value,"direct secure cloud-browser runtime");
+for(const value of ["BROWSERBASE_API_KEY","BrowserbaseComputerUseRuntime","eu-central-1","solveCaptchas: false","recordSession: false","logSession: false","REQUEST_RELEASE","debuggerFullscreenUrl","Target.attachToTarget","bootstrapCookies","Network.setCookie"])expect(runtime,value,"direct secure cloud-browser runtime");
 reject(runtime,"recordSession: true","credential-safe browser recording policy");
+
+const oauth=read("lib/integrations/connections/agent-oauth.ts");
+for(const value of ["google_search_console","google_analytics","google_workspace","microsoft_365","code_challenge","rythm_agent_oauth_session","verifyAgentOAuthState","prepareAgentOAuthLaunch"])expect(oauth,value,"Agent OAuth launch contract");
+const callback=read("lib/integrations/connections/agent-oauth-callback.ts");
+for(const value of ["store_organization_integration_secret_unverified_v1","signalConnectionAuthorizationCompleted","dispatchConnectionSetupSessions","verification_result: \"verified\"","connection_agent_session_id"])expect(callback,value,"Agent OAuth verified callback contract");
+for(const path of ["google-search-console","google-analytics","google-workspace","microsoft-365"]){const body=read(`app/api/integrations/${path}/callback/route.ts`);expect(body,"maybeHandleAgentOAuthCallback",`${path} Agent OAuth callback branch`);}
 
 const resume=read("lib/integrations/connections/resume-token.ts");
 for(const value of ["createHmac","timingSafeEqual","expiresAt","organizationId","userId","sessionId","RYTHM_CONNECTION_AGENT_RESUME_V1","SUPABASE_SERVICE_ROLE_KEY"])expect(resume,value,"signed scoped resume token");
 reject(resume,"localStorage","resume token client storage");
 
 const agent=read("lib/integrations/connection-setup-agent.ts");
-for(const value of ["connection_setup_agent","RYTHM_CONNECTION_AGENT_KILL_SWITCH","RYTHM_CONNECTION_AGENT_ORG_ALLOWLIST","waiting_for_user","project_connection_bindings","last_verified_at","browser.session.started","human.takeover.requested","connection.agent.completed","verifyConnectionResumeToken"])expect(agent,value,"Connection Setup Agent invariant");
+for(const value of ["connection_setup_agent","RYTHM_CONNECTION_AGENT_KILL_SWITCH","RYTHM_CONNECTION_AGENT_ORG_ALLOWLIST","waiting_for_user","project_connection_bindings","last_verified_at","browser.session.started","human.takeover.requested","connection.agent.completed","verifyConnectionResumeToken","prepareAgentOAuthLaunch","bootstrapCookies"])expect(agent,value,"Connection Setup Agent invariant");
 expect(agent,'actor_type: "system"',"auditable system agent identity");
 reject(agent,'actor_agent_id: CONNECTION_SETUP_AGENT_KEY',"fake UUID agent identity");
 
@@ -32,12 +38,26 @@ const resumeMigration=read("supabase/migrations/20260915121600_connection_agent_
 for(const value of ["RESOURCE_DISCOVERY","CONNECTION_VERIFY","automation_mode='ai'","binding_status='verified'"])expect(resumeMigration,value,"provider callback/binding auto-resume");
 const hardeningMigration=read("supabase/migrations/20260915121700_connection_agent_phase2_hardening.sql");
 for(const value of ["drop policy if exists connection_setup_session_events_owner_write","for insert to authenticated","for update to authenticated","for delete to authenticated","connection_setup_session_events_connection_idx","connection_setup_session_events_provider_idx","integration_setup_sessions_connection_idx","integration_setup_sessions_provider_idx","integration_setup_sessions_started_by_idx"])expect(hardeningMigration,value,"Phase 2 RLS/index hardening");
+const flightDeckMigration=read("supabase/migrations/20260915134500_universal_connection_flight_deck_rollout.sql");
+for(const provider of ["google_search_console","google_analytics","google_workspace","microsoft_365","github","vercel","supabase","cloudflare"])expect(flightDeckMigration,`'${provider}'`,`${provider} internal Flight Deck rollout`);
+expect(flightDeckMigration,"ai_setup_rollout = 'internal'","Flight Deck stays allowlisted before general rollout");
 
 const actions=read("app/(app)/integrations/connection-agent-actions.ts");
-for(const value of ["httpOnly:true","sameSite:\"strict\"","startConnectionSetupAgent","controlConnectionSetupSession","dispatchConnectionSetupSessions","explainConnectionSetupQuestion","resume_token_hash","secureEqual(expected,presented)"])expect(actions,value,"secure server actions");
+for(const value of ["httpOnly:true","sameSite:\"strict\"","startConnectionSetupAgent","controlConnectionSetupSession","dispatchConnectionSetupSessions","explainConnectionSetupQuestion","resume_token_hash","secureEqual(expected,presented)","query.set(\"live\",\"1\")"])expect(actions,value,"secure server actions");
 reject(actions,"localStorage","resume token browser storage");
 const page=read("app/(app)/integrations/[id]/setup/page.tsx");
-for(const value of ["ConnectionSetupAgentPanel","Guide me","MANUAL · GUIDE ME","getCanonicalSetupPlan"])expect(page,value,"dual setup UX");
+for(const value of ["ConnectionSetupAgentPanel","Guide me","MANUAL · GUIDE ME","getCanonicalSetupPlan","openLive={query.live===\"1\"}"])expect(page,value,"dual setup UX and Flight Deck deep link");
+const panel=read("app/(app)/integrations/connection-setup-agent-panel.tsx");
+for(const value of ["ConnectionFlightDeck","Agent operating live","Preparing secure workspace"])expect(panel,value,"truthful Flight Deck launcher state");
+reject(panel,'return "AI controlling browser"',"misleading browser-control state");
+const flightDeck=read("app/(app)/integrations/connection-flight-deck.tsx");
+for(const value of ["RYTHM CONNECTION FLIGHT DECK","viewerUrl","iframe","Take Control","Continue with AI","Continue in Background","HUMAN AUTHORITY","setInterval(poll, 3500)"])expect(flightDeck,value,"live Flight Deck experience");
+const dock=read("components/integrations/ConnectionAgentDock.tsx");
+for(const value of ["CONNECTION AGENT ACTIVE","Needs your attention","View Live","live:\"1\"","setInterval(poll,5000)"])expect(dock,value,"persistent background Agent dock");
+const layout=read("app/(app)/layout.tsx");
+for(const value of ["ConnectionAgentDock","connection-flight-deck.css"])expect(layout,value,"global Connection Agent surface");
+const statusRoute=read("app/api/integrations/connection-agent/status/route.ts");
+for(const value of ["browserSessionExists","getConnectionSetupBrowserView","cache-control","connection_setup_session_events"])expect(statusRoute,value,"safe Flight Deck polling endpoint");
 const guide=read("app/(app)/integrations/integration-setup-guide.tsx");expect(guide,"getIntegrationGuideDefinition","Guide consumes canonical plan");
 const dispatcher=read("app/api/projects/dispatch/route.ts");expect(dispatcher,"dispatchConnectionSetupSessions","durable background dispatcher");
 const roadmap=read("app/api/projects/roadmap/route.ts");expect(roadmap,'completion_requires:\"verified_provider_and_bound_resource\"',"truthful Roadmap completion");
