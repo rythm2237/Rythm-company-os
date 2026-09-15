@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { askCustomerConnectionAgent, controlCustomerConnectionAgent } from "./connection-agent-actions";
+import { askCustomerConnectionAgent, controlCustomerConnectionAgent, restartCustomerConnectionAgent } from "./connection-agent-actions";
 import type { ProviderSetupPlan } from "@/lib/integrations/connections/setup-plans";
 
 type EventView = { id:string; event_type:string; safe_message:string|null; created_at:string; status?:string|null; step_key?:string|null };
@@ -50,7 +50,7 @@ function statusText(session:LiveStatus) {
     return "Session expired";
   }
   if (session.controlMode === "human") return "Human control";
-  if (session.sessionStatus === "waiting_for_user") return "Waiting for you";
+  if (session.requiresUserAction && session.sessionStatus === "waiting_for_user") return "Your action required";
   if (session.sessionStatus === "paused") return "Paused";
   if (session.sessionStatus === "verifying") return "Verifying evidence";
   if (session.browser?.viewerUrl && session.controlMode === "ai") return "Agent operating browser";
@@ -76,7 +76,7 @@ function isProviderOAuthError(url:string|null|undefined) {
   if (!url) return false;
   try {
     const parsed = new URL(url);
-    return parsed.hostname.endsWith("google.com") && parsed.pathname.includes("/oauth/error");
+    return parsed.hostname.endsWith("google.com") && (parsed.pathname.includes("/oauth/error") || parsed.pathname.includes("/signin/oauth/error"));
   } catch { return false; }
 }
 
@@ -179,7 +179,9 @@ export function ConnectionFlightDeck({
   const viewer = live.browser?.viewerUrl ?? null;
   const currentDomain = domainOf(live.browser?.currentUrl);
   const providerError = isProviderOAuthError(live.browser?.currentUrl);
-  const humanInteractive = live.controlMode === "human";
+  const autoHuman = Boolean(viewer) && !terminal && live.requiresUserAction && live.sessionStatus === "waiting_for_user";
+  const humanInteractive = live.controlMode === "human" || autoHuman;
+  const noResources = live.userActionType === "RESOURCE_CHOICE_REQUIRED" && /no matching provider resource/i.test(live.humanTakeoverReason ?? "");
   const progress = useMemo(() => {
     if (!live.totalSteps) return 0;
     return Math.max(4,Math.min(100,Math.round(((live.currentStep + (live.sessionStatus === "completed" ? 1 : 0))/live.totalSteps)*100)));
@@ -216,7 +218,7 @@ export function ConnectionFlightDeck({
             <div className={`flight-deck-browser${humanInteractive?" is-interactive":" is-observe"}`}>
               {viewer ? <>
                 <iframe src={viewer} title={`${providerName} live secure browser`} referrerPolicy="no-referrer" allow="clipboard-read; clipboard-write" />
-                {!humanInteractive && !terminal ? <div className="flight-deck-observe-shield"><span><i/>Live · Agent operating</span><small>Take Control when RYTHM requests identity, MFA, consent, or another Human-only action.</small></div> : null}
+                {!humanInteractive && !terminal ? <div className="flight-deck-observe-shield"><span><i/>Live · Agent operating</span><small>When a Human-only step appears, RYTHM pauses and hands the browser to you automatically.</small></div> : null}
               </> : <div className="flight-deck-provisioning">
                 <div className="flight-deck-reactor" aria-hidden="true"><span/><i/><b/></div>
                 <p>ESTABLISHING SECURE EXECUTION CHANNEL</p>
@@ -232,19 +234,22 @@ export function ConnectionFlightDeck({
               <div className="flight-deck-section-kicker"><span>CURRENT MISSION</span><b>{live.totalSteps ? `${Math.min(live.currentStep+1,live.totalSteps)}/${live.totalSteps}` : "—"}</b></div>
               <h3>{live.step?.title ?? statusText(live)}</h3>
               <p>{live.humanTakeoverReason ?? live.step?.description ?? "RYTHM is synchronizing the provider connection state."}</p>
-              {live.requiresUserAction ? <div className="flight-deck-human-callout"><i/>Human decision boundary reached</div> : <div className="flight-deck-agent-intent"><i/>Agent intent: advance only after verifiable provider evidence.</div>}
+              {live.requiresUserAction ? <div className="flight-deck-human-callout"><i/>{autoHuman ? "Control automatically handed to you" : "Human decision boundary reached"}</div> : <div className="flight-deck-agent-intent"><i/>Agent intent: advance only after verifiable provider evidence.</div>}
             </section>
 
+            {noResources ? <section className="flight-deck-provider-error"><div className="flight-deck-section-kicker"><span>RESOURCE RECOVERY</span><b>ACTION</b></div><h3>No accessible provider resource was found</h3><p>The account is authorized, but it does not expose the required resource to RYTHM. Restart the connection and choose an account that owns or has access to the required property.</p><form action={restartCustomerConnectionAgent}><input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<button className="flight-deck-primary" type="submit">Restart & choose another account</button></form></section> : null}
+
             <section className="flight-deck-controls-card">
-              <div className="flight-deck-section-kicker"><span>CONTROL PLANE</span><b>{live.controlMode.toUpperCase()}</b></div>
+              <div className="flight-deck-section-kicker"><span>CONTROL PLANE</span><b>{humanInteractive?"HUMAN":live.controlMode.toUpperCase()}</b></div>
+              {autoHuman ? <p>RYTHM has paused browser automation for this Human-only step. Complete the provider action directly in the live browser; verified completion returns control to AI automatically.</p> : null}
               <div className="flight-deck-controls">
-                {!terminal && viewer && live.controlMode !== "human" && !providerError ? <form action={controlCustomerConnectionAgent}>
+                {!terminal && viewer && !humanInteractive && !providerError ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="take_control"/>
                   <button className="flight-deck-primary" type="submit">Take Control</button>
                 </form> : null}
                 {!terminal && live.controlMode === "human" ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="return_control"/>
-                  <button className="flight-deck-primary" type="submit">Continue with AI</button>
+                  <button className="flight-deck-primary" type="submit">Return control now</button>
                 </form> : null}
                 {!terminal && live.sessionStatus !== "paused" ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="pause"/>
