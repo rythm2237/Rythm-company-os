@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run test:project-os",
+    "prebuild": "npm run test:project-os && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
