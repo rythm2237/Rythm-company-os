@@ -1,5 +1,5 @@
 import "server-only";
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 export type ConnectionResumeClaims = {
   sessionId: string;
@@ -10,9 +10,12 @@ export type ConnectionResumeClaims = {
 };
 
 function secret() {
-  const value = process.env.RYTHM_CONNECTION_AGENT_RESUME_SECRET?.trim();
-  if (!value || value.length < 32) throw new Error("Connection Agent resume signing secret is not configured safely.");
-  return value;
+  const dedicated = process.env.RYTHM_CONNECTION_AGENT_RESUME_SECRET?.trim();
+  if (dedicated && dedicated.length >= 32) return dedicated;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!serviceRoleKey || serviceRoleKey.length < 32) throw new Error("Connection Agent resume signing secret is not configured safely.");
+  // Cryptographic domain separation: never use the service-role credential itself as a token key.
+  return createHash("sha256").update("RYTHM_CONNECTION_AGENT_RESUME_V1\0").update(serviceRoleKey).digest("hex");
 }
 
 function b64(value: string | Buffer) {
