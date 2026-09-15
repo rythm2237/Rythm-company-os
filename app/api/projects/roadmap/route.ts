@@ -20,8 +20,10 @@ export async function GET(request:Request){
   if(!project.data)return NextResponse.json({ok:false,error:"Project not found."},{status:404});
   const service=createServerSupabaseClient();if(!service)return NextResponse.json({ok:false,error:"Project service is unavailable."},{status:503});
   try{
-    const [roadmap,progress]=await Promise.all([getLatestProjectRoadmap(service,auth.organizationId,projectId),getProjectProgressSnapshot(service,auth.organizationId,project.data)]);
-    return NextResponse.json({ok:true,roadmap,progress});
+    const [roadmap,progress,bindings]=await Promise.all([getLatestProjectRoadmap(service,auth.organizationId,projectId),getProjectProgressSnapshot(service,auth.organizationId,project.data),service.from("project_connection_bindings").select("provider_key,resource_type,binding_status,verified_at").eq("organization_id",auth.organizationId).eq("project_id",projectId).eq("binding_status","verified")]);
+    const verified=new Set((bindings.data??[]).filter(row=>row.verified_at).flatMap(row=>[row.provider_key,row.resource_type].filter(Boolean).map(String)));
+    const connectionDependencies=(roadmap?.phases??[]).flatMap(phase=>(phase.requiredConnections??[]).map((raw,index)=>{const item=raw&&typeof raw==="object"?raw as Record<string,unknown>:{};const provider=String(item.provider??item.provider_key??item.resource_type??raw??"");return{phase_key:phase.key,index,provider,status:verified.has(provider)?"completed":"waiting_for_user",completion_requires:"verified_provider_and_bound_resource"};}));
+    return NextResponse.json({ok:true,roadmap,progress,connectionDependencies});
   }catch(error){return NextResponse.json({ok:false,error:error instanceof Error?error.message:"Unable to load roadmap."},{status:500});}
 }
 

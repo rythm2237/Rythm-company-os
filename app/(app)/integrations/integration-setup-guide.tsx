@@ -83,7 +83,7 @@ export function IntegrationSetupGuide() {
     window.setTimeout(() => delete element.dataset.guideHighlighted, 2200);
   }
 
-  if (!open) return <aside className="integration-guide" aria-label="Integration connection guide"><button type="button" onClick={() => setOpen(true)} className="integration-guide-launch">Open connection guide</button></aside>;
+  if (!open) return <aside className="integration-guide" aria-label="Integration connection guide"><button type="button" onClick={() => setOpen(true)} className="integration-guide-launch">Guide this connection</button></aside>;
 
   return <aside className="integration-guide is-open" aria-label="Integration connection guide" aria-live="polite">
     <div className="integration-guide-head"><div><p>GUIDED CONNECTION · {safeStep + 1}/{guide.steps.length}</p><h3>{guide.title}</h3></div><button type="button" aria-label="Close connection guide" onClick={() => setOpen(false)}>Close</button></div>

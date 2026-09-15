@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { discoverGoogleResources, getTokenConnectionAdapter, googleProfile, verifyMicrosoftProfile } from "@/lib/integrations/connections/providers";
+import { createExecutionServiceClient } from "@/lib/integrations/service-runner";
 
 function text(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -37,7 +39,7 @@ export async function createCustomerIntegration(formData: FormData) {
       base_url: null,
       auth_type: provider.supports_oauth ? "oauth" : "token",
       granted_scopes: [],
-      status: "disconnected",
+      status: "setup_required",
       connected_by_user_id: context.user.id,
       metadata: {
         customer_setup: true,
@@ -52,6 +54,15 @@ export async function createCustomerIntegration(formData: FormData) {
     redirect(`/integrations?error=${encodeURIComponent(error?.message ?? "Service could not be added.")}${projectId ? `&project=${encodeURIComponent(projectId)}` : ""}`);
   }
 
+  await context.supabase.from("integration_setup_sessions").insert({
+    organization_id: context.organizationId, provider_key: providerKey,
+    connection_id: integration.id, project_id: projectId || null,
+    setup_plan: { version: 1, steps: ["create_connection", "authorize_provider", "verify_access", "discover_resources", "bind_project_resource"] },
+    current_step: 1, step_status: "waiting_for_user", user_action_required: true,
+    provider_context: { authorization: provider.supports_oauth ? "oauth" : "token" }, created_by_user_id: context.user.id,
+  });
+  await context.supabase.from("audit_events").insert({organization_id:context.organizationId,actor_type:"user",actor_user_id:context.user.id,event_type:"integration.service_added",object_type:"organization_integration",object_id:integration.id,risk_level:"low",payload:{provider_key:providerKey,project_id:projectId||null,authorized:false}});
+
   revalidatePath("/integrations");
   const message = provider.supports_oauth
     ? `${provider.display_name} was added. No external account is connected yet. Continue below to authorize the provider.`
@@ -59,4 +70,49 @@ export async function createCustomerIntegration(formData: FormData) {
   const query = new URLSearchParams({ message });
   if (projectId) query.set("project", projectId);
   redirect(`/integrations/${integration.id}/setup?${query.toString()}`);
+}
+
+function setupUrl(id:string,projectId:string,key:"message"|"error",message:string){const query=new URLSearchParams({[key]:message});if(projectId)query.set("project",projectId);return `/integrations/${id}/setup?${query.toString()}`;}
+
+export async function verifyCustomerTokenConnection(formData:FormData){
+  const context=await requireActiveOwnerOrganizationContext();const integrationId=text(formData.get("integrationId"));const projectId=text(formData.get("projectId"));const secret=text(formData.get("secret"));
+  if(!integrationId||!secret)redirect(setupUrl(integrationId,projectId,"error","A provider-issued credential is required."));
+  const result=await context.supabase.from("organization_integrations").select("id,provider_key").eq("id",integrationId).eq("organization_id",context.organizationId).maybeSingle();
+  const adapter=result.data?getTokenConnectionAdapter(result.data.provider_key):null;if(!result.data||!adapter)redirect(setupUrl(integrationId,projectId,"error","A verified customer token adapter is not available for this service."));
+  const providerKey=result.data.provider_key;
+  await context.supabase.from("organization_integrations").update({status:"verifying",last_error_at:null,last_error_code:null,last_error_message:null,updated_at:new Date().toISOString()}).eq("id",integrationId).eq("organization_id",context.organizationId);
+  let verification;try{verification=await adapter.verifyCredential(secret);}catch(error){const message=error instanceof Error?error.message:"Provider verification failed.";await context.supabase.from("organization_integrations").update({status:"error",last_error_at:new Date().toISOString(),last_error_code:"verification_failed",last_error_message:message,updated_at:new Date().toISOString()}).eq("id",integrationId).eq("organization_id",context.organizationId);redirect(setupUrl(integrationId,projectId,"error",message));}
+  const service=createExecutionServiceClient();const stored=await service.rpc("store_organization_integration_secret_unverified_v1",{target_integration_id:integrationId,secret_value:secret});if(stored.error)redirect(setupUrl(integrationId,projectId,"error",`Credential could not be stored securely: ${stored.error.message}`));
+  const now=new Date().toISOString();await context.supabase.from("integration_resources").update({available:false}).eq("integration_id",integrationId).eq("organization_id",context.organizationId);
+  if(verification.resources.length){const resources=verification.resources.map(resource=>({organization_id:context.organizationId,integration_id:integrationId,provider_key:providerKey,resource_type:resource.resourceType,resource_id:resource.resourceId,resource_name:resource.resourceName,resource_metadata:resource.metadata??{},discovered_at:now,last_verified_at:now,available:true}));const saved=await context.supabase.from("integration_resources").upsert(resources,{onConflict:"integration_id,resource_type,resource_id"});if(saved.error)redirect(setupUrl(integrationId,projectId,"error","Provider access was verified, but resources could not be saved."));}
+  const updated=await context.supabase.from("organization_integrations").update({account_ref:verification.accountRef,granted_scopes:verification.grantedScopes,status:"connected",enabled:true,connected_at:now,last_verified_at:now,last_health_check_at:now,last_error_at:null,last_error_code:null,last_error_message:null,metadata:{verification_result:"verified",verification_detail:verification.detail,credential_format:"provider_token_v1",resource_count:verification.resources.length},updated_at:now}).eq("id",integrationId).eq("organization_id",context.organizationId);if(updated.error)redirect(setupUrl(integrationId,projectId,"error",`Provider verified, but connection state could not be saved: ${updated.error.message}`));
+  await context.supabase.from("integration_setup_sessions").update({current_step:verification.resources.length?3:4,step_status:verification.resources.length?"waiting_for_user":"completed",user_action_required:verification.resources.length,verification_result:{status:"verified",verified_at:now},updated_at:now}).eq("connection_id",integrationId).eq("organization_id",context.organizationId);
+  await context.supabase.from("audit_events").insert({organization_id:context.organizationId,actor_type:"user",actor_user_id:context.user.id,event_type:"integration.connection_verified",object_type:"organization_integration",object_id:integrationId,risk_level:"low",payload:{provider_key:providerKey,resource_count:verification.resources.length,scopes:verification.grantedScopes}});
+  revalidatePath("/integrations");revalidatePath(`/integrations/${integrationId}/setup`);redirect(setupUrl(integrationId,projectId,"message","Connection verified. Select the exact project resource and capabilities below."));
+}
+
+export async function bindCustomerProjectResource(formData:FormData){
+  const context=await requireActiveOwnerOrganizationContext();const integrationId=text(formData.get("integrationId"));const projectId=text(formData.get("projectId"));const resourceRow=text(formData.get("resource"));const capabilities=formData.getAll("capabilities").map(String).filter(Boolean);
+  if(!integrationId||!projectId||!resourceRow)redirect(setupUrl(integrationId,projectId,"error","Project and exact provider resource are required."));
+  const [project,integration,resource]=await Promise.all([context.supabase.from("projects").select("id").eq("id",projectId).eq("organization_id",context.organizationId).maybeSingle(),context.supabase.from("organization_integrations").select("id,provider_key,status").eq("id",integrationId).eq("organization_id",context.organizationId).maybeSingle(),context.supabase.from("integration_resources").select("resource_type,resource_id,resource_name").eq("id",resourceRow).eq("integration_id",integrationId).eq("organization_id",context.organizationId).eq("available",true).maybeSingle()]);
+  if(!project.data||!integration.data||integration.data.status!=="connected"||!resource.data)redirect(setupUrl(integrationId,projectId,"error","The verified connection or selected resource is no longer available."));
+  if(capabilities.length){const allowed=await context.supabase.from("integration_capabilities").select("capability_key").eq("provider_key",integration.data.provider_key).in("capability_key",capabilities);const set=new Set((allowed.data??[]).map(row=>row.capability_key));if(capabilities.some(value=>!set.has(value)))redirect(setupUrl(integrationId,projectId,"error","One or more requested capabilities are not valid for this provider."));}
+  const now=new Date().toISOString();const saved=await context.supabase.from("project_connection_bindings").upsert({organization_id:context.organizationId,project_id:projectId,integration_id:integrationId,provider_key:integration.data.provider_key,resource_type:resource.data.resource_type,resource_ref:resource.data.resource_id,resource_id:resource.data.resource_id,display_name:resource.data.resource_name,resource_name:resource.data.resource_name,permission_scope:{capabilities},capabilities,access_status:"connected",binding_status:"verified",recommendation_level:"confirmed",confirmed_by_user_id:context.user.id,confirmed_at:now,verified_at:now,updated_at:now},{onConflict:"project_id,integration_id,resource_ref"});if(saved.error)redirect(setupUrl(integrationId,projectId,"error",saved.error.message));
+  await context.supabase.from("integration_setup_sessions").update({current_step:4,step_status:"completed",user_action_required:false,updated_at:now}).eq("connection_id",integrationId).eq("project_id",projectId).eq("organization_id",context.organizationId);
+  await context.supabase.from("audit_events").insert({organization_id:context.organizationId,actor_type:"user",actor_user_id:context.user.id,event_type:"integration.resource_bound",object_type:"project",object_id:projectId,risk_level:"low",payload:{integration_id:integrationId,provider_key:integration.data.provider_key,resource_id:resource.data.resource_id,capabilities}});
+  revalidatePath(`/projects/operating`);redirect(setupUrl(integrationId,projectId,"message","Verified resource bound to the project. Roadmap dependencies can now use this connection."));
+}
+
+export async function checkCustomerConnectionHealth(formData:FormData){
+  const context=await requireActiveOwnerOrganizationContext();const integrationId=text(formData.get("integrationId"));const projectId=text(formData.get("projectId"));const connection=await context.supabase.from("organization_integrations").select("provider_key,status").eq("id",integrationId).eq("organization_id",context.organizationId).maybeSingle();const adapter=connection.data?getTokenConnectionAdapter(connection.data.provider_key):null;
+  if(!connection.data)redirect(setupUrl(integrationId,projectId,"error","Connection not found."));
+  const service=createExecutionServiceClient();const secret=await service.rpc("get_organization_integration_secret_service_v1",{target_integration_id:integrationId});if(secret.error||!secret.data)redirect(setupUrl(integrationId,projectId,"error","The Vault credential is unavailable for health verification."));
+  let health:{healthy:boolean;code:string};if(adapter)health=await adapter.healthCheck(String(secret.data));else{try{const envelope=JSON.parse(String(secret.data)) as {access_token?:string};if(!envelope.access_token)throw new Error("missing");if(connection.data.provider_key==="google_search_console")await discoverGoogleResources("google_search_console",envelope.access_token);else if(connection.data.provider_key==="google_analytics")await discoverGoogleResources("google_analytics",envelope.access_token);else if(connection.data.provider_key==="google_workspace")await googleProfile(envelope.access_token);else if(connection.data.provider_key==="microsoft_365")await verifyMicrosoftProfile(envelope.access_token);else throw new Error("unsupported");health={healthy:true,code:"verified"};}catch(error){health={healthy:false,code:(error as {status?:number}).status===401?"reauth_required":"provider_error"};}}
+  const now=new Date().toISOString();await context.supabase.from("organization_integrations").update(health.healthy?{status:"connected",last_health_check_at:now,last_verified_at:now,last_error_at:null,last_error_code:null,last_error_message:null,updated_at:now}:{status:health.code==="reauth_required"?"reauth_required":"needs_attention",last_health_check_at:now,last_error_at:now,last_error_code:health.code,last_error_message:"Provider health verification failed.",updated_at:now}).eq("id",integrationId).eq("organization_id",context.organizationId);
+  redirect(setupUrl(integrationId,projectId,health.healthy?"message":"error",health.healthy?"Connection health verified.":"Connection needs attention or reauthorization."));
+}
+
+export async function disconnectCustomerConnection(formData:FormData){
+  const context=await requireActiveOwnerOrganizationContext();const integrationId=text(formData.get("integrationId"));const projectId=text(formData.get("projectId"));const now=new Date().toISOString();const connection=await context.supabase.from("organization_integrations").select("provider_key").eq("id",integrationId).eq("organization_id",context.organizationId).maybeSingle();if(!connection.data)redirect("/integrations?error=Connection%20not%20found.");
+  await context.supabase.from("organization_integrations").update({status:"disconnected",enabled:false,metadata:{verification_result:"disconnected_by_user"},updated_at:now}).eq("id",integrationId).eq("organization_id",context.organizationId);await context.supabase.from("integration_resources").update({available:false}).eq("integration_id",integrationId).eq("organization_id",context.organizationId);await context.supabase.from("project_connection_bindings").update({access_status:"needs_attention",binding_status:"needs_attention",updated_at:now}).eq("integration_id",integrationId).eq("organization_id",context.organizationId);await context.supabase.from("audit_events").insert({organization_id:context.organizationId,actor_type:"user",actor_user_id:context.user.id,event_type:"integration.disconnected",object_type:"organization_integration",object_id:integrationId,risk_level:"medium",payload:{provider_key:connection.data.provider_key}});revalidatePath("/integrations");redirect(setupUrl(integrationId,projectId,"message","Connection disconnected. Existing project bindings now need attention."));
 }

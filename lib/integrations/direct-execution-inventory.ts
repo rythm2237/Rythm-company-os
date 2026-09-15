@@ -19,6 +19,28 @@ export type DirectExecutionInventoryItem = {
 
 export const DIRECT_EXECUTION_INVENTORY: DirectExecutionInventoryItem[] = [
   {
+    path: "lib/integrations/adapters/customer-connections.ts",
+    classification: ["B", "D"],
+    disposition: "adapter_boundary",
+    owner: "Integration Gateway",
+    scope: "Read-only credential verification, health checks, and resource discovery",
+    risk: "External provider metadata reads",
+    reason: "Company connection operations are isolated behind the registered adapter contract",
+    migrationPlan: "Permanent provider adapter boundary",
+    reviewPoint: "Every provider or granted-capability addition",
+  },
+  ...["google-analytics", "google-search-console", "microsoft-365"].map((provider) => ({
+    path: `app/api/integrations/${provider}/callback/route.ts`,
+    classification: ["B", "D"] as ExecutionPathClass[],
+    disposition: "platform_control_boundary" as const,
+    owner: "Integration Gateway",
+    scope: `Human Owner initiated ${provider} OAuth code exchange and account verification`,
+    risk: "External authorization and provider credential issuance",
+    reason: "The callback establishes a company-owned read credential after explicit provider consent and is not Agent-reachable execution",
+    migrationPlan: "Permanent OAuth control-plane boundary; operational provider actions remain behind capabilities and adapters",
+    reviewPoint: "Every OAuth scope or credential-flow change",
+  })),
+  {
     path: "lib/integrations/provider-executors.ts",
     classification: ["B", "D", "E", "F", "G"],
     disposition: "adapter_boundary",

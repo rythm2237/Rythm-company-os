@@ -9,6 +9,7 @@ import {
   verifyGoogleSearchConsolePropertyAccess,
   verifyGoogleSearchConsoleState,
 } from "@/lib/admin/integrations/google-search-console";
+import {createExecutionServiceClient} from "@/lib/integrations/service-runner";
 
 type GoogleTokenResponse = {
   access_token?: string;
@@ -35,6 +36,7 @@ function finish(request: Request, key: "error" | "message", message: string) {
     "rythm_google_oauth_state",
     "rythm_google_oauth_integration",
     "rythm_google_oauth_user",
+    "rythm_google_oauth_pkce",
   ]) {
     response.cookies.set(name, "", {
       httpOnly: true,
@@ -125,6 +127,7 @@ export async function GET(request: Request) {
   const expectedState = cookies.get("rythm_google_oauth_state") ?? "";
   const cookieIntegrationId = cookies.get("rythm_google_oauth_integration") ?? "";
   const cookieUserId = cookies.get("rythm_google_oauth_user") ?? "";
+  const codeVerifier = cookies.get("rythm_google_oauth_pkce") ?? "";
   const searchConsolePayload = state ? verifyGoogleSearchConsoleState(state) : null;
   const searchConsoleCookieState = cookies.get("rythm_gsc_oauth_state") ?? "";
   const searchConsoleCookieUser = cookies.get("rythm_gsc_oauth_user") ?? "";
@@ -196,7 +199,7 @@ export async function GET(request: Request) {
 
   if (providerError)
     return finish(request, "error", `Google authorization was not completed: ${providerError}`);
-  if (!code || !state || (!cookieStateValid && !signedPayload) || !integrationId || !expectedUserId)
+  if (!code || !state || (!cookieStateValid && !signedPayload) || !integrationId || !expectedUserId || !codeVerifier)
     return finish(request, "error", "Google OAuth state validation failed. Start the connection again from Integrations.");
 
   const context = await resolveOrganizationContext();
@@ -233,6 +236,7 @@ export async function GET(request: Request) {
       client_secret: clientSecret,
       redirect_uri: redirectUri,
       grant_type: "authorization_code",
+      code_verifier: codeVerifier,
     }),
     cache: "no-store",
   });
@@ -269,12 +273,26 @@ export async function GET(request: Request) {
     expires_at: new Date(now + Math.max(60, Number(tokens.expires_in ?? 3600)) * 1000).toISOString(),
   });
 
-  const { error: vaultError } = await context.supabase.rpc(
-    "set_organization_integration_secret_v1",
+  const { error: vaultError } = await createExecutionServiceClient().rpc(
+    "store_organization_integration_secret_unverified_v1",
     { target_integration_id: integrationId, secret_value: envelope },
   );
   if (vaultError)
     return finish(request, "error", `Google credential could not be stored in Vault: ${vaultError.message}`);
+
+  const verifiedAt = new Date().toISOString();
+  const workspaceResourceId = profile.email ?? integrationId;
+  await context.supabase.from("integration_resources").upsert({
+    organization_id: context.organizationId,
+    integration_id: integrationId,
+    provider_key: "google_workspace",
+    resource_type: "google_workspace_account",
+    resource_id: workspaceResourceId,
+    resource_name: profile.email ?? "Google Workspace account",
+    resource_metadata: { google_email_verified: profile.verified_email === true },
+    last_verified_at: verifiedAt,
+    available: true,
+  }, { onConflict: "integration_id,resource_type,resource_id" });
 
   const { error: updateError } = await context.supabase
     .from("organization_integrations")
@@ -284,12 +302,15 @@ export async function GET(request: Request) {
       status: "connected",
       enabled: true,
       granted_scopes: ["gmail.readonly", "calendar.readonly"],
-      connected_at: new Date().toISOString(),
-      last_verified_at: new Date().toISOString(),
+      connected_at: verifiedAt,
+      last_verified_at: verifiedAt,
+      last_health_check_at: verifiedAt,
       metadata: {
+        verification_result: "verified",
         oauth_flow: "google_workspace_v1",
         credential_format: "oauth_token_envelope_v1",
         phase3_read_only_bootstrap: true,
+        resource_count: 1,
         google_email_verified: profile.verified_email === true,
       },
       updated_at: new Date().toISOString(),
