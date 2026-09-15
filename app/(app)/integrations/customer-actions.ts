@@ -4,72 +4,37 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { discoverGoogleResources, getTokenConnectionAdapter, googleProfile, verifyMicrosoftProfile } from "@/lib/integrations/connections/providers";
+import { getCanonicalSetupPlan } from "@/lib/integrations/connections/setup-plans";
 import { createExecutionServiceClient } from "@/lib/integrations/service-runner";
 
-function text(value: FormDataEntryValue | null) {
-  return String(value ?? "").trim();
-}
+function text(value: FormDataEntryValue | null) { return String(value ?? "").trim(); }
 
 export async function createCustomerIntegration(formData: FormData) {
   const context = await requireActiveOwnerOrganizationContext();
   const providerKey = text(formData.get("providerKey"));
   const displayName = text(formData.get("displayName"));
   const projectId = text(formData.get("projectId"));
-  if (!providerKey || !displayName) {
-    redirect(`/integrations?error=${encodeURIComponent("Service and connection name are required.")}${projectId ? `&project=${encodeURIComponent(projectId)}` : ""}`);
-  }
+  if (!providerKey || !displayName) redirect(`/integrations?error=${encodeURIComponent("Service and connection name are required.")}${projectId ? `&project=${encodeURIComponent(projectId)}` : ""}`);
 
-  const { data: provider } = await context.supabase
-    .from("integration_providers")
-    .select("provider_key,display_name,supports_oauth,supports_token")
-    .eq("provider_key", providerKey)
-    .eq("enabled", true)
-    .maybeSingle();
-  if (!provider) {
-    redirect(`/integrations?error=${encodeURIComponent("This service is not available for customer setup.")}${projectId ? `&project=${encodeURIComponent(projectId)}` : ""}`);
-  }
+  const { data: provider } = await context.supabase.from("integration_providers").select("provider_key,display_name,supports_oauth,supports_token").eq("provider_key", providerKey).eq("enabled", true).maybeSingle();
+  if (!provider) redirect(`/integrations?error=${encodeURIComponent("This service is not available for customer setup.")}${projectId ? `&project=${encodeURIComponent(projectId)}` : ""}`);
 
-  const { data: integration, error } = await context.supabase
-    .from("organization_integrations")
-    .insert({
-      organization_id: context.organizationId,
-      provider_key: providerKey,
-      display_name: displayName,
-      account_ref: null,
-      base_url: null,
-      auth_type: provider.supports_oauth ? "oauth" : "token",
-      granted_scopes: [],
-      status: "setup_required",
-      connected_by_user_id: context.user.id,
-      metadata: {
-        customer_setup: true,
-        setup_state: "created_not_authorized",
-        project_context: projectId || null,
-      },
-    })
-    .select("id")
-    .single();
+  const { data: integration, error } = await context.supabase.from("organization_integrations").insert({organization_id:context.organizationId,provider_key:providerKey,display_name:displayName,account_ref:null,base_url:null,auth_type:provider.supports_oauth?"oauth":"token",granted_scopes:[],status:"setup_required",connected_by_user_id:context.user.id,metadata:{customer_setup:true,setup_state:"created_not_authorized",project_context:projectId||null}}).select("id").single();
+  if (error || !integration) redirect(`/integrations?error=${encodeURIComponent(error?.message ?? "Service could not be added.")}${projectId ? `&project=${encodeURIComponent(projectId)}` : ""}`);
 
-  if (error || !integration) {
-    redirect(`/integrations?error=${encodeURIComponent(error?.message ?? "Service could not be added.")}${projectId ? `&project=${encodeURIComponent(projectId)}` : ""}`);
-  }
-
+  const canonical=getCanonicalSetupPlan(providerKey);
   await context.supabase.from("integration_setup_sessions").insert({
-    organization_id: context.organizationId, provider_key: providerKey,
-    connection_id: integration.id, project_id: projectId || null,
-    setup_plan: { version: 1, steps: ["create_connection", "authorize_provider", "verify_access", "discover_resources", "bind_project_resource"] },
-    current_step: 1, step_status: "waiting_for_user", user_action_required: true,
-    provider_context: { authorization: provider.supports_oauth ? "oauth" : "token" }, created_by_user_id: context.user.id,
+    organization_id:context.organizationId,provider_key:providerKey,connection_id:integration.id,project_id:projectId||null,
+    setup_plan_id:canonical?.setupPlanId??`${providerKey}.manual.v1`,setup_plan_version:canonical?.version??1,
+    setup_plan:canonical??{version:1,steps:["create_connection","authorize_provider","verify_access","discover_resources","bind_project_resource"]},
+    automation_mode:"manual",session_status:"waiting_for_user",control_mode:"human",current_step:canonical?Math.max(0,canonical.steps.findIndex(step=>step.userInteractionRequired)):1,
+    step_status:"waiting_for_user",user_action_required:true,requires_user_action:true,user_action_type:provider.supports_oauth?"LOGIN_REQUIRED":"CONSENT_REQUIRED",
+    provider_context:{authorization:provider.supports_oauth?"oauth":"token"},created_by_user_id:context.user.id,started_by_user_id:context.user.id,started_at:new Date().toISOString(),last_heartbeat_at:new Date().toISOString(),
   });
   await context.supabase.from("audit_events").insert({organization_id:context.organizationId,actor_type:"user",actor_user_id:context.user.id,event_type:"integration.service_added",object_type:"organization_integration",object_id:integration.id,risk_level:"low",payload:{provider_key:providerKey,project_id:projectId||null,authorized:false}});
-
   revalidatePath("/integrations");
-  const message = provider.supports_oauth
-    ? `${provider.display_name} was added. No external account is connected yet. Continue below to authorize the provider.`
-    : `${provider.display_name} was added. No external account is connected yet. Continue below to verify a restricted provider credential.`;
-  const query = new URLSearchParams({ message });
-  if (projectId) query.set("project", projectId);
-  redirect(`/integrations/${integration.id}/setup?${query.toString()}`);
+  const message=provider.supports_oauth?`${provider.display_name} was added. No external account is connected yet. Continue below to authorize the provider.`:`${provider.display_name} was added. No external account is connected yet. Continue below to verify a restricted provider credential.`;
+  const query=new URLSearchParams({message});if(projectId)query.set("project",projectId);redirect(`/integrations/${integration.id}/setup?${query.toString()}`);
 }
 
 function setupUrl(id:string,projectId:string,key:"message"|"error",message:string){const query=new URLSearchParams({[key]:message});if(projectId)query.set("project",projectId);return `/integrations/${id}/setup?${query.toString()}`;}
@@ -86,7 +51,7 @@ export async function verifyCustomerTokenConnection(formData:FormData){
   const now=new Date().toISOString();await context.supabase.from("integration_resources").update({available:false}).eq("integration_id",integrationId).eq("organization_id",context.organizationId);
   if(verification.resources.length){const resources=verification.resources.map(resource=>({organization_id:context.organizationId,integration_id:integrationId,provider_key:providerKey,resource_type:resource.resourceType,resource_id:resource.resourceId,resource_name:resource.resourceName,resource_metadata:resource.metadata??{},discovered_at:now,last_verified_at:now,available:true}));const saved=await context.supabase.from("integration_resources").upsert(resources,{onConflict:"integration_id,resource_type,resource_id"});if(saved.error)redirect(setupUrl(integrationId,projectId,"error","Provider access was verified, but resources could not be saved."));}
   const updated=await context.supabase.from("organization_integrations").update({account_ref:verification.accountRef,granted_scopes:verification.grantedScopes,status:"connected",enabled:true,connected_at:now,last_verified_at:now,last_health_check_at:now,last_error_at:null,last_error_code:null,last_error_message:null,metadata:{verification_result:"verified",verification_detail:verification.detail,credential_format:"provider_token_v1",resource_count:verification.resources.length},updated_at:now}).eq("id",integrationId).eq("organization_id",context.organizationId);if(updated.error)redirect(setupUrl(integrationId,projectId,"error",`Provider verified, but connection state could not be saved: ${updated.error.message}`));
-  await context.supabase.from("integration_setup_sessions").update({current_step:verification.resources.length?3:4,step_status:verification.resources.length?"waiting_for_user":"completed",user_action_required:verification.resources.length,verification_result:{status:"verified",verified_at:now},updated_at:now}).eq("connection_id",integrationId).eq("organization_id",context.organizationId);
+  await context.supabase.from("integration_setup_sessions").update({current_step:verification.resources.length?3:4,step_status:verification.resources.length?"waiting_for_user":"completed",session_status:verification.resources.length?"waiting_for_user":"completed",user_action_required:verification.resources.length,requires_user_action:verification.resources.length,updated_at:now}).eq("connection_id",integrationId).eq("organization_id",context.organizationId).eq("automation_mode","manual");
   await context.supabase.from("audit_events").insert({organization_id:context.organizationId,actor_type:"user",actor_user_id:context.user.id,event_type:"integration.connection_verified",object_type:"organization_integration",object_id:integrationId,risk_level:"low",payload:{provider_key:providerKey,resource_count:verification.resources.length,scopes:verification.grantedScopes}});
   revalidatePath("/integrations");revalidatePath(`/integrations/${integrationId}/setup`);redirect(setupUrl(integrationId,projectId,"message","Connection verified. Select the exact project resource and capabilities below."));
 }
@@ -98,7 +63,7 @@ export async function bindCustomerProjectResource(formData:FormData){
   if(!project.data||!integration.data||integration.data.status!=="connected"||!resource.data)redirect(setupUrl(integrationId,projectId,"error","The verified connection or selected resource is no longer available."));
   if(capabilities.length){const allowed=await context.supabase.from("integration_capabilities").select("capability_key").eq("provider_key",integration.data.provider_key).in("capability_key",capabilities);const set=new Set((allowed.data??[]).map(row=>row.capability_key));if(capabilities.some(value=>!set.has(value)))redirect(setupUrl(integrationId,projectId,"error","One or more requested capabilities are not valid for this provider."));}
   const now=new Date().toISOString();const saved=await context.supabase.from("project_connection_bindings").upsert({organization_id:context.organizationId,project_id:projectId,integration_id:integrationId,provider_key:integration.data.provider_key,resource_type:resource.data.resource_type,resource_ref:resource.data.resource_id,resource_id:resource.data.resource_id,display_name:resource.data.resource_name,resource_name:resource.data.resource_name,permission_scope:{capabilities},capabilities,access_status:"connected",binding_status:"verified",recommendation_level:"confirmed",confirmed_by_user_id:context.user.id,confirmed_at:now,verified_at:now,updated_at:now},{onConflict:"project_id,integration_id,resource_ref"});if(saved.error)redirect(setupUrl(integrationId,projectId,"error",saved.error.message));
-  await context.supabase.from("integration_setup_sessions").update({current_step:4,step_status:"completed",user_action_required:false,updated_at:now}).eq("connection_id",integrationId).eq("project_id",projectId).eq("organization_id",context.organizationId);
+  await context.supabase.from("integration_setup_sessions").update({current_step:4,step_status:"completed",session_status:"completed",user_action_required:false,requires_user_action:false,updated_at:now}).eq("connection_id",integrationId).eq("project_id",projectId).eq("organization_id",context.organizationId).eq("automation_mode","manual");
   await context.supabase.from("audit_events").insert({organization_id:context.organizationId,actor_type:"user",actor_user_id:context.user.id,event_type:"integration.resource_bound",object_type:"project",object_id:projectId,risk_level:"low",payload:{integration_id:integrationId,provider_key:integration.data.provider_key,resource_id:resource.data.resource_id,capabilities}});
   revalidatePath(`/projects/operating`);redirect(setupUrl(integrationId,projectId,"message","Verified resource bound to the project. Roadmap dependencies can now use this connection."));
 }
