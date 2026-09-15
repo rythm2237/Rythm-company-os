@@ -54,8 +54,6 @@ export async function askCustomerConnectionAgent(formData:FormData){
   if(!connection.data)redirect(setupUrl(integrationId,projectId,"error","Connection not found."));
   const session=sessionId?await service.from("integration_setup_sessions").select("current_step").eq("id",sessionId).eq("organization_id",context.organizationId).maybeSingle():{data:null};
   const plan=getCanonicalSetupPlan(connection.data.provider_key);const currentStep=plan&&session.data?plan.steps[Number(session.data.current_step)]??null:null;
-  let projectReason:string|null=null;
-  if(projectId){const requirement=await service.from("project_connection_requirements").select("reason,purpose").eq("organization_id",context.organizationId).eq("project_id",projectId).eq("provider_key",connection.data.provider_key).limit(1).maybeSingle();projectReason=String(requirement.data?.reason??requirement.data?.purpose??"")||null;}
-  const answer=explainConnectionSetupQuestion({question,providerKey:connection.data.provider_key,currentStep,projectReason});
+  const answer=explainConnectionSetupQuestion({question,providerKey:connection.data.provider_key,currentStep,projectReason:projectId?"the resource bound to this RYTHM project":null});
   redirect(setupUrl(integrationId,projectId,"agentAnswer",answer));
 }
