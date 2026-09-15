@@ -7,16 +7,11 @@ import { DIRECT_EXECUTION_INVENTORY } from "../lib/integrations/direct-execution
 function files(root: string): string[] {
   return readdirSync(root).flatMap((name) => {
     const path = join(root, name);
-    if (name === "node_modules" || name === ".next" || name === ".git")
-      return [];
+    if (name === "node_modules" || name === ".next" || name === ".git") return [];
     return statSync(path).isDirectory() ? files(path) : [path];
   });
 }
-const sourceFiles = [
-  ...files("app"),
-  ...files("lib"),
-  ...files("components"),
-].filter((path) => /\.(ts|tsx)$/.test(path));
+const sourceFiles = [...files("app"), ...files("lib"), ...files("components")].filter((path) => /\.(ts|tsx)$/.test(path));
 const fetchBoundaries = new Set([
   "app/(app)/agents/[code]/benchmark/BenchmarkConsole.tsx",
   "app/(app)/meetings/room/DeliberationConsole.tsx",
@@ -43,6 +38,10 @@ const fetchBoundaries = new Set([
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   "lib/integrations/adapters/http.ts",
   "lib/integrations/adapters/customer-connections.ts",
+  // Classified in DIRECT_EXECUTION_INVENTORY as a platform control-plane boundary.
+  // It may create/read secure cloud-browser infrastructure sessions, but it grants no
+  // business-action authority and every provider URL/action remains allowlisted.
+  "lib/integrations/computer-use/runtime.ts",
 ]);
 const allFetchFiles = sourceFiles
   .filter((path) => /\bfetch\s*\(/.test(readFileSync(path, "utf8")))
@@ -70,48 +69,34 @@ const inventoried = new Set([
   ...DIRECT_EXECUTION_INVENTORY.map((item) => item.path),
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
 ]);
-const unknown = discovered.filter(
-  (path) =>
-    !path.startsWith("lib/integrations/adapters/") && !inventoried.has(path),
-);
-assert.deepEqual(
-  unknown,
-  [],
-  `Unknown direct provider/external execution paths: ${unknown.join(", ")}`,
-);
+const unknown = discovered.filter((path) => !path.startsWith("lib/integrations/adapters/") && !inventoried.has(path));
+assert.deepEqual(unknown, [], `Unknown direct provider/external execution paths: ${unknown.join(", ")}`);
+
+const computerUseBoundary = DIRECT_EXECUTION_INVENTORY.find((item) => item.path === "lib/integrations/computer-use/runtime.ts");
+assert.ok(computerUseBoundary, "Computer Use boundary must remain explicitly inventoried.");
+assert.equal(computerUseBoundary.disposition, "platform_control_boundary");
+assert.match(computerUseBoundary.scope, /connection setup control-plane/i);
+assert.match(computerUseBoundary.reason, /not authority to execute business actions/i);
+assert.match(computerUseBoundary.reviewPoint, /credential-handling/i);
+
 assert.equal(GOOGLE_OAUTH_REFRESH_BOUNDARY.disposition, "platform_control_boundary");
 assert.match(GOOGLE_OAUTH_REFRESH_BOUNDARY.scope, /OAuth access-token refresh/);
 assert.match(GOOGLE_OAUTH_REFRESH_BOUNDARY.reason, /cannot perform Gmail or Calendar business actions/);
-const directSdkPattern =
-  /from\s+["'](?:stripe|resend|@octokit\/rest|googleapis|@microsoft\/microsoft-graph-client|nodemailer|playwright|puppeteer|axios|got|ky)["']/;
+const directSdkPattern = /from\s+["'](?:stripe|resend|@octokit\/rest|googleapis|@microsoft\/microsoft-graph-client|nodemailer|playwright|puppeteer|axios|got|ky)["']/;
 assert.deepEqual(
-  sourceFiles.filter((path) =>
-    directSdkPattern.test(readFileSync(path, "utf8")),
-  ),
+  sourceFiles.filter((path) => directSdkPattern.test(readFileSync(path, "utf8"))),
   [],
   "Direct integration SDK imports are prohibited outside registered adapters.",
 );
-for (const exception of DIRECT_EXECUTION_INVENTORY.filter(
-  (item) => item.disposition === "temporary_exception",
-)) {
+for (const exception of DIRECT_EXECUTION_INVENTORY.filter((item) => item.disposition === "temporary_exception")) {
   assert.ok(
-    exception.owner &&
-      exception.scope &&
-      exception.risk &&
-      exception.reason &&
-      exception.migrationPlan &&
-      exception.reviewPoint,
+    exception.owner && exception.scope && exception.risk && exception.reason && exception.migrationPlan && exception.reviewPoint,
     `Incomplete temporary exception: ${exception.path}`,
   );
 }
-const outbound = readFileSync(
-  "app/api/communication/outbound/resend/route.ts",
-  "utf8",
-);
+const outbound = readFileSync("app/api/communication/outbound/resend/route.ts", "utf8");
 assert.match(outbound, /requestToolExecution/);
 assert.doesNotMatch(outbound, /fetch\s*\(\s*["'`]https:\/\//);
 const ci = readFileSync(".github/workflows/ci.yml", "utf8");
 assert.match(ci, /test:phase2:direct-guard/);
-console.log(
-  `Phase 2 direct execution guard passed (${discovered.length} classified provider boundaries, ${allFetchFiles.length} explicit fetch boundaries; 0 unknown).`,
-);
+console.log(`Phase 2 direct execution guard passed (${discovered.length} classified provider boundaries, ${allFetchFiles.length} explicit fetch boundaries; 0 unknown).`);
