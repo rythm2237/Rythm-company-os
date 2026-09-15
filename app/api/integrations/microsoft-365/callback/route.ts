@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
 import {createExecutionServiceClient} from "@/lib/integrations/service-runner";
+import {maybeHandleAgentOAuthCallback} from "@/lib/integrations/connections/agent-oauth-callback";
 
 type StatePayload={integrationId:string;userId:string;nonce:string;issuedAt:number};
 type TokenResponse={access_token?:string;refresh_token?:string;expires_in?:number;scope?:string;token_type?:string;error?:string;error_description?:string};
@@ -11,6 +12,7 @@ function cookieMap(request:Request){const raw=request.headers.get("cookie")??"";
 function finish(request:Request,integrationId:string,key:"message"|"error",message:string){const url=new URL(`/integrations/${integrationId}/setup`,request.url);url.searchParams.set(key,message);const r=NextResponse.redirect(url,303);for(const name of ["rythm_m365_state","rythm_m365_integration","rythm_m365_user","rythm_m365_pkce"])r.cookies.set(name,"",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/api/integrations/microsoft-365",maxAge:0});return r;}
 
 export async function GET(request:Request){
+  const agentResponse=await maybeHandleAgentOAuthCallback(request,"microsoft_365");if(agentResponse)return agentResponse;
   const url=new URL(request.url);const code=url.searchParams.get("code")?.trim()||"";const state=url.searchParams.get("state")?.trim()||"";const providerError=url.searchParams.get("error")?.trim();const payload=state?verifyState(state):null;const cookies=cookieMap(request);const integrationId=payload?.integrationId||cookies.get("rythm_m365_integration")||"";
   if(providerError)return finish(request,integrationId,"error",`Microsoft authorization was not completed: ${providerError}`);
   if(!payload||!code||cookies.get("rythm_m365_state")!==state||cookies.get("rythm_m365_integration")!==payload.integrationId||cookies.get("rythm_m365_user")!==payload.userId||!cookies.get("rythm_m365_pkce"))return finish(request,integrationId,"error","Microsoft 365 OAuth state validation failed. Start the connection again from RYTHM.");
