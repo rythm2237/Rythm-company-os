@@ -11,19 +11,21 @@ export async function POST(request:Request){
   if(!projectId||!integrationId||!resourceRef)return NextResponse.json({ok:false,error:"Project, connection and specific resource are required."},{status:400});
   const [project,integration]=await Promise.all([
     auth.supabase.from("projects").select("id").eq("id",projectId).eq("organization_id",auth.organizationId).maybeSingle(),
-    auth.supabase.from("organization_integrations").select("id,provider_key,display_name,status").eq("id",integrationId).eq("organization_id",auth.organizationId).maybeSingle()
+    auth.supabase.from("organization_integrations").select("id,provider_key,display_name,status,metadata,last_verified_at").eq("id",integrationId).eq("organization_id",auth.organizationId).maybeSingle()
   ]);
   if(!project.data)return NextResponse.json({ok:false,error:"Project not found."},{status:404});
-  if(!integration.data||integration.data.status!=="connected")return NextResponse.json({ok:false,error:"The company connection is not connected."},{status:409});
+  if(!integration.data||integration.data.status!=="connected"||integration.data.metadata?.verification_result!=="verified"||!integration.data.last_verified_at)return NextResponse.json({ok:false,error:"The company connection has not passed external provider verification."},{status:409});
+  const discovered=await auth.supabase.from("integration_resources").select("id,resource_type,resource_id,resource_name").eq("organization_id",auth.organizationId).eq("integration_id",integrationId).eq("resource_id",resourceRef).eq("available",true).maybeSingle();
+  if(!discovered.data)return NextResponse.json({ok:false,error:"Select a resource discovered and verified through this company connection."},{status:409});
   const requested=[...new Set((body.capabilities??[]).map(String).filter(Boolean))].slice(0,50);
   if(requested.length){
     const allowed=await auth.supabase.from("integration_capabilities").select("capability_key").eq("provider_key",integration.data.provider_key).in("capability_key",requested);
     const allowedSet=new Set((allowed.data??[]).map(row=>row.capability_key));
     if(requested.some(cap=>!allowedSet.has(cap)))return NextResponse.json({ok:false,error:"One or more requested capabilities are not supported by this integration."},{status:400});
   }
-  const displayName=String(body.displayName??resourceRef).trim().slice(0,240);
-  const resourceType=String(body.resourceType??integration.data.provider_key).trim();
-  const result=await auth.supabase.from("project_connection_bindings").upsert({organization_id:auth.organizationId,project_id:projectId,integration_id:integrationId,resource_type:resourceType,resource_ref:resourceRef,display_name:displayName,permission_scope:{capabilities:requested},access_status:"connected",recommendation_level:"confirmed",confirmed_by_user_id:auth.user.id,confirmed_at:new Date().toISOString(),updated_at:new Date().toISOString()},{onConflict:"project_id,integration_id,resource_ref"}).select("id").single();
+  const displayName=String(body.displayName??discovered.data.resource_name).trim().slice(0,240);
+  const resourceType=discovered.data.resource_type;const now=new Date().toISOString();
+  const result=await auth.supabase.from("project_connection_bindings").upsert({organization_id:auth.organizationId,project_id:projectId,integration_id:integrationId,provider_key:integration.data.provider_key,resource_type:resourceType,resource_ref:resourceRef,resource_id:resourceRef,resource_name:discovered.data.resource_name,display_name:displayName,permission_scope:{capabilities:requested},capabilities:requested,access_status:"connected",binding_status:"verified",verified_at:now,recommendation_level:"confirmed",confirmed_by_user_id:auth.user.id,confirmed_at:now,updated_at:now},{onConflict:"project_id,integration_id,resource_ref"}).select("id").single();
   if(result.error)return NextResponse.json({ok:false,error:"Project connection could not be attached."},{status:500});
   // Publish only non-secret connection metadata into shared Project Knowledge so agents can name
   // exact capability keys in proposals instead of inventing permissions or asking repeatedly.
