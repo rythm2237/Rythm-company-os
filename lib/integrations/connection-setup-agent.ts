@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getCanonicalSetupPlan, type ConnectionHumanActionType, type ConnectionSetupStep } from "@/lib/integrations/connections/setup-plans";
 import { getComputerUseRuntime } from "@/lib/integrations/computer-use/runtime";
 import { issueConnectionResumeToken, verifyConnectionResumeToken } from "@/lib/integrations/connections/resume-token";
+import { isAgentOAuthProvider, prepareAgentOAuthLaunch } from "@/lib/integrations/connections/agent-oauth";
 
 export const CONNECTION_SETUP_AGENT_KEY = "connection_setup_agent";
 const ACTIVE = ["queued","starting","running","waiting_for_user","waiting_for_provider","verifying","paused","retrying"];
@@ -180,6 +181,24 @@ async function advance(service: Db, session: SetupSession, nextStep: number, sta
   session.user_action_type = null;
 }
 
+async function enterNextHumanStepIfNeeded(service: Db, session: SetupSession, plan: NonNullable<ReturnType<typeof getCanonicalSetupPlan>>) {
+  const next = plan.steps[session.current_step];
+  if (next && (next.userInteractionRequired || next.automationMode === "human_only")) {
+    await setWaitingForUser(service, session, next, next.humanActionType ?? "BUSINESS_DECISION_REQUIRED");
+    return true;
+  }
+  return false;
+}
+
+async function retryBrowser(service: Db, session: SetupSession, message: string) {
+  if (session.attempt_count < 3) {
+    const delay = Math.min(60, 5 * Math.max(1, session.attempt_count));
+    await service.from("integration_setup_sessions").update({ session_status: "retrying", next_attempt_at: new Date(Date.now() + delay * 1000).toISOString(), failure_reason: message.slice(0, 500), last_heartbeat_at: now(), updated_at: now() }).eq("id", session.id).eq("organization_id", session.organization_id);
+    return event(service, session, "browser.session.retrying", "Cloud browser action will retry safely.", { resultCode: "browser_retry" });
+  }
+  return failSession(service, session, message, "browser_failure");
+}
+
 async function processSession(service: Db, session: SetupSession) {
   if (isKilled()) return;
   const plan = getCanonicalSetupPlan(session.provider_key);
@@ -210,21 +229,54 @@ async function processSession(service: Db, session: SetupSession) {
         await runtime.execute(browserSessionId, { kind: "navigate", url: step.expectedUrl ?? plan.entryUrl, confidence: 1 }, plan);
       }
       await event(service, session, "provider.navigation", `Opened allowlisted ${plan.title} setup domain.`, { stepKey: step.stepKey });
-      return advance(service, session, session.current_step + 1);
+      await advance(service, session, session.current_step + 1);
+      await enterNextHumanStepIfNeeded(service, session, plan);
+      return;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Computer Use navigation failed.";
-      if (session.attempt_count < 3) {
-        const delay = Math.min(60, 5 * Math.max(1, session.attempt_count));
-        await service.from("integration_setup_sessions").update({ session_status: "retrying", next_attempt_at: new Date(Date.now() + delay * 1000).toISOString(), failure_reason: message.slice(0, 500), last_heartbeat_at: now(), updated_at: now() }).eq("id", session.id).eq("organization_id", session.organization_id);
-        return event(service, session, "browser.session.retrying", "Cloud browser action will retry safely.", { resultCode: "browser_retry" });
-      }
-      return failSession(service, session, message, "browser_failure");
+      return retryBrowser(service, session, message);
     }
   }
 
   if (step.type === "OAUTH_START") {
-    await event(service, session, "provider.authorization.ready", `${plan.title} secure authorization is ready for Human identity verification.`, { stepKey: step.stepKey });
-    return advance(service, session, session.current_step + 1);
+    const runtime = getComputerUseRuntime();
+    if (!runtime.available) return setWaitingForUser(service, session, { ...step, description: "Secure cloud browser is not configured. Continue manually with Guide; completed progress is preserved." }, "BUSINESS_DECISION_REQUIRED");
+    if (!isAgentOAuthProvider(plan.providerKey)) return failSession(service, session, "This OAuth provider does not have a validated Connection Agent launch adapter.", "oauth_adapter_missing");
+    try {
+      const actor = await service.from("integration_setup_sessions").select("started_by_user_id").eq("id", session.id).eq("organization_id", session.organization_id).maybeSingle();
+      const userId = String(actor.data?.started_by_user_id ?? "");
+      if (!userId) return failSession(service, session, "Connection Agent initiator could not be verified.", "missing_agent_initiator");
+      const launch = prepareAgentOAuthLaunch({ providerKey: plan.providerKey, sessionId: session.id, organizationId: session.organization_id, integrationId: session.connection_id, userId, projectId: session.project_id });
+      let browserSessionId = session.browser_session_id;
+      if (!browserSessionId) {
+        const browser = await runtime.createSession({
+          sessionId: session.id,
+          providerKey: plan.providerKey,
+          allowedHosts: plan.allowedHosts,
+          startUrl: launch.authorizationUrl,
+          bootstrapCookies: launch.bootstrapCookies,
+        });
+        browserSessionId = browser.id;
+        const metadata = { ...safeMetadata(session.metadata ?? {}), browser_state: browser.state, live_workspace: true };
+        const saved = await service.from("integration_setup_sessions").update({ browser_session_id: browser.id, metadata, last_heartbeat_at: now(), updated_at: now() }).eq("id", session.id).eq("organization_id", session.organization_id);
+        if (saved.error) throw new Error(saved.error.message);
+        session.browser_session_id = browser.id;
+        session.metadata = metadata;
+        await event(service, session, "browser.session.started", "Secure cloud browser session started for provider authorization.", { stepKey: step.stepKey });
+        await audit(service, session, "browser.session.started");
+      } else {
+        await runtime.execute(browserSessionId, { kind: "navigate", url: launch.authorizationUrl, confidence: 1 }, plan);
+      }
+      const timestamp = now();
+      await service.from("organization_integrations").update({ status: "authorizing", authorization_started_at: timestamp, last_error_at: null, last_error_code: null, last_error_message: null, updated_at: timestamp }).eq("id", session.connection_id).eq("organization_id", session.organization_id);
+      await event(service, session, "provider.authorization.ready", `${plan.title} authorization opened in the secure cloud browser.`, { stepKey: step.stepKey });
+      await advance(service, session, session.current_step + 1);
+      await enterNextHumanStepIfNeeded(service, session, plan);
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "OAuth cloud browser launch failed.";
+      return retryBrowser(service, session, message);
+    }
   }
 
   if (step.type === "RESOURCE_DISCOVERY") {
@@ -276,6 +328,10 @@ async function processSession(service: Db, session: SetupSession) {
     session.session_status = "completed";
     await event(service, session, "connection.agent.completed", `${plan.title} connection setup completed with verification evidence.`, { stepKey: step.stepKey });
     await audit(service, session, "connection.agent.completed");
+    if (session.browser_session_id) {
+      const runtime = getComputerUseRuntime();
+      if (runtime.available) await runtime.closeSession(session.browser_session_id).catch(() => undefined);
+    }
     return;
   }
 
@@ -377,7 +433,7 @@ export function explainConnectionSetupQuestion(input: { question: string; provid
   if (/permission|scope|access/.test(q)) return `RYTHM requests only the capabilities required by this setup plan. ${plan.securityNote}`;
   if (/password|mfa|passkey|captcha|login|sign in/.test(q)) return "Passwords, passkeys, MFA codes and CAPTCHA are Human-only. Enter them only on the provider page; RYTHM does not read or store them.";
   if (/which account|account should/.test(q)) return input.projectReason ? `Use the account that owns the project resource required for: ${input.projectReason}` : "Use the account that owns the exact business resource this project needs. If multiple resources match, RYTHM will stop for your choice.";
-  if (/skip|later/.test(q)) return "You can pause or continue manually with Guide. A required connection remains incomplete until provider verification and any required project resource binding both succeed.";
+  if (/skip|later/.test(q)) return "You can minimize the Flight Deck or continue manually with Guide. The durable session continues in the background unless you pause or stop it.";
   if (/what are you doing|what.*doing|current/.test(q)) return input.currentStep ? `Current step: ${input.currentStep.title}. ${input.currentStep.description}` : "The agent is waiting for the next canonical setup-plan step.";
   if (/reject|deny|decline/.test(q)) return "If you reject provider consent, RYTHM keeps the connection incomplete and does not fabricate a Connected state. You can retry or continue manually later.";
   return `This setup uses the shared ${plan.title} plan. The agent automates only safe steps and stops for identity, consent, authority or ambiguous business choices.`;
