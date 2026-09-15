@@ -30,7 +30,7 @@ const resumeMigration=read("supabase/migrations/20260915121600_connection_agent_
 for(const value of ["RESOURCE_DISCOVERY","CONNECTION_VERIFY","automation_mode='ai'","binding_status='verified'"])expect(resumeMigration,value,"provider callback/binding auto-resume");
 
 const actions=read("app/(app)/integrations/connection-agent-actions.ts");
-for(const value of ["httpOnly:true","sameSite:\"strict\"","startConnectionSetupAgent","controlConnectionSetupSession","dispatchConnectionSetupSessions","explainConnectionSetupQuestion"])expect(actions,value,"secure server actions");
+for(const value of ["httpOnly:true","sameSite:\"strict\"","startConnectionSetupAgent","controlConnectionSetupSession","dispatchConnectionSetupSessions","explainConnectionSetupQuestion","resume_token_hash","secureEqual(expected,presented)"])expect(actions,value,"secure server actions");
 reject(actions,"localStorage","resume token browser storage");
 const page=read("app/(app)/integrations/[id]/setup/page.tsx");
 for(const value of ["ConnectionSetupAgentPanel","Guide me","MANUAL · GUIDE ME","getCanonicalSetupPlan"])expect(page,value,"dual setup UX");
