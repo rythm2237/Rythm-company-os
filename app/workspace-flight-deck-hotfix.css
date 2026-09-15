@@ -1,0 +1,71 @@
+/* Connection Flight Deck viewport + workspace navigation hardening. */
+body.flight-deck-is-open{overflow:hidden}
+.flight-deck-backdrop{position:fixed!important;inset:0!important;z-index:2147483000!important;padding:0!important;place-items:stretch!important;background:rgba(2,5,14,.82)}
+.flight-deck{width:min(1760px,98.5vw)!important;height:min(1020px,98svh)!important;margin:auto;border-radius:22px!important}
+.flight-deck.is-full{width:100vw!important;height:100svh!important;max-width:none!important;max-height:none!important;border-radius:0!important}
+.flight-deck-grid{grid-template-columns:minmax(0,1fr) clamp(300px,20vw,360px)!important}
+.flight-deck-browser-shell{padding:12px!important}
+.flight-deck-browser-toolbar{height:42px!important}
+.flight-deck-browser iframe{display:block;width:100%!important;height:100%!important;min-height:0;background:#fff}
+.flight-deck-sidecar{padding:12px!important;gap:9px!important}
+.flight-deck-sidecar>section{padding:12px!important}
+.flight-deck-provider-error{border-color:rgba(251,113,133,.28)!important;background:linear-gradient(145deg,rgba(110,24,45,.24),rgba(46,14,29,.18))!important}
+.flight-deck-provider-error .flight-deck-section-kicker b{color:#fb9daa!important}
+.flight-deck-provider-error h3{margin:10px 0 6px;color:#ffd7dd;font-size:17px}
+.flight-deck-provider-error p{margin:0;color:#dcaeb8;font-size:10px;line-height:1.55}
+.flight-deck-footer{position:relative;z-index:2}
+
+/* Desktop sidebar can collapse without losing the active workspace context. */
+.product-brand-compact{display:none;width:38px!important;height:38px!important;max-width:38px!important;object-fit:contain}
+.product-nav-collapse{display:grid;place-items:center;width:34px;height:34px;min-height:34px;padding:0;border:1px solid rgba(255,255,255,.11);border-radius:10px;color:#b9c4d8;background:rgba(255,255,255,.04);font-size:20px;line-height:1;cursor:pointer;transition:background .2s ease,color .2s ease,border-color .2s ease}
+.product-nav-collapse:hover{color:#fff;background:rgba(255,255,255,.08);border-color:rgba(132,147,255,.3)}
+
+@media (min-width:1101px){
+  html.rythm-nav-collapsed .app-workspace{--app-sidebar-width:76px}
+  html.rythm-nav-collapsed .product-nav{width:76px}
+  html.rythm-nav-collapsed .product-nav-inner{padding:18px 10px 13px}
+  html.rythm-nav-collapsed .product-nav-topline{justify-content:center;flex-direction:column;gap:10px}
+  html.rythm-nav-collapsed .product-brand-full{display:none!important}
+  html.rythm-nav-collapsed .product-brand-compact{display:block}
+  html.rythm-nav-collapsed .product-nav-collapse{width:32px;height:28px;min-height:28px;border-radius:8px}
+  html.rythm-nav-collapsed .product-nav-groups{margin-top:15px;overflow-x:visible}
+  html.rythm-nav-collapsed .product-nav-group{margin-bottom:8px}
+  html.rythm-nav-collapsed .product-nav-label{display:none}
+  html.rythm-nav-collapsed .product-nav-links{gap:4px}
+  html.rythm-nav-collapsed .product-nav-link{min-height:42px;padding:6px;display:grid;grid-template-columns:1fr;place-items:center;border-radius:11px;overflow:visible}
+  html.rythm-nav-collapsed .product-nav-link:hover{transform:none}
+  html.rythm-nav-collapsed .product-nav-icon{width:31px;height:31px}
+  html.rythm-nav-collapsed .product-nav-text,html.rythm-nav-collapsed .product-nav-link>i{display:none}
+  html.rythm-nav-collapsed .product-nav-footer{gap:8px;justify-items:center}
+  html.rythm-nav-collapsed .workspace-context-card{width:48px;padding:8px;display:grid;place-items:center}
+  html.rythm-nav-collapsed .workspace-context-heading{display:block}
+  html.rythm-nav-collapsed .workspace-context-avatar{width:32px;height:32px}
+  html.rythm-nav-collapsed .workspace-context-copy,html.rythm-nav-collapsed .workspace-context-meta,html.rythm-nav-collapsed .workspace-switcher{display:none}
+  html.rythm-nav-collapsed .product-onboarding-link{width:48px;min-height:44px;padding:7px;display:grid;grid-template-columns:1fr;place-items:center}
+  html.rythm-nav-collapsed .product-onboarding-link>span:first-child{width:30px;height:30px}
+  html.rythm-nav-collapsed .product-onboarding-copy{display:none}
+  html.rythm-nav-collapsed .workspace-system-state{display:none}
+  html.rythm-nav-collapsed .product-nav-footer>form{width:48px}
+  html.rythm-nav-collapsed .product-signout{width:48px;justify-content:center;padding:7px}
+  html.rythm-nav-collapsed .product-signout-label{display:none}
+  html.rythm-nav-collapsed .app-stage{margin-left:76px}
+}
+
+@media (max-width:1100px){
+  .product-nav-collapse{display:none}
+  .flight-deck{width:100vw!important;height:100svh!important;border-radius:0!important}
+  .flight-deck-grid{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(52vh,1fr) auto!important;overflow:auto}
+  .flight-deck-browser-shell{min-height:52vh;border-right:0!important;border-bottom:1px solid var(--fd-line)}
+  .flight-deck-sidecar{max-height:none;overflow:visible}
+}
+
+@media (max-width:720px){
+  .flight-deck-header{grid-template-columns:1fr auto!important;padding:12px!important;gap:10px!important}
+  .flight-deck-header-state{grid-column:1/-1;grid-row:2;justify-content:flex-start!important;overflow:hidden}
+  .flight-deck-brand h2{font-size:16px!important}
+  .flight-deck-browser-shell{padding:7px!important;min-height:56vh}
+  .flight-deck-browser-toolbar{height:38px!important;gap:7px!important;padding:0 8px!important}
+  .flight-deck-browser-address span{display:none}
+  .flight-deck-sidecar{padding:8px!important}
+  .flight-deck-footer{padding:8px!important}
+}
