@@ -78,7 +78,8 @@ export async function POST(request: Request) {
     base_url: null,
     auth_type: "oauth",
     granted_scopes: ["gmail.readonly", "calendar.readonly"],
-    status: "disconnected",
+    status: "authorizing",
+    authorization_started_at: new Date().toISOString(),
     enabled: true,
     connected_by_user_id: context.user.id,
     metadata: {
@@ -119,6 +120,11 @@ export async function POST(request: Request) {
       request,
       error?.message ?? "Google Workspace connection could not be prepared.",
     );
+  await context.supabase.from("audit_events").insert({
+    organization_id: context.organizationId, actor_type: "user", actor_user_id: context.user.id,
+    event_type: "integration.authorization_started", object_type: "organization_integration",
+    object_id: integration.id, risk_level: "low", payload: { provider_key: "google_workspace" },
+  });
 
   const state = signedState({
     integrationId: integration.id,
@@ -128,6 +134,8 @@ export async function POST(request: Request) {
   });
   if (!state)
     return back(request, "Google Workspace OAuth state could not be created.");
+  const codeVerifier = crypto.randomBytes(48).toString("base64url");
+  const codeChallenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
 
   const origin = new URL(request.url).origin;
   const redirectUri = `${origin}/api/integrations/google-workspace/callback`;
@@ -140,6 +148,8 @@ export async function POST(request: Request) {
   consentUrl.searchParams.set("prompt", "consent");
   consentUrl.searchParams.set("include_granted_scopes", "true");
   consentUrl.searchParams.set("state", state);
+  consentUrl.searchParams.set("code_challenge", codeChallenge);
+  consentUrl.searchParams.set("code_challenge_method", "S256");
 
   const response = NextResponse.redirect(consentUrl, 303);
   const cookieOptions = {
@@ -156,5 +166,6 @@ export async function POST(request: Request) {
     cookieOptions,
   );
   response.cookies.set("rythm_google_oauth_user", context.user.id, cookieOptions);
+  response.cookies.set("rythm_google_oauth_pkce", codeVerifier, cookieOptions);
   return response;
 }
