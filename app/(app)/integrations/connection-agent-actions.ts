@@ -92,6 +92,27 @@ export async function controlCustomerConnectionAgent(formData:FormData){
   redirect(setupUrl(integrationId,projectId,"message",message,command!=="stop"));
 }
 
+export async function restartCustomerConnectionAgent(formData:FormData){
+  const context=await requireActiveOwnerOrganizationContext();
+  const integrationId=text(formData.get("integrationId"));const projectId=text(formData.get("projectId"));const sessionId=text(formData.get("sessionId"));
+  if(!integrationId)redirect("/integrations?error=Connection%20is%20required.");
+  try{
+    const service=createExecutionServiceClient();const jar=await cookies();
+    if(sessionId){
+      await controlConnectionSetupSession(service,{organizationId:context.organizationId,userId:context.user.id,sessionId,command:"stop"}).catch(()=>undefined);
+      jar.delete(cookieName(sessionId));
+    }
+    await service.from("organization_integrations").update({status:"setup_required",last_error_at:null,last_error_code:null,last_error_message:null,updated_at:new Date().toISOString()}).eq("id",integrationId).eq("organization_id",context.organizationId);
+    const started=await startConnectionSetupAgent(service,{organizationId:context.organizationId,projectId:projectId||null,connectionId:integrationId,userId:context.user.id});
+    jar.set(cookieName(started.sessionId),started.resumeToken,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"strict",path:`/integrations/${integrationId}/setup`,maxAge:10*60});
+    await dispatchConnectionSetupSessions(service,{limit:2});
+    revalidatePath(`/integrations/${integrationId}/setup`);
+  }catch(error){
+    redirect(setupUrl(integrationId,projectId,"error",error instanceof Error?error.message:"Connection Agent could not be restarted."));
+  }
+  redirect(setupUrl(integrationId,projectId,"message","Connection restarted. Choose the provider account that owns the required resource.",true));
+}
+
 export async function askCustomerConnectionAgent(formData:FormData){
   const context=await requireActiveOwnerOrganizationContext();
   const integrationId=text(formData.get("integrationId"));const projectId=text(formData.get("projectId"));const question=text(formData.get("question"));const sessionId=text(formData.get("sessionId"));
