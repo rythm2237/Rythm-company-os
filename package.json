@@ -33,6 +33,7 @@
     "test:admin-automation": "node --import tsx scripts/validate-admin-automation-center.ts",
     "test:project-os": "node --import tsx scripts/validate-project-operating-system.ts",
     "test:connections-phase1": "node --import tsx scripts/validate-customer-connection-platform.ts",
+    "test:connections-phase2": "node --import tsx scripts/validate-customer-connection-platform-phase2.ts",
     "test:security-definer": "node --experimental-strip-types scripts/validate-security-definer-hardening.ts",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",
