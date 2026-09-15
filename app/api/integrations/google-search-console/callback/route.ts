@@ -1,0 +1,42 @@
+import crypto from "node:crypto";
+import { NextResponse } from "next/server";
+import { isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
+
+const GSC_SCOPE="https://www.googleapis.com/auth/webmasters.readonly";
+type StatePayload={integrationId:string;userId:string;nonce:string;issuedAt:number};
+type TokenResponse={access_token?:string;refresh_token?:string;expires_in?:number;scope?:string;token_type?:string;error?:string;error_description?:string};
+
+function creds(){return{clientId:process.env.GOOGLE_WORKSPACE_CLIENT_ID?.trim()||process.env.GOOGLE_CLIENT_ID?.trim()||"",clientSecret:process.env.GOOGLE_WORKSPACE_CLIENT_SECRET?.trim()||process.env.GOOGLE_CLIENT_SECRET?.trim()||""};}
+function verifyState(state:string):StatePayload|null{const {clientSecret}=creds();if(!clientSecret)return null;const [encoded,sig]=state.split(".");if(!encoded||!sig)return null;const expected=crypto.createHmac("sha256",clientSecret).update(encoded).digest("base64url");const a=Buffer.from(sig),b=Buffer.from(expected);if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return null;try{const p=JSON.parse(Buffer.from(encoded,"base64url").toString("utf8")) as StatePayload;if(!p.integrationId||!p.userId||!p.nonce||!Number.isFinite(p.issuedAt)||Date.now()-p.issuedAt>10*60*1000||p.issuedAt>Date.now()+60000)return null;return p;}catch{return null;}}
+function finish(request:Request,integrationId:string,key:"message"|"error",message:string){const url=new URL(`/integrations/${integrationId}/setup`,request.url);url.searchParams.set(key,message);const r=NextResponse.redirect(url,303);for(const name of ["rythm_gsc_customer_state","rythm_gsc_customer_integration","rythm_gsc_customer_user"])r.cookies.set(name,"",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/api/integrations/google-search-console",maxAge:0});return r;}
+function cookieMap(request:Request){const raw=request.headers.get("cookie")??"";return new Map(raw.split(";").map(v=>v.trim()).filter(Boolean).map(v=>{const i=v.indexOf("=");return i<0?[v,""]:[v.slice(0,i),decodeURIComponent(v.slice(i+1))];}));}
+
+export async function GET(request:Request){
+  const url=new URL(request.url);const code=url.searchParams.get("code")?.trim()||"";const state=url.searchParams.get("state")?.trim()||"";const providerError=url.searchParams.get("error")?.trim();
+  const payload=state?verifyState(state):null;const cookies=cookieMap(request);const integrationId=payload?.integrationId||cookies.get("rythm_gsc_customer_integration")||"";
+  if(providerError)return finish(request,integrationId,"error",`Google authorization was not completed: ${providerError}`);
+  if(!payload||!code||cookies.get("rythm_gsc_customer_state")!==state||cookies.get("rythm_gsc_customer_integration")!==payload.integrationId||cookies.get("rythm_gsc_customer_user")!==payload.userId)return finish(request,integrationId,"error","Google Search Console OAuth state validation failed. Start the connection again from RYTHM.");
+  const context=await resolveOrganizationContext();if(!context||context.user.id!==payload.userId||context.role!=="owner"||!isOrganizationEntitlementActive(context.entitlement))return finish(request,payload.integrationId,"error","Your RYTHM session changed during Google authorization. Sign in again and retry.");
+  const {data:integration}=await context.supabase.from("organization_integrations").select("id,provider_key").eq("id",payload.integrationId).eq("organization_id",context.organizationId).maybeSingle();
+  if(!integration||integration.provider_key!=="google_search_console")return finish(request,payload.integrationId,"error","This Search Console connection is no longer valid.");
+  const {clientId,clientSecret}=creds();if(!clientId||!clientSecret)return finish(request,payload.integrationId,"error","Google OAuth platform credentials are not configured.");
+  const redirectUri=`${url.origin}/api/integrations/google-search-console/callback`;
+  const tokenResponse=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code,client_id:clientId,client_secret:clientSecret,redirect_uri:redirectUri,grant_type:"authorization_code"}),cache:"no-store",signal:AbortSignal.timeout(20000)});
+  const tokens=await tokenResponse.json().catch(()=>({})) as TokenResponse;
+  if(!tokenResponse.ok||!tokens.access_token)return finish(request,payload.integrationId,"error",`Google token exchange failed${tokens.error?`: ${tokens.error}`:"."}`);
+  if(!tokens.refresh_token)return finish(request,payload.integrationId,"error","Google did not return an offline refresh token. Reconnect and approve access again.");
+  const scopes=new Set((tokens.scope??"").split(/\s+/).filter(Boolean));if(!scopes.has(GSC_SCOPE))return finish(request,payload.integrationId,"error","Google did not grant the required read-only Search Console scope.");
+  const [profileResponse,sitesResponse]=await Promise.all([
+    fetch("https://www.googleapis.com/oauth2/v2/userinfo",{headers:{Authorization:`Bearer ${tokens.access_token}`},cache:"no-store",signal:AbortSignal.timeout(20000)}),
+    fetch("https://searchconsole.googleapis.com/webmasters/v3/sites",{headers:{Authorization:`Bearer ${tokens.access_token}`},cache:"no-store",signal:AbortSignal.timeout(20000)}),
+  ]);
+  const profile=profileResponse.ok?await profileResponse.json().catch(()=>({})) as {email?:string;verified_email?:boolean}:{};
+  if(!sitesResponse.ok)return finish(request,payload.integrationId,"error","Google authorized the account, but RYTHM could not verify Search Console property access.");
+  const sites=await sitesResponse.json().catch(()=>({})) as {siteEntry?:Array<{siteUrl?:string;permissionLevel?:string}>};const resources=(sites.siteEntry??[]).filter(s=>s.siteUrl).slice(0,100);
+  const envelope=JSON.stringify({version:1,provider:"google_search_console",access_token:tokens.access_token,refresh_token:tokens.refresh_token,token_type:tokens.token_type||"Bearer",scope:tokens.scope||GSC_SCOPE,expires_at:new Date(Date.now()+Math.max(60,Number(tokens.expires_in??3600))*1000).toISOString()});
+  const {error:vaultError}=await context.supabase.rpc("set_organization_integration_secret_v1",{target_integration_id:payload.integrationId,secret_value:envelope});if(vaultError)return finish(request,payload.integrationId,"error",`Google credential could not be stored securely: ${vaultError.message}`);
+  const now=new Date().toISOString();const {error:updateError}=await context.supabase.from("organization_integrations").update({account_ref:profile.email??null,auth_type:"oauth",status:"connected",enabled:true,granted_scopes:["webmasters.readonly"],connected_at:now,last_verified_at:now,metadata:{oauth_flow:"customer_google_search_console_v1",credential_format:"oauth_token_envelope_v1",readonly:true,google_email_verified:profile.verified_email===true,available_resources:resources,resource_count:resources.length,setup_state:"verified"},updated_at:now}).eq("id",payload.integrationId).eq("organization_id",context.organizationId);
+  if(updateError)return finish(request,payload.integrationId,"error",`Google was authorized, but the connection registry could not be updated: ${updateError.message}`);
+  await context.supabase.from("audit_events").insert({organization_id:context.organizationId,actor_type:"user",actor_user_id:context.user.id,event_type:"integration.google_search_console_connected",object_type:"organization_integration",object_id:payload.integrationId,risk_level:"low",payload:{auth_type:"oauth",scopes:["webmasters.readonly"],resource_count:resources.length,account_ref:profile.email??null}});
+  return finish(request,payload.integrationId,"message",`Google Search Console connected successfully. ${resources.length} accessible ${resources.length===1?"property":"properties"} verified.`);
+}
