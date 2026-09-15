@@ -32,10 +32,7 @@ function cookieMap(request: Request) {
 }
 
 function callbackPath(providerKey: AgentOAuthProviderKey) {
-  if (providerKey === "google_search_console") return "/api/integrations/google-search-console/callback";
-  if (providerKey === "google_analytics") return "/api/integrations/google-analytics/callback";
-  if (providerKey === "google_workspace") return "/api/integrations/google-workspace/callback";
-  return "/api/integrations/microsoft-365/callback";
+  return providerKey === "microsoft_365" ? "/api/integrations/microsoft-365/callback" : "/api/integrations/google-workspace/callback";
 }
 
 function completion(request: Request, providerKey: AgentOAuthProviderKey, ok: boolean, message: string) {
