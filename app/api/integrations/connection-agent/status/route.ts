@@ -52,6 +52,7 @@ export async function GET(request: Request) {
       humanTakeoverReason: session.human_takeover_reason,
       startedAt: session.started_at,
       updatedAt: session.updated_at,
+      browserSessionId: session.browser_session_id,
       browserSessionExists: Boolean(session.browser_session_id),
       step: step ? { stepKey: step.stepKey, title: step.title, description: step.description, risk: step.risk } : null,
       securityNote: plan?.securityNote ?? "Sensitive identity steps remain under Human control.",
