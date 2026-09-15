@@ -249,7 +249,7 @@ export function ConnectionFlightDeck({
                 </form> : null}
                 {!terminal && live.controlMode === "human" ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="return_control"/>
-                  <button className="flight-deck-primary" type="submit">Return control now</button>
+                  <button className="flight-deck-primary" type="submit">Continue with AI</button>
                 </form> : null}
                 {!terminal && live.sessionStatus !== "paused" ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="pause"/>
