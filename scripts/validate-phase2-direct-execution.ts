@@ -22,6 +22,9 @@ const fetchBoundaries = new Set([
   "app/(app)/meetings/room/DeliberationConsole.tsx",
   "app/(app)/readiness/ExecuteValidationButton.tsx",
   "app/api/integrations/google-workspace/callback/route.ts",
+  "app/api/integrations/google-analytics/callback/route.ts",
+  "app/api/integrations/google-search-console/callback/route.ts",
+  "app/api/integrations/microsoft-365/callback/route.ts",
   "app/api/meetings/continue-detached/route.ts",
   "components/app-shell/BoardroomFocusBridge.tsx",
   "components/communication/CommunicationDeliveryDock.tsx",
@@ -32,11 +35,14 @@ const fetchBoundaries = new Set([
   "components/projects/project-governance-controls.tsx",
   "components/projects/project-live-operations.tsx",
   "components/projects/project-os-controls.tsx",
+  "components/projects/ProjectExecutiveSignalEnhancer.tsx",
+  "components/projects/approval-decision-discussion.tsx",
   "lib/ai/agent-provider.ts",
   "lib/analytics/public-events.ts",
   "lib/billing/stripe-rest.ts",
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   "lib/integrations/adapters/http.ts",
+  "lib/integrations/adapters/customer-connections.ts",
 ]);
 const allFetchFiles = sourceFiles
   .filter((path) => /\bfetch\s*\(/.test(readFileSync(path, "utf8")))
