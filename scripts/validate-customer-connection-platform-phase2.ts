@@ -16,14 +16,16 @@ for(const value of ["BROWSERBASE_API_KEY","BrowserbaseComputerUseRuntime","eu-ce
 reject(runtime,"recordSession: true","credential-safe browser recording policy");
 
 const oauth=read("lib/integrations/connections/agent-oauth.ts");
-for(const value of ["google_search_console","google_analytics","google_workspace","microsoft_365","code_challenge","rythm_agent_oauth_session","verifyAgentOAuthState","prepareAgentOAuthLaunch"])expect(oauth,value,"Agent OAuth launch contract");
+for(const value of ["google_search_console","google_analytics","google_workspace","microsoft_365","code_challenge","rythm_agent_oauth_session","verifyAgentOAuthState","prepareAgentOAuthLaunch","GOOGLE_SHARED_CALLBACK","/api/integrations/google-workspace/callback"])expect(oauth,value,"Agent OAuth launch contract");
 const callback=read("lib/integrations/connections/agent-oauth-callback.ts");
-for(const value of ["store_organization_integration_secret_unverified_v1","signalConnectionAuthorizationCompleted","dispatchConnectionSetupSessions","verification_result: \"verified\"","connection_agent_session_id"])expect(callback,value,"Agent OAuth verified callback contract");
+for(const value of ["store_organization_integration_secret_unverified_v1","signalConnectionAuthorizationCompleted","dispatchConnectionSetupSessions","verification_result: \"verified\"","connection_agent_session_id","/api/integrations/google-workspace/callback"])expect(callback,value,"Agent OAuth verified callback contract");
 for(const path of ["google-search-console","google-analytics","google-workspace","microsoft-365"]){const body=read(`app/api/integrations/${path}/callback/route.ts`);expect(body,"maybeHandleAgentOAuthCallback",`${path} Agent OAuth callback branch`);}
+const googleSharedCallback=read("app/api/integrations/google-workspace/callback/route.ts");
+for(const provider of ["google_search_console","google_analytics","google_workspace"])expect(googleSharedCallback,`\"${provider}\"`,`${provider} shared registered Google callback`);
 
 const resume=read("lib/integrations/connections/resume-token.ts");
 for(const value of ["createHmac","timingSafeEqual","expiresAt","organizationId","userId","sessionId","RYTHM_CONNECTION_AGENT_RESUME_V1","SUPABASE_SERVICE_ROLE_KEY"])expect(resume,value,"signed scoped resume token");
-reject(resume,"localStorage","resume token client storage");
+reject(resume,"localStorage","resume token browser storage");
 
 const agent=read("lib/integrations/connection-setup-agent.ts");
 for(const value of ["connection_setup_agent","RYTHM_CONNECTION_AGENT_KILL_SWITCH","RYTHM_CONNECTION_AGENT_ORG_ALLOWLIST","waiting_for_user","project_connection_bindings","last_verified_at","browser.session.started","human.takeover.requested","connection.agent.completed","verifyConnectionResumeToken","prepareAgentOAuthLaunch","bootstrapCookies"])expect(agent,value,"Connection Setup Agent invariant");
@@ -51,13 +53,17 @@ const panel=read("app/(app)/integrations/connection-setup-agent-panel.tsx");
 for(const value of ["ConnectionFlightDeck","Agent operating live","Preparing secure workspace"])expect(panel,value,"truthful Flight Deck launcher state");
 reject(panel,'return "AI controlling browser"',"misleading browser-control state");
 const flightDeck=read("app/(app)/integrations/connection-flight-deck.tsx");
-for(const value of ["RYTHM CONNECTION FLIGHT DECK","viewerUrl","iframe","Take Control","Continue with AI","Continue in Background","HUMAN AUTHORITY","setInterval(poll, 3500)"])expect(flightDeck,value,"live Flight Deck experience");
+for(const value of ["RYTHM CONNECTION FLIGHT DECK","viewerUrl","iframe","Take Control","Continue with AI","Continue in Background","HUMAN AUTHORITY","setInterval(poll, 5000)","createPortal","document.body","browserSessionId","viewerUrlRef","Provider authorization error"])expect(flightDeck,value,"stable live Flight Deck experience");
 const dock=read("components/integrations/ConnectionAgentDock.tsx");
 for(const value of ["CONNECTION AGENT ACTIVE","Needs your attention","View Live","live:\"1\"","setInterval(poll,5000)"])expect(dock,value,"persistent background Agent dock");
 const layout=read("app/(app)/layout.tsx");
-for(const value of ["ConnectionAgentDock","connection-flight-deck.css"])expect(layout,value,"global Connection Agent surface");
+for(const value of ["ConnectionAgentDock","connection-flight-deck.css","workspace-flight-deck-hotfix.css"])expect(layout,value,"global Connection Agent surface");
 const statusRoute=read("app/api/integrations/connection-agent/status/route.ts");
-for(const value of ["browserSessionExists","getConnectionSetupBrowserView","cache-control","connection_setup_session_events"])expect(statusRoute,value,"safe Flight Deck polling endpoint");
+for(const value of ["browserSessionExists","browserSessionId","getConnectionSetupBrowserView","cache-control","connection_setup_session_events"])expect(statusRoute,value,"safe Flight Deck polling endpoint");
+const nav=read("components/product-nav/ProductNav.tsx");
+for(const value of ["desktopCollapsed","rythm_workspace_nav_collapsed","rythm-nav-collapsed","product-nav-collapse","product-brand-compact"])expect(nav,value,"persistent desktop navigation collapse");
+const hotfix=read("app/workspace-flight-deck-hotfix.css");
+for(const value of ["flight-deck-is-open","2147483000","rythm-nav-collapsed","--app-sidebar-width:76px","flight-deck-provider-error"])expect(hotfix,value,"Flight Deck viewport and sidebar hardening");
 const guide=read("app/(app)/integrations/integration-setup-guide.tsx");expect(guide,"getIntegrationGuideDefinition","Guide consumes canonical plan");
 const dispatcher=read("app/api/projects/dispatch/route.ts");expect(dispatcher,"dispatchConnectionSetupSessions","durable background dispatcher");
 const roadmap=read("app/api/projects/roadmap/route.ts");expect(roadmap,'completion_requires:\"verified_provider_and_bound_resource\"',"truthful Roadmap completion");
