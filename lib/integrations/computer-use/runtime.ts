@@ -227,7 +227,7 @@ class BrowserbaseComputerUseRuntime implements ComputerUseRuntime {
         keepAlive: true,
         timeout: 7200,
         region,
-        browserSettings: { recordSession: true, logSession: true, solveCaptchas: false },
+        browserSettings: { recordSession: false, logSession: false, solveCaptchas: false },
         userMetadata: { rythmSessionId: input.sessionId, providerKey: input.providerKey },
       }),
     });
@@ -235,7 +235,12 @@ class BrowserbaseComputerUseRuntime implements ComputerUseRuntime {
     await this.withPage(created.id, async (cdp, pageSessionId) => {
       await cdp.request("Page.navigate", { url: input.startUrl }, pageSessionId);
     });
-    return this.getSession(created.id);
+    const session = await this.getSession(created.id);
+    if (session.currentUrl) {
+      try { assertSafeBrowserUrl(session.currentUrl, input.allowedHosts); }
+      catch (error) { await this.closeSession(created.id).catch(() => undefined); throw error; }
+    }
+    return session;
   }
 
   async getSession(browserSessionId: string): Promise<BrowserSession> {
