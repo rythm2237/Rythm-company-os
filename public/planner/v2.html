@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#0a0d14" />
+<meta name="description" content="Life Rhythm — private, adaptive planning with visual weekly capacity and offline-first storage." />
+<link rel="manifest" href="/planner/manifest.webmanifest" />
+<link rel="icon" href="/planner/icon.svg" />
+<link rel="stylesheet" href="/planner/v2.css" />
+<title>Life Rhythm</title>
+</head>
+<body>
+<div class="app-shell">
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><div class="brand-mark">LR</div><div><strong>Life Rhythm</strong><span>Private life planner</span></div></div>
+  <nav class="nav">
+    <button class="nav-item active" data-view="today"><span>◉</span>Today</button>
+    <button class="nav-item" data-view="week"><span>▦</span>Week</button>
+    <button class="nav-item" data-view="projects"><span>◆</span>Projects</button>
+    <button class="nav-item" data-view="tasks"><span>✓</span>Tasks</button>
+    <button class="nav-item" data-view="insights"><span>✦</span>Insights</button>
+    <button class="nav-item" id="preferencesBtn"><span>⚙</span>Preferences</button>
+  </nav>
+  <div class="privacy-card"><div class="status-dot"></div><div><strong>Local-first</strong><p>Your personal schedule is stored in IndexedDB on this device and works offline.</p></div></div>
+</aside>
+
+<main class="main">
+<header class="topbar">
+  <div><span class="eyebrow" id="dateEyebrow">YOUR DAY</span><h1 id="pageTitle">Today</h1></div>
+  <div class="top-actions"><button class="icon-btn mobile-only" id="menuBtn">☰</button><button class="ghost-btn" id="installBtn" hidden>Install app</button><button class="primary-btn" id="addTaskBtn">+ Add task</button></div>
+</header>
+
+<section class="view active" id="view-today">
+  <div class="hero-card">
+    <div><span class="eyebrow accent">ADAPTIVE PLANNING</span><h2 id="heroGreeting">Your day, with enough room to breathe.</h2><p>Fixed commitments come first. Life Rhythm then protects focus, recovery and personal time inside the space that is actually available.</p></div>
+    <div class="capacity-ring"><strong id="capacityUsed">0</strong><span>% scheduled</span></div>
+  </div>
+  <div class="stats-grid">
+    <article><span>Focus</span><strong id="focusHours">0h</strong><small>study & deep work</small></article>
+    <article><span>Recovery</span><strong id="recoveryHours">0h</strong><small>wellbeing & personal</small></article>
+    <article><span>Open time</span><strong id="openHours">0h</strong><small>unscheduled today</small></article>
+  </div>
+  <div class="section-heading"><div><span class="eyebrow">TIMELINE</span><h3>Today’s rhythm</h3></div><button class="ghost-btn" id="replanTodayBtn">Rebalance</button></div>
+  <div class="timeline" id="todayTimeline"></div>
+</section>
+
+<section class="view" id="view-week">
+  <div class="section-heading"><div><span class="eyebrow">WEEKLY CAPACITY MAP</span><h3>See where your week is full — and where life still fits.</h3></div><button class="primary-btn" id="generateWeekBtn">Rebalance week</button></div>
+  <div class="week-legend"><span><i class="open"></i>Open</span><span><i class="fixed"></i>Fixed</span><span><i class="focus"></i>Focus / project</span><span><i class="life"></i>Personal</span></div>
+  <div class="visual-week" id="weekBoard"></div>
+  <div class="week-summary" id="weekSummary"></div>
+</section>
+
+<section class="view" id="view-projects">
+  <div class="section-heading"><div><span class="eyebrow">PROJECTS & PLANS</span><h3>Turn a goal into sessions that fit your real week.</h3></div><button class="primary-btn" id="addProjectBtn">+ Add project</button></div>
+  <div class="project-grid" id="projectGrid"></div>
+</section>
+
+<section class="view" id="view-tasks">
+  <div class="section-heading"><div><span class="eyebrow">TASK LIBRARY</span><h3>Everything you want your week to hold.</h3></div><button class="primary-btn" id="addTaskBtn2">+ Add task</button></div>
+  <div class="task-filters"><button class="chip active" data-filter="all">All</button><button class="chip" data-filter="required">Required</button><button class="chip" data-filter="focus">Focus</button><button class="chip" data-filter="wellbeing">Wellbeing</button><button class="chip" data-filter="personal">Personal</button></div>
+  <div class="task-list" id="taskList"></div>
+</section>
+
+<section class="view" id="view-insights">
+  <div class="section-heading"><div><span class="eyebrow">BEHAVIOUR PATTERNS</span><h3>Plan around how you actually live.</h3></div></div>
+  <div class="insight-grid" id="insightGrid"></div>
+</section>
+</main>
+</div>
+
+<div class="modal-backdrop" id="onboardingModal" hidden><div class="modal onboarding-modal"><div class="progress"><i id="onboardingProgress"></i></div><span class="eyebrow" id="onboardingStepLabel">STEP 1 OF 6</span><h2 id="onboardingTitle"></h2><div id="onboardingBody"></div><div class="modal-footer"><button class="ghost-btn" id="onboardingBackBtn">Back</button><button class="primary-btn" id="onboardingNextBtn">Continue</button></div></div></div>
+
+<div class="modal-backdrop" id="taskModal" hidden><div class="modal"><div class="modal-head"><div><span class="eyebrow">TASK</span><h2 id="taskModalTitle">Add something to your life</h2></div><button class="icon-btn" data-close="taskModal">×</button></div><form id="taskForm" class="form-grid"><input type="hidden" id="taskId" /><label class="field full">Name<input id="taskName" required placeholder="e.g. Study statistics" /></label><label class="field">Type<select id="taskType"><option value="focus">Focus / study</option><option value="required">Required</option><option value="wellbeing">Wellbeing</option><option value="personal">Personal</option></select></label><label class="field">Duration<select id="taskDuration"><option value="30">30 min</option><option value="45">45 min</option><option value="60" selected>1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option></select></label><label class="field">Priority<select id="taskPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></label><label class="field">Frequency<select id="taskFrequency"><option value="once">Once this week</option><option value="2">2× / week</option><option value="3">3× / week</option><option value="5">5× / week</option><option value="daily">Daily</option></select></label><label class="field">Preferred time<select id="taskPreferred"><option value="any">Any time</option><option value="morning">Morning</option><option value="afternoon">Afternoon</option><option value="evening">Evening</option></select></label><label class="field">Energy needed<select id="taskEnergy"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></label><label class="field full">Notes<textarea id="taskNotes" rows="3" placeholder="Optional details"></textarea></label><div class="form-actions full"><button type="button" class="ghost-btn" data-close="taskModal">Cancel</button><button class="primary-btn" type="submit">Save task</button></div></form></div></div>
+
+<div class="modal-backdrop" id="projectModal" hidden><div class="modal"><div class="modal-head"><div><span class="eyebrow">PROJECT / PLAN</span><h2 id="projectModalTitle">Add a project</h2></div><button class="icon-btn" data-close="projectModal">×</button></div><form id="projectForm" class="form-grid"><input type="hidden" id="projectId" /><label class="field full">Project name<input id="projectName" required placeholder="e.g. Finish thesis chapter" /></label><label class="field">Hours per week<select id="projectHours"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>8</option><option>10</option></select></label><label class="field">Session length<select id="projectSession"><option value="30">30 min</option><option value="45">45 min</option><option value="60" selected>1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option></select></label><label class="field">Priority<select id="projectPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></label><label class="field">Preferred time<select id="projectPreferred"><option value="any">Any time</option><option value="morning">Morning</option><option value="afternoon">Afternoon</option><option value="evening">Evening</option></select></label><label class="field full">Target date<input type="date" id="projectDate" /></label><label class="field full">Notes<textarea id="projectNotes" rows="3" placeholder="What does success look like?"></textarea></label><div class="form-actions full"><button type="button" class="ghost-btn" data-close="projectModal">Cancel</button><button class="primary-btn" type="submit">Save & find time</button></div></form></div></div>
+
+<div class="modal-backdrop" id="projectPlannerModal" hidden><div class="modal wide-modal"><div class="modal-head"><div><span class="eyebrow">SMART PLACEMENT</span><h2 id="projectPlannerTitle">Suggested project time</h2></div><button class="icon-btn" data-close="projectPlannerModal">×</button></div><div id="projectPlannerBody"></div><div class="form-actions"><button class="ghost-btn" data-close="projectPlannerModal">Keep reviewing</button><button class="primary-btn" id="acceptProjectPlanBtn">Add suggested sessions</button></div></div></div>
+
+<div class="modal-backdrop" id="preferencesModal" hidden><div class="modal"><div class="modal-head"><div><span class="eyebrow">PREFERENCES</span><h2>Privacy & planning</h2></div><button class="icon-btn" data-close="preferencesModal">×</button></div><div class="settings-stack"><div class="setting-row"><div><strong>Storage</strong><p>Your planner data is stored in IndexedDB on this device.</p></div><span class="local-badge"><i></i>Local-first</span></div><div class="setting-row"><div><strong>Email account</strong><p>Optional. Local use never requires an account. Email sign-in will be activated with cloud backup/sync.</p></div><button class="ghost-btn" id="accountInfoBtn">Optional</button></div><div class="setting-row"><div><strong>Reminders</strong><p>Allow browser notifications while the app is active.</p></div><button class="ghost-btn" id="notificationsBtn">Enable</button></div><div class="setting-row"><div><strong>Edit onboarding</strong><p>Update work, study, commute, sleep and lifestyle preferences.</p></div><button class="ghost-btn" id="restartOnboardingBtn">Edit</button></div><div class="setting-row danger"><div><strong>Reset local data</strong><p>Erase Life Rhythm data from this device.</p></div><button class="danger-btn" id="resetBtn">Reset</button></div></div></div></div>
+
+<div class="toast" id="toast"></div>
+<script src="/planner/v2.js" defer></script>
+</body>
+</html>
