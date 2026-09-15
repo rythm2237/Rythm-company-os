@@ -28,6 +28,8 @@ for(const rollout of ["off","internal","beta","limited","general"])expect(migrat
 for(const value of ["claim_connection_setup_session_v1","for update skip locked","expire_stale_connection_setup_sessions_v1","connection_setup_session_events","reject_connection_setup_secret_metadata_v1"])expect(migration,value,"durability/security migration");
 const resumeMigration=read("supabase/migrations/20260915121600_connection_agent_auto_resume.sql");
 for(const value of ["RESOURCE_DISCOVERY","CONNECTION_VERIFY","automation_mode='ai'","binding_status='verified'"])expect(resumeMigration,value,"provider callback/binding auto-resume");
+const hardeningMigration=read("supabase/migrations/20260915121700_connection_agent_phase2_hardening.sql");
+for(const value of ["drop policy if exists connection_setup_session_events_owner_write","for insert to authenticated","for update to authenticated","for delete to authenticated","connection_setup_session_events_connection_idx","connection_setup_session_events_provider_idx","integration_setup_sessions_connection_idx","integration_setup_sessions_provider_idx","integration_setup_sessions_started_by_idx"])expect(hardeningMigration,value,"Phase 2 RLS/index hardening");
 
 const actions=read("app/(app)/integrations/connection-agent-actions.ts");
 for(const value of ["httpOnly:true","sameSite:\"strict\"","startConnectionSetupAgent","controlConnectionSetupSession","dispatchConnectionSetupSessions","explainConnectionSetupQuestion","resume_token_hash","secureEqual(expected,presented)"])expect(actions,value,"secure server actions");
