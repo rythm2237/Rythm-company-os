@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { createExecutionServiceClient } from "@/lib/integrations/service-runner";
-import { controlConnectionSetupSession, dispatchConnectionSetupSessions, explainConnectionSetupQuestion, startConnectionSetupAgent } from "@/lib/integrations/connection-setup-agent";
+import { controlConnectionSetupSession, dispatchConnectionSetupSessions, explainConnectionSetupQuestion, getConnectionSetupBrowserView, startConnectionSetupAgent } from "@/lib/integrations/connection-setup-agent";
+import { getComputerUseRuntime } from "@/lib/integrations/computer-use/runtime";
 import { getCanonicalSetupPlan } from "@/lib/integrations/connections/setup-plans";
 
 const COOKIE_PREFIX = "rythm_connection_resume_";
@@ -15,6 +16,15 @@ function setupUrl(id:string,projectId:string,key:"message"|"error"|"agentAnswer"
 function cookieName(sessionId:string){return `${COOKIE_PREFIX}${sessionId.replace(/[^a-zA-Z0-9_-]/g,"")}`;}
 function hashToken(token:string){return createHash("sha256").update(token).digest("hex");}
 function secureEqual(left:string,right:string){const a=Buffer.from(left);const b=Buffer.from(right);return a.length===b.length&&timingSafeEqual(a,b);}
+function providerAuthorizationError(rawUrl:string|null|undefined){
+  if(!rawUrl)return null;
+  try{
+    const url=new URL(rawUrl);
+    if(url.hostname.endsWith("google.com")&&(url.pathname.includes("/signin/oauth/error")||url.pathname.includes("/oauth/error")))return "Google rejected this authorization request. Update the Google Auth Platform audience/verification settings, then restart the connection.";
+    if(url.hostname.endsWith("microsoftonline.com")&&(/error/i.test(url.pathname)||url.searchParams.has("error")))return "Microsoft rejected this authorization request. Update the Microsoft application consent configuration, then restart the connection.";
+  }catch{/* ignore malformed provider URL */}
+  return null;
+}
 
 export async function startCustomerConnectionAgent(formData:FormData){
   const context=await requireActiveOwnerOrganizationContext();
@@ -51,6 +61,25 @@ export async function controlCustomerConnectionAgent(formData:FormData){
       const expected=String(stored.data?.resume_token_hash??"");
       const presented=hashToken(resumeToken);
       if(!expected||!secureEqual(expected,presented))throw new Error("The browser control resume token is no longer valid for this setup session.");
+    }
+    if(command==="return_control"){
+      const browser=await getConnectionSetupBrowserView(service,{organizationId:context.organizationId,sessionId});
+      const providerError=providerAuthorizationError(browser?.currentUrl);
+      if(providerError){
+        const session=await service.from("integration_setup_sessions").select("provider_key,connection_id,project_id,correlation_id,browser_session_id").eq("id",sessionId).eq("organization_id",context.organizationId).maybeSingle();
+        const timestamp=new Date().toISOString();
+        const runtime=getComputerUseRuntime();
+        if(session.data?.browser_session_id&&runtime.available)await runtime.closeSession(String(session.data.browser_session_id)).catch(()=>undefined);
+        await service.from("integration_setup_sessions").update({session_status:"failed",step_status:"failed",failed_at:timestamp,failure_reason:providerError,control_mode:"paused",requires_user_action:false,user_action_required:false,user_action_type:null,human_takeover_reason:null,last_heartbeat_at:timestamp,updated_at:timestamp}).eq("id",sessionId).eq("organization_id",context.organizationId);
+        await service.from("organization_integrations").update({status:"setup_required",last_error_at:timestamp,last_error_code:"provider_authorization_rejected",last_error_message:providerError,updated_at:timestamp}).eq("id",integrationId).eq("organization_id",context.organizationId);
+        if(session.data){
+          await service.from("connection_setup_session_events").insert({organization_id:context.organizationId,project_id:session.data.project_id??null,connection_id:integrationId,session_id:sessionId,provider_key:session.data.provider_key,event_type:"provider.authorization.rejected",actor_type:"provider",status:"failed",safe_message:providerError,result_code:"provider_authorization_rejected",correlation_id:session.data.correlation_id,metadata:{}});
+          await service.from("audit_events").insert({organization_id:context.organizationId,actor_type:"system",event_type:"provider.authorization.rejected",object_type:"connection_setup_session",object_id:sessionId,risk_level:"low",payload:{agent_key:"connection_setup_agent",connection_id:integrationId,provider_key:session.data.provider_key,project_id:session.data.project_id??null,correlation_id:session.data.correlation_id,result_code:"provider_authorization_rejected"}});
+        }
+        jar.delete(cookieName(sessionId));
+        revalidatePath(`/integrations/${integrationId}/setup`);
+        throw new Error(providerError);
+      }
     }
     await controlConnectionSetupSession(service,{organizationId:context.organizationId,userId:context.user.id,sessionId,command,resumeToken});
     if(command==="return_control"||command==="resume")await dispatchConnectionSetupSessions(service,{limit:2});
