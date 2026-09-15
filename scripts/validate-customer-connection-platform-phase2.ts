@@ -12,9 +12,11 @@ const runtime=read("lib/integrations/computer-use/runtime.ts");
 for(const value of ["https:","localhost","isPrivateIpv4","allowedHosts","redirect: \"error\"","credentialCapture: false","screenshotRedaction: \"sensitive-fields\"","privateNetworkAccess: false"])expect(runtime,value,"browser security boundary");
 for(const value of ["password","passcode","otp","mfa","passkey","captcha","private key"])expect(runtime,value,"credential input blocklist");
 expect(runtime,"< 0.8","action confidence threshold");
+for(const value of ["BROWSERBASE_API_KEY","BrowserbaseComputerUseRuntime","eu-central-1","solveCaptchas: false","recordSession: false","logSession: false","REQUEST_RELEASE","debuggerFullscreenUrl","Target.attachToTarget"])expect(runtime,value,"direct secure cloud-browser runtime");
+reject(runtime,"recordSession: true","credential-safe browser recording policy");
 
 const resume=read("lib/integrations/connections/resume-token.ts");
-for(const value of ["createHmac","timingSafeEqual","expiresAt","organizationId","userId","sessionId"])expect(resume,value,"signed scoped resume token");
+for(const value of ["createHmac","timingSafeEqual","expiresAt","organizationId","userId","sessionId","RYTHM_CONNECTION_AGENT_RESUME_V1","SUPABASE_SERVICE_ROLE_KEY"])expect(resume,value,"signed scoped resume token");
 reject(resume,"localStorage","resume token client storage");
 
 const agent=read("lib/integrations/connection-setup-agent.ts");
