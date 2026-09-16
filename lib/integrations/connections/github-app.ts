@@ -16,6 +16,7 @@ export type GitHubAppInstallationEnvelope = {
 type Json = Record<string, unknown>;
 const text = (value: unknown) => typeof value === "string" ? value : "";
 const list = (value: unknown) => Array.isArray(value) ? value as Json[] : [];
+const GITHUB_API_VERSION = "2026-03-10";
 
 export function githubAppConfig() {
   return {
@@ -42,6 +43,18 @@ export function buildGitHubAppInstallUrl(state: string) {
   return url.toString();
 }
 
+export function buildGitHubUserAuthorizationUrl(input: { state: string; redirectUri: string; codeChallenge: string }) {
+  const { clientId } = assertGitHubAppConfigured();
+  const url = new URL("https://github.com/login/oauth/authorize");
+  url.searchParams.set("client_id", clientId);
+  url.searchParams.set("redirect_uri", input.redirectUri);
+  url.searchParams.set("state", input.state);
+  url.searchParams.set("code_challenge", input.codeChallenge);
+  url.searchParams.set("code_challenge_method", "S256");
+  url.searchParams.set("prompt", "select_account");
+  return url.toString();
+}
+
 function base64url(value: string | Buffer) {
   return Buffer.from(value).toString("base64url");
 }
@@ -61,7 +74,7 @@ async function githubJson(url: string, init: RequestInit) {
     ...init,
     headers: {
       Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
+      "X-GitHub-Api-Version": GITHUB_API_VERSION,
       ...init.headers,
     },
     cache: "no-store",
@@ -71,6 +84,39 @@ async function githubJson(url: string, init: RequestInit) {
   const body = await response.json().catch(() => ({})) as Json;
   if (!response.ok) throw new Error(`GitHub App request failed (${response.status}).`);
   return body;
+}
+
+export async function exchangeGitHubUserAuthorizationCode(input: { code: string; redirectUri: string; codeVerifier: string }) {
+  const { clientId, clientSecret } = assertGitHubAppConfigured();
+  if (!input.code || !input.codeVerifier) throw new Error("GitHub user authorization code or PKCE verifier is missing.");
+  const response = await fetch("https://github.com/login/oauth/access_token", {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      code: input.code,
+      redirect_uri: input.redirectUri,
+      code_verifier: input.codeVerifier,
+    }),
+    cache: "no-store",
+    redirect: "error",
+    signal: AbortSignal.timeout(20_000),
+  });
+  const body = await response.json().catch(() => ({})) as Json;
+  const accessToken = text(body.access_token);
+  if (!response.ok || !accessToken) throw new Error(`GitHub user authorization exchange failed${text(body.error) ? `: ${text(body.error)}` : "."}`);
+  return accessToken;
+}
+
+export async function verifyGitHubUserInstallationAccess(userAccessToken: string, installationId: string) {
+  if (!/^\d+$/.test(installationId)) throw new Error("GitHub installation id is invalid.");
+  const result = await githubJson("https://api.github.com/user/installations?per_page=100", {
+    headers: { Authorization: `Bearer ${userAccessToken}` },
+  });
+  const installation = list(result.installations).find(row => String(row.id ?? "") === installationId);
+  if (!installation) throw new Error("The authorized GitHub user does not have access to this RYTHM GitHub App installation.");
+  return installation;
 }
 
 export async function verifyGitHubInstallation(installationId: string) {
@@ -119,7 +165,8 @@ export async function discoverGitHubInstallationResources(accessToken: string) {
   return resources;
 }
 
-export async function prepareGitHubInstallationConnection(installationId: string) {
+export async function prepareGitHubInstallationConnection(installationId: string, userAccessToken?: string) {
+  if (userAccessToken) await verifyGitHubUserInstallationAccess(userAccessToken, installationId);
   const installation = await verifyGitHubInstallation(installationId);
   const access = await createGitHubInstallationAccessToken(installationId);
   const resources = await discoverGitHubInstallationResources(access.token);
@@ -144,6 +191,7 @@ export async function prepareGitHubInstallationConnection(installationId: string
       repository_selection: installation.repositorySelection,
       target_type: installation.targetType,
       repository_count: resources.length,
+      user_installation_verified: Boolean(userAccessToken),
     },
   };
 }
