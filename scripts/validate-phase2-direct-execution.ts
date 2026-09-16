@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { GOOGLE_OAUTH_REFRESH_BOUNDARY } from "../lib/company-bootstrap/direct-execution-boundary";
 import { CONNECTION_AGENT_OAUTH_BOUNDARY } from "../lib/integrations/connection-agent-direct-boundary";
+import { CONNECTION_PLATFORM_DIRECT_BOUNDARIES } from "../lib/integrations/connection-platform-direct-boundary";
 import { DIRECT_EXECUTION_INVENTORY } from "../lib/integrations/direct-execution-inventory";
 
 function files(root: string): string[] {
@@ -13,25 +14,35 @@ function files(root: string): string[] {
   });
 }
 const sourceFiles = [...files("app"), ...files("lib"), ...files("components")].filter((path) => /\.(ts|tsx)$/.test(path));
+const connectionPlatformPaths = CONNECTION_PLATFORM_DIRECT_BOUNDARIES.map((item) => item.path);
+assert.deepEqual(
+  connectionPlatformPaths.sort(),
+  [
+    "lib/integrations/connections/github-app.ts",
+    "lib/integrations/connections/platform-oauth.ts",
+    "lib/integrations/connections/provider-credentials.ts",
+  ].sort(),
+  "Core connection control-plane fetch boundaries must remain explicitly inventoried.",
+);
 const fetchBoundaries = new Set([
   "app/(app)/agents/[code]/benchmark/BenchmarkConsole.tsx",
   "app/(app)/meetings/room/DeliberationConsole.tsx",
   "app/(app)/readiness/ExecuteValidationButton.tsx",
-  // Flight Deck and global dock poll only an authenticated same-origin RYTHM status route.
-  // They cannot call providers or execute external business actions directly.
   "app/(app)/integrations/connection-flight-deck.tsx",
   "components/integrations/ConnectionAgentDock.tsx",
   "app/api/integrations/google-workspace/callback/route.ts",
   "app/api/integrations/google-analytics/callback/route.ts",
   "app/api/integrations/google-search-console/callback/route.ts",
   "app/api/integrations/microsoft-365/callback/route.ts",
+  "app/api/integrations/github/callback/route.ts",
+  "app/api/integrations/vercel/callback/route.ts",
+  "app/api/integrations/supabase/callback/route.ts",
+  "app/api/integrations/cloudflare/callback/route.ts",
   "app/api/meetings/continue-detached/route.ts",
   "components/app-shell/BoardroomFocusBridge.tsx",
   "components/communication/CommunicationDeliveryDock.tsx",
   "components/consumer-withdrawal-form.tsx",
   "components/project-pulse/ProjectPulse.tsx",
-  // Project OS client controls call only same-origin, authenticated RYTHM API routes.
-  // They do not call providers or execute external side effects directly.
   "components/projects/project-governance-controls.tsx",
   "components/projects/project-live-operations.tsx",
   "components/projects/project-os-controls.tsx",
@@ -43,11 +54,8 @@ const fetchBoundaries = new Set([
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   "lib/integrations/adapters/http.ts",
   "lib/integrations/adapters/customer-connections.ts",
-  // Classified as a permanent Connection Agent OAuth control-plane boundary.
   CONNECTION_AGENT_OAUTH_BOUNDARY.path,
-  // Classified in DIRECT_EXECUTION_INVENTORY as a platform control-plane boundary.
-  // It may create/read secure cloud-browser infrastructure sessions, but it grants no
-  // business-action authority and every provider URL/action remains allowlisted.
+  ...connectionPlatformPaths,
   "lib/integrations/computer-use/runtime.ts",
 ]);
 const allFetchFiles = sourceFiles
@@ -74,6 +82,7 @@ const discovered = sourceFiles
   .map((path) => relative(".", path));
 const inventoried = new Set([
   ...DIRECT_EXECUTION_INVENTORY.map((item) => item.path),
+  ...connectionPlatformPaths,
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   CONNECTION_AGENT_OAUTH_BOUNDARY.path,
 ]);
@@ -95,6 +104,14 @@ assert.match(CONNECTION_AGENT_OAUTH_BOUNDARY.reviewPoint, /Human Takeover/i);
 assert.equal(GOOGLE_OAUTH_REFRESH_BOUNDARY.disposition, "platform_control_boundary");
 assert.match(GOOGLE_OAUTH_REFRESH_BOUNDARY.scope, /OAuth access-token refresh/);
 assert.match(GOOGLE_OAUTH_REFRESH_BOUNDARY.reason, /cannot perform Gmail or Calendar business actions/);
+
+assert.equal(CONNECTION_PLATFORM_DIRECT_BOUNDARIES.length, 3);
+for (const boundary of CONNECTION_PLATFORM_DIRECT_BOUNDARIES) {
+  assert.equal(boundary.disposition, "platform_control_boundary");
+  assert.ok(boundary.owner && boundary.scope && boundary.risk && boundary.reason && boundary.migrationPlan && boundary.reviewPoint, `Incomplete connection-platform boundary: ${boundary.path}`);
+  assert.match(boundary.reason, /(does not grant|cannot authorize|does not choose)/i, `Connection-platform boundary must explicitly deny operational authority: ${boundary.path}`);
+}
+
 const directSdkPattern = /from\s+["'](?:stripe|resend|@octokit\/rest|googleapis|@microsoft\/microsoft-graph-client|nodemailer|playwright|puppeteer|axios|got|ky)["']/;
 assert.deepEqual(
   sourceFiles.filter((path) => directSdkPattern.test(readFileSync(path, "utf8"))),

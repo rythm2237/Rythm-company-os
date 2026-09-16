@@ -27,6 +27,7 @@ import { executeWithRetry } from "@/lib/integrations/retry";
 import { getToolMetadata } from "@/lib/integrations/registry";
 import { executionDigest } from "@/lib/integrations/idempotency";
 import { redactSensitiveValue } from "@/lib/security/redaction";
+import { resolveProviderCredential } from "@/lib/integrations/connections/provider-credentials";
 
 type Json = Record<string, any>;
 
@@ -139,7 +140,12 @@ async function credentialFor(
     throw new Error(
       "Provider credential is unavailable to the service executor.",
     );
-  return String(data);
+  return resolveProviderCredential({
+    service: supabase,
+    integrationId: integration.id,
+    providerKey: integration.provider_key,
+    storedSecret: String(data),
+  });
 }
 
 function adapterFor(provider: string) {

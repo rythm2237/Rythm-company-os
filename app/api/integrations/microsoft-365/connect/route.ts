@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
 
-const SCOPES=["openid","profile","email","offline_access","User.Read"];
+const SCOPES=["openid","profile","email","offline_access","User.Read","Mail.Read","Calendars.Read"];
 function credentials(){return{clientId:process.env.MICROSOFT_365_CLIENT_ID?.trim()||process.env.MICROSOFT_CLIENT_ID?.trim()||"",clientSecret:process.env.MICROSOFT_365_CLIENT_SECRET?.trim()||process.env.MICROSOFT_CLIENT_SECRET?.trim()||"",tenant:process.env.MICROSOFT_365_TENANT_ID?.trim()||process.env.MICROSOFT_TENANT_ID?.trim()||"common"};}
 function back(request:Request,integrationId:string,message:string){const url=new URL(`/integrations/${integrationId}/setup`,request.url);url.searchParams.set("error",message);return NextResponse.redirect(url,303);}
 function sign(payload:{integrationId:string;userId:string;nonce:string;issuedAt:number}){const {clientSecret}=credentials();if(!clientSecret)return null;const encoded=Buffer.from(JSON.stringify(payload),"utf8").toString("base64url");const sig=crypto.createHmac("sha256",clientSecret).update(encoded).digest("base64url");return `${encoded}.${sig}`;}

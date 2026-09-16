@@ -1,8 +1,18 @@
 import "server-only";
 import crypto from "node:crypto";
 import type { BrowserBootstrapCookie } from "@/lib/integrations/computer-use/runtime";
+import { buildGitHubAppInstallUrl, githubAppConfig } from "@/lib/integrations/connections/github-app";
+import { buildPlatformAuthorizationUrl, platformOAuthConfig, type PlatformOAuthProviderKey } from "@/lib/integrations/connections/platform-oauth";
 
-export type AgentOAuthProviderKey = "google_search_console" | "google_analytics" | "google_workspace" | "microsoft_365";
+export type AgentOAuthProviderKey =
+  | "google_search_console"
+  | "google_analytics"
+  | "google_workspace"
+  | "microsoft_365"
+  | "github"
+  | "vercel"
+  | "supabase"
+  | "cloudflare";
 
 export type AgentOAuthStatePayload = {
   agent: true;
@@ -33,7 +43,15 @@ const GOOGLE_WORKSPACE_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/calendar.readonly",
 ];
-const MICROSOFT_SCOPES = ["openid", "profile", "email", "offline_access", "User.Read"];
+const MICROSOFT_SCOPES = [
+  "openid",
+  "profile",
+  "email",
+  "offline_access",
+  "User.Read",
+  "Mail.Read",
+  "Calendars.Read",
+];
 const GOOGLE_SHARED_CALLBACK = "/api/integrations/google-workspace/callback";
 
 export const AGENT_OAUTH_COOKIE_NAMES = [
@@ -46,11 +64,13 @@ export const AGENT_OAUTH_COOKIE_NAMES = [
 ] as const;
 
 export function isAgentOAuthProvider(providerKey: string): providerKey is AgentOAuthProviderKey {
-  return ["google_search_console", "google_analytics", "google_workspace", "microsoft_365"].includes(providerKey);
+  return ["google_search_console", "google_analytics", "google_workspace", "microsoft_365", "github", "vercel", "supabase", "cloudflare"].includes(providerKey);
 }
 
 export function agentOAuthCallbackPath(providerKey: AgentOAuthProviderKey) {
-  return providerKey === "microsoft_365" ? "/api/integrations/microsoft-365/callback" : GOOGLE_SHARED_CALLBACK;
+  if (providerKey === "microsoft_365") return "/api/integrations/microsoft-365/callback";
+  if (["github", "vercel", "supabase", "cloudflare"].includes(providerKey)) return `/api/integrations/${providerKey}/callback`;
+  return GOOGLE_SHARED_CALLBACK;
 }
 
 export function connectionAgentOrigin() {
@@ -77,6 +97,13 @@ function microsoftCredentials() {
   };
 }
 
+function providerSecret(providerKey: AgentOAuthProviderKey) {
+  if (["google_search_console", "google_analytics", "google_workspace"].includes(providerKey)) return googleCredentials().clientSecret;
+  if (providerKey === "microsoft_365") return microsoftCredentials().clientSecret;
+  if (providerKey === "github") return githubAppConfig().clientSecret;
+  return platformOAuthConfig(providerKey as PlatformOAuthProviderKey).clientSecret;
+}
+
 function config(providerKey: AgentOAuthProviderKey): ProviderConfig {
   if (providerKey === "microsoft_365") {
     const { clientId, clientSecret, tenant } = microsoftCredentials();
@@ -88,6 +115,14 @@ function config(providerKey: AgentOAuthProviderKey): ProviderConfig {
       authorizationUrl: `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/authorize`,
       prompt: "select_account",
     };
+  }
+  if (providerKey === "github") {
+    const github = githubAppConfig();
+    return { clientId: github.clientId, clientSecret: github.clientSecret, redirectPath: agentOAuthCallbackPath(providerKey), scopes: [], authorizationUrl: "https://github.com/" };
+  }
+  if (["vercel", "supabase", "cloudflare"].includes(providerKey)) {
+    const platform = platformOAuthConfig(providerKey as PlatformOAuthProviderKey);
+    return { clientId: platform.clientId, clientSecret: platform.clientSecret, redirectPath: agentOAuthCallbackPath(providerKey), scopes: platform.scopes, authorizationUrl: platform.authorizationUrl };
   }
   const { clientId, clientSecret } = googleCredentials();
   if (providerKey === "google_search_console") return {
@@ -105,7 +140,7 @@ function config(providerKey: AgentOAuthProviderKey): ProviderConfig {
 }
 
 function sign(providerKey: AgentOAuthProviderKey, payload: AgentOAuthStatePayload) {
-  const { clientSecret } = config(providerKey);
+  const clientSecret = providerSecret(providerKey);
   if (!clientSecret) throw new Error(`${providerKey} OAuth server credentials are not configured.`);
   const encoded = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
   const signature = crypto.createHmac("sha256", clientSecret).update(encoded).digest("base64url");
@@ -114,7 +149,7 @@ function sign(providerKey: AgentOAuthProviderKey, payload: AgentOAuthStatePayloa
 
 export function verifyAgentOAuthState(providerKey: string, state: string): AgentOAuthStatePayload | null {
   if (!isAgentOAuthProvider(providerKey)) return null;
-  const { clientSecret } = config(providerKey);
+  const clientSecret = providerSecret(providerKey);
   const [encoded, supplied] = state.split(".");
   if (!clientSecret || !encoded || !supplied) return null;
   const expected = crypto.createHmac("sha256", clientSecret).update(encoded).digest("base64url");
@@ -160,21 +195,28 @@ export function prepareAgentOAuthLaunch(input: {
   const verifier = crypto.randomBytes(48).toString("base64url");
   const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
   const redirectUri = `${origin}${provider.redirectPath}`;
-  const authorizationUrl = new URL(provider.authorizationUrl);
-  authorizationUrl.searchParams.set("client_id", provider.clientId);
-  authorizationUrl.searchParams.set("response_type", "code");
-  authorizationUrl.searchParams.set("redirect_uri", redirectUri);
-  authorizationUrl.searchParams.set("scope", provider.scopes.join(" "));
-  authorizationUrl.searchParams.set("state", state);
-  authorizationUrl.searchParams.set("code_challenge", challenge);
-  authorizationUrl.searchParams.set("code_challenge_method", "S256");
-  if (input.providerKey === "microsoft_365") {
-    authorizationUrl.searchParams.set("response_mode", "query");
-    authorizationUrl.searchParams.set("prompt", provider.prompt || "select_account");
+  let authorizationUrl: URL;
+  if (input.providerKey === "github") {
+    authorizationUrl = new URL(buildGitHubAppInstallUrl(state));
+  } else if (["vercel", "supabase", "cloudflare"].includes(input.providerKey)) {
+    authorizationUrl = new URL(buildPlatformAuthorizationUrl({ providerKey: input.providerKey as PlatformOAuthProviderKey, state, redirectUri, codeChallenge: challenge }));
   } else {
-    authorizationUrl.searchParams.set("access_type", "offline");
-    authorizationUrl.searchParams.set("include_granted_scopes", "true");
-    authorizationUrl.searchParams.set("prompt", provider.prompt || "select_account consent");
+    authorizationUrl = new URL(provider.authorizationUrl);
+    authorizationUrl.searchParams.set("client_id", provider.clientId);
+    authorizationUrl.searchParams.set("response_type", "code");
+    authorizationUrl.searchParams.set("redirect_uri", redirectUri);
+    authorizationUrl.searchParams.set("scope", provider.scopes.join(" "));
+    authorizationUrl.searchParams.set("state", state);
+    authorizationUrl.searchParams.set("code_challenge", challenge);
+    authorizationUrl.searchParams.set("code_challenge_method", "S256");
+    if (input.providerKey === "microsoft_365") {
+      authorizationUrl.searchParams.set("response_mode", "query");
+      authorizationUrl.searchParams.set("prompt", provider.prompt || "select_account");
+    } else {
+      authorizationUrl.searchParams.set("access_type", "offline");
+      authorizationUrl.searchParams.set("include_granted_scopes", "true");
+      authorizationUrl.searchParams.set("prompt", provider.prompt || "select_account consent");
+    }
   }
 
   const callbackUrl = `${origin}${provider.redirectPath}`;

@@ -16,12 +16,19 @@ for(const value of ["BROWSERBASE_API_KEY","BrowserbaseComputerUseRuntime","eu-ce
 reject(runtime,"recordSession: true","credential-safe browser recording policy");
 
 const oauth=read("lib/integrations/connections/agent-oauth.ts");
-for(const value of ["google_search_console","google_analytics","google_workspace","microsoft_365","code_challenge","rythm_agent_oauth_session","verifyAgentOAuthState","prepareAgentOAuthLaunch","GOOGLE_SHARED_CALLBACK","/api/integrations/google-workspace/callback"])expect(oauth,value,"Agent OAuth launch contract");
+for(const value of ["google_search_console","google_analytics","google_workspace","microsoft_365","github","vercel","supabase","cloudflare","code_challenge","rythm_agent_oauth_session","verifyAgentOAuthState","prepareAgentOAuthLaunch","agentOAuthCallbackPath"])expect(oauth,value,"Agent OAuth launch contract");
 const callback=read("lib/integrations/connections/agent-oauth-callback.ts");
-for(const value of ["store_organization_integration_secret_unverified_v1","signalConnectionAuthorizationCompleted","dispatchConnectionSetupSessions","verification_result: \"verified\"","connection_agent_session_id","/api/integrations/google-workspace/callback"])expect(callback,value,"Agent OAuth verified callback contract");
-for(const path of ["google-search-console","google-analytics","google-workspace","microsoft-365"]){const body=read(`app/api/integrations/${path}/callback/route.ts`);expect(body,"maybeHandleAgentOAuthCallback",`${path} Agent OAuth callback branch`);}
+for(const value of ["store_organization_integration_secret_unverified_v1","signalConnectionAuthorizationCompleted","dispatchConnectionSetupSessions","verification_result: \"verified\"","connection_agent_session_id","agentOAuthCallbackPath","prepareGitHubInstallationConnection","discoverPlatformOAuthResources","exchangePlatformOAuthCode"])expect(callback,value,"Agent OAuth verified callback contract");
+for(const path of ["google-search-console","google-analytics","google-workspace","microsoft-365","github","vercel","supabase","cloudflare"]){const body=read(`app/api/integrations/${path}/callback/route.ts`);expect(body,"maybeHandleAgentOAuthCallback",`${path} Agent OAuth callback branch`);}
 const googleSharedCallback=read("app/api/integrations/google-workspace/callback/route.ts");
 for(const provider of ["google_search_console","google_analytics","google_workspace"])expect(googleSharedCallback,`\"${provider}\"`,`${provider} shared registered Google callback`);
+
+const platformOauth=read("lib/integrations/connections/platform-oauth.ts");
+for(const value of ["VERCEL_INTEGRATION_CLIENT_ID","SUPABASE_OAUTH_CLIENT_ID","CLOUDFLARE_OAUTH_CLIENT_ID","exchangePlatformOAuthCode","discoverPlatformOAuthResources","refreshPlatformOAuthToken"])expect(platformOauth,value,"platform-owned OAuth provider contract");
+const githubApp=read("lib/integrations/connections/github-app.ts");
+for(const value of ["GITHUB_APP_ID","GITHUB_APP_PRIVATE_KEY","GITHUB_APP_SLUG","prepareGitHubInstallationConnection","createGitHubInstallationAccessToken"])expect(githubApp,value,"GitHub App connection contract");
+const credentials=read("lib/integrations/connections/provider-credentials.ts");
+for(const value of ["resolveProviderCredential","refreshPlatformOAuthToken","createGitHubInstallationAccessToken","store_organization_integration_secret_unverified_v1"])expect(credentials,value,"durable provider credential lifecycle");
 
 const resume=read("lib/integrations/connections/resume-token.ts");
 for(const value of ["createHmac","timingSafeEqual","expiresAt","organizationId","userId","sessionId","RYTHM_CONNECTION_AGENT_RESUME_V1","SUPABASE_SERVICE_ROLE_KEY"])expect(resume,value,"signed scoped resume token");
