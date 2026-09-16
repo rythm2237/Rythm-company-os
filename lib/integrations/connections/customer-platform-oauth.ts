@@ -4,12 +4,17 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
 import { createExecutionServiceClient } from "@/lib/integrations/service-runner";
-import { buildGitHubAppInstallUrl, githubAppConfig, prepareGitHubInstallationConnection } from "@/lib/integrations/connections/github-app";
+import {
+  buildGitHubAppInstallUrl,
+  buildGitHubUserAuthorizationUrl,
+  exchangeGitHubUserAuthorizationCode,
+  githubAppConfig,
+  prepareGitHubInstallationConnection,
+} from "@/lib/integrations/connections/github-app";
 import { buildPlatformAuthorizationUrl, discoverPlatformOAuthResources, exchangePlatformOAuthCode, isPlatformOAuthProvider, platformOAuthConfig, type PlatformOAuthProviderKey } from "@/lib/integrations/connections/platform-oauth";
 
 type CustomerCoreOAuthProvider = "github" | PlatformOAuthProviderKey;
 type StatePayload = { integrationId: string; organizationId: string; userId: string; providerKey: CustomerCoreOAuthProvider; projectId?: string | null; nonce: string; issuedAt: number };
-
 type Json = Record<string, unknown>;
 const COOKIE_PREFIX = "rythm_core_oauth";
 
@@ -19,7 +24,7 @@ function secretFor(providerKey: CustomerCoreOAuthProvider) {
 }
 
 function callbackPath(providerKey: CustomerCoreOAuthProvider) {
-  return `/api/integrations/${providerKey === "github" ? "github" : providerKey}/callback`;
+  return `/api/integrations/${providerKey}/callback`;
 }
 
 function sign(providerKey: CustomerCoreOAuthProvider, payload: StatePayload) {
@@ -62,10 +67,14 @@ function redirectBack(request: Request, integrationId: string, projectId: string
   return NextResponse.redirect(url, 303);
 }
 
+function cookieOptions(request: Request, providerKey: CustomerCoreOAuthProvider) {
+  return { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: callbackPath(providerKey).replace(/\/callback$/, ""), maxAge: 10 * 60 };
+}
+
 function clearCookies(response: NextResponse, providerKey: CustomerCoreOAuthProvider) {
-  const path = callbackPath(providerKey).replace(/\/callback$/, "");
-  for (const suffix of ["state", "integration", "user", "organization", "pkce"]) {
-    response.cookies.set(cookieName(providerKey, suffix), "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path, maxAge: 0 });
+  const options = cookieOptions(new Request("https://rythm-os.com"), providerKey);
+  for (const suffix of ["state", "integration", "user", "organization", "pkce", "installation"]) {
+    response.cookies.set(cookieName(providerKey, suffix), "", { ...options, maxAge: 0 });
   }
 }
 
@@ -105,8 +114,7 @@ export async function startCustomerCoreOAuth(request: Request, providerKey: Cust
     await context.supabase.from("organization_integrations").update({ status: "authorizing", authorization_started_at: now, last_error_at: null, last_error_code: null, last_error_message: null, updated_at: now }).eq("id", integrationId).eq("organization_id", context.organizationId);
     await context.supabase.from("audit_events").insert({ organization_id: context.organizationId, actor_type: "user", actor_user_id: context.user.id, event_type: "integration.authorization_started", object_type: "organization_integration", object_id: integrationId, risk_level: "low", payload: { provider_key: providerKey, project_id: projectId } });
     const response = NextResponse.redirect(authorizationUrl, 303);
-    const path = callbackPath(providerKey).replace(/\/callback$/, "");
-    const options = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path, maxAge: 10 * 60 };
+    const options = cookieOptions(request, providerKey);
     response.cookies.set(cookieName(providerKey, "state"), state, options);
     response.cookies.set(cookieName(providerKey, "integration"), integrationId, options);
     response.cookies.set(cookieName(providerKey, "user"), context.user.id, options);
@@ -137,16 +145,32 @@ export async function finishCustomerCoreOAuth(request: Request, providerKey: Cus
   if (!integration.data || integration.data.provider_key !== providerKey) return redirectBack(request, integrationId, projectId, "error", "This provider connection is no longer valid.");
 
   try {
+    const origin = canonicalOrigin(request);
+    const redirectUri = `${origin}${callbackPath(providerKey)}`;
+    const verifier = jar.get(cookieName(providerKey, "pkce")) || "";
+
+    if (providerKey === "github" && !url.searchParams.get("code")) {
+      const installationId = url.searchParams.get("installation_id")?.trim() || "";
+      if (!/^\d+$/.test(installationId) || !verifier) throw new Error("GitHub App installation did not return a valid installation or PKCE verifier.");
+      const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
+      const authorizationUrl = buildGitHubUserAuthorizationUrl({ state, redirectUri, codeChallenge: challenge });
+      const response = NextResponse.redirect(authorizationUrl, 303);
+      response.cookies.set(cookieName(providerKey, "installation"), installationId, cookieOptions(request, providerKey));
+      return response;
+    }
+
     let accountRef: string | null = null;
     let resources: Array<{ resourceType: string; resourceId: string; resourceName: string; metadata?: Json }> = [];
     let grantedScopes: string[] = [];
     let detail: Json = {};
     let secretEnvelope: Json;
-    const origin = canonicalOrigin(request);
+
     if (providerKey === "github") {
-      const installationId = url.searchParams.get("installation_id")?.trim() || "";
-      if (!installationId) throw new Error("GitHub App installation was not completed.");
-      const prepared = await prepareGitHubInstallationConnection(installationId);
+      const code = url.searchParams.get("code")?.trim() || "";
+      const installationId = jar.get(cookieName(providerKey, "installation")) || url.searchParams.get("installation_id")?.trim() || "";
+      if (!code || !installationId || !verifier) throw new Error("GitHub user authorization did not complete securely.");
+      const userAccessToken = await exchangeGitHubUserAuthorizationCode({ code, redirectUri, codeVerifier: verifier });
+      const prepared = await prepareGitHubInstallationConnection(installationId, userAccessToken);
       accountRef = prepared.accountRef;
       resources = prepared.resources;
       grantedScopes = prepared.grantedScopes;
@@ -155,9 +179,7 @@ export async function finishCustomerCoreOAuth(request: Request, providerKey: Cus
     } else {
       const code = url.searchParams.get("code")?.trim() || "";
       if (!code) throw new Error("Provider did not return an authorization code.");
-      const verifier = jar.get(cookieName(providerKey, "pkce")) || "";
       if (!verifier && providerKey !== "vercel") throw new Error("OAuth PKCE verifier is unavailable.");
-      const redirectUri = `${origin}${callbackPath(providerKey)}`;
       const tokens = await exchangePlatformOAuthCode({ providerKey, code, redirectUri, codeVerifier: verifier, configurationId: url.searchParams.get("configurationId") });
       const discovered = await discoverPlatformOAuthResources(providerKey, tokens.access_token, { ...tokens, team_id: url.searchParams.get("teamId") || tokens.team_id });
       accountRef = discovered.accountRef;
