@@ -17,6 +17,10 @@ async function getVideo() {
   return cachedVideo;
 }
 
+function toArrayBuffer(bytes: Uint8Array) {
+  return Uint8Array.from(bytes).buffer;
+}
+
 export async function GET(request: NextRequest) {
   const video = await getVideo();
   const total = video.length;
@@ -29,7 +33,7 @@ export async function GET(request: NextRequest) {
   };
 
   if (!range) {
-    return new Response(video, {
+    return new Response(toArrayBuffer(video), {
       status: 200,
       headers: {
         ...commonHeaders,
@@ -69,7 +73,7 @@ export async function GET(request: NextRequest) {
   }
 
   const chunk = video.subarray(start, end + 1);
-  return new Response(chunk, {
+  return new Response(toArrayBuffer(chunk), {
     status: 206,
     headers: {
       ...commonHeaders,
