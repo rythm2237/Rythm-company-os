@@ -139,7 +139,7 @@ export async function exchangePlatformOAuthCode(input: {
   return {
     ...(raw as PlatformOAuthToken),
     access_token: text(raw.access_token),
-    configuration_id: input.configurationId ?? text(raw.configuration_id) || null,
+    configuration_id: (input.configurationId ?? text(raw.configuration_id)) || null,
   };
 }
 
@@ -167,7 +167,7 @@ export async function discoverPlatformOAuthResources(providerKey: PlatformOAuthP
       resourceType: "project",
       resourceId: String(project.id ?? ""),
       resourceName: text(project.name) || String(project.id ?? "Vercel project"),
-      metadata: { framework: text(project.framework), account_id: project.accountId ?? teamId || null, team_id: teamId || null },
+      metadata: { framework: text(project.framework), account_id: (project.accountId ?? teamId) || null, team_id: teamId || null },
     })).filter(resource => Boolean(resource.resourceId));
     return { accountRef: teamId || text(user.email) || text(user.username) || String(user.id ?? "") || null, resources, grantedScopes: ["project.read", "deployment.read"], detail: { team_id: teamId || null, configuration_id: token.configuration_id ?? null } };
   }
