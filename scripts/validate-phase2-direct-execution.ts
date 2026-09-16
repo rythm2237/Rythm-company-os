@@ -14,25 +14,35 @@ function files(root: string): string[] {
   });
 }
 const sourceFiles = [...files("app"), ...files("lib"), ...files("components")].filter((path) => /\.(ts|tsx)$/.test(path));
+const connectionPlatformPaths = CONNECTION_PLATFORM_DIRECT_BOUNDARIES.map((item) => item.path);
+assert.deepEqual(
+  connectionPlatformPaths.sort(),
+  [
+    "lib/integrations/connections/github-app.ts",
+    "lib/integrations/connections/platform-oauth.ts",
+    "lib/integrations/connections/provider-credentials.ts",
+  ].sort(),
+  "Core connection control-plane fetch boundaries must remain explicitly inventoried.",
+);
 const fetchBoundaries = new Set([
   "app/(app)/agents/[code]/benchmark/BenchmarkConsole.tsx",
   "app/(app)/meetings/room/DeliberationConsole.tsx",
   "app/(app)/readiness/ExecuteValidationButton.tsx",
-  // Flight Deck and global dock poll only an authenticated same-origin RYTHM status route.
-  // They cannot call providers or execute external business actions directly.
   "app/(app)/integrations/connection-flight-deck.tsx",
   "components/integrations/ConnectionAgentDock.tsx",
   "app/api/integrations/google-workspace/callback/route.ts",
   "app/api/integrations/google-analytics/callback/route.ts",
   "app/api/integrations/google-search-console/callback/route.ts",
   "app/api/integrations/microsoft-365/callback/route.ts",
+  "app/api/integrations/github/callback/route.ts",
+  "app/api/integrations/vercel/callback/route.ts",
+  "app/api/integrations/supabase/callback/route.ts",
+  "app/api/integrations/cloudflare/callback/route.ts",
   "app/api/meetings/continue-detached/route.ts",
   "components/app-shell/BoardroomFocusBridge.tsx",
   "components/communication/CommunicationDeliveryDock.tsx",
   "components/consumer-withdrawal-form.tsx",
   "components/project-pulse/ProjectPulse.tsx",
-  // Project OS client controls call only same-origin, authenticated RYTHM API routes.
-  // They do not call providers or execute external side effects directly.
   "components/projects/project-governance-controls.tsx",
   "components/projects/project-live-operations.tsx",
   "components/projects/project-os-controls.tsx",
@@ -44,15 +54,8 @@ const fetchBoundaries = new Set([
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   "lib/integrations/adapters/http.ts",
   "lib/integrations/adapters/customer-connections.ts",
-  // Classified as a permanent Connection Agent OAuth control-plane boundary.
   CONNECTION_AGENT_OAUTH_BOUNDARY.path,
-  // Core customer-connection provider control-plane boundaries are separately inventoried
-  // with owner/scope/risk/review points. They establish credentials/resources only and do
-  // not grant authority for operational business actions.
-  ...CONNECTION_PLATFORM_DIRECT_BOUNDARIES.map((item) => item.path),
-  // Classified in DIRECT_EXECUTION_INVENTORY as a platform control-plane boundary.
-  // It may create/read secure cloud-browser infrastructure sessions, but it grants no
-  // business-action authority and every provider URL/action remains allowlisted.
+  ...connectionPlatformPaths,
   "lib/integrations/computer-use/runtime.ts",
 ]);
 const allFetchFiles = sourceFiles
@@ -79,7 +82,7 @@ const discovered = sourceFiles
   .map((path) => relative(".", path));
 const inventoried = new Set([
   ...DIRECT_EXECUTION_INVENTORY.map((item) => item.path),
-  ...CONNECTION_PLATFORM_DIRECT_BOUNDARIES.map((item) => item.path),
+  ...connectionPlatformPaths,
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   CONNECTION_AGENT_OAUTH_BOUNDARY.path,
 ]);
