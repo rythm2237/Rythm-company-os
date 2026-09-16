@@ -182,10 +182,11 @@ export async function discoverPlatformOAuthResources(providerKey: PlatformOAuthP
     })).filter(resource => Boolean(resource.resourceId));
     return { accountRef: null, resources, grantedScopes: ["project.read"], detail: { project_count: resources.length } };
   }
-  const [profile, zones] = await Promise.all([
-    apiJson("https://dash.cloudflare.com/oauth2/userinfo", accessToken).catch(() => ({})),
+  const [profileRaw, zones] = await Promise.all([
+    apiJson("https://dash.cloudflare.com/oauth2/userinfo", accessToken).catch((): Json => ({})),
     apiJson("https://api.cloudflare.com/client/v4/zones?per_page=50", accessToken),
   ]);
+  const profile = profileRaw as Json;
   const resources: DiscoveredResource[] = list(zones.result).map(zone => ({
     resourceType: "zone",
     resourceId: String(zone.id ?? ""),
