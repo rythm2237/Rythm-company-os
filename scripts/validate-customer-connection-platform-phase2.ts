@@ -26,9 +26,9 @@ for(const provider of ["google_search_console","google_analytics","google_worksp
 const platformOauth=read("lib/integrations/connections/platform-oauth.ts");
 for(const value of ["VERCEL_INTEGRATION_CLIENT_ID","SUPABASE_OAUTH_CLIENT_ID","CLOUDFLARE_OAUTH_CLIENT_ID","exchangePlatformOAuthCode","discoverPlatformOAuthResources","refreshPlatformOAuthToken"])expect(platformOauth,value,"platform-owned OAuth provider contract");
 const githubApp=read("lib/integrations/connections/github-app.ts");
-for(const value of ["GITHUB_APP_ID","GITHUB_APP_PRIVATE_KEY","GITHUB_APP_SLUG","prepareGitHubInstallationConnection","createGitHubInstallationToken"])expect(githubApp,value,"GitHub App connection contract");
+for(const value of ["GITHUB_APP_ID","GITHUB_APP_PRIVATE_KEY","GITHUB_APP_SLUG","prepareGitHubInstallationConnection","createGitHubInstallationAccessToken"])expect(githubApp,value,"GitHub App connection contract");
 const credentials=read("lib/integrations/connections/provider-credentials.ts");
-for(const value of ["resolveProviderCredential","refreshPlatformOAuthToken","createGitHubInstallationToken","store_organization_integration_secret_unverified_v1"])expect(credentials,value,"durable provider credential lifecycle");
+for(const value of ["resolveProviderCredential","refreshPlatformOAuthToken","createGitHubInstallationAccessToken","store_organization_integration_secret_unverified_v1"])expect(credentials,value,"durable provider credential lifecycle");
 
 const resume=read("lib/integrations/connections/resume-token.ts");
 for(const value of ["createHmac","timingSafeEqual","expiresAt","organizationId","userId","sessionId","RYTHM_CONNECTION_AGENT_RESUME_V1","SUPABASE_SERVICE_ROLE_KEY"])expect(resume,value,"signed scoped resume token");
