@@ -18,7 +18,7 @@ const HOTFIX = `<style id="2nya-production-hotfix">
 export async function GET() {
   const filePath = path.join(process.cwd(), 'public', '2nya-nailart', 'index.html');
   const html = await readFile(filePath, 'utf8');
-  const withVideo = html.replaceAll('/assets/hero.mp4', '/2nya-media/hero-hq-v2.mp4?v=2');
+  const withVideo = html.replaceAll('/assets/hero.mp4', '/2nya-media/hero-hq-v3.mp4?v=3');
   const patched = withVideo.includes('2nya-production-hotfix') ? withVideo : withVideo.replace('</head>', `${HOTFIX}</head>`);
   return new NextResponse(patched, {
     status: 200,
