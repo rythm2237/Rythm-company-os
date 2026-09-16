@@ -1,0 +1,12 @@
+{
+  "name": "2nya Nail Art",
+  "short_name": "2nya Admin",
+  "description": "رزرو و مدیریت وقت‌های 2nya Nail Art",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "/admin",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f3ec",
+  "theme_color": "#15100f"
+}
