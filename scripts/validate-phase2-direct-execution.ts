@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { GOOGLE_OAUTH_REFRESH_BOUNDARY } from "../lib/company-bootstrap/direct-execution-boundary";
 import { CONNECTION_AGENT_OAUTH_BOUNDARY } from "../lib/integrations/connection-agent-direct-boundary";
+import { CONNECTION_PLATFORM_DIRECT_BOUNDARIES } from "../lib/integrations/connection-platform-direct-boundary";
 import { DIRECT_EXECUTION_INVENTORY } from "../lib/integrations/direct-execution-inventory";
 
 function files(root: string): string[] {
@@ -45,6 +46,10 @@ const fetchBoundaries = new Set([
   "lib/integrations/adapters/customer-connections.ts",
   // Classified as a permanent Connection Agent OAuth control-plane boundary.
   CONNECTION_AGENT_OAUTH_BOUNDARY.path,
+  // Core customer-connection provider control-plane boundaries are separately inventoried
+  // with owner/scope/risk/review points. They establish credentials/resources only and do
+  // not grant authority for operational business actions.
+  ...CONNECTION_PLATFORM_DIRECT_BOUNDARIES.map((item) => item.path),
   // Classified in DIRECT_EXECUTION_INVENTORY as a platform control-plane boundary.
   // It may create/read secure cloud-browser infrastructure sessions, but it grants no
   // business-action authority and every provider URL/action remains allowlisted.
@@ -74,6 +79,7 @@ const discovered = sourceFiles
   .map((path) => relative(".", path));
 const inventoried = new Set([
   ...DIRECT_EXECUTION_INVENTORY.map((item) => item.path),
+  ...CONNECTION_PLATFORM_DIRECT_BOUNDARIES.map((item) => item.path),
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   CONNECTION_AGENT_OAUTH_BOUNDARY.path,
 ]);
@@ -95,6 +101,14 @@ assert.match(CONNECTION_AGENT_OAUTH_BOUNDARY.reviewPoint, /Human Takeover/i);
 assert.equal(GOOGLE_OAUTH_REFRESH_BOUNDARY.disposition, "platform_control_boundary");
 assert.match(GOOGLE_OAUTH_REFRESH_BOUNDARY.scope, /OAuth access-token refresh/);
 assert.match(GOOGLE_OAUTH_REFRESH_BOUNDARY.reason, /cannot perform Gmail or Calendar business actions/);
+
+assert.equal(CONNECTION_PLATFORM_DIRECT_BOUNDARIES.length, 3);
+for (const boundary of CONNECTION_PLATFORM_DIRECT_BOUNDARIES) {
+  assert.equal(boundary.disposition, "platform_control_boundary");
+  assert.ok(boundary.owner && boundary.scope && boundary.risk && boundary.reason && boundary.migrationPlan && boundary.reviewPoint, `Incomplete connection-platform boundary: ${boundary.path}`);
+  assert.match(boundary.reason, /(does not grant|cannot authorize|does not choose)/i, `Connection-platform boundary must explicitly deny operational authority: ${boundary.path}`);
+}
+
 const directSdkPattern = /from\s+["'](?:stripe|resend|@octokit\/rest|googleapis|@microsoft\/microsoft-graph-client|nodemailer|playwright|puppeteer|axios|got|ky)["']/;
 assert.deepEqual(
   sourceFiles.filter((path) => directSdkPattern.test(readFileSync(path, "utf8"))),
