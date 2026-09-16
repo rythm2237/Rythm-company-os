@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import type { SupabaseCookieToSet } from '@/types/supabase-cookie';
 
 export function env(){
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -18,7 +19,7 @@ export function sessionClient(request:NextRequest,response:NextResponse){
   const {url,key}=env();
   return createServerClient(url,key,{cookies:{
     getAll(){return request.cookies.getAll()},
-    setAll(cookies: Array<{name:string;value:string;options?:any}>){cookies.forEach(({name,value,options})=>response.cookies.set(name,value,options))}
+    setAll(cookies:SupabaseCookieToSet[]){cookies.forEach(({name,value,options})=>response.cookies.set(name,value,options))}
   }});
 }
 
