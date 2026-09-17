@@ -2,16 +2,15 @@ import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const SOURCE_URL = 'https://at.adobe.com/3O4We9WJ7dto7lFJ';
+const SOURCE_URL = 'https://2nya-nailart.rythm-os.com/2nya-media/hero-main-v5.mp4';
 const EXPECTED_SIZE = 1280760;
 const EXPECTED_SHA256 = 'a59800e6ba0e8db496915237c3e9d4eb665eeff0e43adbc316c166ad80f1ad93';
 const OUTPUT = path.join(process.cwd(), 'public', '2nya-media', 'hero-main-v5.mp4');
 
-const response = await fetch(SOURCE_URL, { redirect: 'follow' });
+const response = await fetch(SOURCE_URL, { redirect: 'follow', cache: 'no-store' });
 if (!response.ok) {
-  throw new Error(`2nya hero media download failed: HTTP ${response.status}`);
+  throw new Error(`Failed to download verified 2nya hero media: ${response.status}`);
 }
-
 const bytes = Buffer.from(await response.arrayBuffer());
 const sha256 = createHash('sha256').update(bytes).digest('hex');
 if (bytes.length !== EXPECTED_SIZE) {
@@ -23,4 +22,4 @@ if (sha256 !== EXPECTED_SHA256) {
 
 await mkdir(path.dirname(OUTPUT), { recursive: true });
 await writeFile(OUTPUT, bytes);
-console.log(`2nya hero media materialized: ${bytes.length} bytes, sha256=${sha256}`);
+console.log(`2nya hero media materialized from verified production asset: ${bytes.length} bytes, sha256=${sha256}`);

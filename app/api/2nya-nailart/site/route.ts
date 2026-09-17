@@ -22,8 +22,25 @@ const HERO_MARKUP = `<section class="hero" aria-labelledby="hero-title">
   <div class="wrap hero-copy">
     <span class="pill"><i></i> رزرو آنلاین وقت خدمات ناخن</span>
     <h1 id="hero-title">ناخن‌هایی که فقط زیبا نیستند؛ امضای استایل شما هستند.</h1>
-    <p>نمونه‌کارهای واقعی 2nya Nail Art را ببینید، سرویس موردنظر را انتخاب کنید و فقط از بین زمان‌های واقعاً آزاد، وقت خودتان را رزرو کنید.</p>
+    <p>نمونه‌کارهای واقعی 2nya Nail Art را ببینید و وقتی آماده بودید، رزرو را شروع کنید؛ نوع سرویس در مرحله بعد انتخاب می‌شود.</p>
     <div class="actions hero-actions"><button class="btn primary" data-book>رزرو وقت</button><a class="btn ghost" href="#portfolio">مشاهده نمونه‌کارها</a></div>
+  </div>
+</section>`;
+
+const BOOKING_ENTRY_MARKUP = `<section class="booking-entry" aria-labelledby="booking-entry-title">
+  <div class="wrap">
+    <div class="booking-entry-card">
+      <div class="booking-entry-copy">
+        <span class="eyebrow">رزرو آنلاین</span>
+        <h2 id="booking-entry-title">برای رزرو، فقط از اینجا شروع کنید.</h2>
+        <p>بعد از انتخاب «رزرو وقت»، ابتدا نوع سرویس را انتخاب می‌کنید و سپس فقط تاریخ‌ها و ساعت‌های قابل رزرو نمایش داده می‌شوند.</p>
+      </div>
+      <div class="booking-entry-actions">
+        <button class="booking-main-btn" data-book>رزرو وقت</button>
+        <a class="care-guide-link" href="/nail-care"><span>راهنمای علمی مراقبت از ناخن</span><small>نکات معتبر برای زیبایی، سلامت و نگهداری بهتر ناخن‌ها</small></a>
+      </div>
+      <div id="services" hidden aria-hidden="true"></div>
+    </div>
   </div>
 </section>`;
 
@@ -52,6 +69,16 @@ const HERO_DESIGN = `<style id="2nya-hero-v5">
 @media(prefers-reduced-motion:reduce){.hero-device-shell{filter:none!important}.hero-main{display:none!important}.hero-device-screen{background:#120b0d url('/assets/hero-poster.webp') center/cover no-repeat!important}}
 </style>`;
 
+const BOOKING_ENTRY_STYLE = `<style id="2nya-booking-care-v1">
+.booking-entry{padding:72px 0;background:linear-gradient(180deg,#f8f3ed 0%,#f4ece4 100%)}
+.booking-entry-card{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:40px;align-items:center;padding:clamp(28px,5vw,58px);border:1px solid rgba(23,17,15,.10);border-radius:32px;background:#fff;box-shadow:0 22px 70px rgba(70,42,30,.07)}
+.booking-entry-copy h2{font-size:clamp(2rem,4.2vw,3.8rem);line-height:1.18;margin:6px 0 14px}.booking-entry-copy p{max-width:650px;color:#746a62;margin:0;font-size:1.02rem;line-height:2}
+.booking-entry-actions{display:grid;gap:12px}.booking-main-btn{border:0;border-radius:999px;min-height:58px;padding:15px 24px;background:#17110f;color:#fff;font-weight:800;font-size:1.05rem;box-shadow:0 14px 34px rgba(23,17,15,.16)}
+.care-guide-link{display:grid;gap:3px;text-decoration:none;color:#451015;border:1px solid rgba(115,23,36,.14);border-radius:20px;padding:16px 18px;background:#fbf6f1}.care-guide-link span{font-family:Estedad;font-weight:800}.care-guide-link small{color:#746a62;line-height:1.7}
+.booking-main-btn:focus-visible,.care-guide-link:focus-visible{outline:3px solid rgba(200,162,94,.72);outline-offset:3px}
+@media(max-width:800px){.booking-entry{padding:54px 0}.booking-entry-card{grid-template-columns:1fr;gap:24px;padding:25px 20px;border-radius:25px}.booking-entry-copy h2{font-size:clamp(1.9rem,8vw,2.6rem)}.booking-entry-actions{width:100%}}
+</style>`;
+
 const HERO_SCRIPT = `<script id="2nya-hero-playback-v5">
 (()=>{
   const init=()=>{
@@ -77,12 +104,18 @@ const HERO_SCRIPT = `<script id="2nya-hero-playback-v5">
 })();
 </script>`;
 
+const ALL_PORTFOLIO_SLOTS = "const shots=['portfolio-01.webp','portfolio-02.webp','portfolio-03.webp','portfolio-04.webp','portfolio-05.webp','portfolio-06.webp','portfolio-07.webp','portfolio-08.webp'];";
+const UNIQUE_PORTFOLIO_SLOTS = "const shots=['portfolio-01.webp','portfolio-02.webp','portfolio-03.webp','portfolio-04.webp'];";
+
 export async function GET() {
   const filePath = path.join(process.cwd(), 'public', '2nya-nailart', 'index.html');
   const html = await readFile(filePath, 'utf8');
   const heroPattern = /<section class="hero">[\s\S]*?<\/section>/;
+  const servicePattern = /<section><div class="wrap"><div class="head"><div><span class="eyebrow">Services<\/span>[\s\S]*?<\/section>/;
   const withHero = heroPattern.test(html) ? html.replace(heroPattern, HERO_MARKUP) : html;
-  const withStyles = withHero.replace('</head>', `${HERO_DESIGN}</head>`);
+  const withBookingEntry = servicePattern.test(withHero) ? withHero.replace(servicePattern, BOOKING_ENTRY_MARKUP) : withHero;
+  const withPortfolio = withBookingEntry.replace(ALL_PORTFOLIO_SLOTS, UNIQUE_PORTFOLIO_SLOTS);
+  const withStyles = withPortfolio.replace('</head>', `${HERO_DESIGN}${BOOKING_ENTRY_STYLE}</head>`);
   const patched = withStyles.replace('</body>', `${HERO_SCRIPT}</body>`);
   return new NextResponse(patched, {
     status: 200,
