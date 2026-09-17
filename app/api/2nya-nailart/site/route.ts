@@ -77,12 +77,16 @@ const HERO_SCRIPT = `<script id="2nya-hero-playback-v5">
 })();
 </script>`;
 
+const ALL_PORTFOLIO_SLOTS = "const shots=['portfolio-01.webp','portfolio-02.webp','portfolio-03.webp','portfolio-04.webp','portfolio-05.webp','portfolio-06.webp','portfolio-07.webp','portfolio-08.webp'];";
+const UNIQUE_PORTFOLIO_SLOTS = "const shots=['portfolio-01.webp','portfolio-02.webp','portfolio-03.webp','portfolio-04.webp'];";
+
 export async function GET() {
   const filePath = path.join(process.cwd(), 'public', '2nya-nailart', 'index.html');
   const html = await readFile(filePath, 'utf8');
   const heroPattern = /<section class="hero">[\s\S]*?<\/section>/;
   const withHero = heroPattern.test(html) ? html.replace(heroPattern, HERO_MARKUP) : html;
-  const withStyles = withHero.replace('</head>', `${HERO_DESIGN}</head>`);
+  const withPortfolio = withHero.replace(ALL_PORTFOLIO_SLOTS, UNIQUE_PORTFOLIO_SLOTS);
+  const withStyles = withPortfolio.replace('</head>', `${HERO_DESIGN}</head>`);
   const patched = withStyles.replace('</body>', `${HERO_SCRIPT}</body>`);
   return new NextResponse(patched, {
     status: 200,
