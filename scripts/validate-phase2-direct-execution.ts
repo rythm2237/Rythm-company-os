@@ -88,6 +88,7 @@ const inventoried = new Set([
   ...connectionPlatformPaths,
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   CONNECTION_AGENT_OAUTH_BOUNDARY.path,
+  "app/api/2nya-nailart/book/route.ts",
 ]);
 const unknown = discovered.filter((path) => !path.startsWith("lib/integrations/adapters/") && !inventoried.has(path));
 assert.deepEqual(unknown, [], `Unknown direct provider/external execution paths: ${unknown.join(", ")}`);
