@@ -1,5 +1,5 @@
-import { startCustomerCoreOAuth } from "@/lib/integrations/connections/customer-platform-oauth";
+import { startGitHubCustomerOAuth } from "@/lib/integrations/connections/github-customer-oauth";
 
 export async function POST(request: Request) {
-  return startCustomerCoreOAuth(request, "github");
+  return startGitHubCustomerOAuth(request);
 }
