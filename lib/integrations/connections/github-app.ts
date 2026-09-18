@@ -18,13 +18,50 @@ const text = (value: unknown) => typeof value === "string" ? value : "";
 const list = (value: unknown) => Array.isArray(value) ? value as Json[] : [];
 const GITHUB_API_VERSION = "2026-03-10";
 
+function normalizeGitHubPrivateKey(raw: string) {
+  let value = raw.trim();
+  if (!value) return "";
+
+  if (value.startsWith('"') && value.endsWith('"')) {
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed === "string") value = parsed.trim();
+    } catch {
+      value = value.slice(1, -1).trim();
+    }
+  } else if (value.startsWith("'") && value.endsWith("'")) {
+    value = value.slice(1, -1).trim();
+  }
+
+  value = value
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
+
+  if (/-----BEGIN (?:RSA )?PRIVATE KEY-----/.test(value)) return value;
+
+  try {
+    const compact = value.replace(/\s+/g, "");
+    const decoded = Buffer.from(compact, "base64").toString("utf8").trim();
+    if (/-----BEGIN (?:RSA )?PRIVATE KEY-----/.test(decoded)) {
+      return decoded.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+    }
+  } catch {
+    // Keep the normalized raw value so validation below can return a useful error.
+  }
+
+  return value;
+}
+
 export function githubAppConfig() {
   return {
     clientId: process.env.GITHUB_APP_CLIENT_ID?.trim() || "",
     clientSecret: process.env.GITHUB_APP_CLIENT_SECRET?.trim() || "",
     appId: process.env.GITHUB_APP_ID?.trim() || "",
     slug: process.env.GITHUB_APP_SLUG?.trim() || "",
-    privateKey: (process.env.GITHUB_APP_PRIVATE_KEY ?? "").replace(/\\n/g, "\n").trim(),
+    privateKey: normalizeGitHubPrivateKey(process.env.GITHUB_APP_PRIVATE_KEY ?? ""),
   };
 }
 
@@ -32,6 +69,9 @@ export function assertGitHubAppConfigured() {
   const config = githubAppConfig();
   if (!config.clientId || !config.clientSecret || !config.slug || !config.privateKey) {
     throw new Error("GitHub App platform credentials are not configured.");
+  }
+  if (!/-----BEGIN (?:RSA )?PRIVATE KEY-----/.test(config.privateKey) || !/-----END (?:RSA )?PRIVATE KEY-----/.test(config.privateKey)) {
+    throw new Error("GitHub App private key is not a valid PEM value. Re-save GITHUB_APP_PRIVATE_KEY with the complete private key, including BEGIN/END lines.");
   }
   return config;
 }
@@ -65,8 +105,13 @@ export function createGitHubAppJwt() {
   const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
   const payload = base64url(JSON.stringify({ iat: now - 60, exp: now + 9 * 60, iss: config.clientId || config.appId }));
   const signingInput = `${header}.${payload}`;
-  const signature = crypto.sign("RSA-SHA256", Buffer.from(signingInput), config.privateKey).toString("base64url");
-  return `${signingInput}.${signature}`;
+  try {
+    const key = crypto.createPrivateKey(config.privateKey);
+    const signature = crypto.sign("RSA-SHA256", Buffer.from(signingInput), key).toString("base64url");
+    return `${signingInput}.${signature}`;
+  } catch {
+    throw new Error("GitHub App private key could not be decoded. Re-save GITHUB_APP_PRIVATE_KEY as the complete PEM content from the GitHub App private-key file.");
+  }
 }
 
 async function githubJson(url: string, init: RequestInit) {

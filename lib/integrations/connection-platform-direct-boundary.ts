@@ -13,6 +13,17 @@ export const CONNECTION_PLATFORM_DIRECT_BOUNDARIES: DirectExecutionInventoryItem
     reviewPoint: "Every GitHub App permission, event subscription, installation-token, repository-selection, or operational-capability change",
   },
   {
+    path: "lib/integrations/connections/github-customer-oauth.ts",
+    classification: ["B", "D"],
+    disposition: "platform_control_boundary",
+    owner: "Integration Gateway / Customer Connection Platform",
+    scope: "Human Owner initiated GitHub user authorization, existing-installation discovery, and installation binding during provider connection setup",
+    risk: "External GitHub OAuth exchange and installation metadata reads",
+    reason: "This boundary only establishes and verifies a Human-approved GitHub App installation. It does not grant Agent authority to mutate repositories or execute business actions.",
+    migrationPlan: "Permanent connection control-plane boundary. Operational GitHub actions remain behind registered tools, capabilities, approvals, and the Execution Gateway.",
+    reviewPoint: "Every GitHub OAuth scope, installation-discovery behavior, repository-binding rule, or redirect URI change",
+  },
+  {
     path: "lib/integrations/connections/platform-oauth.ts",
     classification: ["B", "D"],
     disposition: "platform_control_boundary",

@@ -19,6 +19,7 @@ assert.deepEqual(
   connectionPlatformPaths.sort(),
   [
     "lib/integrations/connections/github-app.ts",
+    "lib/integrations/connections/github-customer-oauth.ts",
     "lib/integrations/connections/platform-oauth.ts",
     "lib/integrations/connections/provider-credentials.ts",
   ].sort(),
@@ -30,6 +31,8 @@ const fetchBoundaries = new Set([
   "app/(app)/readiness/ExecuteValidationButton.tsx",
   "app/(app)/integrations/connection-flight-deck.tsx",
   "components/integrations/ConnectionAgentDock.tsx",
+  "app/api/2nya-nailart/book/route.ts",
+  "app/api/2nya-nailart/media-health/route.ts",
   "app/api/integrations/google-workspace/callback/route.ts",
   "app/api/integrations/google-analytics/callback/route.ts",
   "app/api/integrations/google-search-console/callback/route.ts",
@@ -85,6 +88,7 @@ const inventoried = new Set([
   ...connectionPlatformPaths,
   GOOGLE_OAUTH_REFRESH_BOUNDARY.path,
   CONNECTION_AGENT_OAUTH_BOUNDARY.path,
+  "app/api/2nya-nailart/book/route.ts",
 ]);
 const unknown = discovered.filter((path) => !path.startsWith("lib/integrations/adapters/") && !inventoried.has(path));
 assert.deepEqual(unknown, [], `Unknown direct provider/external execution paths: ${unknown.join(", ")}`);
@@ -105,7 +109,7 @@ assert.equal(GOOGLE_OAUTH_REFRESH_BOUNDARY.disposition, "platform_control_bounda
 assert.match(GOOGLE_OAUTH_REFRESH_BOUNDARY.scope, /OAuth access-token refresh/);
 assert.match(GOOGLE_OAUTH_REFRESH_BOUNDARY.reason, /cannot perform Gmail or Calendar business actions/);
 
-assert.equal(CONNECTION_PLATFORM_DIRECT_BOUNDARIES.length, 3);
+assert.equal(CONNECTION_PLATFORM_DIRECT_BOUNDARIES.length, 4);
 for (const boundary of CONNECTION_PLATFORM_DIRECT_BOUNDARIES) {
   assert.equal(boundary.disposition, "platform_control_boundary");
   assert.ok(boundary.owner && boundary.scope && boundary.risk && boundary.reason && boundary.migrationPlan && boundary.reviewPoint, `Incomplete connection-platform boundary: ${boundary.path}`);
