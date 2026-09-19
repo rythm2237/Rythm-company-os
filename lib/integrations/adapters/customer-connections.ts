@@ -26,7 +26,26 @@ export function getTokenConnectionAdapter(providerKey:string){return TOKEN_CONNE
 
 export async function discoverGoogleResources(providerKey:string,accessToken:string):Promise<DiscoveredResource[]>{
   if(providerKey==="google_search_console"){const result=await json("https://www.googleapis.com/webmasters/v3/sites",accessToken);return list(result.siteEntry).map(site=>({resourceType:"search_console_property",resourceId:text(site.siteUrl),resourceName:text(site.siteUrl),metadata:{permission_level:text(site.permissionLevel)}}));}
-  if(providerKey==="google_analytics"){const accounts=await json("https://analyticsadmin.googleapis.com/v1beta/accounts?pageSize=200",accessToken);const output:DiscoveredResource[]=[];for(const account of list(accounts.accounts).slice(0,50)){const name=text(account.name);if(!name)continue;const properties=await json(`https://analyticsadmin.googleapis.com/v1beta/properties?filter=${encodeURIComponent(`parent:${name}`)}&pageSize=200`,accessToken);for(const property of list(properties.properties))output.push({resourceType:"ga4_property",resourceId:text(property.name),resourceName:text(property.displayName)||text(property.name),metadata:{account:name,property_type:text(property.propertyType),time_zone:text(property.timeZone)}});}return output;}
+  if(providerKey==="google_analytics"){
+    const summaries=await json("https://analyticsadmin.googleapis.com/v1beta/accountSummaries?pageSize=200",accessToken);
+    const output:DiscoveredResource[]=[];
+    for(const summary of list(summaries.accountSummaries)){
+      const account=text(summary.account);
+      for(const property of list(summary.propertySummaries)){
+        const propertyId=text(property.property);
+        if(!propertyId)continue;
+        output.push({resourceType:"ga4_property",resourceId:propertyId,resourceName:text(property.displayName)||propertyId,metadata:{account,account_name:text(summary.displayName),property_type:text(property.propertyType)}});
+      }
+    }
+    if(output.length)return output;
+    const accounts=await json("https://analyticsadmin.googleapis.com/v1beta/accounts?pageSize=200",accessToken);
+    for(const account of list(accounts.accounts).slice(0,50)){
+      const name=text(account.name);if(!name)continue;
+      const properties=await json(`https://analyticsadmin.googleapis.com/v1beta/properties?filter=${encodeURIComponent(`parent:${name}`)}&pageSize=200`,accessToken);
+      for(const property of list(properties.properties))output.push({resourceType:"ga4_property",resourceId:text(property.name),resourceName:text(property.displayName)||text(property.name),metadata:{account:name,property_type:text(property.propertyType),time_zone:text(property.timeZone)}});
+    }
+    return output;
+  }
   return[];
 }
 
