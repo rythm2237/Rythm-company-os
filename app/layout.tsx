@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { DEFAULT_LOCALE, getLocaleDefinition } from "@/lib/i18n/config";
 import { enMessages } from "@/lib/i18n/messages";
 import GlobalActionFeedback from "@/components/ui/GlobalActionFeedback";
+import GoogleAnalyticsConsent from "@/components/analytics/GoogleAnalyticsConsent";
 import {
   DEFAULT_DESCRIPTION,
   SITE_NAME,
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <a className="skip-link" href="#main-content">{enMessages.common.skipToMainContent}</a>
         <div id="main-content">{children}</div>
         <GlobalActionFeedback />
+        <GoogleAnalyticsConsent />
       </body>
     </html>
   );
