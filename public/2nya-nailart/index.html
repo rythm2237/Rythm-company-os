@@ -15,6 +15,32 @@
 .modal{display:none;position:fixed;z-index:80;inset:0;background:rgba(10,7,6,.72);align-items:flex-end}.modal.open{display:flex}.sheet{width:min(780px,100%);height:min(92svh,820px);margin:auto;background:var(--paper);border-radius:28px 28px 0 0;display:flex;flex-direction:column;overflow:hidden}.sheet-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}.close{margin-right:auto;border:0;background:#eae0d7;width:42px;height:42px;border-radius:50%;font-size:1.2rem}.steps{display:flex;gap:5px;flex:1}.steps i{height:3px;background:#ded1c6;border-radius:10px;flex:1}.steps i.on{background:var(--wine)}.body{padding:22px 18px 110px;overflow:auto;flex:1}.step{display:none}.step.on{display:block}.step h2{font-size:clamp(1.9rem,6vw,3.2rem);line-height:1.16;margin-bottom:5px}.options{display:grid;gap:9px;margin-top:20px}.opt,.time{border:1px solid var(--line);background:#fff;border-radius:17px;padding:15px;text-align:right}.opt.sel,.time.sel{border-color:var(--wine);box-shadow:0 0 0 2px rgba(115,23,36,.1)}.datebox{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:16px}.date{border:1px solid var(--line);background:#fff;border-radius:13px;min-height:52px;padding:4px}.date.sel{background:var(--wine);color:#fff}.date:disabled{opacity:.3}.times{display:flex;flex-wrap:wrap;gap:8px;margin-top:17px}.time{padding:10px 13px;border-radius:999px}.form{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:17px}.field{display:grid;gap:5px}.field.full{grid-column:1/-1}.field input,.field textarea{border:1px solid var(--line);background:#fff;border-radius:14px;padding:13px;outline:none;width:100%}.field input:focus,.field textarea:focus{border-color:var(--wine)}.summary{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:16px}.sumrow{display:flex;justify-content:space-between;gap:18px;padding:9px 0;border-bottom:1px solid var(--line)}.sumrow:last-child{border:0}.sheet-actions{position:absolute;bottom:0;width:min(780px,100%);padding:12px 18px calc(12px + var(--safe));display:flex;gap:8px;background:linear-gradient(180deg,rgba(248,243,237,0),#f8f3ed 22%)}.sheet-actions .btn{flex:1;background:var(--ink);color:#fff}.sheet-actions .back{background:#e9dfd6;color:var(--ink)}.sheet-actions button:disabled{opacity:.42}.success{background:#fff;border:1px solid var(--line);border-radius:22px;padding:20px;text-align:center;margin-top:20px}.lightbox{display:none;position:fixed;z-index:90;inset:0;background:rgba(0,0,0,.9);place-items:center;padding:20px}.lightbox.open{display:grid}.lightbox img{max-width:95vw;max-height:88vh;border-radius:18px}.lightbox button{position:absolute;top:18px;right:18px;border:0;border-radius:50%;width:44px;height:44px}
 @media(max-width:800px){.hero{min-height:86svh}.hero-main{object-fit:contain;object-position:center center}.hero-bg{filter:blur(20px) brightness(.5)}.brand img{width:40px;height:40px}.brand span{display:none}.hero-copy{padding:110px 0 54px}.hero h1{font-size:clamp(2.5rem,11vw,4rem);letter-spacing:-.04em}.grid{grid-template-columns:1fr 1fr}.shot:first-child{grid-row:auto;grid-column:1/-1;min-height:420px}.shot{min-height:230px}.about{grid-template-columns:1fr}.head{align-items:start;flex-direction:column}.sticky{display:block}.footer-row{display:block}.form{grid-template-columns:1fr}.field.full{grid-column:auto}.service{grid-template-columns:1fr}.service button{width:100%}.nav .book{padding:9px 13px}.sheet{height:94svh}.portfolio{padding-top:64px}}@media(max-width:430px){.wrap{width:min(100% - 22px,1160px)}.top{padding-top:10px}.hero h1{font-size:2.55rem}.hero p{font-size:.96rem}.grid{gap:8px}.shot{min-height:190px;border-radius:16px}.shot:first-child{min-height:360px}.date{min-height:48px;font-size:.87rem}section{padding:62px 0}}
 </style>
+<style id="donya-desktop-polish-v5">
+@media(min-width:801px){
+body main .portfolio{background:linear-gradient(180deg,#ecd0cd 0%,#f5e2de 55%,#f9ece8 100%)!important;color:#321d21!important}
+body main .portfolio .eyebrow{color:#7b1038!important}
+body main .portfolio .muted{color:#6e4d4d!important}
+body>main>section:nth-of-type(3){background:linear-gradient(180deg,#fff8f4 0%,#f8e8e2 100%)!important}
+body>main>section:nth-of-type(4){background:linear-gradient(180deg,#f8e8e2 0%,#fff8f4 100%)!important}
+body main .service{background:rgba(255,255,255,.88)!important;border-color:rgba(123,16,56,.12)!important;box-shadow:0 16px 36px rgba(91,47,43,.08)}
+}
+@media(min-width:1181px){
+body .donya-hero-layout{grid-template-columns:clamp(170px,16vw,290px) 300px minmax(590px,700px) 1fr!important;padding-top:108px!important}
+body .phone-gallery{transform:translate(-48px,20px)!important}
+body .phone-shell{width:286px!important}
+body .phone-caption{margin-top:14px!important;font-size:1.45rem!important}
+body .hero-center-copy{width:min(100%,700px)!important;max-width:700px!important;margin-left:-18px!important;padding-top:24px!important;justify-self:start!important}
+body .hero-center-copy h1{max-width:700px!important;font-size:clamp(2.55rem,3.15vw,3.75rem)!important;line-height:1.34!important;letter-spacing:-.05em!important}
+body #hero-title .hero-title-line{display:block!important;white-space:nowrap}
+}
+@media(min-width:1181px) and (max-width:1440px){
+body .donya-hero-layout{grid-template-columns:clamp(155px,15vw,220px) 270px minmax(540px,620px) 1fr!important}
+body .phone-gallery{transform:translate(-30px,20px)!important}
+body .phone-shell{width:258px!important}
+body .hero-center-copy{max-width:620px!important;margin-left:-10px!important}
+body .hero-center-copy h1{font-size:clamp(2.3rem,3.05vw,3.2rem)!important}
+}
+</style>
 </head>
 <body>
 <header class="top"><div class="wrap nav"><a class="brand" href="/"><img src="/assets/logo.webp" alt="لوگوی 2nya Nail Art"><div><b>2nya Nail Art</b><span>طراحی ناخن با جزئیات و ظرافت</span></div></a><button class="book" data-book>رزرو وقت</button></div></header>
@@ -51,5 +77,6 @@ function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 const shots=['portfolio-01.webp','portfolio-02.webp','portfolio-03.webp','portfolio-04.webp','portfolio-05.webp','portfolio-06.webp','portfolio-07.webp','portfolio-08.webp'];qs('#portfolioGrid').innerHTML=shots.map((f,i)=>`<button class="shot" data-img="/assets/${f}" aria-label="نمایش نمونه کار ${i+1}"><img src="/assets/${f}" loading="lazy" alt="نمونه طراحی ناخن 2nya Nail Art ${i+1}"></button>`).join('');qsa('[data-img]').forEach(b=>b.onclick=()=>{qs('#lightbox img').src=b.dataset.img;qs('#lightbox').classList.add('open')});qs('#lightbox button').onclick=()=>qs('#lightbox').classList.remove('open');
 if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));boot();
 </script>
+<script id="donya-desktop-title-v5">(()=>{const h=document.getElementById('hero-title');if(h&&window.matchMedia('(min-width:801px)').matches){h.innerHTML='<span class="hero-title-line">ناخن‌هایی که فقط زیبا نیستند،</span><span class="hero-title-line"><em>داستان شما</em> را روایت می‌کنند.</span>'}})();</script>
 </body>
 </html>
