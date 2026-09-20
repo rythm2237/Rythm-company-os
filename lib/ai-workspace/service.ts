@@ -4,6 +4,14 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type PromptProfile = "normal" | "professional";
 export type RoutingMode = "auto" | "fast" | "best";
+export type UsageKind = "answer" | "prompt_enhancement";
+
+type ExistingRequest = {
+  id: string;
+  status: string;
+  internal_result: string | null;
+  actual_micros: number | null;
+};
 
 export class AIWorkspaceError extends Error {
   constructor(public readonly code: string, public readonly status = 400) { super(code); }
@@ -20,8 +28,11 @@ export async function ensurePersonalWorkspace(userId: string, client: SupabaseCl
   if (error) throw new AIWorkspaceError("ACCOUNT_LOOKUP_FAILED", 503);
   if (!account) {
     const inserted = await client.from("aiw_accounts").insert({ user_id: userId, kind: "personal" }).select("id,status,allowed_modes,allowed_prompt_profiles,max_request_micros").single();
-    if (inserted.error) throw new AIWorkspaceError("ACCOUNT_PROVISION_FAILED", 503);
-    account = inserted.data;
+    if (inserted.error) {
+      const retry = await client.from("aiw_accounts").select("id,status,allowed_modes,allowed_prompt_profiles,max_request_micros").eq("user_id", userId).maybeSingle();
+      if (retry.error || !retry.data) throw new AIWorkspaceError("ACCOUNT_PROVISION_FAILED", 503);
+      account = retry.data;
+    } else account = inserted.data;
   }
   if (account.status !== "active") throw new AIWorkspaceError("ACCOUNT_DISABLED", 403);
 
@@ -29,16 +40,22 @@ export async function ensurePersonalWorkspace(userId: string, client: SupabaseCl
   if (workspaceError) throw new AIWorkspaceError("WORKSPACE_LOOKUP_FAILED", 503);
   if (!workspace) {
     const inserted = await client.from("aiw_workspaces").insert({ account_id: account.id, kind: "personal", name: "Personal AI Workspace", created_by: userId }).select("id,name").single();
-    if (inserted.error) throw new AIWorkspaceError("WORKSPACE_PROVISION_FAILED", 503);
-    workspace = inserted.data;
+    if (inserted.error) {
+      const retry = await client.from("aiw_workspaces").select("id,name").eq("account_id", account.id).eq("kind", "personal").maybeSingle();
+      if (retry.error || !retry.data) throw new AIWorkspaceError("WORKSPACE_PROVISION_FAILED", 503);
+      workspace = retry.data;
+    } else workspace = inserted.data;
   }
 
   let { data: wallet, error: walletError } = await client.from("usage_wallets").select("id,currency,status").eq("personal_account_id", account.id).eq("payer_type", "personal").maybeSingle();
   if (walletError) throw new AIWorkspaceError("WALLET_LOOKUP_FAILED", 503);
   if (!wallet) {
-    const inserted = await client.from("usage_wallets").insert({ personal_account_id: account.id, payer_type: "personal" }).select("id,currency,status").single();
-    if (inserted.error) throw new AIWorkspaceError("WALLET_PROVISION_FAILED", 503);
-    wallet = inserted.data;
+    const inserted = await client.from("usage_wallets").insert({ personal_account_id: account.id, payer_type: "personal", currency: "USD" }).select("id,currency,status").single();
+    if (inserted.error) {
+      const retry = await client.from("usage_wallets").select("id,currency,status").eq("personal_account_id", account.id).eq("payer_type", "personal").maybeSingle();
+      if (retry.error || !retry.data) throw new AIWorkspaceError("WALLET_PROVISION_FAILED", 503);
+      wallet = retry.data;
+    } else wallet = inserted.data;
   }
 
   let { data: project, error: projectError } = await client.from("aiw_projects").select("id,name").eq("workspace_id", workspace.id).eq("archived", false).order("created_at", { ascending: true }).limit(1).maybeSingle();
@@ -68,24 +85,35 @@ export async function walletBalance(walletId: string, client: SupabaseClient = s
   return String(data ?? "0");
 }
 
-export function reservationFor(mode: RoutingMode, kind: "answer" | "prompt_enhancement") {
+export function reservationFor(mode: RoutingMode, kind: UsageKind) {
   if (kind === "prompt_enhancement") return 50000;
   if (mode === "fast") return 75000;
   if (mode === "best") return 200000;
   return 125000;
 }
 
-export async function reserveUsage(input: { client: SupabaseClient; walletId: string; workspaceId: string; organizationId: string; userId: string; conversationId: string; mode: RoutingMode; profile: PromptProfile; kind: "answer" | "prompt_enhancement"; amount: number; }) {
+export async function reserveUsage(input: { client: SupabaseClient; walletId: string; workspaceId: string; organizationId: string; userId: string; conversationId: string; mode: RoutingMode; profile: PromptProfile; kind: UsageKind; amount: number; clientRequestKey: string; }) {
+  const idempotencyKey = `${input.workspaceId}:${input.clientRequestKey}:${input.kind}`;
+  const findExisting = async () => {
+    const query = await input.client.from("ai_usage_requests").select("id,status,internal_result,actual_micros").eq("workspace_id", input.workspaceId).eq("idempotency_key", idempotencyKey).maybeSingle();
+    if (query.error) throw new AIWorkspaceError("IDEMPOTENCY_LOOKUP_FAILED", 503);
+    return query.data as ExistingRequest | null;
+  };
+  const existing = await findExisting();
+  if (existing) return { ...existing, existing: true as const };
   const requestId = randomUUID();
-  const idempotencyKey = `${input.workspaceId}:${input.conversationId}:${input.kind}:${requestId}`;
   const { data, error } = await input.client.rpc("aiw_reserve_usage", {
     p_wallet: input.walletId, p_workspace: input.workspaceId, p_request: requestId, p_idempotency: idempotencyKey,
     p_amount: input.amount, p_kind: input.kind, p_mode: input.mode, p_profile: input.profile,
-    p_user: input.userId, p_organization: input.organizationId, p_agent: null, p_conversation: input.conversationId,
+    p_user: input.userId, p_organization: input.organizationId, p_agent: null, p_conversation: input.conversationId, p_client_request_key: input.clientRequestKey,
   });
   if (error) throw new AIWorkspaceError("RESERVATION_FAILED", 503);
-  if (data !== true) throw new AIWorkspaceError("INSUFFICIENT_CREDIT_OR_LIMIT", 402);
-  return requestId;
+  if (data !== true) {
+    const raced = await findExisting();
+    if (raced) return { ...raced, existing: true as const };
+    throw new AIWorkspaceError("INSUFFICIENT_CREDIT_OR_LIMIT", 402);
+  }
+  return { id: requestId, status: "reserved", internal_result: null, actual_micros: null, existing: false as const };
 }
 
 export function costMicros(actualCostUsd: number | null | undefined) {
