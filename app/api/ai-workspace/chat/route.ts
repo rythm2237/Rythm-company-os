@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const answerReservation = await reserveUsage({ client, walletId: personal.wallet.id, workspaceId: personal.workspace.id, organizationId: org.organizationId, userId: user.id, conversationId: conversation.id, mode, profile, kind: "answer", amount: reservationFor(mode, "answer"), clientRequestKey: requestKey });
     let answerText: string;
     let answerCost = 0;
-    let answerRequestId = answerReservation.id;
+    const answerRequestId = answerReservation.id;
     let routing: { mode: string; model: string } = { mode, model: "settled" };
     if (answerReservation.existing) {
       if (answerReservation.status !== "settled" || !answerReservation.internal_result) throw new AIWorkspaceError("REQUEST_RECONCILIATION_PENDING", 409);

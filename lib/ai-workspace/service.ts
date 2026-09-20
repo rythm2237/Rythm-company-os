@@ -24,8 +24,9 @@ export function serviceClient() {
 }
 
 export async function ensurePersonalWorkspace(userId: string, client: SupabaseClient = serviceClient()) {
-  let { data: account, error } = await client.from("aiw_accounts").select("id,status,allowed_modes,allowed_prompt_profiles,max_request_micros").eq("user_id", userId).maybeSingle();
-  if (error) throw new AIWorkspaceError("ACCOUNT_LOOKUP_FAILED", 503);
+  const accountResult = await client.from("aiw_accounts").select("id,status,allowed_modes,allowed_prompt_profiles,max_request_micros").eq("user_id", userId).maybeSingle();
+  let account = accountResult.data;
+  if (accountResult.error) throw new AIWorkspaceError("ACCOUNT_LOOKUP_FAILED", 503);
   if (!account) {
     const inserted = await client.from("aiw_accounts").insert({ user_id: userId, kind: "personal" }).select("id,status,allowed_modes,allowed_prompt_profiles,max_request_micros").single();
     if (inserted.error) {
@@ -36,8 +37,9 @@ export async function ensurePersonalWorkspace(userId: string, client: SupabaseCl
   }
   if (account.status !== "active") throw new AIWorkspaceError("ACCOUNT_DISABLED", 403);
 
-  let { data: workspace, error: workspaceError } = await client.from("aiw_workspaces").select("id,name").eq("account_id", account.id).eq("kind", "personal").maybeSingle();
-  if (workspaceError) throw new AIWorkspaceError("WORKSPACE_LOOKUP_FAILED", 503);
+  const workspaceResult = await client.from("aiw_workspaces").select("id,name").eq("account_id", account.id).eq("kind", "personal").maybeSingle();
+  let workspace = workspaceResult.data;
+  if (workspaceResult.error) throw new AIWorkspaceError("WORKSPACE_LOOKUP_FAILED", 503);
   if (!workspace) {
     const inserted = await client.from("aiw_workspaces").insert({ account_id: account.id, kind: "personal", name: "Personal AI Workspace", created_by: userId }).select("id,name").single();
     if (inserted.error) {
@@ -47,8 +49,9 @@ export async function ensurePersonalWorkspace(userId: string, client: SupabaseCl
     } else workspace = inserted.data;
   }
 
-  let { data: wallet, error: walletError } = await client.from("usage_wallets").select("id,currency,status").eq("personal_account_id", account.id).eq("payer_type", "personal").maybeSingle();
-  if (walletError) throw new AIWorkspaceError("WALLET_LOOKUP_FAILED", 503);
+  const walletResult = await client.from("usage_wallets").select("id,currency,status").eq("personal_account_id", account.id).eq("payer_type", "personal").maybeSingle();
+  let wallet = walletResult.data;
+  if (walletResult.error) throw new AIWorkspaceError("WALLET_LOOKUP_FAILED", 503);
   if (!wallet) {
     const inserted = await client.from("usage_wallets").insert({ personal_account_id: account.id, payer_type: "personal", currency: "USD" }).select("id,currency,status").single();
     if (inserted.error) {
@@ -58,8 +61,9 @@ export async function ensurePersonalWorkspace(userId: string, client: SupabaseCl
     } else wallet = inserted.data;
   }
 
-  let { data: project, error: projectError } = await client.from("aiw_projects").select("id,name").eq("workspace_id", workspace.id).eq("archived", false).order("created_at", { ascending: true }).limit(1).maybeSingle();
-  if (projectError) throw new AIWorkspaceError("PROJECT_LOOKUP_FAILED", 503);
+  const projectResult = await client.from("aiw_projects").select("id,name").eq("workspace_id", workspace.id).eq("archived", false).order("created_at", { ascending: true }).limit(1).maybeSingle();
+  let project = projectResult.data;
+  if (projectResult.error) throw new AIWorkspaceError("PROJECT_LOOKUP_FAILED", 503);
   if (!project) {
     const inserted = await client.from("aiw_projects").insert({ workspace_id: workspace.id, name: "General" }).select("id,name").single();
     if (inserted.error) throw new AIWorkspaceError("PROJECT_PROVISION_FAILED", 503);
