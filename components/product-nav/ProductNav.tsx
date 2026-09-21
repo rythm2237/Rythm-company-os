@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { switchOrganization } from "@/app/organization-context/actions";
 import RythmBrandLogo from "@/components/brand/RythmBrandLogo";
 import { logout } from "@/components/app-shell/actions";
@@ -75,27 +75,62 @@ function canShowItem(href: string, access: Props["access"]) {
   return true;
 }
 
+function isAIWorkspacePath(pathname: string) {
+  return pathname === "/ai" || pathname.startsWith("/ai/");
+}
+
 export default function ProductNav({ access, organization }: Props) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [desktopPreferenceLoaded, setDesktopPreferenceLoaded] = useState(false);
+  const aiAutoCollapseActive = useRef(false);
+  const preAiCollapsedPreference = useRef(false);
 
   useEffect(() => setMobileOpen(false), [pathname]);
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(DESKTOP_NAV_STORAGE_KEY);
-      setDesktopCollapsed(stored === "1");
+      const storedCollapsed = window.localStorage.getItem(DESKTOP_NAV_STORAGE_KEY) === "1";
+      preAiCollapsedPreference.current = storedCollapsed;
+      if (isAIWorkspacePath(pathname)) {
+        aiAutoCollapseActive.current = true;
+        setDesktopCollapsed(true);
+      } else {
+        setDesktopCollapsed(storedCollapsed);
+      }
     } catch {
-      setDesktopCollapsed(false);
+      preAiCollapsedPreference.current = false;
+      if (isAIWorkspacePath(pathname)) {
+        aiAutoCollapseActive.current = true;
+        setDesktopCollapsed(true);
+      } else {
+        setDesktopCollapsed(false);
+      }
     } finally {
       setDesktopPreferenceLoaded(true);
     }
   }, []);
   useEffect(() => {
     if (!desktopPreferenceLoaded) return;
+    const inAIWorkspace = isAIWorkspacePath(pathname);
+    if (inAIWorkspace && !aiAutoCollapseActive.current) {
+      preAiCollapsedPreference.current = desktopCollapsed;
+      aiAutoCollapseActive.current = true;
+      setDesktopCollapsed(true);
+      return;
+    }
+    if (!inAIWorkspace && aiAutoCollapseActive.current) {
+      aiAutoCollapseActive.current = false;
+      setDesktopCollapsed(preAiCollapsedPreference.current);
+    }
+  }, [desktopCollapsed, desktopPreferenceLoaded, pathname]);
+  useEffect(() => {
+    if (!desktopPreferenceLoaded) return;
     document.documentElement.classList.toggle("rythm-nav-collapsed", desktopCollapsed);
-    try { window.localStorage.setItem(DESKTOP_NAV_STORAGE_KEY, desktopCollapsed ? "1" : "0"); } catch { /* storage may be unavailable */ }
+    if (!aiAutoCollapseActive.current) {
+      preAiCollapsedPreference.current = desktopCollapsed;
+      try { window.localStorage.setItem(DESKTOP_NAV_STORAGE_KEY, desktopCollapsed ? "1" : "0"); } catch { /* storage may be unavailable */ }
+    }
     return () => document.documentElement.classList.remove("rythm-nav-collapsed");
   }, [desktopCollapsed, desktopPreferenceLoaded]);
 
