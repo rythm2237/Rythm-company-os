@@ -3,7 +3,65 @@ import {requireOwnerOrganizationContext} from "@/lib/auth/organization-context";
 import {stripePost} from "@/lib/billing/stripe-rest";
 import {ensurePersonalWorkspace,serviceClient} from "@/lib/ai-workspace/service";
 
-export async function POST(req:NextRequest){try{const {supabase,user,organizationId,organization}=await requireOwnerOrganizationContext();const form=await req.formData();const offerCode=String(form.get("offerCode")??"");const {data:offer}=await supabase.from("commercial_offers").select("offer_code,name,currency,base_price,billing_interval,self_serve,status").eq("offer_code",offerCode).eq("status","public").eq("self_serve",true).maybeSingle();if(!offer||!offer.base_price||offer.billing_interval!=="month")return NextResponse.redirect(new URL("/billing?error=Offer%20is%20not%20available%20for%20self-service%20billing.",req.url),303);let {data:account}=await supabase.from("billing_accounts").select("*").eq("organization_id",organizationId).maybeSingle();let customerId=account?.provider_customer_id as string|undefined;if(!customerId){const p=new URLSearchParams();p.set("name",organization.legal_name??organization.name);if(organization.primary_email)p.set("email",organization.primary_email);p.set("metadata[organization_id]",organizationId);p.set("metadata[rythm_company]",organization.name);const customer=await stripePost("/customers",p,`customer:${organizationId}`);customerId=customer.id;const upsert={organization_id:organizationId,provider:"stripe",provider_customer_id:customerId,billing_email:organization.primary_email??user.email??null,billing_name:organization.legal_name??organization.name,default_currency:offer.currency??organization.default_currency??"EUR",tax_country_code:organization.country_code??null,updated_at:new Date().toISOString()};const r=await supabase.from("billing_accounts").upsert(upsert,{onConflict:"organization_id"});if(r.error)throw r.error;account=upsert as any;}
-const origin=new URL(req.url).origin;const p=new URLSearchParams();p.set("mode","subscription");p.set("customer",customerId!);p.set("success_url",`${origin}/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`);p.set("cancel_url",`${origin}/billing?checkout=cancelled`);p.set("client_reference_id",organizationId);p.set("metadata[organization_id]",organizationId);p.set("metadata[offer_code]",offer.offer_code);p.set("subscription_data[metadata][organization_id]",organizationId);p.set("subscription_data[metadata][offer_code]",offer.offer_code);
-if(offer.offer_code==="ai_workspace_starter"){const personal=await ensurePersonalWorkspace(user.id,serviceClient());const metadata={user_id:user.id,aiw_account_id:personal.account.id,aiw_workspace_id:personal.workspace.id,aiw_wallet_id:personal.wallet.id};for(const [key,value] of Object.entries(metadata)){p.set(`metadata[${key}]`,String(value));p.set(`subscription_data[metadata][${key}]`,String(value));}}
-p.set("line_items[0][quantity]","1");p.set("line_items[0][price_data][currency]",String(offer.currency??"EUR").toLowerCase());p.set("line_items[0][price_data][unit_amount]",String(Math.round(Number(offer.base_price)*100)));p.set("line_items[0][price_data][recurring][interval]","month");p.set("line_items[0][price_data][product_data][name]",offer.name);p.set("line_items[0][price_data][product_data][metadata][offer_code]",offer.offer_code);const session=await stripePost("/checkout/sessions",p,`checkout:${organizationId}:${offer.offer_code}:${user.id}:${Date.now()}`);await supabase.from("billing_checkout_sessions").insert({organization_id:organizationId,requested_by_user_id:user.id,offer_code:offer.offer_code,provider_session_id:session.id,mode:"subscription",status:"open",success_url:`${origin}/billing?checkout=success`,cancel_url:`${origin}/billing?checkout=cancelled`,expires_at:session.expires_at?new Date(session.expires_at*1000).toISOString():null});return NextResponse.redirect(session.url,303);}catch(e){const msg=e instanceof Error?e.message:"Checkout could not be created.";return NextResponse.redirect(new URL(`/billing?error=${encodeURIComponent(msg)}`,req.url),303);}}
+export async function POST(req:NextRequest){try{
+  const {supabase,user,organizationId,organization}=await requireOwnerOrganizationContext();
+  const form=await req.formData();
+  const offerCode=String(form.get("offerCode")??"");
+  const {data:offer}=await supabase.from("commercial_offers").select("offer_code,name,currency,base_price,billing_interval,self_serve,status").eq("offer_code",offerCode).eq("status","public").eq("self_serve",true).maybeSingle();
+  if(!offer||!offer.base_price||offer.billing_interval!=="month")return NextResponse.redirect(new URL("/billing?error=Offer%20is%20not%20available%20for%20self-service%20billing.",req.url),303);
+
+  const isAiPlan=offer.offer_code.startsWith("ai_workspace_");
+  if(isAiPlan&&String(organization.country_code??"").toUpperCase()==="IR")return NextResponse.redirect(new URL("/billing?error=Iran%20regional%20pricing%20requires%20a%20supported%20local%20payment%20provider.",req.url),303);
+  if(isAiPlan){
+    const {data:subscriptions}=await supabase.from("billing_subscriptions").select("status,metadata").eq("organization_id",organizationId).in("status",["active","trialing","past_due"]);
+    const activeAi=(subscriptions??[]).some((s:any)=>String(s.metadata?.offer_code??"").startsWith("ai_workspace_"));
+    if(activeAi)return NextResponse.redirect(new URL("/billing?error=An%20RYTHM%20AI%20subscription%20is%20already%20active.%20Use%20the%20billing%20portal%20to%20manage%20it.",req.url),303);
+  }
+
+  let {data:account}=await supabase.from("billing_accounts").select("*").eq("organization_id",organizationId).maybeSingle();
+  let customerId=account?.provider_customer_id as string|undefined;
+  if(!customerId){
+    const p=new URLSearchParams();
+    p.set("name",organization.legal_name??organization.name);
+    if(organization.primary_email)p.set("email",organization.primary_email);
+    p.set("metadata[organization_id]",organizationId);
+    p.set("metadata[rythm_company]",organization.name);
+    const customer=await stripePost("/customers",p,`customer:${organizationId}`);
+    customerId=customer.id;
+    const upsert={organization_id:organizationId,provider:"stripe",provider_customer_id:customerId,billing_email:organization.primary_email??user.email??null,billing_name:organization.legal_name??organization.name,default_currency:offer.currency??organization.default_currency??"EUR",tax_country_code:organization.country_code??null,updated_at:new Date().toISOString()};
+    const r=await supabase.from("billing_accounts").upsert(upsert,{onConflict:"organization_id"});
+    if(r.error)throw r.error;
+    account=upsert as any;
+  }
+
+  const origin=new URL(req.url).origin;
+  const p=new URLSearchParams();
+  p.set("mode","subscription");
+  p.set("customer",customerId!);
+  p.set("success_url",`${origin}/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
+  p.set("cancel_url",`${origin}/billing?checkout=cancelled`);
+  p.set("client_reference_id",organizationId);
+  p.set("metadata[organization_id]",organizationId);
+  p.set("metadata[offer_code]",offer.offer_code);
+  p.set("subscription_data[metadata][organization_id]",organizationId);
+  p.set("subscription_data[metadata][offer_code]",offer.offer_code);
+
+  if(isAiPlan){
+    const planCode=offer.offer_code.replace("ai_workspace_","");
+    const {data:catalog}=await serviceClient().from("aiw_plan_catalog").select("plan_code").eq("plan_code",planCode).eq("active",true).maybeSingle();
+    if(!catalog)return NextResponse.redirect(new URL("/billing?error=AI%20plan%20configuration%20is%20not%20available.",req.url),303);
+    const personal=await ensurePersonalWorkspace(user.id,serviceClient());
+    const metadata={user_id:user.id,aiw_account_id:personal.account.id,aiw_workspace_id:personal.workspace.id,aiw_wallet_id:personal.wallet.id,billing_region:"INTL"};
+    for(const [key,value] of Object.entries(metadata)){p.set(`metadata[${key}]`,String(value));p.set(`subscription_data[metadata][${key}]`,String(value));}
+  }
+
+  p.set("line_items[0][quantity]","1");
+  p.set("line_items[0][price_data][currency]",String(offer.currency??"EUR").toLowerCase());
+  p.set("line_items[0][price_data][unit_amount]",String(Math.round(Number(offer.base_price)*100)));
+  p.set("line_items[0][price_data][recurring][interval]","month");
+  p.set("line_items[0][price_data][product_data][name]",offer.name);
+  p.set("line_items[0][price_data][product_data][metadata][offer_code]",offer.offer_code);
+  const session=await stripePost("/checkout/sessions",p,`checkout:${organizationId}:${offer.offer_code}:${user.id}:${Date.now()}`);
+  await supabase.from("billing_checkout_sessions").insert({organization_id:organizationId,requested_by_user_id:user.id,offer_code:offer.offer_code,provider_session_id:session.id,mode:"subscription",status:"open",success_url:`${origin}/billing?checkout=success`,cancel_url:`${origin}/billing?checkout=cancelled`,expires_at:session.expires_at?new Date(session.expires_at*1000).toISOString():null});
+  return NextResponse.redirect(session.url,303);
+}catch(e){const msg=e instanceof Error?e.message:"Checkout could not be created.";return NextResponse.redirect(new URL(`/billing?error=${encodeURIComponent(msg)}`,req.url),303);}}
