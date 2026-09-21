@@ -6,12 +6,7 @@ export type PromptProfile = "normal" | "professional";
 export type RoutingMode = "auto" | "fast" | "best";
 export type UsageKind = "answer" | "prompt_enhancement";
 
-type ExistingRequest = {
-  id: string;
-  status: string;
-  internal_result: string | null;
-  actual_micros: number | null;
-};
+type ExistingRequest = { id: string; status: string; internal_result: string | null; actual_micros: number | null };
 
 export class AIWorkspaceError extends Error {
   constructor(public readonly code: string, public readonly status = 400) { super(code); }
@@ -96,7 +91,7 @@ export function reservationFor(mode: RoutingMode, kind: UsageKind) {
   return 125000;
 }
 
-export async function reserveUsage(input: { client: SupabaseClient; walletId: string; workspaceId: string; organizationId: string; userId: string; conversationId: string; mode: RoutingMode; profile: PromptProfile; kind: UsageKind; amount: number; clientRequestKey: string; }) {
+export async function reserveUsage(input: { client: SupabaseClient; walletId: string; workspaceId: string; organizationId: string; userId: string | null; conversationId: string; mode: RoutingMode; profile: PromptProfile; kind: UsageKind; amount: number; clientRequestKey: string; }) {
   const idempotencyKey = `${input.workspaceId}:${input.clientRequestKey}:${input.kind}`;
   const findExisting = async () => {
     const query = await input.client.from("ai_usage_requests").select("id,status,internal_result,actual_micros").eq("workspace_id", input.workspaceId).eq("idempotency_key", idempotencyKey).maybeSingle();
