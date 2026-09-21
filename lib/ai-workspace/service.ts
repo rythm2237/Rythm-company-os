@@ -4,118 +4,21 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type PromptProfile = "normal" | "professional";
 export type RoutingMode = "auto" | "fast" | "best";
-export type UsageKind = "answer" | "prompt_enhancement";
-
+export type UsageKind = "answer" | "prompt_enhancement" | "file_ingestion";
 type ExistingRequest = { id: string; status: string; internal_result: string | null; actual_micros: number | null };
-
-export class AIWorkspaceError extends Error {
-  constructor(public readonly code: string, public readonly status = 400) { super(code); }
-}
-
-export function serviceClient() {
-  const client = createServerSupabaseClient();
-  if (!client) throw new AIWorkspaceError("AI_WORKSPACE_STORAGE_UNAVAILABLE", 503);
-  return client;
-}
+export class AIWorkspaceError extends Error { constructor(public readonly code: string, public readonly status = 400) { super(code); } }
+export function serviceClient() { const client = createServerSupabaseClient(); if (!client) throw new AIWorkspaceError("AI_WORKSPACE_STORAGE_UNAVAILABLE", 503); return client; }
 
 export async function ensurePersonalWorkspace(userId: string, client: SupabaseClient = serviceClient()) {
-  const accountResult = await client.from("aiw_accounts").select("id,status,allowed_modes,allowed_prompt_profiles,max_request_micros").eq("user_id", userId).maybeSingle();
-  let account = accountResult.data;
-  if (accountResult.error) throw new AIWorkspaceError("ACCOUNT_LOOKUP_FAILED", 503);
-  if (!account) {
-    const inserted = await client.from("aiw_accounts").insert({ user_id: userId, kind: "personal" }).select("id,status,allowed_modes,allowed_prompt_profiles,max_request_micros").single();
-    if (inserted.error) {
-      const retry = await client.from("aiw_accounts").select("id,status,allowed_modes,allowed_prompt_profiles,max_request_micros").eq("user_id", userId).maybeSingle();
-      if (retry.error || !retry.data) throw new AIWorkspaceError("ACCOUNT_PROVISION_FAILED", 503);
-      account = retry.data;
-    } else account = inserted.data;
-  }
-  if (account.status !== "active") throw new AIWorkspaceError("ACCOUNT_DISABLED", 403);
-
-  const workspaceResult = await client.from("aiw_workspaces").select("id,name").eq("account_id", account.id).eq("kind", "personal").maybeSingle();
-  let workspace = workspaceResult.data;
-  if (workspaceResult.error) throw new AIWorkspaceError("WORKSPACE_LOOKUP_FAILED", 503);
-  if (!workspace) {
-    const inserted = await client.from("aiw_workspaces").insert({ account_id: account.id, kind: "personal", name: "Personal AI Workspace", created_by: userId }).select("id,name").single();
-    if (inserted.error) {
-      const retry = await client.from("aiw_workspaces").select("id,name").eq("account_id", account.id).eq("kind", "personal").maybeSingle();
-      if (retry.error || !retry.data) throw new AIWorkspaceError("WORKSPACE_PROVISION_FAILED", 503);
-      workspace = retry.data;
-    } else workspace = inserted.data;
-  }
-
-  const walletResult = await client.from("usage_wallets").select("id,currency,status").eq("personal_account_id", account.id).eq("payer_type", "personal").maybeSingle();
-  let wallet = walletResult.data;
-  if (walletResult.error) throw new AIWorkspaceError("WALLET_LOOKUP_FAILED", 503);
-  if (!wallet) {
-    const inserted = await client.from("usage_wallets").insert({ personal_account_id: account.id, payer_type: "personal", currency: "USD" }).select("id,currency,status").single();
-    if (inserted.error) {
-      const retry = await client.from("usage_wallets").select("id,currency,status").eq("personal_account_id", account.id).eq("payer_type", "personal").maybeSingle();
-      if (retry.error || !retry.data) throw new AIWorkspaceError("WALLET_PROVISION_FAILED", 503);
-      wallet = retry.data;
-    } else wallet = inserted.data;
-  }
-
-  const projectResult = await client.from("aiw_projects").select("id,name").eq("workspace_id", workspace.id).eq("archived", false).order("created_at", { ascending: true }).limit(1).maybeSingle();
-  let project = projectResult.data;
-  if (projectResult.error) throw new AIWorkspaceError("PROJECT_LOOKUP_FAILED", 503);
-  if (!project) {
-    const inserted = await client.from("aiw_projects").insert({ workspace_id: workspace.id, name: "General" }).select("id,name").single();
-    if (inserted.error) throw new AIWorkspaceError("PROJECT_PROVISION_FAILED", 503);
-    project = inserted.data;
-  }
-  return { account, workspace, wallet, project };
+  const accountResult=await client.from("aiw_accounts").select("id,status,allowed_modes,allowed_prompt_profiles,max_request_micros").eq("user_id",userId).maybeSingle(); let account=accountResult.data; if(accountResult.error)throw new AIWorkspaceError("ACCOUNT_LOOKUP_FAILED",503);
+  if(!account){const inserted=await client.from("aiw_accounts").insert({user_id:userId,kind:"personal"}).select("id,status,allowed_modes,allowed_prompt_profiles,max_request_micros").single();if(inserted.error){const retry=await client.from("aiw_accounts").select("id,status,allowed_modes,allowed_prompt_profiles,max_request_micros").eq("user_id",userId).maybeSingle();if(retry.error||!retry.data)throw new AIWorkspaceError("ACCOUNT_PROVISION_FAILED",503);account=retry.data;}else account=inserted.data;} if(account.status!=="active")throw new AIWorkspaceError("ACCOUNT_DISABLED",403);
+  const workspaceResult=await client.from("aiw_workspaces").select("id,name").eq("account_id",account.id).eq("kind","personal").maybeSingle();let workspace=workspaceResult.data;if(workspaceResult.error)throw new AIWorkspaceError("WORKSPACE_LOOKUP_FAILED",503);if(!workspace){const inserted=await client.from("aiw_workspaces").insert({account_id:account.id,kind:"personal",name:"Personal AI Workspace",created_by:userId}).select("id,name").single();if(inserted.error){const retry=await client.from("aiw_workspaces").select("id,name").eq("account_id",account.id).eq("kind","personal").maybeSingle();if(retry.error||!retry.data)throw new AIWorkspaceError("WORKSPACE_PROVISION_FAILED",503);workspace=retry.data;}else workspace=inserted.data;}
+  const walletResult=await client.from("usage_wallets").select("id,currency,status").eq("personal_account_id",account.id).eq("payer_type","personal").maybeSingle();let wallet=walletResult.data;if(walletResult.error)throw new AIWorkspaceError("WALLET_LOOKUP_FAILED",503);if(!wallet){const inserted=await client.from("usage_wallets").insert({personal_account_id:account.id,payer_type:"personal",currency:"USD"}).select("id,currency,status").single();if(inserted.error){const retry=await client.from("usage_wallets").select("id,currency,status").eq("personal_account_id",account.id).eq("payer_type","personal").maybeSingle();if(retry.error||!retry.data)throw new AIWorkspaceError("WALLET_PROVISION_FAILED",503);wallet=retry.data;}else wallet=inserted.data;}
+  const projectResult=await client.from("aiw_projects").select("id,name").eq("workspace_id",workspace.id).eq("archived",false).order("created_at",{ascending:true}).limit(1).maybeSingle();let project=projectResult.data;if(projectResult.error)throw new AIWorkspaceError("PROJECT_LOOKUP_FAILED",503);if(!project){const inserted=await client.from("aiw_projects").insert({workspace_id:workspace.id,name:"General"}).select("id,name").single();if(inserted.error)throw new AIWorkspaceError("PROJECT_PROVISION_FAILED",503);project=inserted.data;}
+  return {account,workspace,wallet,project};
 }
-
-export async function ensureConversation(workspaceId: string, projectId: string, conversationId: string | null, client: SupabaseClient = serviceClient()) {
-  if (conversationId) {
-    const existing = await client.from("aiw_conversations").select("id,title").eq("id", conversationId).eq("workspace_id", workspaceId).eq("project_id", projectId).eq("archived", false).maybeSingle();
-    if (existing.error) throw new AIWorkspaceError("CONVERSATION_LOOKUP_FAILED", 503);
-    if (existing.data) return existing.data;
-  }
-  const created = await client.from("aiw_conversations").insert({ workspace_id: workspaceId, project_id: projectId, title: "New chat" }).select("id,title").single();
-  if (created.error) throw new AIWorkspaceError("CONVERSATION_CREATE_FAILED", 503);
-  return created.data;
-}
-
-export async function walletBalance(walletId: string, client: SupabaseClient = serviceClient()) {
-  const { data, error } = await client.rpc("aiw_wallet_balance", { p_wallet: walletId });
-  if (error) throw new AIWorkspaceError("BALANCE_UNAVAILABLE", 503);
-  return String(data ?? "0");
-}
-
-export function reservationFor(mode: RoutingMode, kind: UsageKind) {
-  if (kind === "prompt_enhancement") return 50000;
-  if (mode === "fast") return 75000;
-  if (mode === "best") return 200000;
-  return 125000;
-}
-
-export async function reserveUsage(input: { client: SupabaseClient; walletId: string; workspaceId: string; organizationId: string; userId: string | null; conversationId: string; mode: RoutingMode; profile: PromptProfile; kind: UsageKind; amount: number; clientRequestKey: string; }) {
-  const idempotencyKey = `${input.workspaceId}:${input.clientRequestKey}:${input.kind}`;
-  const findExisting = async () => {
-    const query = await input.client.from("ai_usage_requests").select("id,status,internal_result,actual_micros").eq("workspace_id", input.workspaceId).eq("idempotency_key", idempotencyKey).maybeSingle();
-    if (query.error) throw new AIWorkspaceError("IDEMPOTENCY_LOOKUP_FAILED", 503);
-    return query.data as ExistingRequest | null;
-  };
-  const existing = await findExisting();
-  if (existing) return { ...existing, existing: true as const };
-  const requestId = randomUUID();
-  const { data, error } = await input.client.rpc("aiw_reserve_usage", {
-    p_wallet: input.walletId, p_workspace: input.workspaceId, p_request: requestId, p_idempotency: idempotencyKey,
-    p_amount: input.amount, p_kind: input.kind, p_mode: input.mode, p_profile: input.profile,
-    p_user: input.userId, p_organization: input.organizationId, p_agent: null, p_conversation: input.conversationId, p_client_request_key: input.clientRequestKey,
-  });
-  if (error) throw new AIWorkspaceError("RESERVATION_FAILED", 503);
-  if (data !== true) {
-    const raced = await findExisting();
-    if (raced) return { ...raced, existing: true as const };
-    throw new AIWorkspaceError("INSUFFICIENT_CREDIT_OR_LIMIT", 402);
-  }
-  return { id: requestId, status: "reserved", internal_result: null, actual_micros: null, existing: false as const };
-}
-
-export function costMicros(actualCostUsd: number | null | undefined) {
-  if (actualCostUsd == null || !Number.isFinite(actualCostUsd) || actualCostUsd < 0) return null;
-  return Math.max(0, Math.ceil(actualCostUsd * 1_000_000));
-}
+export async function ensureConversation(workspaceId:string,projectId:string,conversationId:string|null,client:SupabaseClient=serviceClient()){if(conversationId){const existing=await client.from("aiw_conversations").select("id,title").eq("id",conversationId).eq("workspace_id",workspaceId).eq("project_id",projectId).eq("archived",false).maybeSingle();if(existing.error)throw new AIWorkspaceError("CONVERSATION_LOOKUP_FAILED",503);if(existing.data)return existing.data;}const created=await client.from("aiw_conversations").insert({workspace_id:workspaceId,project_id:projectId,title:"New chat"}).select("id,title").single();if(created.error)throw new AIWorkspaceError("CONVERSATION_CREATE_FAILED",503);return created.data;}
+export async function walletBalance(walletId:string,client:SupabaseClient=serviceClient()){const{data,error}=await client.rpc("aiw_wallet_balance",{p_wallet:walletId});if(error)throw new AIWorkspaceError("BALANCE_UNAVAILABLE",503);return String(data??"0");}
+export function reservationFor(mode:RoutingMode,kind:UsageKind){if(kind==="prompt_enhancement")return 50000;if(kind==="file_ingestion")return 200000;if(mode==="fast")return 75000;if(mode==="best")return 200000;return 125000;}
+export async function reserveUsage(input:{client:SupabaseClient;walletId:string;workspaceId:string;organizationId:string;userId:string|null;conversationId:string|null;mode:RoutingMode;profile:PromptProfile;kind:UsageKind;amount:number;clientRequestKey:string;}){const idempotencyKey=`${input.workspaceId}:${input.clientRequestKey}:${input.kind}`;const findExisting=async()=>{const query=await input.client.from("ai_usage_requests").select("id,status,internal_result,actual_micros").eq("workspace_id",input.workspaceId).eq("idempotency_key",idempotencyKey).maybeSingle();if(query.error)throw new AIWorkspaceError("IDEMPOTENCY_LOOKUP_FAILED",503);return query.data as ExistingRequest|null;};const existing=await findExisting();if(existing)return{...existing,existing:true as const};const requestId=randomUUID();const{data,error}=await input.client.rpc("aiw_reserve_usage",{p_wallet:input.walletId,p_workspace:input.workspaceId,p_request:requestId,p_idempotency:idempotencyKey,p_amount:input.amount,p_kind:input.kind,p_mode:input.mode,p_profile:input.profile,p_user:input.userId,p_organization:input.organizationId,p_agent:null,p_conversation:input.conversationId,p_client_request_key:input.clientRequestKey});if(error)throw new AIWorkspaceError("RESERVATION_FAILED",503);if(data!==true){const raced=await findExisting();if(raced)return{...raced,existing:true as const};throw new AIWorkspaceError("INSUFFICIENT_CREDIT_OR_LIMIT",402);}return{id:requestId,status:"reserved",internal_result:null,actual_micros:null,existing:false as const};}
+export function costMicros(actualCostUsd:number|null|undefined){if(actualCostUsd==null||!Number.isFinite(actualCostUsd)||actualCostUsd<0)return null;return Math.max(0,Math.ceil(actualCostUsd*1_000_000));}
