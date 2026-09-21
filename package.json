@@ -35,6 +35,7 @@
     "test:connections-phase1": "node --import tsx scripts/validate-customer-connection-platform.ts",
     "test:connections-phase2": "node --import tsx scripts/validate-customer-connection-platform-phase2.ts",
     "test:security-definer": "node --experimental-strip-types scripts/validate-security-definer-hardening.ts",
+    "test:ai-workspace": "node --import tsx scripts/validate-rythm-ai-workspace.ts",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",
     "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts"

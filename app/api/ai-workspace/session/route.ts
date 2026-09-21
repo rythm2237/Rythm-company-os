@@ -36,7 +36,9 @@ export async function GET() {
       let status: "Connected" | "Available" | "Coming soon" | "Admin setup required" | "Disabled" = "Coming soon";
       if (connection?.enabled && connection.status === "connected") status = "Connected";
       else if (provider?.kill_switch || provider?.enabled === false) status = "Disabled";
-      else if (provider?.enabled && provider.setup_availability === "ready") status = "Available";
+      else if (provider?.enabled && provider.setup_availability === "available") status = "Available";
+      else if (provider?.enabled && provider.setup_availability === "setup_available") status = "Admin setup required";
+      else if (provider?.setup_availability === "coming_later") status = "Coming soon";
       else if (provider) status = "Admin setup required";
       return { key,name,category,status };
     });

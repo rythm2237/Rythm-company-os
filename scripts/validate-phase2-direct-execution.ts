@@ -25,6 +25,7 @@ assert.deepEqual(
   ].sort(),
   "Core connection control-plane fetch boundaries must remain explicitly inventoried.",
 );
+const AI_WORKSPACE_BROWSER_API_BOUNDARY = "components/ai-workspace/AIWorkspaceClient.tsx";
 const fetchBoundaries = new Set([
   "app/(app)/agents/[code]/benchmark/BenchmarkConsole.tsx",
   "app/(app)/meetings/room/DeliberationConsole.tsx",
@@ -51,6 +52,7 @@ const fetchBoundaries = new Set([
   "components/projects/project-os-controls.tsx",
   "components/projects/ProjectExecutiveSignalEnhancer.tsx",
   "components/projects/approval-decision-discussion.tsx",
+  AI_WORKSPACE_BROWSER_API_BOUNDARY,
   "lib/ai/agent-provider.ts",
   "lib/analytics/public-events.ts",
   "lib/billing/stripe-rest.ts",
@@ -69,6 +71,11 @@ assert.deepEqual(
   [],
   "Every new fetch boundary must be explicitly classified by the Phase 2 guard.",
 );
+const aiWorkspaceBrowserSource = readFileSync(AI_WORKSPACE_BROWSER_API_BOUNDARY, "utf8");
+assert.match(aiWorkspaceBrowserSource, /fetch\(\"\/api\/ai-workspace\/session\"/);
+assert.match(aiWorkspaceBrowserSource, /fetch\(\"\/api\/ai-workspace\/chat\"/);
+assert.doesNotMatch(aiWorkspaceBrowserSource, /fetch\s*\(\s*["'`]https?:\/\//, "AI Workspace browser code must call same-origin RYTHM APIs only.");
+assert.doesNotMatch(aiWorkspaceBrowserSource, /(api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|api\.stripe\.com)/i, "AI Workspace browser code must never call providers directly.");
 const directPatterns = [
   /fetch\s*\(\s*["'`]https:\/\//,
   /new\s+OpenAI\s*\(/,
