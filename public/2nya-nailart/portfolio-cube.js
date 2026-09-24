@@ -7,14 +7,6 @@
   const counter=document.querySelector('#portfolioCounter');
   if(!section||!stage||!card||!dots||!counter||typeof portfolio==='undefined'||!Array.isArray(portfolio)||!portfolio.length||typeof pIndex==='undefined'||typeof renderPortfolio==='undefined')return;
 
-  const cssHref='/2nya-nailart/portfolio-cube.css';
-  if(!document.querySelector(`link[href="${cssHref}"]`)){
-    const link=document.createElement('link');
-    link.rel='stylesheet';
-    link.href=cssHref;
-    document.head.append(link);
-  }
-
   section.classList.add('portfolio-cube-v2');
   card.innerHTML=`<div class="portfolio-cube" id="portfolioCube" aria-hidden="true">
     <figure class="cube-face cube-front" data-cube-face="0"><img alt="" decoding="async"></figure>
