@@ -118,7 +118,7 @@ export async function resolveProviderCredential(input: {
   }
 
   let refreshed: OAuthEnvelope;
-  if (["google_search_console", "google_analytics", "google_workspace"].includes(input.providerKey)) {
+  if (["google_search_console", "google_analytics", "google_workspace", "google_drive", "google_ads"].includes(input.providerKey)) {
     const token = await refreshGoogle(refreshToken);
     refreshed = {
       ...envelope,

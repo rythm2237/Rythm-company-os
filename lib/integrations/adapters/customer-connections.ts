@@ -21,6 +21,7 @@ const vercel=tokenAdapter("vercel",async token=>{const[user,result]=await Promis
 const supabase=tokenAdapter("supabase",async token=>{const result=await json("https://api.supabase.com/v1/projects",token);const projects=Array.isArray(result)?result as Json[]:list((result as Json).projects);return{accountRef:null,grantedScopes:["project.read"],resources:projects.map(project=>({resourceType:"project",resourceId:text(project.ref)||String(project.id),resourceName:text(project.name)||text(project.ref),metadata:{region:text(project.region),status:text(project.status),organization_id:project.organization_id??null}})),detail:{project_count:projects.length}};});
 const cloudflare=tokenAdapter("cloudflare",async token=>{const[verified,zones]=await Promise.all([json("https://api.cloudflare.com/client/v4/user/tokens/verify",token),json("https://api.cloudflare.com/client/v4/zones?per_page=50",token)]);const result=(verified.result&&typeof verified.result==="object"?verified.result:{})as Json;return{accountRef:String(result.id??""),grantedScopes:["zone.read"],resources:list(zones.result).map(zone=>({resourceType:"zone",resourceId:String(zone.id),resourceName:text(zone.name)||String(zone.id),metadata:{status:text(zone.status),account:zone.account??null}})),detail:{token_status:result.status??null}};});
 const googleDrive=tokenAdapter("google_drive",async token=>{const about=await json("https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress,permissionId)",token);const user=(about.user&&typeof about.user==="object"?about.user:{})as Json;const accountRef=text(user.emailAddress)||text(user.permissionId);if(!accountRef)throw new Error("Google Drive verification returned no account identity.");return{accountRef,grantedScopes:["drive.file"],resources:[{resourceType:"google_drive_account",resourceId:text(user.permissionId)||accountRef,resourceName:text(user.displayName)||text(user.emailAddress)||"Google Drive account",metadata:{email_address:text(user.emailAddress)||null,permission_id:text(user.permissionId)||null,access_model:"drive.file"}}],detail:{access_model:"drive.file"}};});
+const googleAds=tokenAdapter("google_ads",async token=>{const result=await json("https://googleads.googleapis.com/v25/customers:listAccessibleCustomers",token);const names=Array.isArray(result.resourceNames)?result.resourceNames.filter((value):value is string=>typeof value==="string"):[];return{accountRef:names[0]??null,grantedScopes:["adwords"],resources:names.map(name=>{const id=name.replace(/^customers\//,"");return{resourceType:"google_ads_customer",resourceId:id,resourceName:`Google Ads ${id}`,metadata:{resource_name:name,api_version:"v25"}};}),detail:{customer_count:names.length,verification_endpoint:"customers:listAccessibleCustomers",api_version:"v25"}};});
 const ahrefs=tokenAdapter("ahrefs",async token=>{
   const result=await json("https://api.ahrefs.com/v3/subscription-info/limits-and-usage",token);
   const info=(result.limits_and_usage&&typeof result.limits_and_usage==="object"?result.limits_and_usage:{})as Json;
@@ -42,7 +43,7 @@ const ahrefs=tokenAdapter("ahrefs",async token=>{
   };
 });
 
-export const TOKEN_CONNECTION_ADAPTERS:Record<string,ProviderConnectionAdapter>={github,vercel,supabase,cloudflare,google_drive:googleDrive,ahrefs};
+export const TOKEN_CONNECTION_ADAPTERS:Record<string,ProviderConnectionAdapter>={github,vercel,supabase,cloudflare,google_drive:googleDrive,google_ads:googleAds,ahrefs};
 export function getTokenConnectionAdapter(providerKey:string){return TOKEN_CONNECTION_ADAPTERS[providerKey]??null;}
 
 export async function exchangeGoogleOAuthCode(input:{code:string;clientId:string;clientSecret:string;redirectUri:string;codeVerifier:string}){
@@ -60,6 +61,8 @@ export async function verifyGoogleDriveAccess(accessToken:string){
   if(!accountRef)throw new Error("Google Drive verification returned no account identity.");
   return{accountRef,user:{displayName:text(user.displayName)||null,emailAddress:text(user.emailAddress)||null,permissionId:text(user.permissionId)||null}};
 }
+
+export async function verifyGoogleAdsAccess(accessToken:string){return googleAds.verifyCredential(accessToken);}
 
 export async function discoverGoogleResources(providerKey:string,accessToken:string):Promise<DiscoveredResource[]>{
   if(providerKey==="google_search_console"){const result=await json("https://www.googleapis.com/webmasters/v3/sites",accessToken);return list(result.siteEntry).map(site=>({resourceType:"search_console_property",resourceId:text(site.siteUrl),resourceName:text(site.siteUrl),metadata:{permission_level:text(site.permissionLevel)}}));}
