@@ -20,6 +20,7 @@ const github=tokenAdapter("github",async token=>{const[user,repos]=await Promise
 const vercel=tokenAdapter("vercel",async token=>{const[user,result]=await Promise.all([json("https://api.vercel.com/v2/user",token),json("https://api.vercel.com/v9/projects?limit=100",token)]);const account=(user.user&&typeof user.user==="object"?user.user:{})as Json;return{accountRef:text(account.email)||text(account.username)||String(account.id??""),grantedScopes:["deployment.read"],resources:list(result.projects).map(project=>({resourceType:"project",resourceId:String(project.id),resourceName:text(project.name)||String(project.id),metadata:{framework:text(project.framework),accountId:project.accountId??null}})),detail:{provider_user_id:account.id??null}};});
 const supabase=tokenAdapter("supabase",async token=>{const result=await json("https://api.supabase.com/v1/projects",token);const projects=Array.isArray(result)?result as Json[]:list((result as Json).projects);return{accountRef:null,grantedScopes:["project.read"],resources:projects.map(project=>({resourceType:"project",resourceId:text(project.ref)||String(project.id),resourceName:text(project.name)||text(project.ref),metadata:{region:text(project.region),status:text(project.status),organization_id:project.organization_id??null}})),detail:{project_count:projects.length}};});
 const cloudflare=tokenAdapter("cloudflare",async token=>{const[verified,zones]=await Promise.all([json("https://api.cloudflare.com/client/v4/user/tokens/verify",token),json("https://api.cloudflare.com/client/v4/zones?per_page=50",token)]);const result=(verified.result&&typeof verified.result==="object"?verified.result:{})as Json;return{accountRef:String(result.id??""),grantedScopes:["zone.read"],resources:list(zones.result).map(zone=>({resourceType:"zone",resourceId:String(zone.id),resourceName:text(zone.name)||String(zone.id),metadata:{status:text(zone.status),account:zone.account??null}})),detail:{token_status:result.status??null}};});
+const googleDrive=tokenAdapter("google_drive",async token=>{const about=await json("https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress,permissionId)",token);const user=(about.user&&typeof about.user==="object"?about.user:{})as Json;const accountRef=text(user.emailAddress)||text(user.permissionId);if(!accountRef)throw new Error("Google Drive verification returned no account identity.");return{accountRef,grantedScopes:["drive.file"],resources:[{resourceType:"google_drive_account",resourceId:text(user.permissionId)||accountRef,resourceName:text(user.displayName)||text(user.emailAddress)||"Google Drive account",metadata:{email_address:text(user.emailAddress)||null,permission_id:text(user.permissionId)||null,access_model:"drive.file"}}],detail:{access_model:"drive.file"}};});
 const ahrefs=tokenAdapter("ahrefs",async token=>{
   const result=await json("https://api.ahrefs.com/v3/subscription-info/limits-and-usage",token);
   const info=(result.limits_and_usage&&typeof result.limits_and_usage==="object"?result.limits_and_usage:{})as Json;
@@ -41,8 +42,24 @@ const ahrefs=tokenAdapter("ahrefs",async token=>{
   };
 });
 
-export const TOKEN_CONNECTION_ADAPTERS:Record<string,ProviderConnectionAdapter>={github,vercel,supabase,cloudflare,ahrefs};
+export const TOKEN_CONNECTION_ADAPTERS:Record<string,ProviderConnectionAdapter>={github,vercel,supabase,cloudflare,google_drive:googleDrive,ahrefs};
 export function getTokenConnectionAdapter(providerKey:string){return TOKEN_CONNECTION_ADAPTERS[providerKey]??null;}
+
+export async function exchangeGoogleOAuthCode(input:{code:string;clientId:string;clientSecret:string;redirectUri:string;codeVerifier:string}){
+  const response=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code:input.code,client_id:input.clientId,client_secret:input.clientSecret,redirect_uri:input.redirectUri,grant_type:"authorization_code",code_verifier:input.codeVerifier}),cache:"no-store",redirect:"error",signal:AbortSignal.timeout(20_000)});
+  const tokens=await response.json().catch(()=>({})) as {access_token?:string;refresh_token?:string;expires_in?:number;scope?:string;token_type?:string;error?:string;error_description?:string};
+  if(!response.ok||!tokens.access_token)throw new Error(`Google token exchange failed${tokens.error_description?`: ${tokens.error_description}`:tokens.error?`: ${tokens.error}`:"."}`);
+  if(!tokens.refresh_token)throw new Error("Google did not return an offline refresh token. Reconnect and approve access again.");
+  return tokens;
+}
+
+export async function verifyGoogleDriveAccess(accessToken:string){
+  const about=await json("https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress,permissionId)",accessToken);
+  const user=(about.user&&typeof about.user==="object"?about.user:{})as Json;
+  const accountRef=text(user.emailAddress)||text(user.permissionId);
+  if(!accountRef)throw new Error("Google Drive verification returned no account identity.");
+  return{accountRef,user:{displayName:text(user.displayName)||null,emailAddress:text(user.emailAddress)||null,permissionId:text(user.permissionId)||null}};
+}
 
 export async function discoverGoogleResources(providerKey:string,accessToken:string):Promise<DiscoveredResource[]>{
   if(providerKey==="google_search_console"){const result=await json("https://www.googleapis.com/webmasters/v3/sites",accessToken);return list(result.siteEntry).map(site=>({resourceType:"search_console_property",resourceId:text(site.siteUrl),resourceName:text(site.siteUrl),metadata:{permission_level:text(site.permissionLevel)}}));}
