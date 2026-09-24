@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
 import { createExecutionServiceClient } from "@/lib/integrations/service-runner";
-import { exchangeGoogleOAuthCode, verifyGoogleAdsAccess } from "@/lib/integrations/adapters/customer-connections";
+import { exchangeGoogleOAuthCode, googleProfile, verifyGoogleAdsAccess } from "@/lib/integrations/adapters/customer-connections";
 
 const GOOGLE_ADS_SCOPE = "https://www.googleapis.com/auth/adwords";
 
@@ -95,7 +95,22 @@ export async function GET(request: Request) {
     const scopes = new Set((tokens.scope ?? "").split(/\s+/).filter(Boolean));
     if (!scopes.has(GOOGLE_ADS_SCOPE)) throw new Error("Google did not grant the required Google Ads scope.");
 
-    const verification = await verifyGoogleAdsAccess(tokens.access_token!);
+    let oauthIdentity = "";
+    try {
+      const profile = await googleProfile(tokens.access_token!);
+      oauthIdentity = typeof profile.email === "string" ? profile.email : typeof profile.id === "string" ? profile.id : "verified";
+    } catch (profileError) {
+      const profileMessage = profileError instanceof Error ? profileError.message : "unknown profile verification error";
+      throw new Error(`Google OAuth access token failed independent validation before Google Ads verification: ${profileMessage}`);
+    }
+
+    let verification;
+    try {
+      verification = await verifyGoogleAdsAccess(tokens.access_token!);
+    } catch (adsError) {
+      const adsMessage = adsError instanceof Error ? adsError.message : "Google Ads verification failed.";
+      throw new Error(`Google OAuth token is valid for ${oauthIdentity}, but Google Ads rejected the same credential: ${adsMessage}`);
+    }
     if (!verification.resources.length) throw new Error("Google Ads authorization succeeded, but no accessible Ads customer account was returned.");
 
     const envelope = {
