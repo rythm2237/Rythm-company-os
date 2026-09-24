@@ -56,28 +56,33 @@ async function googleAdsJson(accessToken:string){
 }
 
 const googleAds=tokenAdapter("google_ads",async token=>{const result=await googleAdsJson(token);const names=Array.isArray(result.resourceNames)?result.resourceNames.filter((value):value is string=>typeof value==="string"):[];return{accountRef:names[0]??null,grantedScopes:["adwords"],resources:names.map(name=>{const id=name.replace(/^customers\//,"");return{resourceType:"google_ads_customer",resourceId:id,resourceName:`Google Ads ${id}`,metadata:{resource_name:name,api_version:"v25"}};}),detail:{customer_count:names.length,verification_endpoint:"customers:listAccessibleCustomers",api_version:"v25"}};});
+
+const googleBusinessProfile=tokenAdapter("google_business_profile",async token=>{
+  const accountsResult=await json("https://mybusinessaccountmanagement.googleapis.com/v1/accounts",token);
+  const accounts=list(accountsResult.accounts);
+  const resources:DiscoveredResource[]=[];
+  for(const account of accounts){
+    const accountName=text(account.name);if(!accountName)continue;
+    resources.push({resourceType:"google_business_profile_account",resourceId:accountName,resourceName:text(account.accountName)||accountName,metadata:{account_type:text(account.type),role:text(account.role)}});
+    const locationsResult=await json(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations?readMask=name,title,storeCode,metadata&pageSize=100`,token);
+    for(const location of list(locationsResult.locations)){
+      const locationName=text(location.name);if(!locationName)continue;
+      const metadata=(location.metadata&&typeof location.metadata==="object"?location.metadata:{}) as Json;
+      resources.push({resourceType:"google_business_profile_location",resourceId:locationName,resourceName:text(location.title)||locationName,metadata:{account:accountName,store_code:text(location.storeCode)||null,place_id:text(metadata.placeId)||null,maps_uri:text(metadata.mapsUri)||null}});
+    }
+  }
+  if(!accounts.length)throw new Error("Google Business Profile returned no accessible accounts.");
+  return{accountRef:text(accounts[0]?.name)||null,grantedScopes:["business.manage"],resources,detail:{account_count:accounts.length,resource_count:resources.length,verification_endpoint:"mybusinessaccountmanagement.googleapis.com/v1/accounts"}};
+});
+
 const ahrefs=tokenAdapter("ahrefs",async token=>{
   const result=await json("https://api.ahrefs.com/v3/subscription-info/limits-and-usage",token);
   const info=(result.limits_and_usage&&typeof result.limits_and_usage==="object"?result.limits_and_usage:{})as Json;
   if(!Object.keys(info).length)throw new Error("Ahrefs verification returned no subscription information.");
-  return{
-    accountRef:null,
-    grantedScopes:[],
-    resources:[],
-    detail:{
-      subscription:text(info.subscription)||null,
-      api_key_expiration_date:text(info.api_key_expiration_date)||null,
-      units_limit_api_key:info.units_limit_api_key??null,
-      units_limit_workspace:info.units_limit_workspace??null,
-      units_usage_api_key:info.units_usage_api_key??null,
-      units_usage_workspace:info.units_usage_workspace??null,
-      usage_reset_date:text(info.usage_reset_date)||null,
-      verification_endpoint:"subscription-info/limits-and-usage",
-    },
-  };
+  return{accountRef:null,grantedScopes:[],resources:[],detail:{subscription:text(info.subscription)||null,api_key_expiration_date:text(info.api_key_expiration_date)||null,units_limit_api_key:info.units_limit_api_key??null,units_limit_workspace:info.units_limit_workspace??null,units_usage_api_key:info.units_usage_api_key??null,units_usage_workspace:info.units_usage_workspace??null,usage_reset_date:text(info.usage_reset_date)||null,verification_endpoint:"subscription-info/limits-and-usage"}};
 });
 
-export const TOKEN_CONNECTION_ADAPTERS:Record<string,ProviderConnectionAdapter>={github,vercel,supabase,cloudflare,google_drive:googleDrive,google_ads:googleAds,ahrefs};
+export const TOKEN_CONNECTION_ADAPTERS:Record<string,ProviderConnectionAdapter>={github,vercel,supabase,cloudflare,google_drive:googleDrive,google_ads:googleAds,google_business_profile:googleBusinessProfile,ahrefs};
 export function getTokenConnectionAdapter(providerKey:string){return TOKEN_CONNECTION_ADAPTERS[providerKey]??null;}
 
 export async function exchangeGoogleOAuthCode(input:{code:string;clientId:string;clientSecret:string;redirectUri:string;codeVerifier:string}){
@@ -99,6 +104,7 @@ export async function verifyGoogleDriveAccess(accessToken:string){
 export async function verifyGoogleAdsAccess(accessToken:string){return googleAds.verifyCredential(accessToken);}
 
 export async function discoverGoogleResources(providerKey:string,accessToken:string):Promise<DiscoveredResource[]>{
+  if(providerKey==="google_business_profile")return(await googleBusinessProfile.verifyCredential(accessToken)).resources;
   if(providerKey==="google_search_console"){const result=await json("https://www.googleapis.com/webmasters/v3/sites",accessToken);return list(result.siteEntry).map(site=>({resourceType:"search_console_property",resourceId:text(site.siteUrl),resourceName:text(site.siteUrl),metadata:{permission_level:text(site.permissionLevel)}}));}
   if(providerKey==="google_analytics"){
     const summaries=await json("https://analyticsadmin.googleapis.com/v1beta/accountSummaries?pageSize=200",accessToken);
