@@ -3,10 +3,24 @@ import type { ConnectionVerification, DiscoveredResource, ProviderConnectionAdap
 
 type Json = Record<string, unknown>;
 
+function providerErrorDetail(body: Json) {
+  const nested = body.error && typeof body.error === "object" ? body.error as Json : null;
+  const code = nested ? text(nested.status) || text(nested.code) : "";
+  const message = nested ? text(nested.message) : "";
+  const topLevel = text(body.error_description) || (typeof body.error === "string" ? body.error : "");
+  return [code, message || topLevel].filter(Boolean).join(": ").slice(0, 320);
+}
+
 async function json(url:string, credential:string, init:RequestInit={}){
   const response=await fetch(url,{...init,headers:{Accept:"application/json",Authorization:`Bearer ${credential}`,...init.headers},cache:"no-store",redirect:"error",signal:AbortSignal.timeout(20_000)});
   const body=await response.json().catch(()=>({})) as Json;
-  if(!response.ok){const error=new Error(response.status===401?"Provider credential is invalid or expired.":response.status===403?"Provider credential does not include the required permission.":`Provider verification failed (${response.status}).`) as Error&{status?:number};error.status=response.status;throw error;}
+  if(!response.ok){
+    const detail=providerErrorDetail(body);
+    const base=response.status===401?"Provider rejected the OAuth credential":response.status===403?"Provider rejected the requested permission":`Provider verification failed (${response.status})`;
+    const error=new Error(detail?`${base}: ${detail}`:`${base}.`) as Error&{status?:number};
+    error.status=response.status;
+    throw error;
+  }
   return body;
 }
 const list=(value:unknown)=>Array.isArray(value)?value as Json[]:[];
