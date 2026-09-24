@@ -105,7 +105,7 @@ export async function GET(request: Request) {
   const withStyles = brandSafe.replace('</head>', `${DESIGN}</head>`);
   const patched = withStyles.replace('</head>', '<link rel="stylesheet" href="/2nya-nailart/editorial.css"></head>').replace('</body>', `${PHONE_SCRIPT}<script src="/2nya-nailart/navigation.js" defer></script></body>`);
   const isPortfolio = new URL(request.url).searchParams.get('view') === 'portfolio';
-  const page = isPortfolio ? patched.replace('<body>', '<body class="portfolio-view">')
+  const page = isPortfolio ? patched.replace(/<section class="hero donya-hero"[\s\S]*?<\/section>/, '').replace('<body>', '<body class="portfolio-view">')
     .replace('<title>Donya Nail Art | رزرو آنلاین وقت</title>', '<title>نمونه‌کارهای طراحی ناخن | Donya Nail Art</title>')
     .replace('<meta name="description" content="Donya Nail Art؛ نمونه‌کارها، خدمات تخصصی ناخن، راهنمای زیبایی و رزرو آنلاین وقت.">', '<meta name="description" content="مجموعه طراحی‌های ناخن دنیا وردی‌نژاد؛ نمونه‌کارها را ورق بزنید و برای رزرو وقت اقدام کنید.">')
     .replace('href="https://2nya-nailart.rythm-os.com/"', 'href="https://2nya-nailart.rythm-os.com/portfolio"')
