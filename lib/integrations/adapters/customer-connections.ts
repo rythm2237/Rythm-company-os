@@ -45,6 +45,22 @@ const ahrefs=tokenAdapter("ahrefs",async token=>{
 export const TOKEN_CONNECTION_ADAPTERS:Record<string,ProviderConnectionAdapter>={github,vercel,supabase,cloudflare,google_drive:googleDrive,ahrefs};
 export function getTokenConnectionAdapter(providerKey:string){return TOKEN_CONNECTION_ADAPTERS[providerKey]??null;}
 
+export async function exchangeGoogleOAuthCode(input:{code:string;clientId:string;clientSecret:string;redirectUri:string;codeVerifier:string}){
+  const response=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code:input.code,client_id:input.clientId,client_secret:input.clientSecret,redirect_uri:input.redirectUri,grant_type:"authorization_code",code_verifier:input.codeVerifier}),cache:"no-store",redirect:"error",signal:AbortSignal.timeout(20_000)});
+  const tokens=await response.json().catch(()=>({})) as {access_token?:string;refresh_token?:string;expires_in?:number;scope?:string;token_type?:string;error?:string;error_description?:string};
+  if(!response.ok||!tokens.access_token)throw new Error(`Google token exchange failed${tokens.error_description?`: ${tokens.error_description}`:tokens.error?`: ${tokens.error}`:"."}`);
+  if(!tokens.refresh_token)throw new Error("Google did not return an offline refresh token. Reconnect and approve access again.");
+  return tokens;
+}
+
+export async function verifyGoogleDriveAccess(accessToken:string){
+  const about=await json("https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress,permissionId)",accessToken);
+  const user=(about.user&&typeof about.user==="object"?about.user:{})as Json;
+  const accountRef=text(user.emailAddress)||text(user.permissionId);
+  if(!accountRef)throw new Error("Google Drive verification returned no account identity.");
+  return{accountRef,user:{displayName:text(user.displayName)||null,emailAddress:text(user.emailAddress)||null,permissionId:text(user.permissionId)||null}};
+}
+
 export async function discoverGoogleResources(providerKey:string,accessToken:string):Promise<DiscoveredResource[]>{
   if(providerKey==="google_search_console"){const result=await json("https://www.googleapis.com/webmasters/v3/sites",accessToken);return list(result.siteEntry).map(site=>({resourceType:"search_console_property",resourceId:text(site.siteUrl),resourceName:text(site.siteUrl),metadata:{permission_level:text(site.permissionLevel)}}));}
   if(providerKey==="google_analytics"){
