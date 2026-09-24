@@ -4,6 +4,7 @@ import {
   isOrganizationEntitlementActive,
   resolveOrganizationContext,
 } from "@/lib/auth/organization-context";
+import { exchangeGoogleOAuthCode, verifyGoogleDriveAccess } from "@/lib/integrations/connections/providers";
 import { createExecutionServiceClient } from "@/lib/integrations/service-runner";
 
 const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
@@ -16,24 +17,6 @@ type StatePayload = {
   providerKey: "google_drive";
   nonce: string;
   issuedAt: number;
-};
-
-type GoogleTokenResponse = {
-  access_token?: string;
-  refresh_token?: string;
-  expires_in?: number;
-  scope?: string;
-  token_type?: string;
-  error?: string;
-  error_description?: string;
-};
-
-type DriveAbout = {
-  user?: {
-    displayName?: string;
-    emailAddress?: string;
-    permissionId?: string;
-  };
 };
 
 function credentials() {
@@ -181,47 +164,20 @@ export async function GET(request: Request) {
 
   try {
     const redirectUri = `${canonicalOrigin(request)}/api/integrations/google-drive/callback`;
-    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
-        code_verifier: codeVerifier,
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(20_000),
+    const tokens = await exchangeGoogleOAuthCode({
+      code,
+      clientId,
+      clientSecret,
+      redirectUri,
+      codeVerifier,
     });
-    const tokens = await tokenResponse.json().catch(() => ({})) as GoogleTokenResponse;
-    if (!tokenResponse.ok || !tokens.access_token) {
-      throw new Error(`Google token exchange failed${tokens.error_description ? `: ${tokens.error_description}` : tokens.error ? `: ${tokens.error}` : "."}`);
-    }
-    if (!tokens.refresh_token) {
-      throw new Error("Google did not return an offline refresh token. Reconnect and approve Google Drive access again.");
-    }
     const scopes = new Set((tokens.scope ?? "").split(/\s+/).filter(Boolean));
     if (!scopes.has(GOOGLE_DRIVE_SCOPE)) {
       throw new Error("Google did not grant the required Google Drive file scope.");
     }
 
-    const aboutResponse = await fetch(
-      "https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress,permissionId)",
-      {
-        headers: { Authorization: `Bearer ${tokens.access_token}` },
-        cache: "no-store",
-        signal: AbortSignal.timeout(20_000),
-      },
-    );
-    if (!aboutResponse.ok) {
-      if (aboutResponse.status === 403) throw new Error("Google authorized the account, but Google Drive API access is unavailable for this OAuth client.");
-      throw new Error(`Google Drive verification failed (${aboutResponse.status}).`);
-    }
-    const about = await aboutResponse.json().catch(() => ({})) as DriveAbout;
-    const accountRef = about.user?.emailAddress || about.user?.permissionId || null;
-    if (!accountRef) throw new Error("Google Drive verification returned no account identity.");
+    const about = await verifyGoogleDriveAccess(String(tokens.access_token));
+    const accountRef = about.accountRef;
 
     const envelope = {
       version: 1,
@@ -247,17 +203,17 @@ export async function GET(request: Request) {
       .eq("integration_id", payload.integrationId)
       .eq("organization_id", context.organizationId);
 
-    const resourceId = about.user?.permissionId || accountRef;
+    const resourceId = about.user.permissionId || accountRef;
     const saved = await context.supabase.from("integration_resources").upsert({
       organization_id: context.organizationId,
       integration_id: payload.integrationId,
       provider_key: "google_drive",
       resource_type: "google_drive_account",
       resource_id: resourceId,
-      resource_name: about.user?.displayName || about.user?.emailAddress || "Google Drive account",
+      resource_name: about.user.displayName || about.user.emailAddress || "Google Drive account",
       resource_metadata: {
-        email_address: about.user?.emailAddress ?? null,
-        permission_id: about.user?.permissionId ?? null,
+        email_address: about.user.emailAddress,
+        permission_id: about.user.permissionId,
         access_model: "drive.file",
       },
       discovered_at: verifiedAt,
