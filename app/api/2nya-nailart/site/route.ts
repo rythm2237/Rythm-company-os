@@ -34,10 +34,10 @@ const HERO_MARKUP = `<section class="hero donya-hero" aria-labelledby="hero-titl
       <div class="phone-shell" id="donyaPhone" tabindex="0" aria-roledescription="carousel">
         <div class="phone-screen">
           <div class="phone-slide is-active" data-phone-slide="0"><video id="heroVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/hero-poster.webp"><source src="/2nya-media/hero-main-v5.mp4" type="video/mp4"></video></div>
-          <div class="phone-slide" data-phone-slide="1"><img src="/assets/portfolio-01.webp" alt="نمونه طراحی ناخن Donya ۱"></div>
-          <div class="phone-slide" data-phone-slide="2"><img loading="lazy" src="/assets/portfolio-02.webp" alt="نمونه طراحی ناخن Donya ۲"></div>
-          <div class="phone-slide" data-phone-slide="3"><img loading="lazy" src="/assets/portfolio-03.webp" alt="نمونه طراحی ناخن Donya ۳"></div>
-          <div class="phone-slide" data-phone-slide="4"><img loading="lazy" src="/assets/portfolio-04.webp" alt="نمونه طراحی ناخن Donya ۴"></div>
+          <div class="phone-slide" data-phone-slide="1"><img src="/api/2nya-nailart/media/portfolio-01.webp" alt="نمونه طراحی ناخن Donya ۱"></div>
+          <div class="phone-slide" data-phone-slide="2"><img loading="lazy" src="/api/2nya-nailart/media/portfolio-02.webp" alt="نمونه طراحی ناخن Donya ۲"></div>
+          <div class="phone-slide" data-phone-slide="3"><img loading="lazy" src="/api/2nya-nailart/media/portfolio-03.webp" alt="نمونه طراحی ناخن Donya ۳"></div>
+          <div class="phone-slide" data-phone-slide="4"><img loading="lazy" src="/api/2nya-nailart/media/portfolio-04.webp" alt="نمونه طراحی ناخن Donya ۴"></div>
         </div>
         <button class="phone-arrow prev" type="button" aria-label="قبلی">‹</button>
         <button class="phone-arrow next" type="button" aria-label="بعدی">›</button>
