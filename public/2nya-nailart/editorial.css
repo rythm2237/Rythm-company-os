@@ -9,3 +9,4 @@
 @media(min-width:801px){.p-thumb:not([data-pos="-2"]):not([data-pos="-1"]):not([data-pos="1"]):not([data-pos="2"]){display:none}}
 
 @media(max-width:800px){.portfolio-dots{display:none}}
+@media(max-width:800px){.sticky{display:none!important}.portfolio-counter{white-space:nowrap;flex:none;font-size:.8rem}}
