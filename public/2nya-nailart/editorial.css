@@ -10,3 +10,66 @@
 
 @media(max-width:800px){.portfolio-dots{display:none}}
 @media(max-width:800px){.sticky{display:none!important}.portfolio-counter{white-space:nowrap;flex:none;font-size:.8rem}}
+
+/* The gallery is a tactile photo cube in a warm editorial frame. */
+.portfolio{background:#f1e7df!important;color:#4a2030;padding-block:92px 100px;background-image:radial-gradient(ellipse at 50% 52%,#fff9f3 0%,transparent 65%)!important}
+.portfolio .portfolio-shell{max-width:1260px;margin:auto}
+.portfolio .portfolio-top{max-width:1040px;padding-inline:12px;align-items:end;margin-bottom:0}
+.portfolio .portfolio-top .eyebrow{color:#986c53;font-size:.78rem;letter-spacing:.08em}
+.portfolio .portfolio-top h2,.portfolio .portfolio-top h1{color:#502238;font-size:clamp(2rem,3.4vw,3.3rem);margin:10px 0 8px}
+.portfolio .portfolio-top p{color:#7b5a5f;line-height:1.9;margin:0;font-size:.95rem}
+.portfolio .portfolio-counter{color:#783950;font-size:1.02rem;letter-spacing:.08em}
+.portfolio .portfolio-stage{display:flex;align-items:center;justify-content:center;gap:42px;max-width:100%;height:auto;min-height:560px;padding:25px 0 2px;overflow:visible;touch-action:auto}
+.cube-scene{--cube-width:430px;--cube-height:500px;--cube-depth:215px;position:relative;width:var(--cube-width);height:var(--cube-height);flex:none;perspective:1400px;perspective-origin:50% 50%}
+.cube-scene:after{content:"";position:absolute;z-index:0;left:8%;right:8%;bottom:-27px;height:25px;border-radius:50%;background:#60403744;filter:blur(17px)}
+.portfolio .feature-card{position:relative;z-index:1;width:100%;height:100%;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible;cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none;outline-offset:8px}
+.portfolio .feature-card:active{cursor:grabbing}
+.cube-rotor{position:relative;width:100%;height:100%;transform-style:preserve-3d;transform:translateZ(calc(-1 * var(--cube-depth))) rotateY(0deg);transition:transform .68s cubic-bezier(.22,.72,.18,1)}
+.cube-rotor.rotate-next{transform:translateZ(calc(-1 * var(--cube-depth))) rotateY(-90deg)}
+.cube-rotor.rotate-prev{transform:translateZ(calc(-1 * var(--cube-depth))) rotateY(90deg)}
+.cube-face{position:absolute;inset:0;border:9px solid #fff8f0;border-radius:5px;overflow:hidden;background:#8d5360;box-shadow:inset 0 0 0 1px #d3b49c,0 20px 42px #5a303345;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.cube-face img{display:block;width:100%;height:100%;object-fit:cover;transition:none!important;transform:none!important;pointer-events:none}
+.cube-front{transform:rotateY(0deg) translateZ(var(--cube-depth))}
+.cube-right{transform:rotateY(90deg) translateZ(var(--cube-depth))}
+.cube-left{transform:rotateY(-90deg) translateZ(var(--cube-depth))}
+.cube-back{transform:rotateY(180deg) translateZ(var(--cube-depth));background:#7a354d}
+.portfolio .portfolio-nav{position:relative;top:auto;left:auto;right:auto;transform:none;flex:none;width:56px;height:56px;border:1px solid #b88980;background:#fff9f2;color:#6f2941;box-shadow:0 8px 24px #6b374922;cursor:pointer}
+.portfolio .portfolio-nav:hover{background:#762c48;color:#fff;border-color:#762c48}
+.portfolio .portfolio-meta{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px;max-width:1040px;margin:6px auto 25px;padding:20px 12px;border-top:1px solid #cdb2aa;border-bottom:1px solid #cdb2aa;text-align:center}
+.portfolio-meta-line{justify-self:start;direction:ltr;font-family:Georgia,serif;font-size:.72rem;letter-spacing:.18em;color:#9f695d}
+.portfolio-meta b{display:block;font-size:1.12rem;color:#55263c}
+.portfolio-hint{display:block;margin-top:7px;color:#8e6d6b;font-size:.8rem}
+.portfolio-progress{justify-self:end;display:block;width:102px;height:2px;background:#d8c3b9;direction:ltr}
+.portfolio-progress i{display:block;height:100%;background:#8a3c55;transition:width .38s ease}
+.portfolio .orbit{position:relative;inset:auto;z-index:auto;display:flex;align-items:center;justify-content:safe center;gap:10px;max-width:1040px;margin:auto;padding:8px 6px 16px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#ad8490 transparent;pointer-events:auto;scroll-snap-type:x proximity}
+.portfolio .p-thumb,.portfolio .p-thumb[data-pos]{display:block!important;position:relative;inset:auto;flex:0 0 67px;width:67px;height:83px;padding:3px;border:1px solid #cdb7ad;border-radius:4px;opacity:.7;filter:none;transform:none!important;background:#fff9f2;box-shadow:none;scroll-snap-align:center;cursor:pointer}
+.portfolio .p-thumb img{border-radius:2px;object-fit:cover}
+.portfolio .p-thumb:hover,.portfolio .p-thumb:focus-visible,.portfolio .p-thumb.on{opacity:1;filter:none;border-color:#71344a;box-shadow:0 0 0 2px #71344a;transform:translateY(-2px)!important}
+.portfolio .portfolio-link{margin-top:10px}
+.portfolio .portfolio-link a{color:#642b42;border-color:#ad777d}
+.portfolio .portfolio-link a:hover{background:#642b42;color:#fff}
+@media(max-width:800px){
+ .portfolio{padding:70px 0 78px}
+ .portfolio .portfolio-top{padding-inline:10px;align-items:start;gap:14px}
+ .portfolio .portfolio-top h2,.portfolio .portfolio-top h1{font-size:clamp(1.85rem,6vw,2.7rem)}
+ .portfolio .portfolio-top p{font-size:.85rem}
+ .portfolio .portfolio-counter{margin-top:14px;white-space:nowrap;font-size:.84rem}
+ .portfolio .portfolio-stage{display:flex;flex-direction:row;gap:6px;min-height:0;padding:28px 0 20px;overflow:visible}
+ .cube-scene{--cube-width:min(70vw,340px);--cube-height:min(89vw,445px);--cube-depth:calc(var(--cube-width) / 2);perspective:1100px}
+ .cube-face{border-width:6px}
+ .portfolio .portfolio-nav{width:43px;height:43px;font-size:1.35rem}
+ .portfolio .portfolio-meta{grid-template-columns:1fr;gap:7px;margin:5px 8px 12px;padding:15px 8px}
+ .portfolio-meta-line{display:none}
+ .portfolio-progress{justify-self:center;width:90px;margin-top:7px}
+ .portfolio .orbit{justify-content:start;gap:8px;padding:8px 8px 17px}
+ .portfolio .p-thumb,.portfolio .p-thumb[data-pos]{flex-basis:61px;width:61px;height:77px;display:block}
+ .portfolio .portfolio-link{margin-top:6px}
+}
+@media(max-width:430px){
+ .cube-scene{--cube-width:calc(100vw - 111px);--cube-height:calc((100vw - 111px) * 1.3)}
+ .portfolio .portfolio-stage{gap:4px}
+ .portfolio .portfolio-nav{width:40px;height:40px}
+ .portfolio .portfolio-top{flex-wrap:wrap}
+ .portfolio .portfolio-counter{margin-top:0}
+}
+@media(prefers-reduced-motion:reduce){.cube-rotor{transition:none!important}.portfolio-progress i{transition:none}}
