@@ -24,6 +24,7 @@ const providerHelp:Record<string,ProviderHelp>={
 
 const oauthHelp:Record<string,OAuthHelp>={
   google_workspace:{action:"/api/integrations/google-workspace/connect",button:"Connect Google Workspace",copy:"Google opens its own sign-in and consent screen. RYTHM requests read-only Gmail and Calendar access for this foundation."},
+  google_drive:{action:"/api/integrations/google-drive/connect",button:"Connect Google Drive",copy:"Google opens its own sign-in and consent screen. RYTHM requests the limited Drive file scope so it can work only with files explicitly created or selected for this app, not the whole Drive."},
   google_search_console:{action:"/api/integrations/google-search-console/connect",button:"Connect Google Search Console",copy:"Google authorization requests read-only Search Console access. RYTHM verifies accessible properties before marking the connection Connected."},
   google_analytics:{action:"/api/integrations/google-analytics/connect",button:"Connect Google Analytics 4",copy:"Google authorization requests read-only Analytics access. RYTHM discovers GA4 properties before marking the connection Connected."},
   microsoft_365:{action:"/api/integrations/microsoft-365/connect",button:"Connect Microsoft 365",copy:"Microsoft opens its own sign-in and consent screen. RYTHM requests read-only identity, mail and calendar scopes; organization-wide admin consent remains Human-only."},
