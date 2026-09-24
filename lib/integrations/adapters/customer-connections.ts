@@ -35,7 +35,27 @@ const vercel=tokenAdapter("vercel",async token=>{const[user,result]=await Promis
 const supabase=tokenAdapter("supabase",async token=>{const result=await json("https://api.supabase.com/v1/projects",token);const projects=Array.isArray(result)?result as Json[]:list((result as Json).projects);return{accountRef:null,grantedScopes:["project.read"],resources:projects.map(project=>({resourceType:"project",resourceId:text(project.ref)||String(project.id),resourceName:text(project.name)||text(project.ref),metadata:{region:text(project.region),status:text(project.status),organization_id:project.organization_id??null}})),detail:{project_count:projects.length}};});
 const cloudflare=tokenAdapter("cloudflare",async token=>{const[verified,zones]=await Promise.all([json("https://api.cloudflare.com/client/v4/user/tokens/verify",token),json("https://api.cloudflare.com/client/v4/zones?per_page=50",token)]);const result=(verified.result&&typeof verified.result==="object"?verified.result:{})as Json;return{accountRef:String(result.id??""),grantedScopes:["zone.read"],resources:list(zones.result).map(zone=>({resourceType:"zone",resourceId:String(zone.id),resourceName:text(zone.name)||String(zone.id),metadata:{status:text(zone.status),account:zone.account??null}})),detail:{token_status:result.status??null}};});
 const googleDrive=tokenAdapter("google_drive",async token=>{const about=await json("https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress,permissionId)",token);const user=(about.user&&typeof about.user==="object"?about.user:{})as Json;const accountRef=text(user.emailAddress)||text(user.permissionId);if(!accountRef)throw new Error("Google Drive verification returned no account identity.");return{accountRef,grantedScopes:["drive.file"],resources:[{resourceType:"google_drive_account",resourceId:text(user.permissionId)||accountRef,resourceName:text(user.displayName)||text(user.emailAddress)||"Google Drive account",metadata:{email_address:text(user.emailAddress)||null,permission_id:text(user.permissionId)||null,access_model:"drive.file"}}],detail:{access_model:"drive.file"}};});
-const googleAds=tokenAdapter("google_ads",async token=>{const result=await json("https://googleads.googleapis.com/v25/customers:listAccessibleCustomers",token);const names=Array.isArray(result.resourceNames)?result.resourceNames.filter((value):value is string=>typeof value==="string"):[];return{accountRef:names[0]??null,grantedScopes:["adwords"],resources:names.map(name=>{const id=name.replace(/^customers\//,"");return{resourceType:"google_ads_customer",resourceId:id,resourceName:`Google Ads ${id}`,metadata:{resource_name:name,api_version:"v25"}};}),detail:{customer_count:names.length,verification_endpoint:"customers:listAccessibleCustomers",api_version:"v25"}};});
+
+async function googleAdsJson(accessToken:string){
+  const token=accessToken.trim();
+  if(!token||token.length<20||/\s/.test(token))throw new Error("Google returned an invalid OAuth access token format.");
+  const headers=new Headers();
+  headers.set("Accept","application/json");
+  headers.set("Content-Type","application/json");
+  headers.set("Authorization",`Bearer ${token}`);
+  const response=await fetch("https://googleads.googleapis.com/v25/customers:listAccessibleCustomers",{method:"GET",headers,cache:"no-store",redirect:"error",signal:AbortSignal.timeout(20_000)});
+  const body=await response.json().catch(()=>({})) as Json;
+  if(!response.ok){
+    const detail=providerErrorDetail(body);
+    const base=response.status===401?"Google Ads rejected the OAuth credential":response.status===403?"Google Ads rejected the requested permission":`Google Ads verification failed (${response.status})`;
+    const error=new Error(detail?`${base}: ${detail}`:`${base}.`) as Error&{status?:number};
+    error.status=response.status;
+    throw error;
+  }
+  return body;
+}
+
+const googleAds=tokenAdapter("google_ads",async token=>{const result=await googleAdsJson(token);const names=Array.isArray(result.resourceNames)?result.resourceNames.filter((value):value is string=>typeof value==="string"):[];return{accountRef:names[0]??null,grantedScopes:["adwords"],resources:names.map(name=>{const id=name.replace(/^customers\//,"");return{resourceType:"google_ads_customer",resourceId:id,resourceName:`Google Ads ${id}`,metadata:{resource_name:name,api_version:"v25"}};}),detail:{customer_count:names.length,verification_endpoint:"customers:listAccessibleCustomers",api_version:"v25"}};});
 const ahrefs=tokenAdapter("ahrefs",async token=>{
   const result=await json("https://api.ahrefs.com/v3/subscription-info/limits-and-usage",token);
   const info=(result.limits_and_usage&&typeof result.limits_and_usage==="object"?result.limits_and_usage:{})as Json;
