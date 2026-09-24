@@ -42,13 +42,9 @@ function canonicalOrigin(request: Request) {
   return new URL(request.url).origin;
 }
 
-export async function POST(request: Request) {
+async function start(request: Request, integrationId: string, projectId: string | null) {
   const context = await resolveOrganizationContext();
   if (!context) return NextResponse.redirect(new URL("/login", request.url), 303);
-
-  const form = await request.formData();
-  const integrationId = String(form.get("integrationId") ?? "").trim();
-  const projectId = String(form.get("projectId") ?? "").trim() || null;
   if (!integrationId) return NextResponse.redirect(new URL("/integrations?error=Connection%20not%20found.", request.url), 303);
 
   if (context.role !== "owner" || !isOrganizationEntitlementActive(context.entitlement)) {
@@ -122,4 +118,32 @@ export async function POST(request: Request) {
   response.cookies.set("rythm_google_ads_oauth_organization", context.organizationId, cookieOptions);
   response.cookies.set("rythm_google_ads_oauth_pkce", codeVerifier, cookieOptions);
   return response;
+}
+
+export async function POST(request: Request) {
+  const form = await request.formData();
+  const integrationId = String(form.get("integrationId") ?? "").trim();
+  const projectId = String(form.get("projectId") ?? "").trim() || null;
+  return start(request, integrationId, projectId);
+}
+
+export async function GET(request: Request) {
+  const context = await resolveOrganizationContext();
+  if (!context) return NextResponse.redirect(new URL("/login", request.url), 303);
+  const url = new URL(request.url);
+  const requested = url.searchParams.get("integrationId")?.trim() || "";
+  const projectId = url.searchParams.get("project")?.trim() || null;
+  let integrationId = requested;
+  if (!integrationId) {
+    const { data } = await context.supabase
+      .from("organization_integrations")
+      .select("id")
+      .eq("organization_id", context.organizationId)
+      .eq("provider_key", "google_ads")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    integrationId = data?.id || "";
+  }
+  return start(request, integrationId, projectId);
 }
