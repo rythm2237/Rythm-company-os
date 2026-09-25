@@ -11,6 +11,12 @@ export type IndexNowSubmissionResult = {
   submitted: number;
 };
 
+export type IndexNowKeyVerificationResult = {
+  ok: boolean;
+  status: number;
+  verified: boolean;
+};
+
 function normalizeIndexNowUrls(urls: string[]) {
   const unique = new Set<string>();
 
@@ -31,6 +37,20 @@ function normalizeIndexNowUrls(urls: string[]) {
   if (!normalized.length) throw new Error("At least one IndexNow URL is required.");
   if (normalized.length > 10_000) throw new Error("IndexNow accepts at most 10,000 URLs per submission.");
   return normalized;
+}
+
+export async function verifyIndexNowKey(): Promise<IndexNowKeyVerificationResult> {
+  try {
+    const response = await fetch(INDEXNOW_KEY_LOCATION, { cache: "no-store" });
+    const body = (await response.text()).trim();
+    return {
+      ok: response.ok,
+      status: response.status,
+      verified: response.ok && body === INDEXNOW_KEY,
+    };
+  } catch {
+    return { ok: false, status: 0, verified: false };
+  }
 }
 
 export async function submitIndexNow(urls: string[]): Promise<IndexNowSubmissionResult> {
