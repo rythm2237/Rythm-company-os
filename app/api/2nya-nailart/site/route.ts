@@ -109,6 +109,6 @@ export async function GET(request: Request) {
     .replace('<title>Donya Nail Art | رزرو آنلاین وقت</title>', '<title>نمونه‌کارهای طراحی ناخن | Donya Nail Art</title>')
     .replace('<meta name="description" content="Donya Nail Art؛ نمونه‌کارها، خدمات تخصصی ناخن، راهنمای زیبایی و رزرو آنلاین وقت.">', '<meta name="description" content="مجموعه طراحی‌های ناخن دنیا وردی‌نژاد؛ نمونه‌کارها را ورق بزنید و برای رزرو وقت اقدام کنید.">')
     .replace('href="https://2nya-nailart.rythm-os.com/"', 'href="https://2nya-nailart.rythm-os.com/portfolio"')
-    .replace('<h2>هنر، در کوچک‌ترین جزئیات</h2>', '<h1>هنر، در کوچک‌ترین جزئیات</h1>') : patched;
+    .replace('<h2>هنر ناخن، از نزدیک</h2>', '<h1>هنر ناخن، از نزدیک</h1>') : patched;
   return new NextResponse(page, {status: 200, headers: {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, max-age=0'}});
 }
