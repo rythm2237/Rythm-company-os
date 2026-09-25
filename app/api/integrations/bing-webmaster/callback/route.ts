@@ -2,10 +2,9 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
 import { createExecutionServiceClient } from "@/lib/integrations/service-runner";
-import { discoverBingWebmasterSites } from "@/lib/integrations/adapters/bing-webmaster";
+import { discoverBingWebmasterSites, exchangeBingWebmasterCode } from "@/lib/integrations/adapters/bing-webmaster";
 
 type StatePayload = { integrationId: string; userId: string; nonce: string; issuedAt: number };
-type TokenResponse = { access_token?: string; refresh_token?: string; expires_in?: number; token_type?: string; scope?: string; error?: string; error_description?: string };
 
 function credentials() {
   return {
@@ -83,28 +82,18 @@ export async function GET(request: Request) {
   if (!clientId || !clientSecret) return finish(request, payload.integrationId, "error", "Bing Webmaster OAuth platform credentials are not configured yet.");
 
   const redirectUri = `${url.origin}/api/integrations/bing-webmaster/callback`;
-  const tokenResponse = await fetch("https://www.bing.com/webmasters/oauth/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      code,
-      grant_type: "authorization_code",
-      redirect_uri: redirectUri,
-    }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(20_000),
-  });
-  const tokens = await tokenResponse.json().catch(() => ({})) as TokenResponse;
-  if (!tokenResponse.ok || !tokens.access_token) {
-    return finish(request, payload.integrationId, "error", `Bing Webmaster token exchange failed${tokens.error ? `: ${tokens.error}` : "."}`);
+  let tokens;
+  try {
+    tokens = await exchangeBingWebmasterCode({ clientId, clientSecret, code, redirectUri });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Bing Webmaster token exchange failed.";
+    return finish(request, payload.integrationId, "error", message);
   }
   if (!tokens.refresh_token) return finish(request, payload.integrationId, "error", "Bing Webmaster did not return a refresh token. Reconnect and approve access again.");
 
   let verification;
   try {
-    verification = await discoverBingWebmasterSites(tokens.access_token);
+    verification = await discoverBingWebmasterSites(tokens.access_token!);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Bing Webmaster site discovery failed.";
     return finish(request, payload.integrationId, "error", message);
