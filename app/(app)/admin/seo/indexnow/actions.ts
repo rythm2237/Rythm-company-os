@@ -23,6 +23,8 @@ export async function submitIndexNowFromAdmin(formData: FormData) {
   const { user } = await requirePlatformAdmin();
   const urls = parseUrls(formData);
 
+  let destination: string;
+
   try {
     const result = await submitIndexNow(urls);
     const now = new Date().toISOString();
@@ -56,9 +58,11 @@ export async function submitIndexNowFromAdmin(formData: FormData) {
     const message = result.accepted
       ? `IndexNow accepted ${result.submitted} URL${result.submitted === 1 ? "" : "s"} with HTTP ${result.status}.`
       : `IndexNow returned HTTP ${result.status} for ${result.submitted} submitted URL${result.submitted === 1 ? "" : "s"}.`;
-    redirect(`${INDEXNOW_ADMIN_PATH}?message=${encodeURIComponent(message)}`);
+    destination = `${INDEXNOW_ADMIN_PATH}?message=${encodeURIComponent(message)}`;
   } catch (error) {
     const message = redactSecretText(error instanceof Error ? error.message : "IndexNow submission failed.");
-    redirect(`${INDEXNOW_ADMIN_PATH}?error=${encodeURIComponent(message)}`);
+    destination = `${INDEXNOW_ADMIN_PATH}?error=${encodeURIComponent(message)}`;
   }
+
+  redirect(destination);
 }
