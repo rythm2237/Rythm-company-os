@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION='20260925-4';
+  const VERSION='20260925-5';
   const NAV_CSS=`/2nya-nailart/navigation.css?v=${VERSION}`;
   const FIT_CSS='/2nya-nailart/viewport-fit.css?v=20260925-1';
   const NAV_ITEMS=[
@@ -59,6 +59,7 @@
         <button class="nav-search" type="button" aria-label="باز کردن منو" aria-expanded="false" aria-controls="mobileNav">☰</button>
       </div>
       <nav id="mobileNav" class="mobile-nav" aria-label="منوی موبایل">${navLinks('mobile')}</nav>`;
+    header.querySelector('.donya-nav-shell')?.style.setProperty('direction','rtl','important');
     return header;
   };
 
