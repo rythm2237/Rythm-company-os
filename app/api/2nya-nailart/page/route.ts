@@ -30,10 +30,7 @@ function tagBody(html: string, pageName: PageName) {
 }
 
 function replaceLegacyHeader(html: string) {
-  return html.replace(
-    /<header\b[^>]*class=(['"])[^'"]*\bsite-head\b[^'"]*\1[^>]*>[\s\S]*?<\/header>/i,
-    NAV_ROOT,
-  );
+  return html.replace(/<header\b[^>]*>[\s\S]*?<\/header>/i, NAV_ROOT);
 }
 
 export async function GET(request: Request) {
