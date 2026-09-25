@@ -1,0 +1,118 @@
+/* Donya Nail Art — viewport density and balance pass, 2026-09-25 */
+
+/* Shared desktop density: keep the primary topic of each page inside the first viewport. */
+@media (min-width:761px){
+  body.donya-inner-page .page-nav{min-height:76px!important}
+  body.donya-inner-page .intro{padding:30px 0 26px!important}
+  body.donya-inner-page .intro h1{margin:4px 0 12px!important;line-height:1.18!important}
+  body.donya-inner-page .closing{padding-block:30px 48px!important}
+
+  /* Services: remove the unused left column and let the cards own the canvas. */
+  body.donya-page-services .services-scene{min-height:calc(100svh - 76px)!important;padding:8px 0 16px!important}
+  body.donya-page-services .showcase-hero{padding:0 0 2px!important}
+  body.donya-page-services .showcase-hero h1{font-size:clamp(2rem,3vw,3.15rem)!important;line-height:1.17!important;margin:0!important}
+  body.donya-page-services .showcase-hero>p:last-child{margin:0!important;font-size:.86rem!important;line-height:1.6!important}
+  body.donya-page-services .services-showcase{grid-template-columns:minmax(0,1fr) 255px!important;gap:clamp(20px,3vw,44px)!important;width:min(1380px,calc(100% - 36px))!important;min-height:0!important;padding:0 0 10px!important;align-items:center!important}
+  body.donya-page-services .showcase-stage{grid-column:1!important;grid-row:1!important;min-height:clamp(455px,57svh,520px)!important;width:100%!important;justify-self:stretch!important;place-items:center!important}
+  body.donya-page-services .showcase-menu{grid-column:2!important;grid-row:1!important;max-width:255px!important;width:100%!important;justify-self:stretch!important}
+  body.donya-page-services .showcase-menu button{min-height:50px!important}
+  body.donya-page-services .showcase-stack{width:min(470px,52vw)!important;height:clamp(430px,53svh,500px)!important}
+  body.donya-page-services .showcase-stage:before{width:min(610px,72%)!important;height:min(610px,72%)!important}
+  body.donya-page-services .showcase-card img{height:57%!important}
+  body.donya-page-services .showcase-card .card-info{min-height:43%!important;padding:12px 20px 13px!important}
+  body.donya-page-services .showcase-card[data-pos="-1"]{transform:translate3d(-105px,18px,-62px) rotate(-7deg) scale(.92)!important}
+  body.donya-page-services .showcase-card[data-pos="1"]{transform:translate3d(105px,18px,-62px) rotate(7deg) scale(.92)!important}
+  body.donya-page-services .showcase-card[data-pos="-2"]{transform:translate3d(-170px,33px,-128px) rotate(-10deg) scale(.80)!important}
+  body.donya-page-services .showcase-card[data-pos="2"]{transform:translate3d(170px,33px,-128px) rotate(10deg) scale(.80)!important}
+  body.donya-page-services .training-entry{grid-column:1/-1!important;grid-row:2!important;padding:8px 14px!important;gap:16px!important;margin-top:-2px!important}
+  body.donya-page-services .closing{padding-top:22px!important}
+
+  /* Training: reduce the dead air above the title and fit the hero into one screen. */
+  body.donya-page-training .training-hero-inner{min-height:calc(100svh - 76px)!important;padding-block:22px 30px!important;gap:clamp(24px,4vw,62px)!important}
+  body.donya-page-training .training-intro h1{font-size:clamp(2.45rem,4vw,4.3rem)!important;line-height:1.16!important;margin:4px 0 12px!important}
+  body.donya-page-training .training-intro>p:not(.kicker){line-height:1.8!important;margin-bottom:18px!important}
+  body.donya-page-training .training-photo{height:clamp(360px,52svh,470px)!important}
+  body.donya-page-training .training-overview{padding-block:52px 64px!important}
+  body.donya-page-training .training-questions{padding-block:54px!important}
+  body.donya-page-training .practice-section{padding-block:52px!important}
+
+  /* Contact: keep the title, contact methods and message form visible without a long first-screen scroll. */
+  body.donya-page-contact .contact-hero{min-height:220px!important}
+  body.donya-page-contact .contact-hero h1{font-size:clamp(2.55rem,4.5vw,4.4rem)!important;margin:2px 0 6px!important}
+  body.donya-page-contact .contact-hero p{margin:0!important;line-height:1.7!important}
+  body.donya-page-contact .contact-grid{margin-top:-28px!important;margin-bottom:34px!important}
+  body.donya-page-contact .contact-info,
+  body.donya-page-contact .message-panel{padding:clamp(20px,2.2vw,34px)!important}
+  body.donya-page-contact .contact-info h2,
+  body.donya-page-contact .message-panel h2{margin:4px 0 8px!important;font-size:clamp(1.45rem,2.3vw,2.15rem)!important}
+  body.donya-page-contact .contact-info p,
+  body.donya-page-contact .message-panel p{margin-block:7px!important;line-height:1.7!important}
+  body.donya-page-contact .contact-info a{margin:9px 0!important}
+  body.donya-page-contact .contact-photo{height:125px!important;margin-top:16px!important}
+  body.donya-page-contact .message-panel label{margin:8px 0!important}
+  body.donya-page-contact .message-panel input,
+  body.donya-page-contact .message-panel textarea{padding:8px 11px!important;margin-top:3px!important}
+  body.donya-page-contact .message-panel textarea{min-height:86px!important}
+  body.donya-page-contact .contact-cta{padding:34px 0!important}
+
+  /* Nail care: compact the hero while retaining the long-form guide below it. */
+  body.donya-page-nail-care .hero{padding:34px 0 30px!important}
+  body.donya-page-nail-care .hero h1{font-size:clamp(2.45rem,4.7vw,4.25rem)!important;margin:5px 0 10px!important;line-height:1.13!important}
+  body.donya-page-nail-care .hero p{margin:0!important;line-height:1.75!important}
+  body.donya-page-nail-care .toc{margin-top:16px!important;gap:6px!important}
+  body.donya-page-nail-care .toc a{padding:6px 10px!important}
+  body.donya-page-nail-care .note{margin-top:15px!important;padding:10px 14px!important}
+  body.donya-page-nail-care main section{padding:52px 0!important}
+
+  /* Landing page sections: reduce excess vertical padding and oversized fixed media. */
+  body:not(.donya-inner-page):not(.portfolio-view) .portfolio,
+  body:not(.donya-inner-page):not(.portfolio-view) .services-section,
+  body:not(.donya-inner-page):not(.portfolio-view) .about-section,
+  body:not(.donya-inner-page):not(.portfolio-view) .guide-section,
+  body:not(.donya-inner-page):not(.portfolio-view) .contact-section{padding-block:48px!important}
+  body:not(.donya-inner-page):not(.portfolio-view) .section-head{margin-bottom:18px!important}
+  body:not(.donya-inner-page):not(.portfolio-view) .section-head h2{margin:4px 0 6px!important}
+  body:not(.donya-inner-page):not(.portfolio-view) .about-photo{min-height:420px!important}
+  body:not(.donya-inner-page):not(.portfolio-view) .about-copy{padding:28px!important}
+  body:not(.donya-inner-page):not(.portfolio-view) .guide-feature img{height:330px!important}
+  body:not(.donya-inner-page):not(.portfolio-view) .guide-copy{padding:18px!important}
+  body:not(.donya-inner-page):not(.portfolio-view) .contact-card{padding:24px!important}
+  body:not(.donya-inner-page):not(.portfolio-view) .contact-form{padding:18px!important}
+
+  /* Dedicated portfolio route: title starts directly below navigation and cube stays in the first viewport. */
+  body.portfolio-view main{padding-top:96px!important}
+  body.portfolio-view .portfolio{min-height:calc(100svh - 96px)!important;padding:20px 0 34px!important}
+  body.portfolio-view .portfolio .portfolio-top h1{margin:3px 0 5px!important;font-size:clamp(1.9rem,3vw,2.85rem)!important}
+  body.portfolio-view .portfolio .portfolio-top p{line-height:1.65!important;font-size:.9rem!important}
+  body.portfolio-view .portfolio .portfolio-stage{min-height:420px!important;padding:10px 0 0!important;gap:28px!important}
+  body.portfolio-view .cube-scene{--cube-width:350px!important;--cube-height:405px!important;--cube-depth:175px!important}
+  body.portfolio-view .portfolio .portfolio-meta{margin:2px auto 10px!important;padding:9px 12px!important}
+  body.portfolio-view .portfolio .orbit{padding:4px 6px 8px!important}
+  body.portfolio-view .portfolio .p-thumb,
+  body.portfolio-view .portfolio .p-thumb[data-pos]{width:58px!important;height:72px!important;flex-basis:58px!important}
+}
+
+@media (min-width:761px) and (max-width:1050px){
+  body.donya-page-services .services-showcase{grid-template-columns:minmax(0,1fr) 220px!important;gap:16px!important}
+  body.donya-page-services .showcase-menu{max-width:220px!important}
+  body.donya-page-services .showcase-stack{width:min(405px,55vw)!important;height:440px!important}
+  body.donya-page-services .showcase-stage{min-height:475px!important}
+  body.donya-page-services .showcase-card[data-pos="-1"]{transform:translate3d(-68px,16px,-58px) rotate(-6deg) scale(.92)!important}
+  body.donya-page-services .showcase-card[data-pos="1"]{transform:translate3d(68px,16px,-58px) rotate(6deg) scale(.92)!important}
+  body.donya-page-services .showcase-card[data-pos="-2"]{transform:translate3d(-108px,30px,-118px) rotate(-9deg) scale(.8)!important}
+  body.donya-page-services .showcase-card[data-pos="2"]{transform:translate3d(108px,30px,-118px) rotate(9deg) scale(.8)!important}
+}
+
+/* Mobile keeps natural scrolling, but removes excessive title/header whitespace. */
+@media (max-width:760px){
+  body.donya-inner-page .intro{padding:28px 0 22px!important}
+  body.donya-page-services .services-scene{padding-top:8px!important}
+  body.donya-page-services .showcase-hero{padding-top:0!important}
+  body.donya-page-services .showcase-hero h1{margin-top:0!important}
+  body.donya-page-training .training-hero-inner{padding:24px 0 30px!important}
+  body.donya-page-contact .contact-hero{min-height:270px!important}
+  body.donya-page-contact .contact-grid{margin-bottom:45px!important}
+  body.donya-page-nail-care .hero{padding:38px 0 34px!important}
+  body.portfolio-view main{padding-top:76px!important}
+  body.portfolio-view .portfolio{padding-top:32px!important}
+}
