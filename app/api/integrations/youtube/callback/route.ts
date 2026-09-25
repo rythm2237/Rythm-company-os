@@ -116,7 +116,8 @@ export async function GET(request: Request) {
     return finish(request, id, payload.projectId, "error", error instanceof Error ? error.message : "Google token exchange failed.");
   }
 
-  if (!(tokens.scope ?? "").split(/\s+/).includes(SCOPE)) {
+  const returnedScopes = (tokens.scope ?? "").split(/\s+/).filter(Boolean);
+  if (returnedScopes.length && !returnedScopes.includes(SCOPE)) {
     return finish(request, id, payload.projectId, "error", "Google did not grant read-only YouTube access.");
   }
 
