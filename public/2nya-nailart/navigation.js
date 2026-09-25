@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION='20260925-2';
+  const VERSION='20260925-3';
   const NAV_CSS=`/2nya-nailart/navigation.css?v=${VERSION}`;
   const FIT_CSS='/2nya-nailart/viewport-fit.css?v=20260925-1';
   const NAV_ITEMS=[
@@ -43,7 +43,7 @@
 
   const buildHeader=()=>{
     const training=cleanPath(location.pathname)==='/training';
-    const ctaHref=training?'#consultation':'/#booking';
+    const ctaHref=training?'#consultation':'/?book=';
     const ctaLabel=training?'وقت مشاوره':'رزرو وقت';
     const header=document.createElement('header');
     header.className='top donya-top donya-unified-nav';
