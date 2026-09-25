@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
 
-const SCOPE = "Webmaster.read";
+const SCOPE = "webmaster.read";
 
 function credentials() {
   return {
