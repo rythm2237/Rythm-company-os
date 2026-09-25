@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPlatformAdminContext } from "@/lib/admin/authorization";
 import { INDEXNOW_KEY_LOCATION, verifyIndexNowKey } from "@/lib/integrations/adapters/indexnow";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { submitIndexNowFromAdmin } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -22,13 +23,18 @@ export default async function AdminIndexNowPage({ searchParams }: Props) {
   const context = await getPlatformAdminContext();
   if (!context) redirect("/command-center");
 
+  const adminSupabase = createServerSupabaseClient();
+  const historyQuery = adminSupabase
+    ? adminSupabase
+        .from("audit_events")
+        .select("id,actor_type,actor_user_id,payload,created_at")
+        .eq("event_type", "seo.indexnow_submission")
+        .order("created_at", { ascending: false })
+        .limit(10)
+    : Promise.resolve({ data: null, error: { message: "Server admin client is not configured." } });
+
   const [{ data: auditRows, error: auditError }, keyStatus] = await Promise.all([
-    context.supabase
-      .from("audit_events")
-      .select("id,actor_type,actor_user_id,payload,created_at")
-      .eq("event_type", "seo.indexnow_submission")
-      .order("created_at", { ascending: false })
-      .limit(10),
+    historyQuery,
     verifyIndexNowKey(),
   ]);
 
