@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION='20260925-3';
+  const VERSION='20260925-4';
   const NAV_CSS=`/2nya-nailart/navigation.css?v=${VERSION}`;
   const FIT_CSS='/2nya-nailart/viewport-fit.css?v=20260925-1';
   const NAV_ITEMS=[
@@ -8,7 +8,7 @@
     {href:'/training',label:'آموزش',key:'training'},
     {href:'/portfolio',label:'نمونه‌کارها',key:'portfolio'},
     {href:'/nail-care',label:'مراقبت ناخن',key:'nail-care'},
-    {href:'/#about',label:'درباره دنیا',key:'about'},
+    {href:'/about',label:'درباره دنیا',key:'about'},
     {href:'/contact',label:'تماس',key:'contact'},
   ];
 
@@ -29,12 +29,12 @@
 
   const currentKey=()=>{
     const path=cleanPath(location.pathname);
-    if(path==='/'&&location.hash==='#about') return 'about';
     if(path==='/') return 'home';
     if(path==='/services') return 'services';
     if(path==='/training') return 'training';
     if(path==='/portfolio') return 'portfolio';
     if(path==='/nail-care') return 'nail-care';
+    if(path==='/about') return 'about';
     if(path==='/contact') return 'contact';
     return '';
   };
@@ -70,20 +70,23 @@
     });
   };
 
+  const removeLegacyTopHeaders=()=>{
+    document.querySelectorAll('body > header:not([data-donya-unified-nav])').forEach(header=>header.remove());
+  };
+
   const mountHeader=()=>{
     const existingUnified=document.querySelector('[data-donya-unified-nav="true"]');
     if(existingUnified) return existingUnified;
     const header=buildHeader();
     const root=document.querySelector('#donya-navigation-root');
-    const legacy=document.querySelector('.donya-top,.site-head');
     if(root) root.replaceWith(header);
-    else if(legacy) legacy.replaceWith(header);
     else document.body.prepend(header);
     return header;
   };
 
   const init=()=>{
     ensureStyles();
+    removeLegacyTopHeaders();
     const header=mountHeader();
     setActive(header);
 
@@ -125,7 +128,6 @@
       up.classList.toggle('visible',scrollY>window.innerHeight*.85);
     };
     window.addEventListener('scroll',state,{passive:true});
-    window.addEventListener('hashchange',()=>setActive(header));
     state();
   };
 
