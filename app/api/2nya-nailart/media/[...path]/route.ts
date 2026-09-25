@@ -7,12 +7,14 @@ import p1 from '@/lib/2nya-nailart/media/p1';
 import p2 from '@/lib/2nya-nailart/media/p2';
 import p3 from '@/lib/2nya-nailart/media/p3';
 import p4 from '@/lib/2nya-nailart/media/p4';
+import aboutDonya from '@/lib/2nya-nailart/media/about';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const images: Record<string, string> = {
   'hero-poster.webp': heroPoster,
+  'about-donya.webp': aboutDonya,
   'portfolio-01.webp': p1,
   'portfolio-02.webp': p2,
   'portfolio-03.webp': p3,
