@@ -63,6 +63,7 @@ const stage=document.querySelector('#serviceStage');
 const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
 let index=Math.max(0,services.findIndex(s=>s.id===(new URLSearchParams(location.search).get('service')||'gel')));
 let dragStart=null;
+let suppressCardClick=false;
 const escapeHtml=value=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const rel=i=>{let d=i-index,n=services.length;if(d>n/2)d-=n;if(d<-n/2)d+=n;return Math.abs(d)>2?'far':String(d)};
 nav.innerHTML=services.map((s,i)=>`<button type="button" data-service-index="${i}" aria-label="نمایش خدمت ${s.name}"><span class="num">${String(i+1).padStart(2,'0')}</span><span>${s.name}</span><span class="arrow" aria-hidden="true">↗</span></button>`).join('');
@@ -85,12 +86,12 @@ function update(push=true){
 function go(delta){index=(index+delta+services.length)%services.length;update()}
 update(false);
 nav.addEventListener('click',e=>{const b=e.target.closest('[data-service-index]');if(b){index=Number(b.dataset.serviceIndex);update()}});
-stack.addEventListener('click',e=>{const card=e.target.closest('[data-card-index]');if(card&&Number(card.dataset.cardIndex)!==index){index=Number(card.dataset.cardIndex);update()}});
+stack.addEventListener('click',e=>{if(suppressCardClick){e.preventDefault();return}const card=e.target.closest('[data-card-index]');if(card&&Number(card.dataset.cardIndex)!==index){index=Number(card.dataset.cardIndex);update()}});
 document.querySelector('#servicePrev').onclick=()=>go(-1);
 document.querySelector('#serviceNext').onclick=()=>go(1);
 stage.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();go(1)}if(e.key==='ArrowRight'){e.preventDefault();go(-1)}});
 stage.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('a,button,summary,.card-detail'))return;dragStart=e.clientX});
-stage.addEventListener('pointerup',e=>{if(dragStart===null)return;const dx=e.clientX-dragStart;dragStart=null;if(Math.abs(dx)>45)go(dx<0?1:-1)});
+stage.addEventListener('pointerup',e=>{if(dragStart===null)return;const dx=e.clientX-dragStart;dragStart=null;if(Math.abs(dx)>45){suppressCardClick=true;go(dx<0?1:-1);requestAnimationFrame(()=>{suppressCardClick=false})}});
 </script>
 </body>
 </html>
