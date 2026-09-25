@@ -31,6 +31,7 @@ const FOOTER_GROUPS = [
     links: [
       ["AI Workforce", "/ai-workforce"],
       ["AI Agents", "/ai-agents-for-business"],
+      ["AI Agent Platforms", "/platforms-for-building-company-with-ai-agents"],
       ["How It Works", "/how-it-works"],
       ["Product Architecture", "/product-architecture"],
       ["Use Cases", "/use-cases"],
@@ -70,6 +71,7 @@ const FOOTER_GROUPS = [
     label: "Help",
     links: [
       ["About", "/about"],
+      ["Press", "/press"],
       ["Support", "/support"],
       ["Contact", "/contact"],
       ["Customer sign in", "/login"],
