@@ -22,9 +22,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Allow Production deployment to become ready
+      - name: Wait for matching Production deployment
         if: github.event_name == 'push'
-        run: sleep 120
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          VERSION_URL: https://rythm-os.com/api/system/deployment-version
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            body="$(curl --fail --silent --show-error --max-time 10 "$VERSION_URL" || true)"
+            live_sha="$(printf '%s' "$body" | sed -n 's/.*"commitSha":"\([^"]*\)".*/\1/p')"
+            if [ "$live_sha" = "$EXPECTED_SHA" ]; then
+              echo "Production is serving $EXPECTED_SHA"
+              exit 0
+            fi
+            echo "Waiting for Production SHA $EXPECTED_SHA (currently ${live_sha:-unknown}); attempt $attempt/60"
+            sleep 10
+          done
+          echo "Production did not reach expected SHA $EXPECTED_SHA within 10 minutes." >&2
+          exit 1
       - name: Crawl canonical Production site
         env:
           SEO_CRAWL_ORIGIN: https://rythm-os.com
