@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requirePlatformAdmin } from "@/lib/admin/authorization";
 import { submitIndexNow } from "@/lib/integrations/adapters/indexnow";
 import { redactSecretText } from "@/lib/security/redaction";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const INDEXNOW_ADMIN_PATH = "/admin/seo/indexnow";
 
@@ -19,14 +20,19 @@ function parseUrls(formData: FormData) {
 }
 
 export async function submitIndexNowFromAdmin(formData: FormData) {
-  const { supabase, user } = await requirePlatformAdmin();
+  const { user } = await requirePlatformAdmin();
   const urls = parseUrls(formData);
 
   try {
     const result = await submitIndexNow(urls);
     const now = new Date().toISOString();
+    const adminSupabase = createServerSupabaseClient();
 
-    const { error: auditError } = await supabase.from("audit_events").insert({
+    if (!adminSupabase) {
+      throw new Error("Submission succeeded but audit logging is unavailable because the server admin client is not configured.");
+    }
+
+    const { error: auditError } = await adminSupabase.from("audit_events").insert({
       organization_id: null,
       actor_type: "user",
       actor_user_id: user.id,
