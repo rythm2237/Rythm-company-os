@@ -1,89 +1,92 @@
-/* Donya portfolio turn slider v4 — matches the supplied flat-to-cube-turn reference */
+/* Donya portfolio turn slider v5 — flat square artwork that becomes a cube only during transition */
 .portfolio.portfolio-turn-v4{
   --pt-ink:#2c2224;--pt-muted:#816f70;--pt-wine:#7b173e;--pt-rose:#c98588;--pt-paper:#f6f1ec;
   position:relative;isolation:isolate;overflow:hidden;background:
   radial-gradient(circle at 18% 20%,rgba(181,116,122,.14),transparent 28%),
   radial-gradient(circle at 82% 78%,rgba(123,23,62,.08),transparent 30%),
-  linear-gradient(180deg,#faf7f3 0%,#f1ebe5 100%)!important;color:var(--pt-ink)!important;padding-block:86px 108px
+  linear-gradient(180deg,#faf7f3 0%,#f1ebe5 100%)!important;color:var(--pt-ink)!important;padding-block:82px 104px
 }
-.portfolio.portfolio-turn-v4:before,.portfolio.portfolio-turn-v4:after{
-  content:"";position:absolute;border:1px solid rgba(123,23,62,.09);border-radius:50%;pointer-events:none;z-index:0
-}
+.portfolio.portfolio-turn-v4:before,.portfolio.portfolio-turn-v4:after{content:"";position:absolute;border:1px solid rgba(123,23,62,.09);border-radius:50%;pointer-events:none;z-index:0}
 .portfolio.portfolio-turn-v4:before{width:560px;height:560px;right:-300px;top:90px}
 .portfolio.portfolio-turn-v4:after{width:430px;height:430px;left:-250px;bottom:-130px}
 .portfolio-turn-v4 .portfolio-shell{position:relative;z-index:1;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;padding:0!important}
-.portfolio-turn-v4 .portfolio-top{max-width:1120px;margin:0 auto 22px;padding-inline:24px;align-items:center}
+.portfolio-turn-v4 .portfolio-top{max-width:1120px;margin:0 auto 18px;padding-inline:24px;align-items:center}
 .portfolio-turn-v4 .portfolio-top .eyebrow{color:#a15d68!important}
 .portfolio-turn-v4 .portfolio-top h1,.portfolio-turn-v4 .portfolio-top h2{color:var(--pt-ink)!important;font-size:clamp(2.05rem,3.9vw,3.45rem)!important;line-height:1.2!important;margin:.12rem 0 0!important;letter-spacing:-.035em}
-.portfolio-turn-v4 .portfolio-counter{color:var(--pt-wine)!important;background:rgba(255,255,255,.7);border:1px solid rgba(123,23,62,.12);padding:7px 14px;border-radius:999px;box-shadow:0 10px 30px rgba(69,44,45,.07);backdrop-filter:blur(9px)}
-.portfolio-turn-v4 .portfolio-stage{height:650px;max-width:1180px;margin:auto;display:grid;place-items:center;position:relative;perspective:1500px;perspective-origin:50% 46%;touch-action:pan-y;user-select:none;-webkit-user-select:none;overflow:visible}
+.portfolio-turn-v4 .portfolio-counter{color:var(--pt-wine)!important;background:rgba(255,255,255,.72);border:1px solid rgba(123,23,62,.12);padding:7px 14px;border-radius:999px;box-shadow:0 10px 30px rgba(69,44,45,.07);backdrop-filter:blur(9px)}
+.portfolio-turn-v4 .portfolio-stage{height:590px;max-width:1180px;margin:auto;display:grid;place-items:center;position:relative;perspective:1500px;perspective-origin:50% 44%;touch-action:pan-y;user-select:none;-webkit-user-select:none;overflow:visible}
 .portfolio-turn-v4 .feature-card{
-  --turn-w:430px;--turn-h:520px;--turn-half:calc(var(--turn-w)/2);
-  position:relative!important;z-index:8!important;width:560px!important;height:610px!important;overflow:visible!important;
+  --turn-size:440px;--turn-half:calc(var(--turn-size)/2);
+  position:relative!important;z-index:8!important;width:560px!important;height:550px!important;overflow:visible!important;
   border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;cursor:grab!important;
   display:flex!important;flex-direction:column;align-items:center;justify-content:flex-start;outline:none;perspective:1500px
 }
 .portfolio-turn-v4 .feature-card:active{cursor:grabbing!important}
 .portfolio-turn-v4 .feature-card:focus-visible{outline:2px solid rgba(123,23,62,.52);outline-offset:12px;border-radius:20px!important}
 .portfolio-turn-v4 .feature-card:hover img{transform:none!important}
-.portfolio-turn-v4 .turn-scene{position:relative;width:var(--turn-w);height:var(--turn-h);transform-style:preserve-3d;perspective:1500px}
+.portfolio-turn-v4 .turn-scene{position:relative;width:var(--turn-size);height:var(--turn-size);transform-style:preserve-3d;perspective:1500px}
+.portfolio-turn-v4 .turn-fallback{position:absolute;inset:0;z-index:20;overflow:hidden;background:#d6c6c0;border:1px solid rgba(255,255,255,.82);box-shadow:0 28px 28px rgba(48,36,36,.16);transition:opacity .18s ease,visibility .18s ease}
+.portfolio-turn-v4 .turn-fallback img{display:block;width:100%;height:100%;object-fit:cover}
+.portfolio-turn-v4 .feature-card.is-cube-ready .turn-fallback{opacity:0;visibility:hidden;pointer-events:none}
 .portfolio-turn-v4 .turn-cube{
-  --turn-y:0deg;position:relative;width:100%;height:100%;transform-style:preserve-3d;
-  transform:rotateY(var(--turn-y));transition:transform .78s cubic-bezier(.22,.72,.18,1);will-change:transform;
+  --turn-y:0deg;position:relative;width:100%;height:100%;transform-style:preserve-3d;opacity:0;
+  transform:rotateY(var(--turn-y));transition:transform .72s cubic-bezier(.22,.72,.18,1),opacity .16s ease;will-change:transform;
   filter:drop-shadow(0 28px 24px rgba(48,36,36,.18))
 }
-.portfolio-turn-v4 .turn-cube.is-dragging{transition:none!important}
+.portfolio-turn-v4 .feature-card.is-cube-ready .turn-cube{opacity:1}
+.portfolio-turn-v4 .turn-cube.is-dragging{transition:opacity .16s ease!important}
 .portfolio-turn-v4 .turn-face{
   position:absolute;inset:0;margin:0;overflow:hidden;background:#bda8a2;border:1px solid rgba(255,255,255,.82);
   backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:inset 0 0 0 1px rgba(66,43,45,.08)
 }
 .portfolio-turn-v4 .turn-face img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;user-select:none;-webkit-user-drag:none;transform:none!important;transition:none!important}
-.portfolio-turn-v4 .turn-face:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(112deg,rgba(255,255,255,.16),transparent 27%,transparent 72%,rgba(36,22,25,.1))}
+.portfolio-turn-v4 .turn-face:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(112deg,rgba(255,255,255,.16),transparent 27%,transparent 72%,rgba(36,22,25,.11))}
 .portfolio-turn-v4 .turn-front{transform:translateZ(var(--turn-half))}
 .portfolio-turn-v4 .turn-right{transform:rotateY(90deg) translateZ(var(--turn-half))}
 .portfolio-turn-v4 .turn-back{transform:rotateY(180deg) translateZ(var(--turn-half))}
 .portfolio-turn-v4 .turn-left{transform:rotateY(-90deg) translateZ(var(--turn-half))}
-.portfolio-turn-v4 .turn-shadow{width:calc(var(--turn-w) * .92);height:32px;margin-top:-2px;border-radius:50%;background:radial-gradient(ellipse,rgba(45,31,33,.19),rgba(45,31,33,.06) 52%,transparent 74%);filter:blur(12px);transform:translateY(18px);pointer-events:none;transition:transform .5s ease,opacity .5s ease}
-.portfolio-turn-v4 .feature-card.is-turning .turn-shadow{transform:translateY(19px) scaleX(.82);opacity:.72}
-.portfolio-turn-v4 .turn-caption{width:min(540px,96%);margin-top:40px;text-align:center;direction:rtl}
+.portfolio-turn-v4 .turn-shadow{width:calc(var(--turn-size) * .92);height:32px;margin-top:-2px;border-radius:50%;background:radial-gradient(ellipse,rgba(45,31,33,.19),rgba(45,31,33,.06) 52%,transparent 74%);filter:blur(12px);transform:translateY(18px);pointer-events:none;transition:transform .45s ease,opacity .45s ease}
+.portfolio-turn-v4 .feature-card.is-turning .turn-shadow{transform:translateY(19px) scaleX(.8);opacity:.72}
+.portfolio-turn-v4 .feature-card.is-loading .turn-shadow{opacity:.6}
+.portfolio-turn-v4 .turn-caption{width:min(540px,96%);margin-top:34px;text-align:center;direction:rtl}
 .portfolio-turn-v4 .turn-caption b{display:block;font:800 1.08rem/1.65 Estedad,Vazirmatn,sans-serif;color:var(--pt-ink)}
 .portfolio-turn-v4 .turn-caption span{display:inline-flex;align-items:center;gap:8px;margin-top:7px;color:var(--pt-muted);font-size:.78rem}
 .portfolio-turn-v4 .turn-caption span:before{content:"↔";color:var(--pt-wine);font-size:1rem}
 .portfolio-turn-v4 .orbit{display:none!important}.portfolio-turn-v4 .p-thumb{display:none!important}
-.portfolio-turn-v4 .portfolio-nav{top:46%!important;width:56px!important;height:56px!important;border:1px solid rgba(77,50,53,.13)!important;background:rgba(255,252,249,.92)!important;color:var(--pt-wine)!important;box-shadow:0 12px 32px rgba(55,37,39,.1)!important;backdrop-filter:blur(10px);transition:transform .2s ease,background .2s ease,box-shadow .2s ease}
+.portfolio-turn-v4 .portfolio-nav{top:44%!important;width:56px!important;height:56px!important;border:1px solid rgba(77,50,53,.13)!important;background:rgba(255,252,249,.92)!important;color:var(--pt-wine)!important;box-shadow:0 12px 32px rgba(55,37,39,.1)!important;backdrop-filter:blur(10px);transition:transform .2s ease,background .2s ease,box-shadow .2s ease}
 .portfolio-turn-v4 .portfolio-nav:hover{background:#fff!important;transform:translateY(-50%) scale(1.06);box-shadow:0 16px 38px rgba(55,37,39,.15)!important}
 .portfolio-turn-v4 .portfolio-nav.prev{right:7%!important}.portfolio-turn-v4 .portfolio-nav.next{left:7%!important}
 .portfolio-turn-v4 .portfolio-dots{margin-top:8px!important;gap:7px!important}
 .portfolio-turn-v4 .portfolio-dots button{width:7px!important;height:7px!important;background:#c7b6b2!important;transition:width .25s ease,background .25s ease!important}
 .portfolio-turn-v4 .portfolio-dots button.on{width:30px!important;background:var(--pt-wine)!important}
-.portfolio-turn-v4 .portfolio-link{margin-top:24px!important}
+.portfolio-turn-v4 .portfolio-link{margin-top:22px!important}
 .portfolio-turn-v4 .portfolio-link a{color:var(--pt-ink)!important;border:1px solid rgba(83,53,55,.16)!important;background:rgba(255,255,255,.55);padding:10px 22px!important;border-radius:999px!important;backdrop-filter:blur(8px)}
 .portfolio-view .portfolio.portfolio-turn-v4{min-height:calc(100vh - var(--header-height));padding-top:70px}
 @media(max-width:900px){
-  .portfolio.portfolio-turn-v4{padding-block:68px 88px}
-  .portfolio-turn-v4 .portfolio-stage{height:600px}
-  .portfolio-turn-v4 .feature-card{--turn-w:380px;--turn-h:470px;width:500px!important;height:560px!important}
+  .portfolio.portfolio-turn-v4{padding-block:64px 84px}
+  .portfolio-turn-v4 .portfolio-stage{height:540px}
+  .portfolio-turn-v4 .feature-card{--turn-size:390px;width:500px!important;height:500px!important}
   .portfolio-turn-v4 .portfolio-nav.prev{right:2%!important}.portfolio-turn-v4 .portfolio-nav.next{left:2%!important}
 }
 @media(max-width:620px){
-  .portfolio.portfolio-turn-v4{padding-block:50px 68px}
+  .portfolio.portfolio-turn-v4{padding-block:48px 66px}
   .portfolio-turn-v4 .portfolio-top{padding-inline:15px;margin-bottom:6px;align-items:flex-start}
   .portfolio-turn-v4 .portfolio-top h1,.portfolio-turn-v4 .portfolio-top h2{font-size:2.05rem!important;max-width:290px}
   .portfolio-turn-v4 .portfolio-counter{font-size:.74rem;padding:6px 10px;margin-top:3px}
-  .portfolio-turn-v4 .portfolio-stage{height:490px;perspective:1050px;perspective-origin:50% 42%}
-  .portfolio-turn-v4 .feature-card{--turn-w:min(300px,76vw);--turn-h:min(370px,94vw);width:88vw!important;height:432px!important;perspective:1050px}
-  .portfolio-turn-v4 .turn-cube{transition-duration:.66s;filter:drop-shadow(0 22px 19px rgba(48,36,36,.17))}
-  .portfolio-turn-v4 .turn-caption{margin-top:27px;width:92%}.portfolio-turn-v4 .turn-caption b{font-size:.98rem}.portfolio-turn-v4 .turn-caption span{font-size:.72rem;margin-top:4px}
-  .portfolio-turn-v4 .portfolio-nav{width:45px!important;height:45px!important;font-size:1.2rem!important;top:43%!important}
+  .portfolio-turn-v4 .portfolio-stage{height:438px;perspective:1050px;perspective-origin:50% 40%}
+  .portfolio-turn-v4 .feature-card{--turn-size:min(300px,76vw);width:88vw!important;height:390px!important;perspective:1050px}
+  .portfolio-turn-v4 .turn-cube{transition-duration:.64s;filter:drop-shadow(0 22px 19px rgba(48,36,36,.17))}
+  .portfolio-turn-v4 .turn-caption{margin-top:26px;width:92%}.portfolio-turn-v4 .turn-caption b{font-size:.98rem}.portfolio-turn-v4 .turn-caption span{font-size:.72rem;margin-top:4px}
+  .portfolio-turn-v4 .portfolio-nav{width:45px!important;height:45px!important;font-size:1.2rem!important;top:40%!important}
   .portfolio-turn-v4 .portfolio-nav.prev{right:2px!important}.portfolio-turn-v4 .portfolio-nav.next{left:2px!important}
   .portfolio-turn-v4 .portfolio-dots{margin-top:6px!important;max-width:84vw;margin-inline:auto;overflow:hidden}
   .portfolio-turn-v4 .portfolio-link{margin-top:18px!important}
 }
 @media(max-width:390px){
-  .portfolio-turn-v4 .portfolio-stage{height:458px}
-  .portfolio-turn-v4 .feature-card{--turn-w:min(274px,72vw);--turn-h:min(338px,89vw);height:405px!important}
+  .portfolio-turn-v4 .portfolio-stage{height:410px}
+  .portfolio-turn-v4 .feature-card{--turn-size:min(274px,72vw);height:365px!important}
   .portfolio-turn-v4 .portfolio-top h1,.portfolio-turn-v4 .portfolio-top h2{font-size:1.9rem!important}
 }
 @media(prefers-reduced-motion:reduce){
-  .portfolio-turn-v4 .turn-cube,.portfolio-turn-v4 .portfolio-nav,.portfolio-turn-v4 .portfolio-dots button,.portfolio-turn-v4 .turn-shadow{transition-duration:.01ms!important}
+  .portfolio-turn-v4 .turn-cube,.portfolio-turn-v4 .portfolio-nav,.portfolio-turn-v4 .portfolio-dots button,.portfolio-turn-v4 .turn-shadow,.portfolio-turn-v4 .turn-fallback{transition-duration:.01ms!important}
 }
