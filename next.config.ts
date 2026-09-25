@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
       beforeFiles: [
         { source: "/", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/api/2nya-nailart/site" },
         { source: "/admin", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/2nya-nailart/admin.html" },
+        { source: "/about", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/api/2nya-nailart/page?name=about" },
         { source: "/nail-care", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/api/2nya-nailart/page?name=nail-care" },
         { source: "/services", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/api/2nya-nailart/page?name=services" },
         { source: "/training", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/api/2nya-nailart/page?name=training" },
