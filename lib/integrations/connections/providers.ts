@@ -1,4 +1,5 @@
 export * from "../adapters/customer-connections";
+export * from "../adapters/linkedin-marketing";
 import { getTokenConnectionAdapter as getBaseTokenConnectionAdapter } from "../adapters/customer-connections";
 import { semrushAdapter } from "../adapters/semrush";
 import { bingWebmasterAdapter } from "../adapters/bing-webmaster";
