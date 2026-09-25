@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
         { source: "/admin", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/2nya-nailart/admin.html" },
         { source: "/nail-care", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/2nya-nailart/nail-care.html" },
         { source: "/services", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/2nya-nailart/services.html" },
+        { source: "/training", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/2nya-nailart/training.html" },
         { source: "/contact", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/2nya-nailart/contact.html" },
         { source: "/portfolio", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/api/2nya-nailart/site?view=portfolio" },
         { source: "/booking/:id", has: [{ type: "host", value: "2nya-nailart.rythm-os.com" }], destination: "/2nya-nailart/booking.html?id=:id" },
