@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>خدمات ناخن | Donya Nail Art</title>
-<meta name="description" content="راهنمای خدمات دنیا: ژلیش، ترمیم، لمینت، پارافین، پدیکور، طراحی و آموزش. جزئیات هر خدمت و رزرو آنلاین.">
+<meta name="description" content="راهنمای خدمات دنیا: ژلیش، ترمیم، لمینت، پارافین، پدیکور و طراحی. جزئیات هر خدمت و رزرو آنلاین.">
 <link rel="canonical" href="https://2nya-nailart.rythm-os.com/services">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Estedad:wght@400;600;700;800&family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/2nya-nailart/pages.css">
-<link rel="stylesheet" href="/2nya-nailart/services-showcase.css?v=20260925-1400">
+<link rel="stylesheet" href="/2nya-nailart/services-showcase.css?v=20260925-1600">
 </head>
 <body class="services-showcase-page">
 <header class="site-head">
   <nav class="page-nav wrap" aria-label="ناوبری اصلی">
     <a class="brand" href="/"><img src="/2nya-media/donya-logo.webp" alt="لوگوی دنیا"><b dir="ltr">Donya Nail Art</b></a>
-    <div class="nav-links"><a href="/">خانه</a><a aria-current="page" href="/services">خدمات</a><a href="/portfolio">نمونه‌کارها</a><a href="/nail-care">مراقبت ناخن</a><a href="/contact">تماس</a></div>
+    <div class="nav-links"><a href="/">خانه</a><a aria-current="page" href="/services">خدمات</a><a href="/training">آموزش</a><a href="/portfolio">نمونه‌کارها</a><a href="/nail-care">مراقبت ناخن</a><a href="/contact">تماس</a></div>
     <a class="book" href="/?book=">رزرو وقت</a>
   </nav>
 </header>
@@ -24,10 +24,19 @@
 <section class="showcase-hero wrap">
   <p class="kicker">THE ART OF NAILS · خدمات دنیا</p>
   <h1>خدماتی برای <em>استایلِ شما</em></h1>
-  <p>از رنگ و مراقبت تا طراحی و آموزش؛ جزئیات هر خدمت را در کارت آن بخوانید.</p>
+  <p>کارت‌ها را ورق بزنید؛ توضیح، مراقبت و رزرو هر خدمت داخل همان کارت است.</p>
 </section>
 <section class="services-showcase wrap" aria-label="خدمات دنیا">
-  <div class="showcase-grid" id="serviceGrid"></div>
+  <nav id="serviceNav" class="showcase-menu" aria-label="انتخاب خدمت"></nav>
+  <div id="serviceStage" class="showcase-stage" tabindex="0" role="region" aria-roledescription="اسلایدر خدمات" aria-label="کارت‌های خدمات ناخن">
+    <div id="serviceStack" class="showcase-stack"></div>
+    <div class="showcase-controls">
+      <button id="servicePrev" type="button" aria-label="خدمت قبلی">‹</button>
+      <span id="serviceNumber" aria-live="polite" dir="ltr">01 / 06</span>
+      <button id="serviceNext" type="button" aria-label="خدمت بعدی">›</button>
+    </div>
+  </div>
+  <a class="training-entry" href="/training"><span>مسیر مستقل آموزش</span><strong>یادگیری هنر ناخن با راهنمایی دنیا</strong><span>دیدن برنامهٔ آموزش و درخواست وقت مشاوره ←</span></a>
 </section>
 </div>
 <section class="closing wrap">
@@ -36,7 +45,7 @@
   <a href="/nail-care">راهنمای مراقبت از ناخن ←</a>
 </section>
 </main>
-<footer><div class="wrap footer-inner"><span dir="ltr">Donya Nail Art</span><nav><a href="/">خانه</a><a href="/portfolio">نمونه‌کارها</a><a href="/contact">تماس</a></nav><small dir="ltr">Designed by Rythm</small></div></footer>
+<footer><div class="wrap footer-inner"><span dir="ltr">Donya Nail Art</span><nav><a href="/">خانه</a><a href="/training">آموزش</a><a href="/portfolio">نمونه‌کارها</a><a href="/training">آموزش</a><a href="/contact">تماس</a></nav><small dir="ltr">Designed by Rythm</small></div></footer>
 
 <script>
 const services=[
@@ -46,22 +55,43 @@ const services=[
 {id:'paraffin',name:'پارافین',image:'/api/2nya-nailart/media/portfolio-03.webp',intro:'پارافین یک بخش مراقبتی برای ایجاد حس نرمی و راحتی پوست دست یا پا است.',process:'پس از بررسی وضعیت پوست و تمیزکردن آن، پارافین مناسب به روش بهداشتی استفاده و سپس پاک می‌شود.',suitable:'برای کسانی که تجربهٔ مراقبتی گرم و لطیف را در کنار خدمات زیبایی دوست دارند.',care:'پس از خدمت، روتین مرطوب‌کردن پوست را ادامه دهید؛ دمای پارافین و حساسیت پوستی را پیش از کار مطرح کنید.',note:'برای زخم باز، التهاب یا حساسیت شناخته‌شده، پیش از درخواست این خدمت راهنمایی تخصصی بگیرید.'},
 {id:'pedicure',name:'پدیکور',image:'/api/2nya-nailart/media/portfolio-04.webp',intro:'پدیکور به مرتب‌کردن ناخن پا و مراقبت زیبایی پوست اطراف آن می‌پردازد.',process:'ناخن‌ها با توجه به فرم پا کوتاه و مرتب می‌شوند؛ رسیدگی ملایم به پوست اطراف و در صورت انتخاب شما رنگ یا ژلیش انجام می‌شود.',suitable:'برای کسی که به ظاهر تمیز و مراقبت منظم پا اهمیت می‌دهد.',care:'ناخن پا را بیش از حد کوتاه نکنید و کفش راحت انتخاب کنید. برای مشکلات دردناک یا ناخن فرورفته از متخصص سلامت کمک بگیرید.',note:'پدیکور زیبایی جایگزین درمان عفونت یا مشکل پزشکی پا نیست.'},
 {id:'design',name:'طراحی',image:'/2nya-media/portfolio-new-02.webp',intro:'طراحی ناخن از جزئیات مینیمال تا تصویرسازی اختصاصی را دربرمی‌گیرد؛ هر طرح به سلیقه و فرم ناخن شما نزدیک می‌شود.',process:'ایده یا تصویر الهام‌بخش را انتخاب می‌کنیم، دربارهٔ رنگ و مقیاس طرح توافق می‌کنیم و سپس جزئیات روی سطح آماده اجرا می‌شود.',suitable:'برای کسانی که می‌خواهند ناخنشان بخشی از استایل شخصی یا مناسبتی خاص باشد.',care:'برای دوام بهتر، از ضربه و تماس خشن با سطح طرح دوری کنید و دربارهٔ نگهداری پوشش نهایی سؤال کنید.',note:'پیچیدگی طرح روی زمان موردنیاز اثر می‌گذارد؛ هنگام رزرو ایدهٔ خود را مطرح کنید.'},
-{id:'training',name:'آموزش',image:'/2nya-nailart/gallery/IMG_0761.jpeg',intro:'آموزش تکنیک‌های کاربردی ناخن با توجه به سطح و هدف هنرجو برنامه‌ریزی می‌شود.',process:'سطح فعلی و هدف یادگیری مشخص می‌شود؛ سپس تمرین آماده‌سازی، کار با ابزار و اجرای تمیز تکنیک‌ها پیش می‌رود.',suitable:'برای علاقه‌مندان به یادگیری اصول کار یا توسعهٔ مهارت طراحی ناخن.',care:'پس از هر جلسه تمرین مستمر و ثبت نتیجه به پیشرفت کمک می‌کند؛ سرفصل و زمان دوره را پیش از ثبت‌نام هماهنگ کنید.',note:'برنامه، ظرفیت و هزینهٔ دوره پس از تماس تأیید می‌شود.'}
 ];
 
-const grid=document.querySelector('#serviceGrid');
-const requested=new URLSearchParams(location.search).get('service');
-const selected=services.find(s=>s.id===requested);
-const escapeHtml=value=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-grid.innerHTML=services.map((s,i)=>`<article class="service-card" id="service-${s.id}">
-  <div class="card-top"><img src="${s.image}" loading="${i===0?'eager':'lazy'}" decoding="async" alt="نمونه‌ای از هنر ناخن دنیا" width="96" height="108"><div class="card-title"><span class="card-number" dir="ltr">${String(i+1).padStart(2,'0')} / ${String(services.length).padStart(2,'0')}</span><h2>${s.name}</h2></div></div>
-  <p class="card-intro">${escapeHtml(s.intro)}</p>
-  <details ${selected?.id===s.id?'open':''}><summary>جزئیات و مراقبت <span aria-hidden="true">+</span></summary>
-    <div class="card-detail"><h3>روند انجام</h3><p>${escapeHtml(s.process)}</p><h3>مناسب برای</h3><p>${escapeHtml(s.suitable)}</p><h3>مراقبت پس از خدمت</h3><p>${escapeHtml(s.care)}</p><p class="card-note">${escapeHtml(s.note)}</p></div>
-  </details>
-  <a class="card-book" href="/?book=${encodeURIComponent(s.name)}" aria-label="رزرو ${s.name}">رزرو ${s.name} <span aria-hidden="true">↗</span></a>
-</article>`).join('');
-if(selected){requestAnimationFrame(()=>document.getElementById('service-'+selected.id)?.scrollIntoView({block:'nearest'}))}
+const nav=document.querySelector('#serviceNav');
+const stack=document.querySelector('#serviceStack');
+const stage=document.querySelector('#serviceStage');
+const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+let index=Math.max(0,services.findIndex(s=>s.id===(new URLSearchParams(location.search).get('service')||'gel')));
+let dragStart=null;
+let suppressCardClick=false;
+const escapeHtml=value=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const rel=i=>{let d=i-index,n=services.length;if(d>n/2)d-=n;if(d<-n/2)d+=n;return Math.abs(d)>2?'far':String(d)};
+nav.innerHTML=services.map((s,i)=>`<button type="button" data-service-index="${i}" aria-label="نمایش خدمت ${s.name}"><span class="num">${String(i+1).padStart(2,'0')}</span><span>${s.name}</span><span class="arrow" aria-hidden="true">↗</span></button>`).join('');
+stack.innerHTML=services.map((s,i)=>`<figure class="showcase-card" data-card-index="${i}">
+  <img src="${s.image}" ${i?'loading="lazy"':''} decoding="async" alt="نمونه‌ای از طراحی ناخن دنیا" width="420" height="480">
+  <figcaption class="card-info"><span class="card-eyebrow" dir="ltr">DONYA · ${String(i+1).padStart(2,'0')}</span><h2>${s.name}</h2>
+    <p>${escapeHtml(s.intro)}</p>
+    <details><summary>روند و مراقبت این خدمت <span aria-hidden="true">+</span></summary><div class="card-detail">
+      <h3>روند انجام</h3><p>${escapeHtml(s.process)}</p><h3>مناسب برای</h3><p>${escapeHtml(s.suitable)}</p><h3>مراقبت پس از خدمت</h3><p>${escapeHtml(s.care)}</p><p class="card-note">${escapeHtml(s.note)}</p>
+    </div></details>
+    <a class="book card-book" href="/?book=${encodeURIComponent(s.name)}" aria-label="رزرو ${s.name}">رزرو ${s.name} ↗</a>
+  </figcaption></figure>`).join('');
+function update(push=true){
+ nav.querySelectorAll('[data-service-index]').forEach((b,i)=>{b.classList.toggle('active',i===index);b.setAttribute('aria-current',i===index?'true':'false')});
+ stack.querySelectorAll('[data-card-index]').forEach((card,i)=>{const active=i===index;card.dataset.pos=rel(i);card.setAttribute('aria-hidden',active?'false':'true');card.querySelector('a').tabIndex=active?0:-1;card.querySelector('summary').tabIndex=active?0:-1;if(!active)card.querySelector('details').open=false});
+ document.querySelector('#serviceNumber').textContent=`${String(index+1).padStart(2,'0')} / ${String(services.length).padStart(2,'0')}`;
+ if(push)history.replaceState(null,'','/services?service='+services[index].id);
+ nav.querySelector(`[data-service-index="${index}"]`)?.scrollIntoView({behavior:reduced?'instant':'smooth',block:'nearest',inline:'nearest'});
+}
+function go(delta){index=(index+delta+services.length)%services.length;update()}
+update(false);
+nav.addEventListener('click',e=>{const b=e.target.closest('[data-service-index]');if(b){index=Number(b.dataset.serviceIndex);update()}});
+stack.addEventListener('click',e=>{if(suppressCardClick){e.preventDefault();return}const card=e.target.closest('[data-card-index]');if(card&&Number(card.dataset.cardIndex)!==index){index=Number(card.dataset.cardIndex);update()}});
+document.querySelector('#servicePrev').onclick=()=>go(-1);
+document.querySelector('#serviceNext').onclick=()=>go(1);
+stage.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();go(1)}if(e.key==='ArrowRight'){e.preventDefault();go(-1)}});
+stage.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('a,button,summary,.card-detail'))return;dragStart=e.clientX});
+stage.addEventListener('pointerup',e=>{if(dragStart===null)return;const dx=e.clientX-dragStart;dragStart=null;if(Math.abs(dx)>45){suppressCardClick=true;go(dx<0?1:-1);requestAnimationFrame(()=>{suppressCardClick=false})}});
 </script>
 </body>
 </html>

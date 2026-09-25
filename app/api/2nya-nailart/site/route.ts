@@ -14,6 +14,7 @@ const HEADER_MARKUP = `<header class="top donya-top">
     <nav class="desktop-nav" aria-label="ناوبری اصلی">
       <a href="/">صفحه اصلی</a>
       <a href="/services">خدمات ما</a>
+      <a href="/training">آموزش</a>
       <a href="/portfolio">نمونه‌کارها</a>
       <a href="/#booking">رزرو وقت</a>
       <a href="/nail-care">راهنمای زیبایی</a>
@@ -22,7 +23,7 @@ const HEADER_MARKUP = `<header class="top donya-top">
     </nav>
     <button class="book nav-book" data-book><span>رزرو وقت</span><span aria-hidden="true">▦</span></button>
     <button class="nav-search" type="button" aria-label="باز کردن منو" aria-expanded="false" aria-controls="mobileNav">☰</button>
-  </div><nav id="mobileNav" class="mobile-nav" aria-label="منوی موبایل"><a href="/">صفحه اصلی</a><a href="/services">خدمات</a><a href="/portfolio">نمونه‌کارها</a><a href="/nail-care">راهنمای مراقبت</a><a href="/#about">درباره دنیا</a><a href="/contact">تماس</a></nav>
+  </div><nav id="mobileNav" class="mobile-nav" aria-label="منوی موبایل"><a href="/">صفحه اصلی</a><a href="/services">خدمات</a><a href="/training">آموزش</a><a href="/portfolio">نمونه‌کارها</a><a href="/nail-care">راهنمای مراقبت</a><a href="/#about">درباره دنیا</a><a href="/contact">تماس</a></nav>
 </header>`;
 
 const HERO_MARKUP = `<section class="hero donya-hero" aria-labelledby="hero-title">
