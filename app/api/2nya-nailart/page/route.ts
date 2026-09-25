@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 const PAGES = {
   services: 'services.html',
   training: 'training.html',
-  'nail-care': 'nail-care.html',
+  'nail-care': 'nail-care-v2.html',
+  about: 'about.html',
   contact: 'contact.html',
 } as const;
 
@@ -29,8 +30,12 @@ function tagBody(html: string, pageName: PageName) {
   });
 }
 
-function replaceLegacyHeader(html: string) {
-  return html.replace(/<header\b[^>]*>[\s\S]*?<\/header>/i, NAV_ROOT);
+function installNavigationRoot(html: string) {
+  if (html.includes('id="donya-navigation-root"')) return html;
+  if (/<header\b[^>]*>[\s\S]*?<\/header>/i.test(html)) {
+    return html.replace(/<header\b[^>]*>[\s\S]*?<\/header>/i, NAV_ROOT);
+  }
+  return html.replace(/<body([^>]*)>/i, `<body$1>${NAV_ROOT}`);
 }
 
 export async function GET(request: Request) {
@@ -41,10 +46,10 @@ export async function GET(request: Request) {
 
   const filePath = path.join(process.cwd(), 'public', '2nya-nailart', PAGES[name]);
   const html = await readFile(filePath, 'utf8');
-  const tagged = tagBody(replaceLegacyHeader(html), name);
+  const tagged = tagBody(installNavigationRoot(html), name);
   const page = tagged.replace(
     '</head>',
-    '<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260925-3"><link rel="stylesheet" href="/2nya-nailart/viewport-fit.css?v=20260925-1"><script defer src="/2nya-nailart/navigation.js?v=20260925-3"></script></head>',
+    '<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260925-4"><link rel="stylesheet" href="/2nya-nailart/viewport-fit.css?v=20260925-1"><script defer src="/2nya-nailart/navigation.js?v=20260925-4"></script></head>',
   );
 
   return new NextResponse(page, {
