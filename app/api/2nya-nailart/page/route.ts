@@ -47,7 +47,7 @@ export async function GET(request: Request) {
   const tagged = tagBody(replaceLegacyHeader(html), name);
   const page = tagged.replace(
     '</head>',
-    '<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260925-2"><link rel="stylesheet" href="/2nya-nailart/viewport-fit.css?v=20260925-1"><script defer src="/2nya-nailart/navigation.js?v=20260925-2"></script></head>',
+    '<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260925-3"><link rel="stylesheet" href="/2nya-nailart/viewport-fit.css?v=20260925-1"><script defer src="/2nya-nailart/navigation.js?v=20260925-3"></script></head>',
   );
 
   return new NextResponse(page, {
