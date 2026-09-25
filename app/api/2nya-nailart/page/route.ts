@@ -9,6 +9,7 @@ const PAGES = {
   services: 'services.html',
   training: 'training.html',
   'nail-care': 'nail-care.html',
+  about: 'about.html',
   contact: 'contact.html',
 } as const;
 
@@ -33,6 +34,11 @@ function replaceLegacyHeader(html: string) {
   return html.replace(/<header\b[^>]*>[\s\S]*?<\/header>/i, NAV_ROOT);
 }
 
+function ensureNavigationRoot(html: string) {
+  if (html.includes('id="donya-navigation-root"')) return html;
+  return html.replace(/<body([^>]*)>/i, (match) => `${match}${NAV_ROOT}`);
+}
+
 export async function GET(request: Request) {
   const name = new URL(request.url).searchParams.get('name') as PageName | null;
   if (!name || !(name in PAGES)) {
@@ -41,10 +47,11 @@ export async function GET(request: Request) {
 
   const filePath = path.join(process.cwd(), 'public', '2nya-nailart', PAGES[name]);
   const html = await readFile(filePath, 'utf8');
-  const tagged = tagBody(replaceLegacyHeader(html), name);
+  const normalized = ensureNavigationRoot(replaceLegacyHeader(html));
+  const tagged = tagBody(normalized, name);
   const page = tagged.replace(
     '</head>',
-    '<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260925-3"><link rel="stylesheet" href="/2nya-nailart/viewport-fit.css?v=20260925-1"><script defer src="/2nya-nailart/navigation.js?v=20260925-3"></script></head>',
+    '<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260925-4"><link rel="stylesheet" href="/2nya-nailart/viewport-fit.css?v=20260925-1"><script defer src="/2nya-nailart/navigation.js?v=20260925-4"></script></head>',
   );
 
   return new NextResponse(page, {
