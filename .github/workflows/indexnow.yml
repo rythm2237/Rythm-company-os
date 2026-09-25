@@ -5,17 +5,19 @@ on:
     branches:
       - main
   workflow_dispatch:
-  schedule:
-    - cron: "23 5 * * *"
 
 permissions:
   contents: read
 
+concurrency:
+  group: indexnow-production-main
+  cancel-in-progress: true
+
 jobs:
   submit:
-    name: Submit canonical sitemap to IndexNow
+    name: Notify IndexNow after production deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -25,5 +27,41 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Submit production canonical URLs
+      - name: Capture pre-deploy sitemap for deletion detection
+        shell: bash
+        run: |
+          set -euo pipefail
+          if curl --fail --silent --show-error --location \
+            --header "Cache-Control: no-cache" \
+            "https://rythm-os.com/sitemap.xml" \
+            --output /tmp/indexnow-before.xml; then
+            echo "Captured current production sitemap before rollout."
+          else
+            rm -f /tmp/indexnow-before.xml
+            echo "Pre-deploy sitemap was unavailable; continuing without deletion detection."
+          fi
+
+      - name: Wait for matching production deployment
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          endpoint="https://rythm-os.com/api/system/deployment-version"
+          for attempt in $(seq 1 60); do
+            body="$(curl --fail --silent --show-error --location --max-time 10 --header "Cache-Control: no-cache" "$endpoint" 2>/dev/null || true)"
+            deployed_sha="$(DEPLOYMENT_JSON="$body" node -e 'try { const value = JSON.parse(process.env.DEPLOYMENT_JSON || "{}"); process.stdout.write(String(value.commitSha || "")); } catch { process.stdout.write(""); }')"
+            if [ "$deployed_sha" = "$EXPECTED_SHA" ]; then
+              echo "Production is serving commit $EXPECTED_SHA."
+              exit 0
+            fi
+            echo "Attempt $attempt/60: production commit is ${deployed_sha:-unavailable}; waiting for $EXPECTED_SHA."
+            sleep 15
+          done
+          echo "Production did not reach commit $EXPECTED_SHA within the verification window."
+          exit 1
+
+      - name: Submit production URLs to IndexNow
+        env:
+          INDEXNOW_PREVIOUS_SITEMAP_FILE: /tmp/indexnow-before.xml
         run: node scripts/submit-indexnow.mjs
