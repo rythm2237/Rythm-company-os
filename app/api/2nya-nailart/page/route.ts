@@ -47,9 +47,13 @@ export async function GET(request: Request) {
   const filePath = path.join(process.cwd(), 'public', '2nya-nailart', PAGES[name]);
   const html = await readFile(filePath, 'utf8');
   const tagged = tagBody(installNavigationRoot(html), name);
+  const needsLegacyDensityOverrides = name === 'services' || name === 'training' || name === 'contact';
+  const densityStyles = needsLegacyDensityOverrides
+    ? '<link rel="stylesheet" href="/2nya-nailart/viewport-fit.css?v=20260925-1">'
+    : '';
   const page = tagged.replace(
     '</head>',
-    '<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260925-4"><link rel="stylesheet" href="/2nya-nailart/viewport-fit.css?v=20260925-1"><script defer src="/2nya-nailart/navigation.js?v=20260925-4"></script></head>',
+    `<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260925-4">${densityStyles}<script defer src="/2nya-nailart/navigation.js?v=20260925-4"></script></head>`,
   );
 
   return new NextResponse(page, {
