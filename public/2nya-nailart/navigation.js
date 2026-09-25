@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION='20260925-5';
+  const VERSION='20260925-6';
   const NAV_CSS=`/2nya-nailart/navigation.css?v=${VERSION}`;
   const FIT_CSS='/2nya-nailart/viewport-fit.css?v=20260925-1';
   const NAV_ITEMS=[
@@ -26,6 +26,8 @@
     const path=(value||'/').split('?')[0].replace(/\/+$/,'');
     return path||'/';
   };
+
+  const isLegacyAboutRoute=()=>cleanPath(location.pathname)==='/'&&location.hash==='#about';
 
   const currentKey=()=>{
     const path=cleanPath(location.pathname);
@@ -85,7 +87,14 @@
     return header;
   };
 
+  const routeLegacyAbout=()=>{
+    if(!isLegacyAboutRoute()) return false;
+    location.replace('/about');
+    return true;
+  };
+
   const init=()=>{
+    if(routeLegacyAbout()) return;
     ensureStyles();
     removeLegacyTopHeaders();
     const header=mountHeader();
@@ -129,6 +138,7 @@
       up.classList.toggle('visible',scrollY>window.innerHeight*.85);
     };
     window.addEventListener('scroll',state,{passive:true});
+    window.addEventListener('hashchange',()=>{routeLegacyAbout()});
     state();
   };
 
