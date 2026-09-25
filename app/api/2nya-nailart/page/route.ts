@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     : '';
   const page = tagged.replace(
     '</head>',
-    `<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260925-4">${densityStyles}<script defer src="/2nya-nailart/navigation.js?v=20260925-4"></script></head>`,
+    `<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260925-5">${densityStyles}<script defer src="/2nya-nailart/navigation.js?v=20260925-5"></script></head>`,
   );
 
   return new NextResponse(page, {
