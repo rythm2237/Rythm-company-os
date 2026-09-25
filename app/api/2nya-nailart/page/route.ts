@@ -31,7 +31,10 @@ function tagBody(html: string, pageName: PageName) {
 }
 
 function replaceLegacyHeader(html: string) {
-  return html.replace(/<header\b[^>]*>[\s\S]*?<\/header>/i, NAV_ROOT);
+  return html.replace(
+    /<header\b[^>]*class=(['"])[^'"]*\b(?:site-head|donya-top)\b[^'"]*\1[^>]*>[\s\S]*?<\/header>/i,
+    NAV_ROOT,
+  );
 }
 
 function ensureNavigationRoot(html: string) {
