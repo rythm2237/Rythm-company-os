@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION='20260925-3';
+  const VERSION='20260925-4';
   const NAV_CSS=`/2nya-nailart/navigation.css?v=${VERSION}`;
   const FIT_CSS='/2nya-nailart/viewport-fit.css?v=20260925-1';
   const NAV_ITEMS=[
@@ -8,7 +8,7 @@
     {href:'/training',label:'آموزش',key:'training'},
     {href:'/portfolio',label:'نمونه‌کارها',key:'portfolio'},
     {href:'/nail-care',label:'مراقبت ناخن',key:'nail-care'},
-    {href:'/#about',label:'درباره دنیا',key:'about'},
+    {href:'/about',label:'درباره دنیا',key:'about'},
     {href:'/contact',label:'تماس',key:'contact'},
   ];
 
@@ -35,6 +35,7 @@
     if(path==='/training') return 'training';
     if(path==='/portfolio') return 'portfolio';
     if(path==='/nail-care') return 'nail-care';
+    if(path==='/about') return 'about';
     if(path==='/contact') return 'contact';
     return '';
   };
