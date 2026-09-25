@@ -57,6 +57,13 @@ function microsoftClient() {
   };
 }
 
+function bingWebmasterClient() {
+  return {
+    clientId: process.env.BING_WEBMASTER_CLIENT_ID?.trim() || "",
+    clientSecret: process.env.BING_WEBMASTER_CLIENT_SECRET?.trim() || "",
+  };
+}
+
 async function refreshGoogle(refreshToken: string) {
   const { clientId, clientSecret } = googleClient();
   if (!clientId || !clientSecret) throw new Error("Google OAuth platform credentials are unavailable for token refresh.");
@@ -86,6 +93,26 @@ async function refreshMicrosoft(refreshToken: string, scope?: string) {
   });
   const raw = await response.json().catch(() => ({})) as { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string; token_type?: string; error?: string };
   if (!response.ok || !raw.access_token) throw new Error(`Microsoft OAuth token refresh failed${raw.error ? `: ${raw.error}` : "."}`);
+  return raw;
+}
+
+async function refreshBingWebmaster(refreshToken: string) {
+  const { clientId, clientSecret } = bingWebmasterClient();
+  if (!clientId || !clientSecret) throw new Error("Bing Webmaster OAuth platform credentials are unavailable for token refresh.");
+  const response = await fetch("https://www.bing.com/webmasters/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(20_000),
+  });
+  const raw = await response.json().catch(() => ({})) as { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string; token_type?: string; error?: string };
+  if (!response.ok || !raw.access_token) throw new Error(`Bing Webmaster OAuth token refresh failed${raw.error ? `: ${raw.error}` : "."}`);
   return raw;
 }
 
@@ -136,6 +163,16 @@ export async function resolveProviderCredential(input: {
       refresh_token: token.refresh_token || refreshToken,
       token_type: token.token_type || envelope.token_type || "Bearer",
       scope: token.scope || envelope.scope || "",
+      expires_at: expiry(token.expires_in),
+    };
+  } else if (input.providerKey === "bing_webmaster") {
+    const token = await refreshBingWebmaster(refreshToken);
+    refreshed = {
+      ...envelope,
+      access_token: token.access_token,
+      refresh_token: token.refresh_token || refreshToken,
+      token_type: token.token_type || envelope.token_type || "Bearer",
+      scope: token.scope || envelope.scope || "Webmaster.read",
       expires_at: expiry(token.expires_in),
     };
   } else if (isPlatformOAuthProvider(input.providerKey)) {
