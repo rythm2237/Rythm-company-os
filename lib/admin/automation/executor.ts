@@ -22,14 +22,29 @@ type AutomationTask = {
 type HandlerResult = { status?: "succeeded" | "skipped"; summary: string; output?: Record<string, unknown> };
 
 const SITE_ORIGIN = "https://rythm-os.com";
+const DISPATCH_HOUR_UTC = 5;
+const DISPATCH_LEAD_MINUTES = 5;
+
+function alignBeforeDispatcher(value: Date) {
+  value.setUTCHours(DISPATCH_HOUR_UTC, -DISPATCH_LEAD_MINUTES, 0, 0);
+  return value;
+}
 
 function nextRun(mode: AutomationTask["schedule_mode"], from = new Date()) {
   const next = new Date(from);
   if (mode === "manual") return null;
-  if (mode === "daily") next.setUTCDate(next.getUTCDate() + 1);
-  else if (mode === "weekly") next.setUTCDate(next.getUTCDate() + 7);
-  else if (mode === "monthly") next.setUTCMonth(next.getUTCMonth() + 1);
-  else next.setUTCHours(next.getUTCHours() + 1);
+  if (mode === "daily") {
+    next.setUTCDate(next.getUTCDate() + 1);
+    alignBeforeDispatcher(next);
+  } else if (mode === "weekly") {
+    next.setUTCDate(next.getUTCDate() + 7);
+    alignBeforeDispatcher(next);
+  } else if (mode === "monthly") {
+    next.setUTCMonth(next.getUTCMonth() + 1);
+    alignBeforeDispatcher(next);
+  } else {
+    next.setUTCHours(next.getUTCHours() + 1);
+  }
   return next.toISOString();
 }
 
