@@ -1,0 +1,56 @@
+insert into public.automation_tasks (
+  slug,
+  name,
+  description,
+  category,
+  handler_key,
+  enabled,
+  schedule_mode,
+  timezone,
+  next_run_at,
+  timeout_seconds,
+  max_retries,
+  risk_level,
+  requires_approval,
+  configuration_status,
+  config
+)
+values (
+  'agency-seo-daily-monitoring',
+  'Agency SEO Daily Monitoring',
+  'Runs technical SEO, connected search-provider evidence, AI analysis, historical snapshots, and anomaly notifications for active Agency SEO client websites.',
+  'search',
+  'agency_seo_daily_monitoring',
+  true,
+  'daily',
+  'Europe/Budapest',
+  date_trunc('day', now() + interval '1 day') + interval '5 hours',
+  300,
+  1,
+  'low',
+  false,
+  'ready',
+  jsonb_build_object(
+    'max_sites_per_run', 10,
+    'score_drop_threshold', 10,
+    'search_drop_ratio', 0.30,
+    'min_baseline_impressions', 20,
+    'min_baseline_clicks', 5,
+    'notifications', 'anomalies_only'
+  )
+)
+on conflict (slug) do update set
+  name = excluded.name,
+  description = excluded.description,
+  category = excluded.category,
+  handler_key = excluded.handler_key,
+  enabled = excluded.enabled,
+  schedule_mode = excluded.schedule_mode,
+  timezone = excluded.timezone,
+  timeout_seconds = excluded.timeout_seconds,
+  max_retries = excluded.max_retries,
+  risk_level = excluded.risk_level,
+  requires_approval = excluded.requires_approval,
+  configuration_status = excluded.configuration_status,
+  config = excluded.config,
+  updated_at = now();

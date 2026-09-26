@@ -2,6 +2,7 @@ import "server-only";
 import { createAnalyticsAdminClient } from "@/lib/supabase/analytics-admin";
 import { runCoreWebVitalsMonitoring, runSearchConsoleMonitoring } from "@/lib/admin/automation/google-monitoring";
 import { runCrawlyAuthorityMonitoring } from "@/lib/admin/automation/crawly-monitoring";
+import { runAgencySeoSiteMonitoring } from "@/lib/seo/agency-client-monitoring";
 import { fetchPublicResource } from "@/lib/security/public-url";
 import { redactSecretText } from "@/lib/security/redaction";
 
@@ -107,6 +108,68 @@ async function securityHealth(): Promise<HandlerResult> {
   };
 }
 
+function numericConfig(task: AutomationTask, key: string, fallback: number) {
+  const value = Number(task.config?.[key]);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+async function agencySeoDailyMonitoring(task: AutomationTask): Promise<HandlerResult> {
+  const admin = createAnalyticsAdminClient();
+  if (!admin) throw new Error("Supabase service-role environment is unavailable.");
+  const maxSites = Math.max(1, Math.min(20, Math.round(numericConfig(task, "max_sites_per_run", 10))));
+  const thresholds = {
+    scoreDrop: numericConfig(task, "score_drop_threshold", 10),
+    searchDropRatio: numericConfig(task, "search_drop_ratio", 0.3),
+    minBaselineImpressions: numericConfig(task, "min_baseline_impressions", 20),
+    minBaselineClicks: numericConfig(task, "min_baseline_clicks", 5),
+  };
+
+  const { data: sites, error } = await admin.from("agency_seo_sites")
+    .select("id,organization_id,name,site_url")
+    .eq("active", true)
+    .order("updated_at", { ascending: true })
+    .limit(maxSites);
+  if (error) throw new Error(error.message);
+  if (!sites?.length) return { status: "skipped", summary: "No active Agency SEO client websites are configured.", output: { processed: 0 } };
+
+  const results: Array<Record<string, unknown>> = [];
+  for (const site of sites) {
+    try {
+      const result = await runAgencySeoSiteMonitoring({
+        organizationId: site.organization_id,
+        siteId: site.id,
+        trigger: "scheduled",
+        thresholds,
+      });
+      results.push({
+        siteId: result.siteId,
+        siteName: result.siteName,
+        score: result.score,
+        googleStatus: result.googleStatus,
+        bingStatus: result.bingStatus,
+        aiReady: result.aiReady,
+        anomalyCount: result.anomalyCount,
+        notificationCreated: result.notificationCreated,
+        status: "succeeded",
+      });
+    } catch (siteError) {
+      results.push({
+        siteId: site.id,
+        siteName: site.name,
+        status: "failed",
+        error: redactSecretText(siteError instanceof Error ? siteError.message : "Agency SEO client monitoring failed."),
+      });
+    }
+  }
+
+  const failed = results.filter((item) => item.status === "failed").length;
+  const alerts = results.filter((item) => item.notificationCreated === true).length;
+  return {
+    summary: `Agency SEO scheduled monitoring processed ${results.length} client site${results.length === 1 ? "" : "s"}; ${failed} failed; ${alerts} alert${alerts === 1 ? "" : "s"} created.`,
+    output: { processed: results.length, failed, alerts, maxSites, results },
+  };
+}
+
 async function configurationRequired(task: AutomationTask): Promise<HandlerResult> {
   const requiredProvider = typeof task.config?.required_integration === "string" ? task.config.required_integration : null;
   const requiredEnvironment = typeof task.config?.required_env === "string" ? task.config.required_env : null;
@@ -125,6 +188,7 @@ const handlers: Record<string, (task: AutomationTask) => Promise<HandlerResult>>
   core_web_vitals: (task) => runCoreWebVitalsMonitoring(task.config),
   search_index_monitoring: (task) => runSearchConsoleMonitoring(task.config),
   authority_monitoring: (task) => runCrawlyAuthorityMonitoring(task.config),
+  agency_seo_daily_monitoring: agencySeoDailyMonitoring,
 };
 
 export async function executeAutomationTask(taskId: string, triggerType: AutomationTrigger, initiatedBy?: string | null) {
