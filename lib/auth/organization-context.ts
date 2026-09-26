@@ -79,7 +79,7 @@ export function isOrganizationEntitlementActive(entitlement: OrganizationEntitle
 
 export type OrganizationContext = {
   supabase: Awaited<ReturnType<typeof createAuthServerClient>>;
-  user: { id: string; email?: string };
+  user: { id: string; email?: string; name?: string };
   organizationId: string;
   organization: OrganizationRow;
   role: string;
@@ -91,7 +91,7 @@ const organizationProfileFields = "id,name,slug,status,owner_user_id,legal_name,
 const organizationEntitlementFields = "organization_id,product_code,plan_code,status,starts_at,ends_at,ai_budget_limit,company_template_access,company_builder_enabled,agent_builder_enabled,agent_create_enabled,agent_clone_enabled,agent_archive_enabled,agent_structure_edit_enabled,workflow_edit_enabled,max_active_agents,max_departments,max_projects,support_tier,allowed_model_tiers,advanced_reasoning_enabled,preferred_cost_strategy,max_ai_context_tokens,max_ai_cost_per_request";
 
 async function legacyMembershipFallback(supabase: Awaited<ReturnType<typeof createAuthServerClient>>, userId: string) {
-  const { data: membershipData } = await supabase.from("organization_members").select("organization_id,role").eq("user_id", userId);
+  const { data: membershipData } = await supabase.from("organization_members").select("organization_id,role").eq("user_id", userId).eq("membership_status", "active");
   const membershipRows = (membershipData ?? []) as MembershipRow[];
   if (!membershipRows.length) return [];
   const organizationIds = [...new Set(membershipRows.map((row) => row.organization_id))];
@@ -127,10 +127,11 @@ async function resolveOrganizationContextUncached(): Promise<OrganizationContext
   ]);
   if (profileError && !organizationListError) console.error("organization_context_profile_query_failed", profileError);
   if (entitlementError && !organizationListError) console.error("organization_context_entitlement_query_failed", entitlementError);
+  const { data: customerProfile } = await supabase.from("customer_profiles").select("full_name").eq("user_id", user.id).maybeSingle();
   const organization = (profileData as OrganizationRow | null) ?? selectedMembership.organization;
   return {
     supabase,
-    user: { id: user.id, email: user.email ?? undefined },
+    user: { id: user.id, email: user.email ?? undefined, name: customerProfile?.full_name || user.email || "Signed-in user" },
     organizationId: selectedMembership.organization_id,
     organization,
     role: selectedMembership.role,

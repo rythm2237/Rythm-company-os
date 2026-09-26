@@ -1,0 +1,1 @@
+export default function Loading() { return <main className="admin-studio"><section className="admin-panel" role="status" aria-live="polite"><h1>Customer companies</h1><p>Loading authorized customer data…</p></section></main>; }

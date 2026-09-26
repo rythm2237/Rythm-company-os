@@ -36,6 +36,6 @@ export async function switchOrganization(formData: FormData) {
   });
 
   revalidatePath("/", "layout");
-  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/command-center";
+  const safeNext = next === "/command-center" ? next : "/command-center";
   redirect(safeNext);
 }

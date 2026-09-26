@@ -105,6 +105,8 @@ export default async function AppShell({ children }: Readonly<{ children: React.
     activeOrganizationId: organizationContext.organizationId,
     activeOrganizationName: organizationContext.organization.name,
     activeRole: organizationContext.role,
+    userName: organizationContext.user.name ?? organizationContext.user.email ?? "Signed-in user",
+    userEmail: organizationContext.user.email,
     productCode: organizationContext.entitlement?.product_code,
     entitlementStatus: organizationContext.entitlement?.status,
     organizations: organizationContext.memberships.map((membership) => ({ id: membership.organization_id, name: membership.organization.name, role: membership.role })),
@@ -116,7 +118,8 @@ export default async function AppShell({ children }: Readonly<{ children: React.
       <Suspense fallback={null}><BoardroomFocusBridge /></Suspense>
       <Suspense fallback={null}><DecisionDraftGuard /></Suspense>
       <div className="app-stage">
-        <div className="app-page-transition">{children}</div>
+        {organizationNavigation ? <div className="workspace-identity-bar" aria-label="Current account"><strong>{organizationNavigation.activeOrganizationName}</strong><span title={organizationNavigation.userEmail}>{organizationNavigation.userName} · {organizationNavigation.activeRole}</span></div> : null}
+        <div className="app-page-transition" key={organizationContext?.organizationId ?? "no-company"}>{children}</div>
         <footer className="workspace-footer" aria-label="RYTHM workspace footer">
           <div className="workspace-footer-inner">
             <div className="workspace-footer-brand"><strong>RYTHM Company OS</strong><span>Human-led AI company operating system.</span></div>

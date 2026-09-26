@@ -1,8 +1,9 @@
+import AgentLifecycleActions from "@/components/agents/AgentLifecycleActions";
 import Link from "next/link";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { getAgentProviderOptions } from "@/lib/agent-builder";
 import AgentBuilderWizard from "./AgentBuilderWizard";
-import { cloneAgent, setAgentStatus } from "./actions";
+import { cloneAgent } from "./actions";
 import { generateMasterAgent } from "./master-generate-actions";
 
 export const dynamic = "force-dynamic";
@@ -38,10 +39,12 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
   const entitlement = context.entitlement;
   const providers = getAgentProviderOptions();
 
-  const [{ data: agentData }, { data: departmentData }] = await Promise.all([
+  const [{ data: agentData, error: agentError }, { data: departmentData, error: departmentError }] = await Promise.all([
     context.supabase.from("agents").select("id,agent_code,name,role_title,purpose,authority_level,risk_ceiling,language,agent_status,external_actions_allowed,department_id,runtime_provider,runtime_model,professional_competency_level,mastery_status").eq("organization_id", context.organizationId).order("agent_code"),
     context.supabase.from("departments").select("id,name").eq("organization_id", context.organizationId).eq("status", "active").order("name"),
   ]);
+
+  if (agentError || departmentError) throw new Error("Agent Studio data could not be loaded. Please retry.");
 
   const agents = (agentData ?? []) as AgentRow[];
   const departments = (departmentData ?? []) as DepartmentRow[];
@@ -57,17 +60,14 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
       <p>A{agent.authority_level} · {agent.risk_ceiling} risk · {agent.language}</p>
       <p>Competency: <strong>{agent.mastery_status === "verified" ? "Master-level verified" : agent.professional_competency_level ?? "foundation"}</strong></p>
       <p>Brain: <strong>{agent.runtime_provider ?? "OpenAI"}</strong>{agent.runtime_model ? ` · ${agent.runtime_model}` : ""}</p>
-      <p>Status: <strong>{agent.agent_status}</strong></p>
+      <p>Status: <strong>{agent.agent_status === "paused" ? "Disabled" : agent.agent_status}</strong></p>
       <p>External actions: <strong>{agent.external_actions_allowed ? "Allowed" : "Disabled"}</strong></p>
       <p>
         {agent.agent_status !== "archived" ? <><Link href={`/agents/${agent.agent_code.toLowerCase()}`}><strong>Open profile</strong></Link> · <Link href={`/studio/agents/${agent.id}/run`}>Chat / Run</Link> · </> : null}
         <Link href={`/studio/agents/${agent.id}`}>Edit Agent</Link>
       </p>
-      {agent.agent_status !== "archived" ? <div>
-        <form action={setAgentStatus}><input type="hidden" name="agentId" value={agent.id} /><input type="hidden" name="status" value={agent.agent_status === "enabled" ? "paused" : "enabled"} /><button type="submit">{agent.agent_status === "enabled" ? "Pause" : "Enable"}</button></form>
-        {entitlement.agent_clone_enabled ? <form action={cloneAgent}><input type="hidden" name="agentId" value={agent.id} /><button type="submit">Clone</button></form> : null}
-        {entitlement.agent_archive_enabled ? <form action={setAgentStatus}><input type="hidden" name="agentId" value={agent.id} /><input type="hidden" name="status" value="archived" /><button type="submit">Archive</button></form> : null}
-      </div> : null}
+      <AgentLifecycleActions agentId={agent.id} name={agent.name} status={agent.agent_status} canArchive={entitlement.agent_archive_enabled} organizationId={context.organizationId} />
+      {agent.agent_status !== "archived" && entitlement.agent_clone_enabled ? <form action={cloneAgent}><input type="hidden" name="agentId" value={agent.id}/><button type="submit">Clone</button></form> : null}
     </article>
   );
 
@@ -76,7 +76,7 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
       <section className="panel">
         <p className="eyebrow">RYTHM COMPANY STUDIO</p>
         <h1>Agent Studio</h1>
-        <p><strong>One workforce, two views.</strong> The <Link href="/agents">Workforce directory</Link> is the operational view for tasks, profiles and knowledge. Agent Studio manages the same organization&apos;s Agent lifecycle: create, edit, pause, clone and archive.</p>
+        <p><strong>One workforce, two views.</strong> The <Link href="/agents">Workforce directory</Link> is the operational view for tasks, profiles and knowledge. Agent Studio manages the same organization&apos;s Agent lifecycle: create, edit, enable, disable, clone, archive and restore.</p>
         <p>Active/non-archived Agents shown below are the same workforce exposed in the operational directory. Archived records are kept separately for lifecycle administration.</p>
         <p>Build a governed AI specialist. Generate resolves the position and expertise, provisions trusted professional knowledge, verifies the RYTHM Master-level Professional Competency Benchmark, and connects the Agent to the company&apos;s live document memory.</p>
         <p><strong>Master-level</strong> is an internal professional capability benchmark. It is not an academic degree, professional license, or regulated credential.</p>
