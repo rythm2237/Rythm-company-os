@@ -10,6 +10,8 @@ import { redactSecretText } from "@/lib/security/redaction";
 
 const PATH = "/agency/seo";
 const PROVIDERS = new Set(["google_search_console", "bing_webmaster"]);
+type OrganizationContext = Awaited<ReturnType<typeof requireOrganizationContext>>;
+type OrganizationSupabase = OrganizationContext["supabase"];
 
 function normalizeSiteUrl(raw: string) {
   const value = raw.trim();
@@ -21,6 +23,76 @@ function normalizeSiteUrl(raw: string) {
   url.search = "";
   url.pathname = "";
   return url.toString().replace(/\/$/, "");
+}
+
+function normalizeHost(value: string) {
+  return value.trim().toLowerCase().replace(/^www\./, "").replace(/\.$/, "");
+}
+
+function resourceMatchesSite(providerKey: string, resourceId: string, siteUrl: string) {
+  const siteHost = normalizeHost(new URL(siteUrl).hostname);
+  if (providerKey === "google_search_console" && resourceId.toLowerCase().startsWith("sc-domain:")) {
+    return normalizeHost(resourceId.slice("sc-domain:".length)) === siteHost;
+  }
+  try {
+    return normalizeHost(new URL(resourceId).hostname) === siteHost;
+  } catch {
+    return false;
+  }
+}
+
+async function autoBindMatchingProviders({
+  supabase,
+  organizationId,
+  userId,
+  siteId,
+  siteUrl,
+}: {
+  supabase: OrganizationSupabase;
+  organizationId: string;
+  userId: string;
+  siteId: string;
+  siteUrl: string;
+}) {
+  const [{ data: existing, error: existingError }, { data: resources, error: resourcesError }] = await Promise.all([
+    supabase.from("agency_seo_provider_bindings")
+      .select("provider_key,integration_resource_id")
+      .eq("organization_id", organizationId)
+      .eq("site_id", siteId),
+    supabase.from("integration_resources")
+      .select("id,provider_key,resource_id,available,last_verified_at")
+      .eq("organization_id", organizationId)
+      .eq("available", true)
+      .in("provider_key", ["google_search_console", "bing_webmaster"]),
+  ]);
+  if (existingError) throw new Error(existingError.message);
+  if (resourcesError) throw new Error(resourcesError.message);
+
+  const existingProviders = new Set((existing ?? []).map((item) => item.provider_key));
+  const candidates = [...(resources ?? [])].sort((a, b) => {
+    const aTime = a.last_verified_at ? new Date(a.last_verified_at).getTime() : 0;
+    const bTime = b.last_verified_at ? new Date(b.last_verified_at).getTime() : 0;
+    return bTime - aTime;
+  });
+  const connected: string[] = [];
+
+  for (const providerKey of ["google_search_console", "bing_webmaster"] as const) {
+    if (existingProviders.has(providerKey)) continue;
+    const match = candidates.find((resource) => resource.provider_key === providerKey && resourceMatchesSite(providerKey, resource.resource_id, siteUrl));
+    if (!match) continue;
+
+    const { error } = await supabase.from("agency_seo_provider_bindings").upsert({
+      organization_id: organizationId,
+      site_id: siteId,
+      provider_key: providerKey,
+      integration_resource_id: match.id,
+      created_by_user_id: userId,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "site_id,provider_key" });
+    if (error) throw new Error(error.message);
+    connected.push(providerKey);
+  }
+  return connected;
 }
 
 function destination(siteId?: string | null, key: "message" | "error" = "message", value?: string) {
@@ -64,8 +136,13 @@ export async function createAgencySeoSite(formData: FormData) {
       created_by_user_id: user.id,
     }).select("id").single();
     if (error || !site) throw new Error(error?.message || "SEO site could not be created.");
+
+    const connected = await autoBindMatchingProviders({ supabase, organizationId, userId: user.id, siteId: site.id, siteUrl });
+    const labels = connected.map((providerKey) => providerKey === "google_search_console" ? "Google Search Console" : "Bing Webmaster");
     revalidatePath(PATH);
-    target = destination(site.id, "message", "Client website added. Bind provider properties, then run monitoring.");
+    target = destination(site.id, "message", labels.length
+      ? `Client website added. ${labels.join(" + ")} connected automatically. Analyze the website when ready.`
+      : "Client website added. RYTHM will automatically connect matching search providers when they become available.");
   } catch (error) {
     target = destination(null, "error", redactSecretText(error instanceof Error ? error.message : "Client website could not be created."));
   }
@@ -108,7 +185,7 @@ export async function bindAgencySeoProvider(formData: FormData) {
       }, { onConflict: "site_id,provider_key" });
       if (error) throw new Error(error.message);
       revalidatePath(PATH);
-      target = destination(siteId, "message", `${providerKey === "google_search_console" ? "Google Search Console" : "Bing Webmaster"} property bound to this client.`);
+      target = destination(siteId, "message", `${providerKey === "google_search_console" ? "Google Search Console" : "Bing Webmaster"} connection updated.`);
     }
   } catch (error) {
     target = destination(siteId, "error", redactSecretText(error instanceof Error ? error.message : "Provider binding failed."));
@@ -128,6 +205,8 @@ export async function runAgencySeoMonitoring(formData: FormData) {
       .maybeSingle();
     if (siteError || !site) throw new Error("Client website was not found.");
     if (!site.active) throw new Error("This client website is archived.");
+
+    await autoBindMatchingProviders({ supabase, organizationId, userId: user.id, siteId, siteUrl: site.site_url });
 
     const { data: bindings, error: bindingError } = await supabase.from("agency_seo_provider_bindings")
       .select("provider_key,integration_resource_id")
@@ -199,7 +278,7 @@ export async function runAgencySeoMonitoring(formData: FormData) {
 
     revalidatePath(PATH);
     const providerLabel = [providerEvidence.google.status === "connected" ? "Google" : null, providerEvidence.bing.status === "connected" ? "Bing" : null].filter(Boolean).join(" + ") || "technical-only";
-    target = destination(siteId, "message", `Monitoring completed: ${snapshot.score}/100 · ${providerLabel}${aiReasoning ? " · AI analysis ready" : " · deterministic analysis ready"}.`);
+    target = destination(siteId, "message", `Analysis completed: ${snapshot.score}/100 · ${providerLabel}${aiReasoning ? " · AI insights ready" : " · deterministic insights ready"}.`);
   } catch (error) {
     target = destination(siteId, "error", redactSecretText(error instanceof Error ? error.message : "Client SEO monitoring failed."));
   }
