@@ -6,6 +6,7 @@ const REQUEST_TIMEOUT_MS = 10_000;
 
 export type SeoCheckStatus = "pass" | "warning" | "fail" | "unavailable";
 export type SeoCheckCategory = "availability" | "indexing" | "crawl" | "metadata" | "structured_data" | "discovery";
+export type SeoMonitoringOptions = { includeIndexNow?: boolean };
 
 export type SeoCheck = {
   id: string;
@@ -78,9 +79,10 @@ function counts(checks: SeoCheck[]): Record<SeoCheckStatus, number> {
   );
 }
 
-export async function runSeoMonitoringEngine(site = DEFAULT_SITE): Promise<SeoMonitoringSnapshot> {
+export async function runSeoMonitoringEngine(site = DEFAULT_SITE, options: SeoMonitoringOptions = {}): Promise<SeoMonitoringSnapshot> {
   const started = Date.now();
   const parsedSite = new URL(site);
+  if (!['http:', 'https:'].includes(parsedSite.protocol)) throw new Error("SEO monitoring only supports HTTP(S) sites.");
   const origin = parsedSite.origin;
   const allowedHost = parsedSite.hostname;
   const checks: SeoCheck[] = [];
@@ -122,11 +124,13 @@ export async function runSeoMonitoringEngine(site = DEFAULT_SITE): Promise<SeoMo
     checks.push({ id: "sitemap.http", category: "indexing", status: "unavailable", title: "XML sitemap", detail: error instanceof Error ? error.message : "Sitemap could not be checked.", url: `${origin}/sitemap.xml` });
   }
 
-  try {
-    const key = await verifyIndexNowKey();
-    checks.push({ id: "indexnow.key", category: "discovery", status: key.verified ? "pass" : "fail", title: "IndexNow ownership", detail: key.verified ? `Ownership key verified with HTTP ${key.status}.` : `Ownership key verification returned HTTP ${key.status || "unreachable"}.`, metric: key.status });
-  } catch (error) {
-    checks.push({ id: "indexnow.key", category: "discovery", status: "unavailable", title: "IndexNow ownership", detail: error instanceof Error ? error.message : "IndexNow ownership could not be checked." });
+  if (options.includeIndexNow !== false) {
+    try {
+      const key = await verifyIndexNowKey();
+      checks.push({ id: "indexnow.key", category: "discovery", status: key.verified ? "pass" : "fail", title: "IndexNow ownership", detail: key.verified ? `Ownership key verified with HTTP ${key.status}.` : `Ownership key verification returned HTTP ${key.status || "unreachable"}.`, metric: key.status });
+    } catch (error) {
+      checks.push({ id: "indexnow.key", category: "discovery", status: "unavailable", title: "IndexNow ownership", detail: error instanceof Error ? error.message : "IndexNow ownership could not be checked." });
+    }
   }
 
   return { version: "seo-monitor-v1", site: origin, checkedAt: new Date().toISOString(), durationMs: Date.now() - started, score: scoreChecks(checks), counts: counts(checks), checks };
