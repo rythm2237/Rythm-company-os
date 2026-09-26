@@ -3,9 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOrganizationContext } from "@/lib/auth/organization-context";
-import { collectSeoProviderEvidence } from "@/lib/integrations/adapters/seo-provider-analytics";
-import { runSeoAiReasoning, runSeoIntelligenceAgent } from "@/lib/seo/intelligence-agent";
-import { runSeoMonitoringEngine } from "@/lib/seo/monitoring-engine";
+import { runAgencySeoSiteMonitoring } from "@/lib/seo/agency-client-monitoring";
 import { redactSecretText } from "@/lib/security/redaction";
 
 const PATH = "/agency/seo";
@@ -194,91 +192,15 @@ export async function bindAgencySeoProvider(formData: FormData) {
 }
 
 export async function runAgencySeoMonitoring(formData: FormData) {
-  const { supabase, organizationId, user } = await requireOrganizationContext();
+  const { organizationId, user } = await requireOrganizationContext();
   const siteId = String(formData.get("siteId") ?? "").trim();
   let target = destination(siteId);
   try {
-    const { data: site, error: siteError } = await supabase.from("agency_seo_sites")
-      .select("id,name,site_url,crm_account_id,active")
-      .eq("organization_id", organizationId)
-      .eq("id", siteId)
-      .maybeSingle();
-    if (siteError || !site) throw new Error("Client website was not found.");
-    if (!site.active) throw new Error("This client website is archived.");
-
-    await autoBindMatchingProviders({ supabase, organizationId, userId: user.id, siteId, siteUrl: site.site_url });
-
-    const { data: bindings, error: bindingError } = await supabase.from("agency_seo_provider_bindings")
-      .select("provider_key,integration_resource_id")
-      .eq("organization_id", organizationId)
-      .eq("site_id", siteId);
-    if (bindingError) throw new Error(bindingError.message);
-
-    const resourceIds = (bindings ?? []).map((item) => item.integration_resource_id);
-    const resourcesResult = resourceIds.length
-      ? await supabase.from("integration_resources").select("id,provider_key,resource_id,available").eq("organization_id", organizationId).in("id", resourceIds)
-      : { data: [], error: null };
-    if (resourcesResult.error) throw new Error(resourcesResult.error.message);
-    const resources = resourcesResult.data ?? [];
-    const googleBinding = (bindings ?? []).find((item) => item.provider_key === "google_search_console");
-    const bingBinding = (bindings ?? []).find((item) => item.provider_key === "bing_webmaster");
-    const googleResource = resources.find((item) => item.id === googleBinding?.integration_resource_id && item.available);
-    const bingResource = resources.find((item) => item.id === bingBinding?.integration_resource_id && item.available);
-
-    const [snapshot, providerEvidence] = await Promise.all([
-      runSeoMonitoringEngine(site.site_url, { includeIndexNow: false }),
-      collectSeoProviderEvidence({
-        organizationId,
-        siteUrl: `${site.site_url.replace(/\/$/, "")}/`,
-        googleProperty: googleResource?.resource_id ?? null,
-        bingSite: bingResource?.resource_id ?? null,
-      }),
-    ]);
-    const intelligence = runSeoIntelligenceAgent(snapshot);
-
-    let aiReasoning: Awaited<ReturnType<typeof runSeoAiReasoning>> | null = null;
-    let aiReasoningError: string | null = null;
-    try {
-      aiReasoning = await runSeoAiReasoning({ organizationId, actorUserId: user.id, snapshot, deterministicReport: intelligence, providerEvidence });
-    } catch (error) {
-      aiReasoningError = redactSecretText(error instanceof Error ? error.message : "AI reasoning was unavailable.");
-    }
-
-    const { error: saveError } = await supabase.from("agency_seo_snapshots").insert({
-      organization_id: organizationId,
-      site_id: siteId,
-      checked_at: snapshot.checkedAt,
-      duration_ms: snapshot.durationMs,
-      score: snapshot.score,
-      counts: snapshot.counts,
-      checks: snapshot.checks,
-      provider_evidence: providerEvidence,
-      intelligence_summary: intelligence.summary,
-      findings: intelligence.findings,
-      guardrails: intelligence.guardrails,
-      ai_reasoning: aiReasoning?.outputText ?? null,
-      ai_correlation_id: aiReasoning?.correlationId ?? null,
-      ai_routing_mode: aiReasoning?.routingMode ?? null,
-      ai_model: aiReasoning?.model ?? null,
-      ai_reasoning_error: aiReasoningError,
-      created_by_user_id: user.id,
-    });
-    if (saveError) throw new Error(`SEO snapshot could not be saved: ${saveError.message}`);
-
-    await supabase.from("audit_events").insert({
-      organization_id: organizationId,
-      actor_type: "user",
-      actor_user_id: user.id,
-      event_type: "agency.seo_monitoring_run",
-      object_type: "agency_seo_site",
-      object_id: siteId,
-      risk_level: "low",
-      payload: { crm_account_id: site.crm_account_id, site: snapshot.site, score: snapshot.score, google: providerEvidence.google.status, bing: providerEvidence.bing.status, ai: Boolean(aiReasoning) },
-    });
-
+    if (!siteId) throw new Error("Client website was not found.");
+    const result = await runAgencySeoSiteMonitoring({ organizationId, siteId, actorUserId: user.id, trigger: "manual" });
     revalidatePath(PATH);
-    const providerLabel = [providerEvidence.google.status === "connected" ? "Google" : null, providerEvidence.bing.status === "connected" ? "Bing" : null].filter(Boolean).join(" + ") || "technical-only";
-    target = destination(siteId, "message", `Analysis completed: ${snapshot.score}/100 · ${providerLabel}${aiReasoning ? " · AI insights ready" : " · deterministic insights ready"}.`);
+    const providerLabel = [result.googleStatus === "connected" ? "Google" : null, result.bingStatus === "connected" ? "Bing" : null].filter(Boolean).join(" + ") || "technical-only";
+    target = destination(siteId, "message", `Analysis completed: ${result.score}/100 · ${providerLabel}${result.aiReady ? " · AI insights ready" : " · deterministic insights ready"}.`);
   } catch (error) {
     target = destination(siteId, "error", redactSecretText(error instanceof Error ? error.message : "Client SEO monitoring failed."));
   }
