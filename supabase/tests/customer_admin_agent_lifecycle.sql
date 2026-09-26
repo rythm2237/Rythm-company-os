@@ -57,11 +57,18 @@ do $$ declare inventory jsonb; detail jsonb; begin
  inventory:=public.platform_customer_list_v1('Customer isolation test');
  if (inventory->>'total')::integer<>2 then raise exception 'FAIL customer inventory count'; end if;
  detail:=public.platform_customer_detail_v1('b1000000-0000-4000-8000-000000000001');
- if jsonb_array_length(detail->'users')<>2 or jsonb_array_length(detail->'agents')<>2 then raise exception 'FAIL detail counts'; end if;
- if not exists(select 1 from jsonb_array_elements(detail->'agents') a where a->>'name'='Updated Agent') then raise exception 'FAIL agent name'; end if;
- if detail::text ~ 'vault_secret_id|encrypted_password|refresh_token|system_instructions' then raise exception 'FAIL sensitive field exposure'; end if;
+ if (detail->'counts'->>'users')::integer<>2 or (detail->'counts'->>'agents')::integer<>2 then raise exception 'FAIL detail counts'; end if;
+ if jsonb_array_length(detail->'users')<>0 or jsonb_array_length(detail->'agents')<>0 or jsonb_array_length(detail->'activity')<>0 or jsonb_array_length(detail->'integrations')<>0 or jsonb_array_length(detail->'billing')<>0 then raise exception 'FAIL private detail arrays'; end if;
+ if (detail->'company') - array['id','name','status','created_at'] <> '{}'::jsonb then raise exception 'FAIL company field allowlist'; end if;
+ if exists(select 1 from jsonb_array_elements(inventory->'items') i where i - array['id','name','status','created_at','plan_code','product_code','entitlement_status','user_count','agent_count','active_agent_count','integration_count'] <> '{}'::jsonb) then raise exception 'FAIL inventory field allowlist'; end if;
+ if (public.platform_customer_list_v1('owner-customer-test@example.invalid')->>'total')::integer<>0 then raise exception 'FAIL private email search oracle'; end if;
+ if detail::text ~ 'owner-customer-test|Updated Agent|Updated lifecycle purpose|owner_user_id|primary_email|primary_phone|mission|vision|creator_id|actor_user_id|vault_secret_id|encrypted_password|refresh_token|system_instructions' then raise exception 'FAIL sensitive field exposure'; end if;
+
 end $$;
 reset role;
+do $$ begin
+ if not exists(select 1 from public.audit_events where organization_id='b1000000-0000-4000-8000-000000000001' and event_type='platform.customer_detail_viewed') then raise exception 'FAIL platform read audit'; end if;
+end $$;
 -- A second membership verifies switch/refetch authorization. Inactive membership is rejected.
 insert into public.organization_members(organization_id,user_id,role,membership_status) values('b1000000-0000-4000-8000-000000000002','a1000000-0000-4000-8000-000000000001','viewer','active');
 set local role authenticated;
