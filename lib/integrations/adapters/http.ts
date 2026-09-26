@@ -1,4 +1,4 @@
-import { validatePublicHttpUrl } from "@/lib/security/public-url";
+import { fetchPublicResource, validatePublicHttpUrl } from "@/lib/security/public-url";
 import {
   IntegrationExecutionError,
   normalizeExecutionError,
@@ -60,6 +60,34 @@ export async function executeTextRequest(
   timeoutMs: number,
 ) {
   return executeRequest(url, init, timeoutMs);
+}
+
+export async function executePublicTextRequest(
+  url: string | URL,
+  allowedHosts: string[],
+  init: Pick<RequestInit, "headers">,
+  timeoutMs: number,
+) {
+  try {
+    const { response, bytes } = await fetchPublicResource(url, {
+      allowedHosts,
+      headers: init.headers,
+      timeoutMs,
+      maxRedirects: 4,
+      maxBytes: 1_500_000,
+    });
+    return { response, text: new TextDecoder().decode(bytes) };
+  } catch (error) {
+    if (error instanceof IntegrationExecutionError) throw error;
+    const normalized = normalizeExecutionError(error);
+    throw new IntegrationExecutionError(
+      normalized.sanitizedError,
+      normalized.errorClass,
+      normalized.retryable,
+      normalized.uncertainCompletion,
+      normalized.statusCode ?? undefined,
+    );
+  }
 }
 
 export async function executeJsonRequest(
