@@ -87,29 +87,29 @@ export async function bindAgencySeoProvider(formData: FormData) {
       const { error } = await supabase.from("agency_seo_provider_bindings").delete().eq("organization_id", organizationId).eq("site_id", siteId).eq("provider_key", providerKey);
       if (error) throw new Error(error.message);
       revalidatePath(PATH);
-      redirect(destination(siteId, "message", "Provider binding removed."));
+      target = destination(siteId, "message", "Provider binding removed.");
+    } else {
+      const { data: resource } = await supabase.from("integration_resources")
+        .select("id,provider_key,available")
+        .eq("organization_id", organizationId)
+        .eq("id", resourceId)
+        .eq("provider_key", providerKey)
+        .eq("available", true)
+        .maybeSingle();
+      if (!resource) throw new Error("The selected provider resource is not verified or does not belong to this organization.");
+
+      const { error } = await supabase.from("agency_seo_provider_bindings").upsert({
+        organization_id: organizationId,
+        site_id: siteId,
+        provider_key: providerKey,
+        integration_resource_id: resourceId,
+        created_by_user_id: user.id,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "site_id,provider_key" });
+      if (error) throw new Error(error.message);
+      revalidatePath(PATH);
+      target = destination(siteId, "message", `${providerKey === "google_search_console" ? "Google Search Console" : "Bing Webmaster"} property bound to this client.`);
     }
-
-    const { data: resource } = await supabase.from("integration_resources")
-      .select("id,provider_key,available")
-      .eq("organization_id", organizationId)
-      .eq("id", resourceId)
-      .eq("provider_key", providerKey)
-      .eq("available", true)
-      .maybeSingle();
-    if (!resource) throw new Error("The selected provider resource is not verified or does not belong to this organization.");
-
-    const { error } = await supabase.from("agency_seo_provider_bindings").upsert({
-      organization_id: organizationId,
-      site_id: siteId,
-      provider_key: providerKey,
-      integration_resource_id: resourceId,
-      created_by_user_id: user.id,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "site_id,provider_key" });
-    if (error) throw new Error(error.message);
-    revalidatePath(PATH);
-    target = destination(siteId, "message", `${providerKey === "google_search_console" ? "Google Search Console" : "Bing Webmaster"} property bound to this client.`);
   } catch (error) {
     target = destination(siteId, "error", redactSecretText(error instanceof Error ? error.message : "Provider binding failed."));
   }
