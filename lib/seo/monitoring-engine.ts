@@ -1,4 +1,4 @@
-import { executeTextRequest, secureProviderUrl } from "@/lib/integrations/adapters/http";
+import { executePublicTextRequest } from "@/lib/integrations/adapters/http";
 import { verifyIndexNowKey } from "@/lib/integrations/adapters/indexnow";
 
 const DEFAULT_SITE = "https://rythm-os.com";
@@ -29,8 +29,7 @@ export type SeoMonitoringSnapshot = {
 };
 
 async function fetchText(url: string, allowedHost: string) {
-  const secured = await secureProviderUrl(url, [allowedHost]);
-  return executeTextRequest(secured, { headers: { "user-agent": "RYTHM-SEO-Monitor/1.0" } }, REQUEST_TIMEOUT_MS);
+  return executePublicTextRequest(url, [allowedHost], { headers: { "user-agent": "RYTHM-SEO-Monitor/1.0" } }, REQUEST_TIMEOUT_MS);
 }
 
 function canonicalFromHtml(html: string) {
@@ -82,7 +81,7 @@ function counts(checks: SeoCheck[]): Record<SeoCheckStatus, number> {
 export async function runSeoMonitoringEngine(site = DEFAULT_SITE, options: SeoMonitoringOptions = {}): Promise<SeoMonitoringSnapshot> {
   const started = Date.now();
   const parsedSite = new URL(site);
-  if (!['http:', 'https:'].includes(parsedSite.protocol)) throw new Error("SEO monitoring only supports HTTP(S) sites.");
+  if (!["http:", "https:"].includes(parsedSite.protocol)) throw new Error("SEO monitoring only supports HTTP(S) sites.");
   const origin = parsedSite.origin;
   const allowedHost = parsedSite.hostname;
   const checks: SeoCheck[] = [];
