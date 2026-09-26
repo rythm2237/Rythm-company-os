@@ -30,7 +30,10 @@ const groups = [
     { label: "Templates", href: "/studio/templates", icon: "▦" },
     { label: "Company Builder", href: "/studio/builder", icon: "⌘" },
   ]},
-  { label: "Grow", items: [{ label: "CRM & Sales", href: "/crm", icon: "↗" }]},
+  { label: "Grow", items: [
+    { label: "CRM & Sales", href: "/crm", icon: "↗" },
+    { label: "Agency SEO", href: "/agency/seo", icon: "⌕" },
+  ]},
   { label: "Govern", items: [
     { label: "Ideas", href: "/ideas", icon: "◎" },
     { label: "Boardroom", href: "/meetings/room", icon: "◉" },
