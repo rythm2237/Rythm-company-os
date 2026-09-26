@@ -20,7 +20,7 @@ export async function secureProviderUrl(
   return validatePublicHttpUrl(url, { allowedHosts });
 }
 
-export async function executeJsonRequest(
+async function executeRequest(
   url: URL,
   init: RequestInit,
   timeoutMs: number,
@@ -38,18 +38,7 @@ export async function executeJsonRequest(
       redirect: "error",
     });
     const text = await response.text();
-    let body: unknown = null;
-    try {
-      body = text ? JSON.parse(text) : null;
-    } catch {
-      body = text.slice(0, 2_000);
-    }
-    if (!response.ok)
-      throw normalizeHttpError(
-        response.status,
-        response.headers.get("retry-after"),
-      );
-    return body;
+    return { response, text };
   } catch (error) {
     if (error instanceof IntegrationExecutionError) throw error;
     const normalized = normalizeExecutionError(error);
@@ -63,6 +52,34 @@ export async function executeJsonRequest(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function executeTextRequest(
+  url: URL,
+  init: RequestInit,
+  timeoutMs: number,
+) {
+  return executeRequest(url, init, timeoutMs);
+}
+
+export async function executeJsonRequest(
+  url: URL,
+  init: RequestInit,
+  timeoutMs: number,
+) {
+  const { response, text } = await executeRequest(url, init, timeoutMs);
+  let body: unknown = null;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = text.slice(0, 2_000);
+  }
+  if (!response.ok)
+    throw normalizeHttpError(
+      response.status,
+      response.headers.get("retry-after"),
+    );
+  return body;
 }
 
 export function requireAdapterFields(
