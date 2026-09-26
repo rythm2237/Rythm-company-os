@@ -283,7 +283,7 @@ export async function runAgentConsole(input: RunConsoleInput) {
   const prompt = String(input.prompt ?? "").trim().slice(0, 12000); if (!prompt) return { ok: false as const, error: "Enter a message or task first." };
   try {
     const { context, agent } = await getAgent(input.agentId);
-    if (agent.agent_status === "archived") return { ok: false as const, error: "Archived Agents cannot be run." };
+    if (agent.agent_status !== "enabled") return { ok: false as const, error: "This Agent is disabled or archived. Enable it in Agent Studio before running." };
     if (agent.provisioning_status !== "ready") return { ok: false as const, error: "This Agent is not ready. Professional knowledge provisioning must complete before it can run." };
     if (!agent.system_instructions?.trim()) return { ok: false as const, error: "This Agent has no generated system instruction yet." };
     if (!agent.runtime_model) return { ok: false as const, error: "This Agent has no legacy fallback runtime model configured." };

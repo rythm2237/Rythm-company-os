@@ -165,9 +165,11 @@ export async function retryAgentProvisioning(formData: FormData) {
 export async function updateAgent(formData: FormData) {
   const context = await requireActiveOwnerOrganizationContext();
   const agentId = String(formData.get("agentId") ?? "");
+  if (!agentId || !/^[0-9a-f-]{36}$/i.test(agentId)) redirect("/studio/agents?error=Invalid%20Agent.");
   const newRoleTitle = String(formData.get("roleTitle") ?? "").trim();
   const { data: currentAgent } = await context.supabase.from("agents").select("role_title,template_version")
     .eq("organization_id", context.organizationId).eq("id", agentId).maybeSingle();
+  if (!currentAgent) redirect("/studio/agents?error=Agent%20not%20found%20in%20this%20company.");
   const { error } = await context.supabase.rpc("update_agent_v1", {
     target_agent_id: agentId, target_name: String(formData.get("name") ?? ""), target_role_title: newRoleTitle,
     target_purpose: String(formData.get("purpose") ?? ""), target_department_id: String(formData.get("departmentId") ?? "") || null,
@@ -202,14 +204,19 @@ export async function updateAgent(formData: FormData) {
 export async function setAgentStatus(formData: FormData) {
   const agentId = String(formData.get("agentId") ?? ""); const status = String(formData.get("status") ?? "paused");
   const context = await requireActiveOwnerOrganizationContext();
+  if (String(formData.get("organizationId") ?? "") !== context.organizationId) redirect("/studio/agents?error=Company%20context%20changed.%20Refresh%20and%20retry.");
+  const { data: target } = await context.supabase.from("agents").select("id").eq("organization_id", context.organizationId).eq("id", agentId).maybeSingle();
+  if (!target) redirect("/studio/agents?error=Agent%20not%20found%20in%20this%20company.");
   const { error } = await context.supabase.rpc("set_agent_status_v1", { target_agent_id: agentId, target_status: status });
   if (error) redirect(`/studio/agents?error=${encodeURIComponent(safeError(error))}`);
-  revalidatePath("/studio/agents"); revalidatePath("/agents");
+  revalidatePath("/studio/agents"); revalidatePath("/agents"); revalidatePath(`/studio/agents/${agentId}`); revalidatePath("/admin/customers", "layout");
   redirect(`/studio/agents?message=${encodeURIComponent(`Agent status changed to ${status}.`)}`);
 }
 
 export async function cloneAgent(formData: FormData) {
   const context = await requireActiveOwnerOrganizationContext(); const agentId = String(formData.get("agentId") ?? "");
+  const { data: target } = await context.supabase.from("agents").select("id").eq("organization_id", context.organizationId).eq("id", agentId).maybeSingle();
+  if (!target) redirect("/studio/agents?error=Agent%20not%20found%20in%20this%20company.");
   const { error } = await context.supabase.rpc("clone_agent_v1", { target_agent_id: agentId });
   if (error) redirect(`/studio/agents?error=${encodeURIComponent(safeError(error))}`);
   revalidatePath("/studio/agents"); revalidatePath("/agents");

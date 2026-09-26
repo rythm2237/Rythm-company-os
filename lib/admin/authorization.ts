@@ -1,7 +1,8 @@
 import "server-only";
+import { cache } from "react";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
-export async function getPlatformAdminContext() {
+export const getPlatformAdminContext = cache(async function getPlatformAdminContext() {
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -9,7 +10,7 @@ export async function getPlatformAdminContext() {
   const { data: allowed, error } = await supabase.rpc("is_platform_admin");
   if (error || allowed !== true) return null;
   return { supabase, user };
-}
+});
 
 export async function requirePlatformAdmin() {
   const context = await getPlatformAdminContext();

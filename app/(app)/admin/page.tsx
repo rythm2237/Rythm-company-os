@@ -36,6 +36,7 @@ export default async function AdminStudioPage() {
       </section>
 
       <section className="admin-grid">
+        <Link href="/admin/customers" className="admin-module"><span>CUSTOMERS</span><h2>Customer Companies</h2><p>Inspect customer accounts, owners, users, agents, products and recorded activity.</p><strong>Manage customers →</strong></Link>
         <Link href="/admin/automation" className="admin-module"><span>AUTOMATION</span><h2>Automation Center</h2><p>Run tasks now, schedule recurring self-monitoring, inspect history and keep external dependencies explicit.</p><strong>Manage automation →</strong></Link>
         <article className="admin-module"><span>PLATFORM</span><h2>System Health</h2><p>Database, production endpoint and internal operational health checks are available as automation tasks.</p><strong>Controlled through Automation Center</strong></article>
         <Link href="/admin/seo/indexnow" className="admin-module"><span>SEARCH</span><h2>SEO / GEO / AEO</h2><p>Canonical, robots, sitemap and key-page monitoring run natively. IndexNow can now be verified and submitted directly from Admin Studio.</p><strong>Open IndexNow →</strong></Link>

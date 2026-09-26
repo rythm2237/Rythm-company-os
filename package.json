@@ -38,7 +38,8 @@
     "test:ai-workspace": "node --import tsx scripts/validate-rythm-ai-workspace.ts",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",
-    "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts"
+    "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts",
+    "test:customers": "node --import tsx scripts/validate-customer-management.tsx"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

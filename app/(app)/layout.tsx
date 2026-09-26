@@ -6,6 +6,7 @@ import GoogleWorkspaceConnectEnhancer from "@/components/integrations/GoogleWork
 import ActiveWorkspaceGuide from "@/components/onboarding/ActiveWorkspaceGuide";
 import ProjectExecutiveSignalEnhancer from "@/components/projects/ProjectExecutiveSignalEnhancer";
 import "../mobile-workspace.css";
+import "../customer-management.css";
 import "../mobile-navigation-footer.css";
 import "../workspace-form-hardening.css";
 import "../communication-center.css";

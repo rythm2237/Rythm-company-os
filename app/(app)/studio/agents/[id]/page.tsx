@@ -1,3 +1,4 @@
+import AgentLifecycleActions from "@/components/agents/AgentLifecycleActions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
@@ -46,6 +47,10 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
 
   if (!agentData) notFound();
   const agent = agentData as AgentRow;
+  const [history, usage] = await Promise.all([
+    context.supabase.from("audit_events").select("id,event_type,created_at").eq("organization_id", context.organizationId).eq("object_id", agent.id).order("created_at", { ascending: false }).limit(30),
+    context.supabase.from("agent_runs").select("id", { count: "exact", head: true }).eq("organization_id", context.organizationId).eq("agent_id", agent.id),
+  ]);
   const departments = (departmentData ?? []) as DepartmentRow[];
   const managers = (managerData ?? []) as ManagerRow[];
 
@@ -81,6 +86,8 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
       {agent.provisioning_status === "failed" || agent.mastery_status === "failed" ? <form action={retryMasterAgentProvisioning}><input type="hidden" name="agentId" value={agent.id} /><button type="submit">Retry professional + Master-level provisioning</button></form> : null}
     </section>
 
+    <section className="panel"><h2>Lifecycle</h2><AgentLifecycleActions agentId={agent.id} name={agent.name} status={agent.agent_status} canArchive={context.entitlement.agent_archive_enabled} organizationId={context.organizationId}/><p>Archiving preserves task, audit and financial history. Restoring returns this Agent to Disabled.</p></section>
+    <section className="panel"><h2>Agent activity</h2><p>Recorded runs: {usage.error ? "Unavailable" : usage.count ?? "Unavailable"}</p>{history.error ? <p role="alert">Activity is temporarily unavailable.</p> : history.data?.length ? <ul>{history.data.map(event => <li key={event.id}>{event.event_type} · {formatDate(event.created_at)}</li>)}</ul> : <p>No audit activity recorded.</p>}</section>
     {query.message ? <p className="form-success" role="status">{query.message}</p> : null}
     {query.error ? <p className="form-error" role="alert">{query.error}</p> : null}
     {agent.provisioning_status === "failed" && agent.provisioning_error ? <p className="form-error" role="alert">{agent.provisioning_error}</p> : null}
