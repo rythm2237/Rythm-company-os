@@ -30,7 +30,21 @@ The existing task and integration execution paths check enabled agents. Agent
 Studio runtime now also rejects disabled agents; it previously allowed paused
 agents to run. In-flight external work is not retroactively canceled.
 
-## Data semantics
+## Privacy boundary (updated 2026-09-26)
+Platform customer pages expose only company name/ID/status/creation date, product
+entitlements, and aggregate membership/agent/integration counts. Personal names,
+email/phone, profile/onboarding/location fields, company mission/vision, agent
+names/configuration/runtime/purpose, integration identities, usage costs, billing
+details and audit histories are excluded from both the pages and existing RPCs.
+Search matches only company name/ID/product/plan, never private fields.
+RPCs no longer join auth.users or customer_profiles. Empty compatibility arrays
+keep the previous UI safe during the migration-first rollout; they contain no data.
+Access audits still exist for authorized security operations but are not disclosed
+in this cross-tenant customer view. The signed-in user identity in the sidebar is
+the current operator, not the customer being viewed. Tenant-owned workspaces keep
+their existing permissions. Previously rendered browser pages require a refresh.
+
+## Data semantics (original rollout; superseded by privacy boundary above)
 Inventory uses server pagination (25), search and sort. Organization status uses
 the existing record enum (draft/review/approved/rejected/archived); entitlement
 status is separate. User counts are active memberships. Agent totals include
