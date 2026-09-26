@@ -83,3 +83,30 @@ SECURITY DEFINER read RPCs; each checks auth.uid() and is_platform_admin() befor
 access, denies anon, explicitly selects output fields, and audits the read.
 The SQL suite verifies denial for ordinary owners/members and success for the
 allowlisted platform identity. Existing unrelated advisor findings are unchanged.
+
+## Company branding and compact inventory (2026-09-26)
+Owners can upload, replace or remove their company's logo in Company Profile.
+The server decodes PNG/JPEG/WebP (2 MB, 16 MP limit), strips metadata and stores
+a maximum 512px WebP in the private company-logos bucket. Unique paths avoid
+cache/stale replacements. A stale-company form is rejected before upload.
+Branding RLS allows active members and allowlisted platform administrators to read;
+only owners can write. Storage denies anonymous/cross-tenant access, and platform
+admins can read only the current registered logo, not historical objects. Reads
+use the caller's auth session; no public or signed URLs or service-role bypass.
+The image route sends private/no-store and nosniff headers. Replace/remove attempts
+clean up the previous file after persistence; a storage cleanup failure can leave
+an orphan visible only to the owning company owner, not other members/admins.
+Logo changes are audited without file content. The application sidebar identity
+and logo always refer to the active workspace, including while viewing a different
+customer detail as platform admin.
+
+The fixed account bar puts the active-company logo at the top right and preserves
+layout spacing on desktop/mobile. Missing/failed logos use company initials.
+Customer inventory rows contain only logo, company name, product and status, with
+a View details link. Counts, creation date and entitlements stay in the detail view;
+confidential fields remain excluded. Logo version is the only new admin RPC field.
+
+Validation: test:company-logo covers decoding, bounds, privacy headers, authentication,
+owner/stale-company guards, successful upload/removal and failed-save cleanup.
+company_branding_logos.sql tests RLS/storage/current-logo/admin-read boundaries and
+audit inside a rolled-back transaction. Existing customer privacy tests remain active.

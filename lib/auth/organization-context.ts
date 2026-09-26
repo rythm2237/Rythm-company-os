@@ -15,6 +15,7 @@ export type OrganizationRow = {
   name: string;
   slug: string;
   status: string;
+  logo_version?: string | null;
   owner_user_id: string | null;
   legal_name?: string | null;
   legal_entity_type?: string | null;
@@ -129,6 +130,8 @@ async function resolveOrganizationContextUncached(): Promise<OrganizationContext
   if (entitlementError && !organizationListError) console.error("organization_context_entitlement_query_failed", entitlementError);
   const { data: customerProfile } = await supabase.from("customer_profiles").select("full_name").eq("user_id", user.id).maybeSingle();
   const organization = (profileData as OrganizationRow | null) ?? selectedMembership.organization;
+  const { data: branding } = await supabase.from("organization_branding").select("logo_path,updated_at").eq("organization_id", selectedMembership.organization_id).maybeSingle();
+  organization.logo_version = branding?.logo_path ? branding.updated_at : null;
   return {
     supabase,
     user: { id: user.id, email: user.email ?? undefined, name: customerProfile?.full_name || user.email || "Signed-in user" },

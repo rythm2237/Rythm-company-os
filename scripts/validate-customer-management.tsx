@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 (globalThis as typeof globalThis & { React: typeof React }).React = React;
 let allowed = true;
 let reads = 0;
-const inventory = { total: 1, items: [{ id: "11111111-1111-4111-8111-111111111111", name: "Acme <script>", status: "approved", owner_name: "Jane", owner_email: "jane@example.invalid", user_count: 2, agent_count: 3, active_agent_count: 1, integration_count: 0, created_at: "2026-09-26T00:00:00Z", last_activity: null }] };
+const inventory = { total: 1, items: [{ id: "11111111-1111-4111-8111-111111111111", name: "Acme <script>", logo_version: "2026-09-26T00:00:00Z", status: "approved", owner_name: "Jane", owner_email: "jane@example.invalid", user_count: 2, agent_count: 3, active_agent_count: 1, integration_count: 0, created_at: "2026-09-26T00:00:00Z", last_activity: null }] };
 let rpcData: unknown = inventory;
 const fakeContext = { supabase: { rpc: async () => { reads++; return { data: rpcData, error: null }; } } };
 // Confine auth/framework mocking to this standalone test process.
@@ -27,9 +27,11 @@ async function main() {
   const { default: Customers } = await import("../app/(app)/admin/customers/page");
   let html = renderToStaticMarkup(await Customers({ searchParams: Promise.resolve({}) }));
   assert.match(html, /Acme &lt;script&gt;/);
-  assert.match(html, /2 active users/);
-  assert.match(html, /3 agents/);
-  assert.match(html, /Not provided/);
+  assert.doesNotMatch(html, /2 active users/);
+  assert.doesNotMatch(html, /3 agents/);
+  assert.match(html, /View details/);
+  assert.match(html, /api\/company-logo\/11111111-1111-4111-8111-111111111111/);
+  assert.match(html, /Acme &lt;script&gt; logo/);
   assert.doesNotMatch(html, /jane@example.invalid|Jane|Owner \/ contact/);
   assert.match(html, /aria-label="Customer pages"/);
   const { default: Detail } = await import("../app/(app)/admin/customers/[id]/page");
