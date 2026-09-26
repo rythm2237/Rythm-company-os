@@ -4,11 +4,13 @@ import { requirePlatformAdmin } from "@/lib/admin/authorization";
 // Platform support receives service metadata and aggregate counts only.
 // Do not add customer-authored content, personal identities, or per-user activity.
 export type Customer = {
+  logo_version?: string | null;
   id: string; name: string; status: string; created_at: string;
   plan_code: string | null; product_code: string | null; entitlement_status: string | null;
   user_count: number; agent_count: number; active_agent_count: number; integration_count: number;
 };
 export type CustomerDetail = {
+  logo_version?: string | null;
   company: Pick<Customer, "id" | "name" | "status" | "created_at">;
   entitlement: { product_code: string; plan_code: string; status: string; starts_at: string | null; ends_at: string | null; max_active_agents: number; agent_builder_enabled: boolean; agent_create_enabled: boolean; agent_archive_enabled: boolean } | null;
   counts: { users: number; memberships: number; agents: number; enabled_agents: number; archived_agents: number; integrations: number; connected_integrations: number };

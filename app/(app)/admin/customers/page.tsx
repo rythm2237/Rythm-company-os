@@ -1,6 +1,7 @@
 import Link from "next/link";
+import CompanyLogo from "@/components/company-branding/CompanyLogo";
 import { getPlatformAdminContext } from "@/lib/admin/authorization";
-import { listCustomers, display, date, product } from "@/lib/admin/customers";
+import { listCustomers, product } from "@/lib/admin/customers";
 export const dynamic = "force-dynamic";
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; sort?: string; page?: string }> }) {
   if (!await getPlatformAdminContext()) return null;
@@ -17,9 +18,13 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <label>Sort by<select name="sort" defaultValue={sort}><option value="newest">Newest</option><option value="name">Company name</option><option value="agents">Agent count</option></select></label>
       <button className="admin-primary-action" type="submit">Apply</button><Link href="/admin/customers">Reset</Link>
     </form><p role="status">{data.total} matching {data.total === 1 ? "company" : "companies"}</p>
-    <div className="customer-table-scroll"><table className="customer-table"><caption className="sr-only">Customer company inventory</caption><thead><tr><th>Company</th><th>Status</th><th>Product / plan</th><th>People / agents</th><th>Created</th></tr></thead><tbody>
-      {data.items.map(c => <tr key={c.id}><td><Link prefetch={false} href={`/admin/customers/${c.id}`}><strong>{c.name}</strong></Link><small>{c.id}</small></td><td><span className="admin-status">{c.status}</span></td><td>{product(c.product_code)}<small>{display(c.plan_code)} · {display(c.entitlement_status)}</small></td><td>{c.user_count} active users<small>{c.agent_count} agents · {c.active_agent_count} enabled</small><small>{c.integration_count} integrations</small></td><td>{date(c.created_at)}</td></tr>)}
-    </tbody></table></div>
+    <ul className="customer-summary-list" aria-label="Customer company inventory">
+      {data.items.map(c => <li key={c.id}><Link className="customer-summary-row" prefetch={false} href={`/admin/customers/${c.id}`}>
+        <CompanyLogo organizationId={c.id} name={c.name} version={c.logo_version} />
+        <span className="customer-summary-name"><strong>{c.name}</strong><small>{product(c.product_code)}</small></span>
+        <span className="admin-status">{c.status}</span><span className="customer-summary-open">View details →</span>
+      </Link></li>)}
+    </ul>
     {!data.items.length ? <p className="admin-empty">{data.total ? "No companies on this page. Return to the first page." : "No customer companies match these filters."}</p> : null}
     <nav className="customer-pagination" aria-label="Customer pages">{page > 1 ? <Link href={pageUrl(page - 1)}>← Previous</Link> : null}<span>Page {page} of {Math.max(1, Math.ceil(data.total / 25))}</span>{page * 25 < data.total ? <Link href={pageUrl(page + 1)}>Next →</Link> : null}</nav>
     </section>

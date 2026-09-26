@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CompanyLogoForm from "@/components/company-branding/CompanyLogoForm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
@@ -72,7 +73,7 @@ type Props = { searchParams: Promise<{ message?: string; error?: string }> };
 
 export default async function CompanyProfilePage({ searchParams }: Props) {
   const params = await searchParams;
-  const { supabase, organizationId } = await requireOwnerOrganizationContext();
+  const { supabase, organizationId, organization } = await requireOwnerOrganizationContext();
   const { data: org } = await supabase.from("organizations").select("*").eq("id", organizationId).single();
   if (!org) redirect("/company");
   const address = (org.registered_address && typeof org.registered_address === "object" ? org.registered_address : {}) as Record<string, string>;
@@ -85,6 +86,7 @@ export default async function CompanyProfilePage({ searchParams }: Props) {
     {params.message ? <p className="ops-message">{params.message}</p> : null}
     {params.error ? <p className="form-error">{params.error}</p> : null}
 
+    <CompanyLogoForm key={organizationId} organizationId={organizationId} name={org.name} version={organization.logo_version} />
     <section className="panel ops-section">
       <div className="panel-heading"><div><p className="label">CORE IDENTITY</p><h2>Business profile</h2></div><span className="pill">Always editable</span></div>
       <form action={saveCompanyProfile} className="ops-form-grid">

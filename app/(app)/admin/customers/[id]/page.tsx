@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CompanyLogo from "@/components/company-branding/CompanyLogo";
 import { notFound } from "next/navigation";
 import { getPlatformAdminContext } from "@/lib/admin/authorization";
 import { getCustomer, display, date, product } from "@/lib/admin/customers";
@@ -9,7 +10,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   if (!data) notFound();
   const { company: c, entitlement: e, counts } = data;
   return <main className="admin-studio customer-console">
-    <section className="admin-hero"><div><Link href="/admin/customers">← Customer companies</Link><p className="admin-kicker">CUSTOMER ACCOUNT / {c.status}</p><h1>{c.name}</h1><p>{c.id}</p></div><span className="admin-status">Service metadata only</span></section>
+    <section className="admin-hero"><div><Link href="/admin/customers">← Customer companies</Link><p className="admin-kicker">CUSTOMER ACCOUNT / {c.status}</p><div className="customer-detail-brand"><CompanyLogo organizationId={c.id} name={c.name} version={data.logo_version} size={72} /><h1>{c.name}</h1></div><p>{c.id}</p></div><span className="admin-status">Service metadata only</span></section>
     <section className="admin-panel"><h2>Customer privacy</h2><p>This platform view contains only service metadata and aggregate counts. Personal identities, contact details, internal company content, agent names and configuration, integration details, usage costs, and activity histories are not available here.</p></section>
     <section className="admin-metrics">
       <article><span>Users</span><strong>{counts.users}</strong><small>{counts.memberships} total memberships</small></article>
