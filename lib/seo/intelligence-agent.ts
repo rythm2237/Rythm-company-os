@@ -1,4 +1,5 @@
 import { executeAiRequest } from "@/lib/ai/request-gateway";
+import { normalizeAiGatewayError } from "@/lib/ai/gateway-errors";
 import type { SeoProviderEvidence } from "@/lib/integrations/adapters/seo-provider-analytics";
 import type { SeoCheck, SeoMonitoringSnapshot } from "@/lib/seo/monitoring-engine";
 
@@ -103,6 +104,18 @@ export function runSeoIntelligenceAgent(snapshot: SeoMonitoringSnapshot): SeoInt
   ] };
 }
 
+function commonSystemInstructions(knowledge: string) {
+  return `You are RYTHM's SEO Intelligence Agent. Use only supplied monitoring evidence and provider evidence. Never invent indexing, ranking, traffic, Core Web Vitals or causal claims. Separate facts from hypotheses. Prefer quantitative trend analysis over generic prose. Do not execute changes. High-risk SEO changes require human approval. Knowledge and operating policy:\n${knowledge}`;
+}
+
+function evidencePayload(input: {
+  snapshot: SeoMonitoringSnapshot;
+  deterministicReport: SeoIntelligenceReport;
+  providerEvidence?: SeoProviderEvidence | null;
+}) {
+  return `Monitoring snapshot:\n${JSON.stringify(input.snapshot)}\n\nDeterministic report:\n${JSON.stringify(input.deterministicReport)}\n\nProvider evidence:\n${JSON.stringify(input.providerEvidence ?? null)}`;
+}
+
 export async function runSeoAiReasoning(input: {
   organizationId: string;
   actorUserId: string;
@@ -111,16 +124,32 @@ export async function runSeoAiReasoning(input: {
   providerEvidence?: SeoProviderEvidence | null;
 }): Promise<SeoAiReasoning> {
   const knowledge = [...SEO_INTELLIGENCE_KNOWLEDGE.objectives, ...SEO_INTELLIGENCE_KNOWLEDGE.architecture, ...SEO_INTELLIGENCE_KNOWLEDGE.priorities, ...input.deterministicReport.guardrails].map((item) => `- ${item}`).join("\n");
-  const response = await executeAiRequest({
+  const baseRequest = {
     organizationId: input.organizationId,
-    actor: { type: "user", userId: input.actorUserId },
-    feature: "internal.unspecified",
-    mode: "task",
-    telemetryPolicy: "required",
+    actor: { type: "user" as const, userId: input.actorUserId },
+    feature: "internal.unspecified" as const,
+    mode: "task" as const,
+    telemetryPolicy: "required" as const,
     conversationLanguage: "en",
-    maxOutputTokens: 1100,
-    systemInstructions: `You are RYTHM's SEO Intelligence Agent. Use only supplied monitoring evidence and provider evidence. Never invent indexing, ranking, traffic, Core Web Vitals or causal claims. Separate facts from hypotheses. Prefer quantitative trend analysis over generic prose. Do not execute changes. High-risk SEO changes require human approval. Knowledge and operating policy:\n${knowledge}`,
-    prompt: `Analyze the technical snapshot plus Google Search Console/Bing evidence. Return a compact operational analysis optimized for a visual dashboard: (1) 3-5 quantified highlights, (2) anomalies or risks, (3) likely explanations explicitly marked as hypotheses, (4) prioritized actions with approval level, and (5) evidence gaps. Compare recent movement when daily data supports it; do not claim a trend from insufficient data.\n\nMonitoring snapshot:\n${JSON.stringify(input.snapshot)}\n\nDeterministic report:\n${JSON.stringify(input.deterministicReport)}\n\nProvider evidence:\n${JSON.stringify(input.providerEvidence ?? null)}`,
-  });
-  return { outputText: response.outputText, correlationId: response.correlationId, routingMode: response.routingMode, model: response.routingDecision.selectedModel };
+    systemInstructions: commonSystemInstructions(knowledge),
+  };
+
+  try {
+    const response = await executeAiRequest({
+      ...baseRequest,
+      maxOutputTokens: 1100,
+      prompt: `Analyze the technical snapshot plus Google Search Console/Bing evidence. Return a compact operational analysis optimized for a visual dashboard: (1) 3-5 quantified highlights, (2) anomalies or risks, (3) likely explanations explicitly marked as hypotheses, (4) prioritized actions with approval level, and (5) evidence gaps. Compare recent movement when daily data supports it; do not claim a trend from insufficient data.\n\n${evidencePayload(input)}`,
+    });
+    return { outputText: response.outputText, correlationId: response.correlationId, routingMode: response.routingMode, model: response.routingDecision.selectedModel };
+  } catch (error) {
+    const normalized = normalizeAiGatewayError(error);
+    if (!normalized.retryable) throw error;
+
+    const response = await executeAiRequest({
+      ...baseRequest,
+      maxOutputTokens: 700,
+      prompt: `Evidence-only SEO summary. Do not request or use tools. Do not perform workflow coordination. Based strictly on the supplied snapshot and provider evidence, return: three concise quantitative observations where supported, up to three risks, and up to three recommended next actions. Label every unsupported explanation as a hypothesis. If evidence is insufficient, say so.\n\n${evidencePayload(input)}`,
+    });
+    return { outputText: response.outputText, correlationId: response.correlationId, routingMode: response.routingMode, model: response.routingDecision.selectedModel };
+  }
 }
