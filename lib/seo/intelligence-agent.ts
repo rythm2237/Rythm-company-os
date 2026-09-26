@@ -1,3 +1,4 @@
+import { executeAiRequest } from "@/lib/ai/request-gateway";
 import type { SeoCheck, SeoMonitoringSnapshot } from "@/lib/seo/monitoring-engine";
 
 export type SeoFindingSeverity = "critical" | "high" | "medium" | "low" | "info";
@@ -22,6 +23,13 @@ export type SeoIntelligenceReport = {
   findings: SeoFinding[];
   knowledgeVersion: string;
   guardrails: string[];
+};
+
+export type SeoAiReasoning = {
+  outputText: string;
+  correlationId: string;
+  routingMode: string;
+  model: string;
 };
 
 export const SEO_INTELLIGENCE_KNOWLEDGE = {
@@ -106,5 +114,38 @@ export function runSeoIntelligenceAgent(snapshot: SeoMonitoringSnapshot): SeoInt
       "Canonical, robots, redirects, sitemap logic and structured-data mutations require human approval.",
       "Do not infer search-engine indexing status from a public HTTP check; provider evidence is required.",
     ],
+  };
+}
+
+export async function runSeoAiReasoning(input: {
+  organizationId: string;
+  actorUserId: string;
+  snapshot: SeoMonitoringSnapshot;
+  deterministicReport: SeoIntelligenceReport;
+}): Promise<SeoAiReasoning> {
+  const knowledge = [
+    ...SEO_INTELLIGENCE_KNOWLEDGE.objectives,
+    ...SEO_INTELLIGENCE_KNOWLEDGE.architecture,
+    ...SEO_INTELLIGENCE_KNOWLEDGE.priorities,
+    ...input.deterministicReport.guardrails,
+  ].map((item) => `- ${item}`).join("\n");
+
+  const response = await executeAiRequest({
+    organizationId: input.organizationId,
+    actor: { type: "user", userId: input.actorUserId },
+    feature: "internal.unspecified",
+    mode: "task",
+    telemetryPolicy: "required",
+    conversationLanguage: "en",
+    maxOutputTokens: 900,
+    systemInstructions: `You are RYTHM's SEO Intelligence Agent. Use only supplied monitoring evidence and established provider evidence. Never invent indexing, ranking, traffic, Core Web Vitals or causal claims. Separate facts from hypotheses. Do not execute changes. High-risk SEO changes require human approval. Knowledge and operating policy:\n${knowledge}`,
+    prompt: `Analyze this SEO monitoring snapshot and deterministic report. Return a concise operational brief with: (1) current state, (2) prioritized issues, (3) likely explanations explicitly marked as hypotheses, (4) recommended next actions and required approval level, and (5) missing provider evidence needed before stronger conclusions.\n\nMonitoring snapshot:\n${JSON.stringify(input.snapshot)}\n\nDeterministic report:\n${JSON.stringify(input.deterministicReport)}`,
+  });
+
+  return {
+    outputText: response.outputText,
+    correlationId: response.correlationId,
+    routingMode: response.routingMode,
+    model: response.routingDecision.selectedModel,
   };
 }
