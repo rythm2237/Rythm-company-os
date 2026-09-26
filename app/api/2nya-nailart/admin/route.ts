@@ -15,7 +15,7 @@ export async function GET(request:NextRequest){
     supabase.from('nail_2nya_availability_exceptions').select('*').gte('exception_date',now.toISOString().slice(0,10)).order('exception_date').limit(120),
     supabase.from('nail_2nya_special_availability').select('*').gte('availability_date',now.toISOString().slice(0,10)).order('availability_date').limit(120),
     supabase.from('nail_2nya_blocked_periods').select('*').gte('end_at',new Date(Date.now()-86400000).toISOString()).lte('start_at',until.toISOString()).order('start_at').limit(200),
-    supabase.from('nail_2nya_appointments').select('id,booking_reference,start_at,end_at,reserved_start_at,reserved_end_at,status,source,customer_notes,admin_notes,service_id,nail_2nya_services(name,duration_minutes,buffer_before,buffer_after),customer_id,nail_2nya_customers(name,phone,instagram_username,email)').gte('start_at',new Date(Date.now()-7*86400000).toISOString()).lte('start_at',until.toISOString()).order('start_at').limit(500),
+    supabase.from('nail_2nya_appointments').select('id,booking_reference,start_at,end_at,reserved_start_at,reserved_end_at,status,source,customer_notes,admin_notes,service_id,nail_2nya_services(name,duration_minutes,buffer_before,buffer_after),customer_id,nail_2nya_customers(name,phone,instagram_username,email)').gte('start_at',new Date(Date.now()-90*86400000).toISOString()).lte('start_at',until.toISOString()).order('start_at').limit(1000),
     supabase.from('nail_2nya_site_settings').select('key,value').in('key',['push_vapid_public'])
   ]);
   const failed=[business,services,hours,exceptions,special,blocks,appointments,pushSettings].find(x=>x.error);
