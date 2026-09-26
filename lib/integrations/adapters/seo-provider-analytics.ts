@@ -49,6 +49,13 @@ async function credentialFor(integration: IntegrationRow) {
   return resolveProviderCredential({ service, integrationId: integration.id, providerKey: integration.provider_key, storedSecret: String(data) });
 }
 
+function isVerifiedIntegration(integration: IntegrationRow) {
+  if (!integration.enabled) return false;
+  if (integration.status === "connected") return true;
+  if (integration.status !== "verifying") return false;
+  return integration.metadata?.verification_result === "verified" && integration.metadata?.setup_state === "verified";
+}
+
 async function findIntegration(providerKey: string, resourceId: string) {
   const service = createExecutionServiceClient();
   const { data: resource, error: resourceError } = await service.from("integration_resources")
@@ -57,9 +64,10 @@ async function findIntegration(providerKey: string, resourceId: string) {
   if (resourceError || !resource?.integration_id) return null;
   const { data: integration, error } = await service.from("organization_integrations")
     .select("id,organization_id,provider_key,status,enabled,metadata")
-    .eq("id", resource.integration_id).eq("status", "connected").eq("enabled", true).maybeSingle();
+    .eq("id", resource.integration_id).eq("enabled", true).maybeSingle();
   if (error || !integration) return null;
-  return integration as IntegrationRow;
+  const row = integration as IntegrationRow;
+  return isVerifiedIntegration(row) ? row : null;
 }
 
 async function googleJson(url: string, token: string, init: RequestInit = {}) {
