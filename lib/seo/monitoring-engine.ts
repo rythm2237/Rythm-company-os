@@ -38,6 +38,19 @@ function canonicalFromHtml(html: string) {
     ?? null;
 }
 
+function normalizeCanonical(value: string | null, base: string) {
+  if (!value) return null;
+  try {
+    const url = new URL(value, base);
+    url.hash = "";
+    url.search = "";
+    if (url.pathname === "/") url.pathname = "";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return value.trim().replace(/\/$/, "");
+  }
+}
+
 function titleFromHtml(html: string) {
   return html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, " ").trim() ?? null;
 }
@@ -78,7 +91,9 @@ export async function runSeoMonitoringEngine(site = DEFAULT_SITE): Promise<SeoMo
 
     const canonical = canonicalFromHtml(text);
     const expectedCanonical = `${origin}/`;
-    checks.push({ id: "homepage.canonical", category: "indexing", status: canonical === expectedCanonical ? "pass" : canonical ? "warning" : "fail", title: "Homepage canonical", detail: canonical ? `Canonical is ${canonical}.` : "No canonical link was detected in the homepage HTML.", url: expectedCanonical, metric: canonical });
+    const normalizedCanonical = normalizeCanonical(canonical, expectedCanonical);
+    const normalizedExpected = normalizeCanonical(expectedCanonical, expectedCanonical);
+    checks.push({ id: "homepage.canonical", category: "indexing", status: normalizedCanonical === normalizedExpected ? "pass" : canonical ? "warning" : "fail", title: "Homepage canonical", detail: canonical ? `Canonical is ${canonical}.` : "No canonical link was detected in the homepage HTML.", url: expectedCanonical, metric: canonical });
 
     const title = titleFromHtml(text);
     checks.push({ id: "homepage.title", category: "metadata", status: title && title.length >= 20 && title.length <= 65 ? "pass" : title ? "warning" : "fail", title: "Page title", detail: title ? `Title length is ${title.length} characters.` : "No HTML title was detected.", url: expectedCanonical, metric: title?.length ?? null });

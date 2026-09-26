@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { SeoDailyPoint, SeoDimensionRow, SeoProviderEvidence } from "@/lib/integrations/adapters/seo-provider-analytics";
 
 function sum(rows: SeoDailyPoint[], key: "clicks" | "impressions") { return rows.reduce((total, row) => total + row[key], 0); }
@@ -15,7 +16,7 @@ function sevenDayComparison(rows: SeoDailyPoint[]) {
   };
 }
 
-function TrendChart({ rows }: { rows: SeoDailyPoint[] }) {
+function TrendChart({ rows, label = "Search performance trend" }: { rows: SeoDailyPoint[]; label?: string }) {
   if (!rows.length) return <p className="admin-empty">No daily search performance data is available yet.</p>;
   const data = [...rows].sort((a, b) => a.date.localeCompare(b.date));
   const width = 900, height = 250, pad = 30;
@@ -27,7 +28,7 @@ function TrendChart({ rows }: { rows: SeoDailyPoint[] }) {
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
   return <div style={{ overflowX: "auto" }}>
-    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Google Search performance trend" style={{ width: "100%", minWidth: 620, height: "auto" }}>
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label} style={{ width: "100%", minWidth: 620, height: "auto" }}>
       {[0.25,0.5,0.75].map((p) => <line key={p} x1={pad} x2={width-pad} y1={pad+(height-pad*2)*p} y2={pad+(height-pad*2)*p} stroke="currentColor" opacity="0.10" />)}
       <polyline points={points("impressions", maxImpressions)} fill="none" stroke="currentColor" strokeWidth="3" opacity="0.35" />
       <polyline points={points("clicks", maxClicks)} fill="none" stroke="currentColor" strokeWidth="4" />
@@ -56,6 +57,7 @@ export function SeoVisualAnalytics({ evidence }: { evidence: SeoProviderEvidence
   const weightedPosition = g.daily.reduce((total, row) => total + (row.position ?? 0) * row.impressions, 0) / Math.max(1, gImpressions);
   const comparison = sevenDayComparison(g.daily);
   const inspection = g.inspection;
+  const googleNeedsReconnect = Boolean(g.error?.toLowerCase().includes("invalid_grant") || g.error?.toLowerCase().includes("reauthor"));
 
   return <>
     <section className="admin-metrics" aria-label="Search performance summary">
@@ -66,8 +68,8 @@ export function SeoVisualAnalytics({ evidence }: { evidence: SeoProviderEvidence
     </section>
 
     <section className="admin-panel">
-      <div className="admin-panel-heading"><div><p className="admin-kicker">SEARCH PERFORMANCE</p><h2>Google trend · last 28 days</h2></div><span className={`admin-status ${g.status === "connected" ? "admin-status-succeeded" : "admin-status-pending"}`}>{g.status}</span></div>
-      {g.error ? <p className="form-error">{g.error}</p> : null}<TrendChart rows={g.daily} />
+      <div className="admin-panel-heading"><div><p className="admin-kicker">SEARCH PERFORMANCE</p><h2>Google trend · last 28 days</h2></div><span className={`admin-status ${g.status === "connected" ? "admin-status-succeeded" : "admin-status-pending"}`}>{googleNeedsReconnect ? "RECONNECT" : g.status}</span></div>
+      {g.error ? <div className="form-error"><strong>{googleNeedsReconnect ? "Google Search Console authorization expired." : "Google Search Console data is unavailable."}</strong><div style={{ marginTop: 6 }}>{googleNeedsReconnect ? "Reconnect Search Console, then rerun SEO monitoring. The saved Search Console property does not need to be recreated." : g.error}</div>{googleNeedsReconnect ? <div style={{ marginTop: 12 }}><Link className="admin-secondary-action" href="/integrations">Open Integrations</Link></div> : null}</div> : null}<TrendChart rows={g.daily} label="Google Search performance trend" />
     </section>
 
     <div className="admin-grid">
@@ -77,15 +79,15 @@ export function SeoVisualAnalytics({ evidence }: { evidence: SeoProviderEvidence
 
     <div className="admin-grid">
       <section className="admin-panel"><div className="admin-panel-heading"><div><p className="admin-kicker">AUDIENCE</p><h2>Device distribution</h2></div><span>Impressions</span></div><BarRows rows={g.devices} metric="impressions" limit={6} /></section>
-      <section className="admin-panel"><div className="admin-panel-heading"><div><p className="admin-kicker">GOOGLE INDEX</p><h2>Homepage inspection</h2></div><span className={`admin-status ${inspection?.verdict === "PASS" ? "admin-status-succeeded" : "admin-status-pending"}`}>{inspection?.verdict || "unavailable"}</span></div>
-        {inspection ? <div style={{ display: "grid", gap: 8 }}><p><strong>{inspection.coverageState || inspection.indexingState || "Index status returned"}</strong></p><small>Fetch: {inspection.pageFetchState || "—"}</small><small>Google canonical: {inspection.googleCanonical || "—"}</small><small>User canonical: {inspection.userCanonical || "—"}</small><small>Last crawl: {inspection.lastCrawlTime ? new Date(inspection.lastCrawlTime).toLocaleString("en-GB", { timeZone: "Europe/Budapest" }) : "—"}</small></div> : <p className="admin-empty">URL Inspection evidence was not available in this run.</p>}
+      <section className="admin-panel"><div className="admin-panel-heading"><div><p className="admin-kicker">GOOGLE INDEX</p><h2>Homepage inspection</h2></div><span className={`admin-status ${inspection?.verdict === "PASS" ? "admin-status-succeeded" : "admin-status-pending"}`}>{inspection?.verdict || (googleNeedsReconnect ? "reconnect" : "unavailable")}</span></div>
+        {inspection ? <div style={{ display: "grid", gap: 8 }}><p><strong>{inspection.coverageState || inspection.indexingState || "Index status returned"}</strong></p><small>Fetch: {inspection.pageFetchState || "—"}</small><small>Google canonical: {inspection.googleCanonical || "—"}</small><small>User canonical: {inspection.userCanonical || "—"}</small><small>Last crawl: {inspection.lastCrawlTime ? new Date(inspection.lastCrawlTime).toLocaleString("en-GB", { timeZone: "Europe/Budapest" }) : "—"}</small></div> : <p className="admin-empty">{googleNeedsReconnect ? "Reconnect Google Search Console to restore URL Inspection evidence." : "URL Inspection evidence was not available in this run."}</p>}
       </section>
     </div>
 
     <section className="admin-panel">
       <div className="admin-panel-heading"><div><p className="admin-kicker">BING WEBMASTER</p><h2>Search visibility cross-check</h2></div><span className={`admin-status ${b.status === "connected" ? "admin-status-succeeded" : "admin-status-pending"}`}>{b.status}</span></div>
       {b.error ? <p className="form-error">{b.error}</p> : null}
-      {b.daily.length ? <><div className="admin-metrics"><article><span>Clicks</span><strong>{fmt(sum(b.daily, "clicks"))}</strong><small>Recent Bing window</small></article><article><span>Impressions</span><strong>{fmt(sum(b.daily, "impressions"))}</strong><small>Recent Bing window</small></article><article><span>Top queries</span><strong>{b.queries.length}</strong><small>Provider rows</small></article><article><span>Top pages</span><strong>{b.pages.length}</strong><small>Provider rows</small></article></div><TrendChart rows={b.daily} /></> : <p className="admin-empty">No Bing traffic rows were returned for this snapshot.</p>}
+      {b.daily.length ? <><div className="admin-metrics"><article><span>Clicks</span><strong>{fmt(sum(b.daily, "clicks"))}</strong><small>Recent Bing window</small></article><article><span>Impressions</span><strong>{fmt(sum(b.daily, "impressions"))}</strong><small>Recent Bing window</small></article><article><span>Top queries</span><strong>{b.queries.length}</strong><small>Provider rows</small></article><article><span>Top pages</span><strong>{b.pages.length}</strong><small>Provider rows</small></article></div><TrendChart rows={b.daily} label="Bing Search visibility trend" /></> : <p className="admin-empty">No Bing traffic rows were returned for this snapshot.</p>}
     </section>
   </>;
 }
