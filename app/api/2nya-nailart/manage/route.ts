@@ -10,32 +10,37 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'لینک مدیریت رزرو معتبر نیست.' }, { status: 400 });
   }
   const db = publicClient();
-  const bookingResult = await db.rpc('nail_2nya_get_booking', {
-    p_appointment_id: appointmentId,
-    p_token: managementCode,
-  });
-  const businessResult = await db.from('nail_2nya_business_profile').select('timezone').limit(1).maybeSingle();
+  const [bookingResult,businessResult,pushResult]=await Promise.all([
+    db.rpc('nail_2nya_get_booking',{p_appointment_id:appointmentId,p_token:managementCode}),
+    db.from('nail_2nya_business_profile').select('timezone').limit(1).maybeSingle(),
+    db.from('nail_2nya_site_settings').select('value').eq('key','push_vapid_public').maybeSingle(),
+  ]);
   if (bookingResult.error || !bookingResult.data?.length) {
     return NextResponse.json({ ok: false, error: 'این لینک رزرو معتبر نیست یا منقضی شده است.' }, { status: 404 });
   }
-  return NextResponse.json({ ok: true, booking: bookingResult.data[0], timezone: businessResult.data?.timezone || 'UTC' }, { headers: { 'Cache-Control': 'no-store' } });
+  const pushPublicKey=(pushResult.data?.value as {key?:string}|null)?.key??null;
+  return NextResponse.json({ ok: true, booking: bookingResult.data[0], timezone: businessResult.data?.timezone || 'UTC', push_public_key:pushPublicKey }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    if (body?.action !== 'cancel' || !body?.id || !body?.token) {
-      return NextResponse.json({ ok: false, error: 'درخواست معتبر نیست.' }, { status: 400 });
+    const action=String(body?.action??'');
+    if(!body?.id||!body?.token)return NextResponse.json({ok:false,error:'درخواست معتبر نیست.'},{status:400});
+    const db=publicClient();
+    if(action==='cancel'){
+      const result=await db.rpc('nail_2nya_cancel_booking',{p_appointment_id:body.id,p_token:body.token});
+      if(result.error||!result.data)return NextResponse.json({ok:false,error:'لغو رزرو انجام نشد.'},{status:400});
+      return NextResponse.json({ok:true});
     }
-    const db = publicClient();
-    const result = await db.rpc('nail_2nya_cancel_booking', {
-      p_appointment_id: body.id,
-      p_token: body.token,
-    });
-    if (result.error || !result.data) {
-      return NextResponse.json({ ok: false, error: 'لغو رزرو انجام نشد.' }, { status: 400 });
+    if(action==='push_subscribe'){
+      const sub=body?.subscription;
+      if(!sub?.endpoint||!sub?.keys?.p256dh||!sub?.keys?.auth)return NextResponse.json({ok:false,error:'اشتراک اعلان معتبر نیست.'},{status:400});
+      const result=await db.rpc('nail_2nya_subscribe_customer_push',{p_appointment_id:body.id,p_token:body.token,p_endpoint:String(sub.endpoint),p_p256dh:String(sub.keys.p256dh),p_auth:String(sub.keys.auth)});
+      if(result.error||result.data!==true)return NextResponse.json({ok:false,error:'فعال‌سازی اعلان انجام نشد.'},{status:400});
+      return NextResponse.json({ok:true});
     }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ok:false,error:'درخواست معتبر نیست.'},{status:400});
   } catch {
     return NextResponse.json({ ok: false, error: 'درخواست معتبر نیست.' }, { status: 400 });
   }
