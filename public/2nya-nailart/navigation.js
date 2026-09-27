@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION='20260927-3';
+  const VERSION='20260927-4';
   const NAV_CSS=`/2nya-nailart/navigation.css?v=${VERSION}`;
   const FIT_CSS='/2nya-nailart/viewport-fit.css?v=20260925-1';
   const NAV_ITEMS=[
@@ -122,6 +122,12 @@
     if(!booking?.management_url)return '';
     return `${booking.management_url}${booking.management_url.includes('?')?'&':'?'}notify=1`;
   };
+  const tehranDate=iso=>{const [y,m,d]=String(iso).split('-').map(Number);return new Date(Date.UTC(y,m-1,d,8,30))};
+  const persianDateParts=iso=>{
+    const parts=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{timeZone:'Asia/Tehran',weekday:'short',day:'numeric',month:'short',year:'numeric'}).formatToParts(tehranDate(iso));
+    const out={};parts.forEach(p=>{if(p.type!=='literal')out[p.type]=p.value});return out;
+  };
+  const persianDateLabel=iso=>new Intl.DateTimeFormat('fa-IR-u-ca-persian',{timeZone:'Asia/Tehran',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(tehranDate(iso));
 
   const enableCustomerPush=async booking=>{
     if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window))throw new Error('اعلان روی این مرورگر پشتیبانی نمی‌شود.');
@@ -181,7 +187,7 @@
       if(!box||!times||!state.service)return;
       box.style.display='';
       step?.querySelector('h2')&&(step.querySelector('h2').textContent='چه روزی مناسب است؟');
-      step?.querySelector('p')&&(step.querySelector('p').textContent='فقط روزهایی نمایش داده می‌شوند که زمان آزاد دارند.');
+      step?.querySelector('p')&&(step.querySelector('p').textContent='فقط روزهایی نمایش داده می‌شوند که زمان آزاد دارند. تاریخ‌ها بر اساس تقویم شمسی هستند.');
       box.innerHTML='<span class="muted">در حال پیدا کردن روزهای آزاد…</span>';
       times.innerHTML='';
       updateNext();
@@ -189,7 +195,7 @@
         const r=await fetch(`/api/2nya-nailart/availability?service_id=${encodeURIComponent(state.service.id)}&days=28`,{cache:'no-store'}),j=await r.json();
         if(!r.ok||!j.ok)throw new Error();
         if(!j.dates?.length){box.innerHTML='<span class="muted">در ۲۸ روز آینده وقت آزادی وجود ندارد.</span>';return;}
-        box.innerHTML=j.dates.map(x=>{const d=new Date(`${x.date}T12:00:00`);return `<button class="date" data-available-date="${x.date}"><b>${toFa(d.getDate())}</b><br><small>${new Intl.DateTimeFormat('fa-IR',{weekday:'short'}).format(d)}</small></button>`}).join('');
+        box.innerHTML=j.dates.map(x=>{const p=persianDateParts(x.date);return `<button class="date" data-available-date="${x.date}" aria-label="${persianDateLabel(x.date)}"><b>${p.day}</b><br><small>${p.weekday} · ${p.month}</small></button>`}).join('');
         qsa('[data-available-date]').forEach(btn=>btn.onclick=()=>chooseDate(btn.dataset.availableDate,btn));
       }catch{box.innerHTML='<span class="muted">دریافت روزهای آزاد ناموفق بود.</span>';}
     };
@@ -200,7 +206,7 @@
       qsa('.date').forEach(x=>x.classList.remove('sel'));btn?.classList.add('sel');
       if(box)box.style.display='none';
       step?.querySelector('h2')&&(step.querySelector('h2').textContent='چه ساعتی مناسب است؟');
-      step?.querySelector('p')&&(step.querySelector('p').textContent=`زمان‌های آزاد ${faDate(new Date(`${iso}T12:00:00`))}`);
+      step?.querySelector('p')&&(step.querySelector('p').textContent=`زمان‌های آزاد ${persianDateLabel(iso)}`);
       times.innerHTML='<button type="button" class="btn ghost" id="changeBookingDay" style="margin-bottom:14px">← تغییر روز</button><div class="muted">در حال دریافت ساعت‌های آزاد…</div>';
       qs('#changeBookingDay').onclick=()=>renderDates();
       try{
