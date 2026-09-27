@@ -84,6 +84,24 @@ async function createDepartment(formData: FormData) {
   revalidatePath("/company");
 }
 
+async function updateDepartmentManager(formData: FormData) {
+  "use server";
+  const { supabase, user, organizationId } = await requireOwnerOrganizationContext();
+  const departmentId = text(formData, "departmentId");
+  const managerId = nullable(formData, "managerAgentId");
+  const { data: department } = await supabase.from("departments").select("id").eq("organization_id", organizationId).eq("id", departmentId).maybeSingle();
+  if (!department) redirect("/company?error=Department%20not%20found.");
+  if (managerId) {
+    const { data: agent } = await supabase.from("agents").select("id").eq("organization_id", organizationId).eq("department_id", departmentId).eq("id", managerId).neq("agent_status", "archived").maybeSingle();
+    if (!agent) redirect("/company?error=Manager%20must%20be%20an%20active%20agent%20in%20this%20department.");
+  }
+  const { error } = await supabase.from("departments").update({ manager_agent_id: managerId }).eq("organization_id", organizationId).eq("id", departmentId);
+  if (error) redirect(`/company?error=${encodeURIComponent(error.message)}`);
+  await supabase.from("audit_events").insert({ organization_id: organizationId, actor_type: "user", actor_user_id: user.id, event_type: "organization.department_manager_updated", object_type: "department", object_id: departmentId, risk_level: "medium", payload: { manager_agent_id: managerId } });
+  revalidatePath("/company");
+  redirect("/company?message=Department%20manager%20updated.");
+}
+
 async function createTeam(formData: FormData) {
   "use server";
   const { supabase, user, organizationId } = await requireOwnerOrganizationContext();
@@ -203,6 +221,7 @@ export default async function CompanyPage({ searchParams }: Props) {
   const address = (org.registered_address && typeof org.registered_address === "object" ? org.registered_address : {}) as Record<string, string>;
   const totalMonthlyCost = agents.reduce((sum, agent) => sum + Number(agent.monthly_company_cost ?? 0), 0);
   const totalMonthlySale = agents.reduce((sum, agent) => sum + Number(agent.sale_price_monthly ?? 0), 0);
+  const actionSummaries = isOwner ? (await supabase.from("action_items").select("id,title,status,assigned_agent_id").eq("organization_id", organizationId).not("assigned_agent_id", "is", null).order("created_at", { ascending: false }).limit(60)).data ?? [] : [];
 
   return <main className="command-shell ops-shell company-dashboard">
     <header className="command-header"><div><p className="eyebrow">COMPANY ADMINISTRATION</p><h1>Company & workforce</h1><p className="subtitle">The canonical company identity, hybrid organization chart, human membership lifecycle and AI workforce economics.</p></div><div className="ops-header-actions"><a className="secondary-button" href="/calendar">Calendar</a><a className="secondary-button" href="/notifications">Notifications</a></div></header>
@@ -234,7 +253,7 @@ export default async function CompanyPage({ searchParams }: Props) {
     <CompanyDisclosure id="company-structure" number="02" title="Structure" description="Departments, teams and leadership" meta={`${departments.length} departments · ${teams.length} teams`}>
     <div className="ops-two-col">
       <section className="panel ops-section"><div className="panel-heading"><div><p className="label">Structure</p><h2>Departments</h2></div></div>
-        <div className="ops-list">{departments.map((department) => <div className="ops-list-row" key={department.id}><div><strong>{department.name}</strong><small>{department.description || "No description"}</small></div><span>{department.status}</span></div>)}</div>
+        <div className="ops-list">{departments.map((department) => <div className="ops-list-row company-department-row" key={department.id}><div><strong>{department.name}</strong><small>{department.description || "No description"}</small></div><form action={updateDepartmentManager}><input type="hidden" name="departmentId" value={department.id}/><label><span>Department manager</span><select name="managerAgentId" defaultValue={department.manager_agent_id ?? ""} disabled={!isOwner}><option value="">Not assigned</option>{agents.filter(agent => agent.department_id === department.id).map(agent => <option key={agent.id} value={agent.id}>{agent.display_name || agent.name}</option>)}</select></label>{isOwner ? <button type="submit">Save manager</button> : null}</form></div>)}</div>
         {isOwner ? <form action={createDepartment} className="ops-inline-form"><input name="name" placeholder="Department name" required/><input name="description" placeholder="Purpose"/><select name="parentDepartmentId"><option value="">Top level</option>{departments.map(d => <option value={d.id} key={d.id}>{d.name}</option>)}</select><button>Add department</button></form> : null}
       </section>
       <section className="panel ops-section"><div className="panel-heading"><div><p className="label">Structure</p><h2>Teams</h2></div></div>
@@ -250,7 +269,7 @@ export default async function CompanyPage({ searchParams }: Props) {
     </CompanyDisclosure>
 
     <CompanyDisclosure id="hybrid-org-chart" number="04" title="Hybrid organizational chart" description="People, AI positions and reporting relationships" meta={`${members.filter(m => m.membership_status === "active").length + agents.length} positions`} initiallyOpen>
-      <CompanyChart key={organizationId} departments={departments} agents={agents.map(({ id, name, display_name, role_title, department_id, reports_to_agent_id, agent_status }) => ({ id, name, display_name, role_title, department_id, reports_to_agent_id, agent_status }))} members={members.map(({ user_id, display_name, job_title, role, department_id, membership_status }) => ({ user_id, display_name, job_title, role, department_id, membership_status }))}>
+      <CompanyChart key={organizationId} departments={departments} agents={agents.map(({ id, name, display_name, role_title, department_id, reports_to_agent_id, agent_status }) => ({ id, name, display_name, role_title, department_id, reports_to_agent_id, agent_status }))} members={members.map(({ user_id, display_name, job_title, role, department_id, membership_status }) => ({ user_id, display_name, job_title, role, department_id, membership_status }))} actions={actionSummaries} canTrack={isOwner}>
       <div className="ops-agent-grid">{agents.map(agent => <article className="ops-agent-card" key={agent.id}><div className="ops-agent-head"><div><span>{agent.agent_code}</span><h3>{agent.display_name || agent.name}</h3><p>{agent.role_title}</p></div><strong>{agent.cost_currency ?? "EUR"} {Number(agent.monthly_company_cost ?? 0).toFixed(2)}/mo</strong></div>
         <form action={updateAgentStructure} className="ops-agent-form"><input type="hidden" name="agentId" value={agent.id}/><label><span>Department</span><select name="departmentId" defaultValue={agent.department_id ?? ""} disabled={!isOwner}><option value="">Unassigned</option>{departments.map(d => <option value={d.id} key={d.id}>{d.name}</option>)}</select></label><label><span>Reports to</span><select name="reportsToAgentId" defaultValue={agent.reports_to_agent_id ?? ""} disabled={!isOwner}><option value="">Human CEO / none</option>{agents.filter(a => a.id !== agent.id).map(a => <option value={a.id} key={a.id}>{a.display_name || a.name}</option>)}</select></label>{isOwner ? <button>Save structure</button> : null}</form>
         <form action={updateAgentCost} className="ops-agent-form ops-cost-form"><input type="hidden" name="agentId" value={agent.id}/><label><span>Cost model</span><select name="costModel" defaultValue={agent.cost_model ?? "included"} disabled={!isOwner}><option value="included">Included / zero</option><option value="fixed">Fixed monthly</option><option value="usage">Usage based</option><option value="hybrid">Fixed + usage</option><option value="custom">Custom</option></select></label><label><span>Base monthly cost</span><input name="monthlyCompanyCost" type="number" min="0" step="0.01" defaultValue={agent.monthly_company_cost ?? 0} disabled={!isOwner}/></label><label><span>Usage rate</span><input name="usageCostRate" type="number" min="0" step="0.0001" defaultValue={agent.usage_cost_rate ?? 0} disabled={!isOwner}/></label><label><span>Usage unit</span><input name="usageCostUnit" defaultValue={agent.usage_cost_unit ?? ""} placeholder="1M tokens / run" disabled={!isOwner}/></label><label><span>Customer monthly price</span><input name="salePriceMonthly" type="number" min="0" step="0.01" defaultValue={agent.sale_price_monthly ?? ""} disabled={!isOwner}/></label><label><span>Currency</span><input name="currency" maxLength={3} defaultValue={agent.cost_currency ?? org.default_currency ?? "EUR"} disabled={!isOwner}/></label>{isOwner ? <button>Save Agent Cost</button> : null}</form>

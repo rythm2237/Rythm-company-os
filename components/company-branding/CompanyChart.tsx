@@ -1,57 +1,51 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { buildCompanyChart, CHART_CARD_HEIGHT, CHART_CARD_WIDTH, type ChartAgent, type ChartDepartment, type ChartMember, type ChartNode } from "@/lib/company-chart";
+import { useMemo, useState, type ReactNode } from "react";
+import { buildCompanyChart, type ChartAgent, type ChartDepartment, type ChartMember, type ChartPerson } from "@/lib/company-chart";
 
-function PositionCard({ node, selected, dimmed, onSelect, inMap = false }: { node: ChartNode; selected: boolean; dimmed: boolean; onSelect: () => void; inMap?: boolean }) {
-  return <button type="button" className={`company-org-card ${node.kind} ${selected ? "is-selected" : ""} ${dimmed ? "is-dimmed" : ""} ${node.issue ? "has-issue" : ""}`}
-    style={inMap ? { left: node.x, top: node.y, width: CHART_CARD_WIDTH, minHeight: CHART_CARD_HEIGHT } : undefined}
-    aria-pressed={selected} aria-label={`${node.name}, ${node.role}, ${node.department}. Reports to: ${node.reportsTo}.`} onClick={onSelect}>
-    <span className="company-org-card-top"><span className="company-org-avatar" aria-hidden="true">{node.name.trim().slice(0, 2).toUpperCase()}</span><span className="company-org-kind">{node.kind === "human" ? "HUMAN" : "AI POSITION"}</span><span className="company-org-status">{node.status}</span></span>
-    <strong title={node.name}>{node.name}</strong><span className="company-org-role" title={node.role}>{node.role}</span>
-    <span className="company-org-card-bottom"><span className="company-org-department" title={node.department}>{node.department}</span><span className="company-org-reports" title={`Reports to: ${node.reportsTo}`}>{node.kind === "human" ? "Human authority" : `↳ ${node.reportsTo}`}</span></span>
+type ActionSummary = { id: string; title: string; status: string; assigned_agent_id: string | null };
+
+function Person({ person, selected, onSelect }: { person: ChartPerson; selected: boolean; onSelect: () => void }) {
+  return <button type="button" className={`company-pyramid-person ${person.isManager ? "is-manager" : ""} ${person.issue ? "has-issue" : ""}`}
+    aria-pressed={selected} onClick={onSelect}>
+    <span className="company-pyramid-avatar" aria-hidden="true">{person.name.slice(0, 2).toUpperCase()}</span>
+    <span className="company-pyramid-person-label"><strong>{person.name}</strong><small>{person.role}</small></span>
+    <span className="company-pyramid-type">{person.kind === "ai" ? "AI" : "Human"}</span>
   </button>;
 }
 
-export default function CompanyChart({ departments, agents, members, children }: { departments: ChartDepartment[]; agents: ChartAgent[]; members: ChartMember[]; children: ReactNode }) {
+export default function CompanyChart({ departments, agents, members, actions = [], canTrack = false, children }: { departments: ChartDepartment[]; agents: ChartAgent[]; members: ChartMember[]; actions?: ActionSummary[]; canTrack?: boolean; children: ReactNode }) {
   const [view, setView] = useState<"chart" | "cards">("chart");
-  const [zoom, setZoom] = useState(1);
-  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
-  const frame = useRef<HTMLDivElement>(null);
-  const headingId = useId().replace(/:/g, "");
+  const [query, setQuery] = useState("");
   const graph = useMemo(() => buildCompanyChart(departments, agents, members), [departments, agents, members]);
-  const byId = useMemo(() => new Map(graph.nodes.map(node => [node.id, node])), [graph]);
-  const humanNodes = graph.nodes.filter(node => node.kind === "human");
-  const aiNodes = graph.nodes.filter(node => node.kind === "ai");
-  const search = query.trim().toLocaleLowerCase();
-  const matches = (node: ChartNode) => !search || `${node.name} ${node.role} ${node.department}`.toLocaleLowerCase().includes(search);
-  const selectedNode = selected ? byId.get(selected) : null;
-  const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const move = (distance: number) => frame.current?.scrollBy({ left: distance, behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  const focusNode = (node: ChartNode) => frame.current?.scrollTo({ left: Math.max(0, (node.x + CHART_CARD_WIDTH / 2) * zoom - frame.current.clientWidth / 2), top: Math.max(0, node.y * zoom - 70), behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  useEffect(() => {
-    const root = graph.roots[0];
-    const first = root ? byId.get(root) : null;
-    if (first && frame.current) frame.current.scrollLeft = Math.max(0, first.x + CHART_CARD_WIDTH / 2 - frame.current.clientWidth / 2);
-  }, [graph, byId]);
-  const findFirst = () => { const first = aiNodes.find(matches); if (first) { setSelected(first.id); focusNode(first); } };
+  const person = graph.branches.flatMap(branch => [branch.manager, ...branch.people]).find(item => item?.id === selected);
+  const matches = (name: string) => name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
 
   return <div className="company-chart">
-    <div className="company-chart-toolbar"><div className="company-view-switch" role="group" aria-label="Organization chart view"><button type="button" aria-pressed={view === "chart"} onClick={() => setView("chart")}>Visual chart</button><button type="button" aria-pressed={view === "cards"} onClick={() => setView("cards")}>Cards &amp; edit</button></div><p>Explore the organization. Edit positions in Cards &amp; edit.</p></div>
+    <div className="company-chart-toolbar"><div className="company-view-switch" role="group" aria-label="Organization chart view"><button type="button" aria-pressed={view === "chart"} onClick={() => setView("chart")}>Organization chart</button><button type="button" aria-pressed={view === "cards"} onClick={() => setView("cards")}>Cards &amp; edit</button></div><p>Department placement and reporting lines are shown separately.</p></div>
     <div hidden={view !== "chart"} className="company-chart-view">
-      {humanNodes.length ? <section className="company-org-leadership" aria-label="Human workforce"><div className="company-org-leadership-heading"><span className="company-org-eyebrow">HUMAN GOVERNANCE</span><h3>People behind the company</h3><p>Human reporting lines are not recorded; no reporting connection is assumed.</p></div><div className="company-org-human-list">{humanNodes.map(node => <PositionCard key={node.id} node={node} selected={selected === node.id} dimmed={!matches(node)} onSelect={() => setSelected(node.id)} />)}</div></section> : null}
-      <div className="company-org-section-head"><div><span className="company-org-eyebrow">ORGANIZATION MAP</span><h3 id={headingId}>Reporting hierarchy</h3><p>Every connector represents a recorded manager → direct report relationship.</p></div><span className="company-org-count">{aiNodes.length} AI positions</span></div>
-      <div className="company-chart-controls"><label className="company-org-search"><span>Find a position</span><input type="search" placeholder="Name, role or department" value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") findFirst(); }} /></label><div className="company-org-control-group" role="group" aria-label="Navigate organization chart"><button type="button" aria-label="Scroll chart left" onClick={() => move(-Math.max(280, (frame.current?.clientWidth || 0) * .7))}>←</button><button type="button" aria-label="Scroll chart right" onClick={() => move(Math.max(280, (frame.current?.clientWidth || 0) * .7))}>→</button><button type="button" onClick={() => { const first = graph.roots[0] ? byId.get(graph.roots[0]) : null; if (first) focusNode(first); }}>Center</button><span className="company-org-control-divider"/><button type="button" disabled={zoom <= 1} onClick={() => setZoom(value => Math.max(1, +(value - .15).toFixed(2)))} aria-label="Zoom out">−</button><output aria-label="Zoom level">{Math.round(zoom * 100)}%</output><button type="button" disabled={zoom >= 1.6} onClick={() => setZoom(value => Math.min(1.6, +(value + .15).toFixed(2)))} aria-label="Zoom in">+</button></div></div>
-      {graph.issues ? <p className="company-chart-warning" role="status">{graph.issues} position(s) have a missing manager or a reporting cycle. Check their details in Cards &amp; edit.</p> : null}
-      {!aiNodes.length ? <p className="company-chart-empty">No AI positions yet. Add an agent to see the reporting hierarchy.</p> : <div className="company-org-frame"><div className="company-chart-canvas" ref={frame} tabIndex={0} role="region" aria-labelledby={headingId}>
-        <div className="company-org-surface" style={{ width: graph.width * zoom, height: graph.height * zoom }}><div className="company-org-map" style={{ width: graph.width, height: graph.height, transform: `scale(${zoom})` }}>
-          <svg className="company-org-connectors" width={graph.width} height={graph.height} aria-hidden="true"><defs><marker id={`${headingId}-arrow`} markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7" fill="none" stroke="#7892b1" strokeWidth="1.5"/></marker></defs>{graph.edges.map(edge => { const from = byId.get(edge.from)!; const to = byId.get(edge.to)!; const sx = from.x + CHART_CARD_WIDTH / 2, sy = from.y + CHART_CARD_HEIGHT, tx = to.x + CHART_CARD_WIDTH / 2, ty = to.y; const mid = (sy + ty) / 2; return <path key={`${edge.from}-${edge.to}`} d={`M${sx} ${sy} V${mid} H${tx} V${ty - 7}`} fill="none" stroke={selected === edge.from || selected === edge.to ? "#5267d9" : "#a8b9cf"} strokeWidth={selected === edge.from || selected === edge.to ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round" markerEnd={`url(#${headingId}-arrow)`}/>; })}</svg>
-          {aiNodes.map(node => <PositionCard key={node.id} node={node} selected={selected === node.id} dimmed={!matches(node)} inMap onSelect={() => setSelected(node.id)} />)}
-        </div></div>
-      </div><span className="company-org-edge" aria-hidden="true"/></div>}
-      <p role="status" className="company-chart-hint">{search ? `${graph.nodes.filter(matches).length} matching positions highlighted. Press Enter to focus the first.` : "Cards stay at readable size. Scroll inside the chart, or use the arrows to explore the full hierarchy."}</p>
-      {selectedNode ? <aside className="company-position-detail" aria-label="Selected position"><div><span>{selectedNode.kind === "human" ? "Human position" : "AI position"}</span><h3>{selectedNode.name}</h3><p>{selectedNode.role}</p></div><dl><div><dt>Department</dt><dd>{selectedNode.department}</dd></div><div><dt>Department lead</dt><dd>{selectedNode.manager}</dd></div><div><dt>Reports to</dt><dd>{selectedNode.reportsTo}</dd></div><div><dt>Status</dt><dd>{selectedNode.status}</dd></div></dl><button type="button" onClick={() => setSelected(null)} aria-label="Close position details">Close</button></aside> : null}
+      <div className="company-pyramid-intro"><div><span className="company-org-eyebrow">ORGANIZATION / AUTHORITY</span><h3>Who leads whom</h3><p>Human authority at the top; departments, their appointed managers and the people inside each department below.</p></div><label className="company-org-search"><span>Find a department or position</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search the organization" /></label></div>
+      <div className="company-pyramid-root" aria-label="Human CEO / Owner"><span className="company-pyramid-root-kicker">HUMAN AUTHORITY</span><strong>{graph.ceo?.name ?? "No active owner recorded"}</strong><span>{graph.ceo?.role ?? "Human CEO / Owner"}</span></div>
+      <div className="company-pyramid-spine" aria-hidden="true" />
+      {!graph.branches.length ? <p className="company-chart-empty">No departments or positions yet. Create a department to build the organization.</p> : <div className="company-pyramid-scroll" role="region" tabIndex={0} aria-label="Department hierarchy; scroll horizontally to explore">
+        <div className="company-pyramid-departments">{graph.branches.map(branch => {
+          const visible = matches(branch.name) || branch.manager && matches(branch.manager.name) || branch.people.some(item => matches(item.name) || matches(item.role));
+          const departmentActions = actions.filter(action => agents.some(agent => agent.id === action.assigned_agent_id && agent.department_id === branch.id));
+          return <section className={`company-pyramid-branch ${visible ? "" : "is-dimmed"}`} key={branch.id} aria-label={`${branch.name} department`}>
+            <header className="company-pyramid-department"><span>DEPARTMENT</span><h4>{branch.name}</h4><small>{branch.people.length + (branch.manager ? 1 : 0)} positions</small></header>
+            <div className="company-pyramid-line" aria-hidden="true" />
+            <div className="company-pyramid-manager"><span className="company-pyramid-tier">DEPARTMENT MANAGER</span>{branch.manager ? <Person person={branch.manager} selected={selected === branch.manager.id} onSelect={() => setSelected(branch.manager!.id)} /> : <div className="company-pyramid-vacancy">No manager assigned <span>Assign one in Structure to establish the routing layer.</span></div>}</div>
+            <div className="company-pyramid-line" aria-hidden="true" />
+            <div className="company-pyramid-team"><span className="company-pyramid-tier">DEPARTMENT MEMBERS</span>{branch.people.length ? branch.people.map(item => <Person key={item.id} person={item} selected={selected === item.id} onSelect={() => setSelected(item.id)} />) : <p>No members assigned yet.</p>}</div>
+            {canTrack && departmentActions.length ? <div className="company-pyramid-task-list"><strong>RECENT ASSIGNED ACTIONS</strong>{departmentActions.slice(0, 3).map(action => <a key={action.id} href={`/actions?action=${action.id}&status=${action.status}`}><span>{action.title}</span><small>{action.status.replaceAll("_", " ")}</small></a>)}</div> : null}
+          </section>;
+        })}</div>
+      </div>}
+      <p className="company-chart-hint">Department containment shows where a person works; it does not invent a reporting line. Select a position to inspect its recorded manager. Scroll horizontally for more departments.</p>
+      {graph.issues ? <p className="company-chart-warning" role="status">{graph.issues} reporting relationship(s) need attention: a missing manager or a cycle. Check Cards &amp; edit.</p> : null}
+      {person ? <aside className="company-position-detail" aria-label="Selected position"><div><span>{person.isManager ? "Department manager" : `${person.kind === "ai" ? "AI" : "Human"} position`}</span><h3>{person.name}</h3><p>{person.role}</p></div><dl><div><dt>Recorded reports to</dt><dd>{person.reportsTo}</dd></div><div><dt>Status</dt><dd>{person.status}</dd></div></dl><button type="button" onClick={() => setSelected(null)}>Close</button></aside> : null}
+      <section className="company-pyramid-workflow" aria-label="Intended operating flow"><div><span className="company-org-eyebrow">OPERATING MODEL</span><h3>How a request should move</h3><p>This is the intended route. The action register currently tracks status; manager review, revision loops, cross-department handoff and resource escalation are not yet enforced automatically.</p></div><ol><li><strong>CEO brief</strong><span>Choose a department and define the outcome.</span></li><li><strong>Manager triage</strong><span>Assign the right agent and clarify the work.</span></li><li><strong>Agent execution</strong><span>Complete the task and return evidence.</span></li><li><strong>Manager review</strong><span>Accept it or request a revision from the agent.</span></li><li><strong>Handoff or escalation</strong><span>Refer to another department, request a meeting or resources when needed.</span></li><li><strong>CEO visibility</strong><span>Track progress and receive the reviewed result.</span></li></ol><div className="company-pyramid-links">{canTrack ? <a href="/actions">Track existing action items →</a> : null}<a href="/meetings/room">Open meetings →</a></div></section>
     </div>
     <div hidden={view !== "cards"} className="company-chart-cards-view">{children}</div>
   </div>;
