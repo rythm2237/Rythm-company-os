@@ -11,6 +11,7 @@ const dispatcher=read("app/api/projects/dispatch/route.ts");
 const meetings=read("lib/projects/project-autonomous-meetings.ts");
 const migration=read("supabase/migrations/20260927193000_project_autonomy_supervisor_recovery.sql");
 const scheduledRecoveryHealth=read("supabase/migrations/20260927195000_project_scheduled_recovery_health_fix.sql");
+const retryHealthResolution=read("supabase/migrations/20260927195500_project_retry_health_resolution.sql");
 
 requireText(supervisor,"superviseProjectExecutions","durable supervisor entrypoint");
 requireText(supervisor,"supervisor_recovery_count","bounded autonomous recovery");
@@ -53,5 +54,11 @@ requireText(scheduledRecoveryHealth,"x.next_attempt_at>now()","future retry must
 requireText(scheduledRecoveryHealth,"no runnable or scheduled recovery branch","deadlock wording reflects scheduled recovery");
 requireText(scheduledRecoveryHealth,"Normalize legacy heartbeat-based wording","legacy health wording correction");
 requireText(scheduledRecoveryHealth,"grant execute on function public.refresh_project_execution_health_v1() to service_role","health hotfix remains worker-only");
+
+requireText(retryHealthResolution,"resolve_project_retry_health_v1","retry health resolution function");
+requireText(retryHealthResolution,"old.status='failed' and new.status<>'failed'","retry health closes only after task recovery");
+requireText(retryHealthResolution,"project_task_retry_health_resolution_v1","retry health status trigger");
+requireText(retryHealthResolution,"h.details->>'task_run_id'=new.id::text","retry health resolution is task-specific");
+requireText(retryHealthResolution,"grant execute on function public.resolve_project_retry_health_v1() to service_role","retry health trigger remains worker-only");
 
 console.log("Project autonomous supervisor recovery validation passed.");
