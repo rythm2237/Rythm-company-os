@@ -11,8 +11,7 @@ Deno.serve(async (req: Request) => {
     if (!serviceKey || !url) return Response.json({ ok: false, error: "server_config" }, { status: 500 });
     const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 
-    const { data: initialKeyRow, error: keyError } = await db.from("nail_2nya_push_keys").select("public_key,private_key").eq("singleton", true).maybeSingle();
-    let keyRow = initialKeyRow;
+    let { data: keyRow, error: keyError } = await db.from("nail_2nya_push_keys").select("public_key,private_key").eq("singleton", true).maybeSingle();
     if (keyError) return Response.json({ ok: false, error: "push_key_lookup_failed" }, { status: 500 });
     if (!keyRow) {
       const generated = webpush.generateVAPIDKeys();

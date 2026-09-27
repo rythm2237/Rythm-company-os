@@ -27,7 +27,5 @@ still provides membership/account identity as it did before.
 Validation: `npm run test:company-chart` covers topology, cross-department
 reporting, inactive humans, cycles, missing managers, default chart markup,
 collapsed sections, existing actions and removal of the independent bar.
-Existing customer and logo suites, typecheck, lint and production build are
-also run. Lint's unrelated main-branch error in the 2nya push function is
-fixed solely by separating one mutable row from an immutable error binding;
-its behavior is unchanged.
+Existing customer and logo suites, typecheck and production build are also run.
+The unrelated 2nya files are outside this change.
