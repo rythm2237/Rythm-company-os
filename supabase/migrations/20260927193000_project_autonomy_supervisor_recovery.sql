@@ -50,11 +50,11 @@ begin
 
   v_status := case
     when v_active>0 and v_completed=v_active then 'completed'
-    when v_active=0 then case when v_current='completed' then 'completed' else 'blocked' end
+    when v_active=0 then case when v_current='completed' then 'completed' else 'not_started' end
     when v_blocked>0 and not exists(
       select 1 from public.project_task_runs
       where roadmap_phase_id=p_phase_id
-        and status in('running','retrying','waiting_for_approval','waiting_for_connection','waiting_for_data')
+        and status in('running','retrying','queued','waiting_for_approval','waiting_for_connection','waiting_for_data')
     ) then 'blocked'
     when v_current='monitoring' then 'monitoring'
     when v_started>0 then 'in_progress'
@@ -148,11 +148,12 @@ $$;
 revoke all on function public.resume_project_tasks_after_approval_v1() from public,anon,authenticated;
 grant execute on function public.resume_project_tasks_after_approval_v1() to service_role;
 
--- Backfill already-resolved project approvals so the audit trail no longer looks unconsumed.
-update public.approval_requests ar
-set consumed_at=coalesce(ar.consumed_at,ar.resolved_at,now()),
-    consumed_by_execution_id=coalesce(
-      ar.consumed_by_execution_id,
+-- Backfill only approvals that can be tied to an actual execution. A resolved decision
+-- without execution evidence must remain unconsumed for audit integrity.
+with approval_consumption as (
+  select
+    ar.id,
+    coalesce(
       (
         select tr.execution_id
         from public.project_task_runs tr
@@ -169,10 +170,18 @@ set consumed_at=coalesce(ar.consumed_at,ar.resolved_at,now()),
           and pp.id=ar.subject_id
         limit 1
       )
-    )
-where ar.project_id is not null
-  and ar.status in('approved','rejected')
-  and ar.consumed_at is null;
+    ) as execution_id
+  from public.approval_requests ar
+  where ar.project_id is not null
+    and ar.status in('approved','rejected')
+    and ar.consumed_at is null
+)
+update public.approval_requests ar
+set consumed_at=coalesce(ar.consumed_at,ar.resolved_at,now()),
+    consumed_by_execution_id=coalesce(ar.consumed_by_execution_id,m.execution_id)
+from approval_consumption m
+where ar.id=m.id
+  and m.execution_id is not null;
 
 create or replace function public.refresh_project_execution_health_v1()
 returns integer
