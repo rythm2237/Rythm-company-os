@@ -1,0 +1,1 @@
+Admin UX phase marker: interaction feedback, busy states, focus/hover/active affordances, branded background layer.
