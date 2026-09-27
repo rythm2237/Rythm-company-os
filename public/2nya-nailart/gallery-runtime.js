@@ -1,4 +1,5 @@
 (()=>{
+  if(!document.querySelector('script[data-donya-brand-motion]')){const s=document.createElement('script');s.src='/2nya-nailart/brand-motion.js?v=20260927-1';s.defer=true;s.dataset.donyaBrandMotion='true';document.head.append(s)}
   const ENDPOINT='/api/2nya-nailart/portfolio';
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const pad=n=>String(n).padStart(2,'0');
