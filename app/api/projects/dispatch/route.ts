@@ -6,6 +6,7 @@ import { dispatchProjectKnowledge } from "@/lib/projects/project-knowledge";
 import { dispatchAutonomousProjectMeetings } from "@/lib/projects/project-autonomous-meetings";
 import { dispatchApprovedProjectProposalActions } from "@/lib/projects/project-proposal-execution";
 import { dispatchApprovedProjectToolExecutions, reconcileDispatchedProjectProposals } from "@/lib/projects/project-tool-execution";
+import { superviseProjectExecutions } from "@/lib/projects/project-supervisor";
 import { dispatchConnectionSetupSessions } from "@/lib/integrations/connection-setup-agent";
 
 export const dynamic="force-dynamic";
@@ -55,6 +56,9 @@ export async function GET(request:Request){
     if(health.error){console.error("project_health_refresh_failed",health.error.message);errors.push({step:"health",error:health.error.message});}
     if(meetingRecovery.error){console.error("project_meeting_recovery_failed",meetingRecovery.error.message);errors.push({step:"meeting_recovery",error:meetingRecovery.error.message});}
 
+    // First pass repairs retry-exhausted/deadlocked work before normal workers claim tasks.
+    const supervisorBefore=await isolated("supervisor_pre",()=>superviseProjectExecutions(service),errors,[]);
+
     const [knowledgeResults,connectionSetupResults]=await Promise.all([
       isolated("knowledge",()=>dispatchProjectKnowledge(service,{claimLimit:4}),errors,[]),
       isolated("connection_setup",()=>dispatchConnectionSetupSessions(service,{limit:2}),errors,[]),
@@ -65,15 +69,27 @@ export async function GET(request:Request){
       isolated("tasks",()=>dispatchProjectWork(service),errors,[]),
       isolated("meetings",()=>dispatchAutonomousProjectMeetings(service),errors,[]),
     ]);
+
+    // Second pass reacts to failures produced in this same dispatcher cycle instead of
+    // leaving the project idle until a human manually restarts it.
+    const supervisorAfter=await isolated("supervisor_post",()=>superviseProjectExecutions(service),errors,[]);
     const toolResults=await isolated("external_actions",()=>dispatchApprovedProjectToolExecutions(),errors,[]);
     const terminal=await service.rpc("reconcile_project_execution_terminal_states_v1");
     if(terminal.error){console.error("project_terminal_reconciliation_failed",terminal.error.message);errors.push({step:"terminal_reconciliation",error:terminal.error.message});}
 
+    const supervisorResults=[...supervisorBefore,...supervisorAfter];
     return NextResponse.json({
       ok:true,degraded:errors.length>0,errors,
-      processed:knowledgeResults.length+connectionSetupResults.length+taskResults.length+meetingResults.length+proposalResults.length+proposalConvergence.length+toolResults.length,
+      processed:knowledgeResults.length+connectionSetupResults.length+taskResults.length+meetingResults.length+proposalResults.length+proposalConvergence.length+toolResults.length+supervisorResults.length,
       healthEvents:Number(health.data??0),recoveredMeetings:Number(meetingRecovery.data??0),terminalExecutions:Number(terminal.data??0),
-      knowledge:knowledgeResults,connectionSetup:connectionSetupResults,tasks:taskResults,meetings:meetingResults,proposals:proposalResults,proposalConvergence,externalActions:toolResults,
+      knowledge:knowledgeResults,
+      connectionSetup:connectionSetupResults,
+      supervisor:supervisorResults,
+      tasks:taskResults,
+      meetings:meetingResults,
+      proposals:proposalResults,
+      proposalConvergence,
+      externalActions:toolResults,
     });
   }catch(error){
     console.error("project_dispatch_failed",error);
