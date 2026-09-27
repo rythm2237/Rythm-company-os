@@ -56,23 +56,23 @@ drop policy if exists "2nya admins select media" on storage.objects;
 create policy "2nya admins select media"
 on storage.objects for select
 to authenticated
-using (bucket_id='nail-2nya-media' and public.nail_2nya_is_admin(auth.uid()));
+using (bucket_id='nail-2nya-media' and public.nail_2nya_is_admin());
 
 drop policy if exists "2nya admins insert media" on storage.objects;
 create policy "2nya admins insert media"
 on storage.objects for insert
 to authenticated
-with check (bucket_id='nail-2nya-media' and public.nail_2nya_is_admin(auth.uid()));
+with check (bucket_id='nail-2nya-media' and public.nail_2nya_is_admin());
 
 drop policy if exists "2nya admins update media" on storage.objects;
 create policy "2nya admins update media"
 on storage.objects for update
 to authenticated
-using (bucket_id='nail-2nya-media' and public.nail_2nya_is_admin(auth.uid()))
-with check (bucket_id='nail-2nya-media' and public.nail_2nya_is_admin(auth.uid()));
+using (bucket_id='nail-2nya-media' and public.nail_2nya_is_admin())
+with check (bucket_id='nail-2nya-media' and public.nail_2nya_is_admin());
 
 drop policy if exists "2nya admins delete media" on storage.objects;
 create policy "2nya admins delete media"
 on storage.objects for delete
 to authenticated
-using (bucket_id='nail-2nya-media' and public.nail_2nya_is_admin(auth.uid()));
+using (bucket_id='nail-2nya-media' and public.nail_2nya_is_admin());
