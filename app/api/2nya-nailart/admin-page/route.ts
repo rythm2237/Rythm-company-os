@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 const LOAD_MARKER = "if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});load().catch(()=>showLogin());";
 const CALENDAR_CSS = '<link rel="stylesheet" href="/2nya-nailart/admin-calendar.css?v=20260926-1">';
 const EXPERIENCE_CSS = '<link rel="stylesheet" href="/2nya-nailart/admin-experience.css?v=20260927-2">';
+const BRAND_SCRIPT = '<script defer src="/2nya-nailart/brand-motion.js?v=20260927-1"></script>';
 
 export async function GET() {
   try {
@@ -26,7 +27,7 @@ export async function GET() {
       return new NextResponse('Admin page is temporarily unavailable.', { status: 503 });
     }
 
-    const withStyles = html.replace('</head>', `${CALENDAR_CSS}${EXPERIENCE_CSS}</head>`);
+    const withStyles = html.replace('</head>', `${CALENDAR_CSS}${EXPERIENCE_CSS}${BRAND_SCRIPT}</head>`);
     const page = withStyles.replace(
       LOAD_MARKER,
       `${calendarJs}\n${workflowJs}\n${galleryJs}\n${experienceJs}\n${persianCalendarJs}\n${LOAD_MARKER}`,
