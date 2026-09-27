@@ -10,7 +10,7 @@ const supervisor=read("lib/projects/project-supervisor.ts");
 const dispatcher=read("app/api/projects/dispatch/route.ts");
 const meetings=read("lib/projects/project-autonomous-meetings.ts");
 const migration=read("supabase/migrations/20260927193000_project_autonomy_supervisor_recovery.sql");
-const scheduledRecoveryHealth=read("supabase/migrations/20260927190000_project_scheduled_recovery_health_fix.sql");
+const scheduledRecoveryHealth=read("supabase/migrations/20260927195000_project_scheduled_recovery_health_fix.sql");
 
 requireText(supervisor,"superviseProjectExecutions","durable supervisor entrypoint");
 requireText(supervisor,"supervisor_recovery_count","bounded autonomous recovery");
