@@ -3,6 +3,9 @@ import { requireNailAdmin } from '@/lib/2nya-nailart/server';
 export const dynamic='force-dynamic';
 
 function fail(error:string,status=400){return NextResponse.json({ok:false,error},{status,headers:{'Cache-Control':'no-store'}})}
+async function sendBookingPush(appointmentId:string,eventType:string,target:'admin'|'customer'){
+  try{await fetch('https://dezbacyuvsdrlpmmpjht.supabase.co/functions/v1/two-nya-push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({appointment_id:appointmentId,event_type:eventType,target}),cache:'no-store'});}catch(error){console.error('2nya_push_dispatch_failed',{eventType,target,message:error instanceof Error?error.message:'unknown'});}
+}
 
 export async function GET(request:NextRequest){
   const auth=await requireNailAdmin(request);if(!auth.ok)return auth.response;
@@ -35,7 +38,12 @@ export async function POST(request:NextRequest){
       result=body.id?await db.from('nail_2nya_services').update(row).eq('id',body.id).select().single():await db.from('nail_2nya_services').insert(row).select().single();
     }else if(action==='delete_service') result=await db.from('nail_2nya_services').delete().eq('id',body.id);
     else if(action==='save_business') result=await db.from('nail_2nya_business_profile').update({phone:body.phone||null,address:body.address||null,timezone:body.timezone||'UTC',currency:body.currency||null,language:'fa',slot_interval_minutes:Number(body.slot_interval_minutes||15),min_booking_notice_minutes:Number(body.min_booking_notice_minutes||0),max_advance_days:Number(body.max_advance_days||180)}).eq('id',body.id).select().single();
-    else if(action==='add_hours') result=await db.from('nail_2nya_business_hours').insert({weekday:Number(body.weekday),start_time:body.start_time,end_time:body.end_time,active:true}).select().single();
+    else if(action==='set_default_hours'){
+      const start=String(body.start_time||''),end=String(body.end_time||'');
+      if(!/^\d{2}:\d{2}$/.test(start)||!/^\d{2}:\d{2}$/.test(end)||start>=end)return fail('ساعت شروع و پایان معتبر نیست.');
+      const cleared=await db.from('nail_2nya_business_hours').delete().in('weekday',[0,1,2,3,4,5,6]);
+      if(cleared.error)result=cleared;else result=await db.from('nail_2nya_business_hours').insert([0,1,2,3,4,6].map(weekday=>({weekday,start_time:start,end_time:end,active:true}))).select();
+    }else if(action==='add_hours') result=await db.from('nail_2nya_business_hours').insert({weekday:Number(body.weekday),start_time:body.start_time,end_time:body.end_time,active:true}).select().single();
     else if(action==='delete_hours') result=await db.from('nail_2nya_business_hours').delete().eq('id',body.id);
     else if(action==='close_day') result=await db.from('nail_2nya_availability_exceptions').upsert({exception_date:body.date,is_closed:true,note:body.note||null},{onConflict:'exception_date'}).select().single();
     else if(action==='reopen_day') result=await db.from('nail_2nya_availability_exceptions').delete().eq('exception_date',body.date);
@@ -43,8 +51,15 @@ export async function POST(request:NextRequest){
     else if(action==='delete_special') result=await db.from('nail_2nya_special_availability').delete().eq('id',body.id);
     else if(action==='add_block') result=await db.from('nail_2nya_blocked_periods').insert({start_at:body.start_at,end_at:body.end_at,reason:body.reason||null,created_by:auth.user.id}).select().single();
     else if(action==='delete_block') result=await db.from('nail_2nya_blocked_periods').delete().eq('id',body.id);
-    else if(action==='appointment_status') result=await db.from('nail_2nya_appointments').update({status:body.status}).eq('id',body.id).select().single();
-    else if(action==='manual_booking'){
+    else if(action==='appointment_status'){
+      const status=String(body.status||'');
+      if(!['pending','confirmed','completed','cancelled','no_show'].includes(status))return fail('وضعیت معتبر نیست.');
+      const previous=await db.from('nail_2nya_appointments').select('id,status').eq('id',body.id).maybeSingle();
+      if(previous.error||!previous.data)return fail('وقت پیدا نشد.',404);
+      result=await db.from('nail_2nya_appointments').update({status}).eq('id',body.id).select().single();
+      if(!result.error&&previous.data.status==='pending'&&status==='confirmed')await sendBookingPush(String(body.id),'request_approved','customer');
+      if(!result.error&&previous.data.status==='pending'&&status==='cancelled')await sendBookingPush(String(body.id),'request_rejected','customer');
+    }else if(action==='manual_booking'){
       result=await db.rpc('nail_2nya_admin_create_appointment',{p_service_id:body.service_id,p_start_at:body.start_at,p_name:String(body.name??'').trim(),p_phone:String(body.phone??'').trim(),p_instagram:body.instagram||null,p_email:body.email||null,p_customer_notes:body.customer_notes||null,p_admin_notes:body.admin_notes||null});
       if(!result.error&&result.data?.ok===false){const conflict=result.data.code==='appointment_conflict';return fail(conflict?'این زمان با یک رزرو دیگر تداخل دارد.':'رزرو دستی ساخته نشد.',conflict?409:400)}
     }else if(action==='push_subscribe'){
