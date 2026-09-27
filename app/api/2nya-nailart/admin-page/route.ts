@@ -7,17 +7,18 @@ export const dynamic = 'force-dynamic';
 
 const LOAD_MARKER = "if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});load().catch(()=>showLogin());";
 const CALENDAR_CSS = '<link rel="stylesheet" href="/2nya-nailart/admin-calendar.css?v=20260926-1">';
-const EXPERIENCE_CSS = '<link rel="stylesheet" href="/2nya-nailart/admin-experience.css?v=20260927-1">';
+const EXPERIENCE_CSS = '<link rel="stylesheet" href="/2nya-nailart/admin-experience.css?v=20260927-2">';
 
 export async function GET() {
   try {
     const publicDir = path.join(process.cwd(), 'public', '2nya-nailart');
-    const [html, calendarJs, workflowJs, galleryJs, experienceJs] = await Promise.all([
+    const [html, calendarJs, workflowJs, galleryJs, experienceJs, persianCalendarJs] = await Promise.all([
       readFile(path.join(publicDir, 'admin.html'), 'utf8'),
       readFile(path.join(publicDir, 'admin-calendar.js'), 'utf8'),
       readFile(path.join(publicDir, 'admin-workflow.js'), 'utf8'),
       readFile(path.join(publicDir, 'admin-gallery.js'), 'utf8'),
       readFile(path.join(publicDir, 'admin-experience.js'), 'utf8'),
+      readFile(path.join(publicDir, 'admin-persian-calendar.js'), 'utf8'),
     ]);
 
     if (!html.includes(LOAD_MARKER)) {
@@ -26,7 +27,10 @@ export async function GET() {
     }
 
     const withStyles = html.replace('</head>', `${CALENDAR_CSS}${EXPERIENCE_CSS}</head>`);
-    const page = withStyles.replace(LOAD_MARKER, `${calendarJs}\n${workflowJs}\n${galleryJs}\n${experienceJs}\n${LOAD_MARKER}`);
+    const page = withStyles.replace(
+      LOAD_MARKER,
+      `${calendarJs}\n${workflowJs}\n${galleryJs}\n${experienceJs}\n${persianCalendarJs}\n${LOAD_MARKER}`,
+    );
 
     return new NextResponse(page, {
       status: 200,
