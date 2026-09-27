@@ -2,6 +2,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOrganizationContext, requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { createWorkforceAdminClient } from "@/lib/supabase/workforce-admin";
+import CompanyChart from "@/components/company-branding/CompanyChart";
+import "@/app/company-dashboard.css";
 
 export const dynamic = "force-dynamic";
 
@@ -201,12 +203,13 @@ export default async function CompanyPage({ searchParams }: Props) {
   const totalMonthlyCost = agents.reduce((sum, agent) => sum + Number(agent.monthly_company_cost ?? 0), 0);
   const totalMonthlySale = agents.reduce((sum, agent) => sum + Number(agent.sale_price_monthly ?? 0), 0);
 
-  return <main className="command-shell ops-shell">
+  return <main className="command-shell ops-shell company-dashboard">
     <header className="command-header"><div><p className="eyebrow">COMPANY ADMINISTRATION</p><h1>Company & workforce</h1><p className="subtitle">The canonical company identity, hybrid organization chart, human membership lifecycle and AI workforce economics.</p></div><div className="ops-header-actions"><a className="secondary-button" href="/calendar">Calendar</a><a className="secondary-button" href="/notifications">Notifications</a></div></header>
     {params.message ? <p className="ops-message">{params.message}</p> : null}{params.error ? <p className="form-error">{params.error}</p> : null}
     <section className="metrics-grid ops-metrics"><div className="metric-card"><span>Departments</span><strong>{departments.length}</strong></div><div className="metric-card"><span>Teams</span><strong>{teams.length}</strong></div><div className="metric-card"><span>Humans</span><strong>{members.length}</strong></div><div className="metric-card"><span>AI workforce</span><strong>{agents.length}</strong></div><div className="metric-card"><span>Monthly cost</span><strong>€{totalMonthlyCost.toFixed(0)}</strong></div><div className="metric-card"><span>Position revenue</span><strong>€{totalMonthlySale.toFixed(0)}</strong></div></section>
 
-    <section className="panel ops-section"><div className="panel-heading"><div><p className="label">Official identity</p><h2>Company Profile</h2></div><span className="pill">Owner controlled</span></div>
+    <details className="company-disclosure" id="official-identity"><summary><span className="company-section-index">01</span><span><strong>Official identity</strong><small>Company profile, registration and contact details</small></span><span className="company-section-meta">Owner controlled</span><span className="company-section-chevron" aria-hidden="true">⌄</span></summary><div className="company-disclosure-body">
+      <p className="company-section-help"><a href="/company/profile">Edit full profile & company logo →</a></p>
       <form action={updateCompanyProfile} className="ops-form-grid">
         <label><span>Legal name</span><input name="legalName" defaultValue={org.legal_name ?? org.name} required disabled={!isOwner}/></label>
         <label><span>Entity type</span><input name="legalEntityType" defaultValue={org.legal_entity_type ?? ""} placeholder="Kft., Ltd., E.V..." disabled={!isOwner}/></label>
@@ -225,9 +228,9 @@ export default async function CompanyPage({ searchParams }: Props) {
         <label><span>Postal code</span><input name="postalCode" defaultValue={address.postal_code ?? ""} disabled={!isOwner}/></label>
         {isOwner ? <div className="ops-form-actions"><button type="submit">Save company profile</button></div> : null}
       </form>
-    </section>
+    </div></details>
 
-    <div className="ops-two-col">
+    <details className="company-disclosure" id="company-structure"><summary><span className="company-section-index">02</span><span><strong>Structure</strong><small>Departments, teams and leadership</small></span><span className="company-section-meta">{departments.length} departments · {teams.length} teams</span><span className="company-section-chevron" aria-hidden="true">⌄</span></summary><div className="company-disclosure-body ops-two-col">
       <section className="panel ops-section"><div className="panel-heading"><div><p className="label">Structure</p><h2>Departments</h2></div></div>
         <div className="ops-list">{departments.map((department) => <div className="ops-list-row" key={department.id}><div><strong>{department.name}</strong><small>{department.description || "No description"}</small></div><span>{department.status}</span></div>)}</div>
         {isOwner ? <form action={createDepartment} className="ops-inline-form"><input name="name" placeholder="Department name" required/><input name="description" placeholder="Purpose"/><select name="parentDepartmentId"><option value="">Top level</option>{departments.map(d => <option value={d.id} key={d.id}>{d.name}</option>)}</select><button>Add department</button></form> : null}
@@ -236,19 +239,21 @@ export default async function CompanyPage({ searchParams }: Props) {
         <div className="ops-list">{teams.map((team) => <div className="ops-list-row" key={team.id}><div><strong>{team.name}</strong><small>{team.description || "Hybrid human/AI team"}</small></div><span>{team.status}</span></div>)}</div>
         {isOwner ? <form action={createTeam} className="ops-inline-form"><input name="name" placeholder="Team name" required/><select name="departmentId"><option value="">No department</option>{departments.map(d => <option value={d.id} key={d.id}>{d.name}</option>)}</select><select name="managerAgentId"><option value="">No AI manager</option>{agents.map(a => <option value={a.id} key={a.id}>{a.display_name || a.name}</option>)}</select><button>Add team</button></form> : null}
       </section>
-    </div>
+    </div></details>
 
-    <section className="panel ops-section"><div className="panel-heading"><div><p className="label">Human workforce</p><h2>Members & invitations</h2></div><span className="pill">{invitations.filter(i => i.status === "invited").length} pending</span></div>
+    <details className="company-disclosure" id="human-workforce"><summary><span className="company-section-index">03</span><span><strong>Human workforce</strong><small>Members, roles and invitations</small></span><span className="company-section-meta">{members.length} members · {invitations.filter(i => i.status === "invited").length} pending</span><span className="company-section-chevron" aria-hidden="true">⌄</span></summary><div className="company-disclosure-body">
       {isOwner ? <form action={inviteMember} className="ops-invite"><input name="email" type="email" placeholder="person@company.com" required/><select name="role" defaultValue="member"><option>admin</option><option>manager</option><option>member</option><option>viewer</option></select><select name="departmentId"><option value="">No department</option>{departments.map(d => <option value={d.id} key={d.id}>{d.name}</option>)}</select><button>Invite member</button></form> : null}
       <div className="ops-member-grid">{members.map(member => <form action={updateMember} className="ops-member-card" key={member.user_id}><input type="hidden" name="userId" value={member.user_id}/><div><strong>{member.display_name || `User ${member.user_id.slice(0, 8)}`}</strong><small>{member.job_title || "Team member"}</small></div><input name="jobTitle" defaultValue={member.job_title ?? ""} placeholder="Job title" disabled={!isOwner}/><select name="departmentId" defaultValue={member.department_id ?? ""} disabled={!isOwner}><option value="">No department</option>{departments.map(d => <option value={d.id} key={d.id}>{d.name}</option>)}</select><select name="role" defaultValue={member.role} disabled={!isOwner}>{["owner","admin","manager","member","viewer"].map(role => <option key={role}>{role}</option>)}</select><select name="status" defaultValue={member.membership_status ?? "active"} disabled={!isOwner}><option>active</option><option>suspended</option><option>removed</option></select>{isOwner ? <button>Update</button> : null}</form>)}</div>
       {invitations.length ? <div className="ops-invitations"><h3>Recent invitations</h3>{invitations.map(invite => <div key={invite.id}><span>{invite.email}</span><span>{invite.role}</span><strong>{invite.status}</strong></div>)}</div> : null}
-    </section>
+    </div></details>
 
-    <section className="panel ops-section"><div className="panel-heading"><div><p className="label">Hybrid org chart</p><h2>AI reporting structure & cost</h2></div><span className="pill">Cost ≠ payroll</span></div>
+    <details className="company-disclosure company-chart-disclosure" id="hybrid-org-chart" open><summary><span className="company-section-index">04</span><span><strong>Hybrid organizational chart</strong><small>People, AI positions and reporting relationships</small></span><span className="company-section-meta">{members.filter(m => m.membership_status === "active").length + agents.length} positions</span><span className="company-section-chevron" aria-hidden="true">⌄</span></summary><div className="company-disclosure-body">
+      <CompanyChart key={organizationId} departments={departments} agents={agents.map(({ id, name, display_name, role_title, department_id, reports_to_agent_id, agent_status }) => ({ id, name, display_name, role_title, department_id, reports_to_agent_id, agent_status }))} members={members.map(({ user_id, display_name, job_title, role, department_id, membership_status }) => ({ user_id, display_name, job_title, role, department_id, membership_status }))}>
       <div className="ops-agent-grid">{agents.map(agent => <article className="ops-agent-card" key={agent.id}><div className="ops-agent-head"><div><span>{agent.agent_code}</span><h3>{agent.display_name || agent.name}</h3><p>{agent.role_title}</p></div><strong>{agent.cost_currency ?? "EUR"} {Number(agent.monthly_company_cost ?? 0).toFixed(2)}/mo</strong></div>
         <form action={updateAgentStructure} className="ops-agent-form"><input type="hidden" name="agentId" value={agent.id}/><label><span>Department</span><select name="departmentId" defaultValue={agent.department_id ?? ""} disabled={!isOwner}><option value="">Unassigned</option>{departments.map(d => <option value={d.id} key={d.id}>{d.name}</option>)}</select></label><label><span>Reports to</span><select name="reportsToAgentId" defaultValue={agent.reports_to_agent_id ?? ""} disabled={!isOwner}><option value="">Human CEO / none</option>{agents.filter(a => a.id !== agent.id).map(a => <option value={a.id} key={a.id}>{a.display_name || a.name}</option>)}</select></label>{isOwner ? <button>Save structure</button> : null}</form>
         <form action={updateAgentCost} className="ops-agent-form ops-cost-form"><input type="hidden" name="agentId" value={agent.id}/><label><span>Cost model</span><select name="costModel" defaultValue={agent.cost_model ?? "included"} disabled={!isOwner}><option value="included">Included / zero</option><option value="fixed">Fixed monthly</option><option value="usage">Usage based</option><option value="hybrid">Fixed + usage</option><option value="custom">Custom</option></select></label><label><span>Base monthly cost</span><input name="monthlyCompanyCost" type="number" min="0" step="0.01" defaultValue={agent.monthly_company_cost ?? 0} disabled={!isOwner}/></label><label><span>Usage rate</span><input name="usageCostRate" type="number" min="0" step="0.0001" defaultValue={agent.usage_cost_rate ?? 0} disabled={!isOwner}/></label><label><span>Usage unit</span><input name="usageCostUnit" defaultValue={agent.usage_cost_unit ?? ""} placeholder="1M tokens / run" disabled={!isOwner}/></label><label><span>Customer monthly price</span><input name="salePriceMonthly" type="number" min="0" step="0.01" defaultValue={agent.sale_price_monthly ?? ""} disabled={!isOwner}/></label><label><span>Currency</span><input name="currency" maxLength={3} defaultValue={agent.cost_currency ?? org.default_currency ?? "EUR"} disabled={!isOwner}/></label>{isOwner ? <button>Save Agent Cost</button> : null}</form>
       </article>)}</div>
-    </section>
+      </CompanyChart>
+    </div></details>
   </main>;
 }
