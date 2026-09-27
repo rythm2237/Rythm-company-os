@@ -1,8 +1,9 @@
 (()=>{
   if(window.__donyaBrandMotion)return;window.__donyaBrandMotion=true;
   const LOGO='/api/2nya-nailart/logo';
+  const PORTRAIT='/2nya-nailart/donya-about-portrait.webp';
   const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const css=document.createElement('link');css.rel='stylesheet';css.href='/2nya-nailart/brand-motion.css?v=20260927-1';document.head.append(css);
+  const css=document.createElement('link');css.rel='stylesheet';css.href='/2nya-nailart/brand-motion.css?v=20260927-2';document.head.append(css);
   const logoSources=['/2nya-media/donya-logo.webp','/assets/logo.webp','/2nya-nailart/assets/logo.webp'];
   const isLogo=img=>{const src=img.getAttribute('src')||'';return logoSources.some(x=>src.includes(x))||/logo/i.test(img.className||'')||/لوگو/.test(img.alt||'')};
   function wrapLogo(img,index){
@@ -15,6 +16,12 @@
     if(prominent)frame.classList.add('logo-shine');
   }
   function refreshLogos(){[...document.images].filter(isLogo).forEach(wrapLogo)}
+  function syncManagerPortrait(){
+    document.querySelectorAll('.about-photo img').forEach(img=>{
+      if(img.dataset.donyaPortrait==='1')return;
+      img.dataset.donyaPortrait='1';img.src=PORTRAIT;img.alt='دنیا وردی‌نژاد، مدیر Donya Nail Art';img.decoding='async';
+    });
+  }
   const revealGroups=[
     ['.portfolio-top > *,.section-head > *','motion-title'],
     ['.portfolio-shell,.feature-card,.about-photo,.guide-feature > img','motion-scale'],
@@ -34,6 +41,6 @@
     document.querySelectorAll('.motion-reveal:not(.is-visible)').forEach(el=>io.observe(el));
   }
   function heroMotion(){const hero=document.querySelector('.donya-hero');if(!hero||reduced)return;hero.classList.add('hero-motion-ready');requestAnimationFrame(()=>requestAnimationFrame(()=>hero.classList.add('hero-motion-run')))}
-  function init(){refreshLogos();prepareReveal();heroMotion();const obs=new MutationObserver(()=>{refreshLogos();prepareReveal()});obs.observe(document.body,{childList:true,subtree:true})}
+  function init(){refreshLogos();syncManagerPortrait();prepareReveal();heroMotion();const obs=new MutationObserver(()=>{refreshLogos();syncManagerPortrait();prepareReveal()});obs.observe(document.body,{childList:true,subtree:true})}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
