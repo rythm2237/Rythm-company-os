@@ -1,5 +1,5 @@
 import Link from "next/link";
-import CompanyLogo from "@/components/company-branding/CompanyLogo";
+import WorkspaceCompanyBadge from "@/components/company-branding/WorkspaceCompanyBadge";
 import { Suspense } from "react";
 import DecisionDraftGuard from "@/components/decision-draft-guard/DecisionDraftGuard";
 import ProductNav from "@/components/product-nav/ProductNav";
@@ -119,7 +119,7 @@ export default async function AppShell({ children }: Readonly<{ children: React.
       <Suspense fallback={null}><BoardroomFocusBridge /></Suspense>
       <Suspense fallback={null}><DecisionDraftGuard /></Suspense>
       <div className="app-stage">
-        {organizationNavigation ? <div className="workspace-identity-slot"><div className="workspace-identity-bar" aria-label="Current account"><div className="workspace-identity-copy"><strong>{organizationNavigation.activeOrganizationName}</strong><span title={organizationNavigation.userEmail}>{organizationNavigation.userName} · {organizationNavigation.activeRole}</span></div><CompanyLogo key={organizationContext?.organizationId} organizationId={organizationNavigation.activeOrganizationId} name={organizationNavigation.activeOrganizationName} version={organizationContext?.organization.logo_version} /></div></div> : null}
+        {organizationNavigation ? <WorkspaceCompanyBadge key={organizationNavigation.activeOrganizationId} organizationId={organizationNavigation.activeOrganizationId} name={organizationNavigation.activeOrganizationName} version={organizationContext?.organization.logo_version} /> : null}
         <div className="app-page-transition" key={organizationContext?.organizationId ?? "no-company"}>{children}</div>
         <footer className="workspace-footer" aria-label="RYTHM workspace footer">
           <div className="workspace-footer-inner">

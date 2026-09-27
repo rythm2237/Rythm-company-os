@@ -40,7 +40,8 @@
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",
     "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts",
     "test:customers": "node --import tsx scripts/validate-customer-management.tsx",
-    "test:company-logo": "node --import tsx scripts/validate-company-logo.ts"
+    "test:company-logo": "node --import tsx scripts/validate-company-logo.ts",
+    "test:company-chart": "node --import tsx scripts/validate-company-chart.tsx"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
