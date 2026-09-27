@@ -1,0 +1,68 @@
+(()=>{
+  if(window.__donyaPersianAdminCalendar)return;window.__donyaPersianAdminCalendar=true;
+  const pad=n=>String(n).padStart(2,'0');
+  const isoFromCarrier=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const carrierFromIso=iso=>{const [y,m,d]=String(iso).split('-').map(Number);return new Date(y,m-1,d,12,0,0,0)};
+  const shiftIso=(iso,days)=>{const [y,m,d]=String(iso).split('-').map(Number);const x=new Date(Date.UTC(y,m-1,d+days,12));return `${x.getUTCFullYear()}-${pad(x.getUTCMonth()+1)}-${pad(x.getUTCDate())}`};
+  const weekdayOf=iso=>{const [y,m,d]=String(iso).split('-').map(Number);return new Date(Date.UTC(y,m-1,d,12)).getUTCDay()};
+  const faNum=v=>new Intl.NumberFormat('fa-IR').format(v);
+  const persianParts=iso=>{
+    const [y,m,d]=String(iso).split('-').map(Number);
+    const parts=new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn',{timeZone:'UTC',year:'numeric',month:'numeric',day:'numeric'}).formatToParts(new Date(Date.UTC(y,m-1,d,12)));
+    const out={};parts.forEach(p=>{if(p.type!=='literal')out[p.type]=p.value});
+    return {year:Number(out.year),month:Number(out.month),day:Number(out.day)};
+  };
+  const persianLabel=(iso,opts={weekday:'long',day:'numeric',month:'long',year:'numeric'})=>{
+    const [y,m,d]=String(iso).split('-').map(Number);
+    return new Intl.DateTimeFormat('fa-IR-u-ca-persian',{...opts,timeZone:'UTC'}).format(new Date(Date.UTC(y,m-1,d,12)));
+  };
+  const monthDates=anchorIso=>{
+    const target=persianParts(anchorIso);let first=anchorIso;
+    for(let i=0;i<32;i++){const p=persianParts(first);if(p.year===target.year&&p.month===target.month&&p.day===1)break;first=shiftIso(first,-1)}
+    const dates=[];let cursor=first;
+    for(let i=0;i<32;i++){const p=persianParts(cursor);if(p.year!==target.year||p.month!==target.month)break;dates.push(cursor);cursor=shiftIso(cursor,1)}
+    return dates;
+  };
+  const appointmentsFor=iso=>(window.data?.appointments||[]).filter(a=>a.status!=='cancelled'&&(()=>{try{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:window.data?.business?.timezone||'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(a.start_at));const o={};parts.forEach(p=>{if(p.type!=='literal')o[p.type]=p.value});return `${o.year}-${o.month}-${o.day}`===iso}catch{return false}})());
+  const isOpen=iso=>{
+    const d=window.data||{};
+    if((d.exceptions||[]).some(x=>x.exception_date===iso&&x.is_closed))return false;
+    if((d.special||[]).some(x=>x.availability_date===iso))return true;
+    return (d.hours||[]).some(h=>h.active!==false&&Number(h.weekday)===weekdayOf(iso));
+  };
+  const setViewDay=iso=>{
+    window.currentDate=carrierFromIso(iso);window.view='day';
+    document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view==='day'));
+    window.renderAppointments?.();
+  };
+  function enhanceMonth(){
+    if(window.view!=='month')return;
+    const root=document.querySelector('#appointments'),grid=root?.querySelector('.month-grid');if(!grid)return;
+    const anchor=isoFromCarrier(window.currentDate),dates=monthDates(anchor);if(!dates.length)return;
+    const heads=['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنج‌شنبه','جمعه'];
+    const leading=(weekdayOf(dates[0])+1)%7;
+    let html=heads.map(x=>`<div class="month-weekday">${x}</div>`).join('');
+    for(let i=0;i<leading;i++)html+='<div class="month-cell ghost"></div>';
+    dates.forEach(iso=>{const p=persianParts(iso),count=appointmentsFor(iso).length,open=isOpen(iso);html+=`<button class="month-cell ${open?'open':'closed'}" data-persian-day="${iso}" type="button"><strong>${faNum(p.day)}</strong><span>${open?'باز':'تعطیل'}</span><em>${count?`${faNum(count)} رزرو`:'بدون رزرو'}</em></button>`});
+    grid.innerHTML=html;
+    root.querySelectorAll('[data-persian-day]').forEach(btn=>btn.onclick=()=>setViewDay(btn.dataset.persianDay));
+    const p=persianParts(anchor),meta=document.querySelector('#agendaMeta');if(meta)meta.textContent=persianLabel(anchor,{month:'long',year:'numeric'});
+    const note=root.querySelector('.cal-month-note');if(note)note.textContent='تقویم شمسی ایران · برای دیدن ساعت‌ها روی روز موردنظر بزنید.';
+  }
+  function addCalendarBadge(){
+    const meta=document.querySelector('#agendaMeta');if(!meta||meta.parentElement?.querySelector('.jalali-badge'))return;
+    const badge=document.createElement('span');badge.className='jalali-badge';badge.textContent='تقویم شمسی · تهران';meta.after(badge);
+  }
+  const originalRender=window.renderAppointments;
+  if(typeof originalRender==='function'){
+    window.renderAppointments=async function(...args){const result=await originalRender.apply(this,args);requestAnimationFrame(()=>{addCalendarBadge();enhanceMonth()});return result};
+  }
+  const prev=document.querySelector('#prevDate'),next=document.querySelector('#nextDate');
+  if(prev&&next){
+    const oldPrev=prev.onclick,oldNext=next.onclick;
+    prev.onclick=()=>{if(window.view!=='month')return oldPrev?.call(prev);const dates=monthDates(isoFromCarrier(window.currentDate));if(dates.length){window.currentDate=carrierFromIso(shiftIso(dates[0],-1));window.renderAppointments?.()}};
+    next.onclick=()=>{if(window.view!=='month')return oldNext?.call(next);const dates=monthDates(isoFromCarrier(window.currentDate));if(dates.length){window.currentDate=carrierFromIso(shiftIso(dates[dates.length-1],1));window.renderAppointments?.()}};
+  }
+  const style=document.createElement('style');style.textContent='.jalali-badge{display:inline-flex;margin-top:7px;padding:4px 9px;border-radius:999px;background:#fff1c8;color:#6d4d08;border:1px solid rgba(190,144,42,.24);font-size:.72rem;font-weight:800}.month-cell strong{font-variant-numeric:tabular-nums}';document.head.append(style);
+  requestAnimationFrame(()=>{addCalendarBadge();enhanceMonth()});
+})();
