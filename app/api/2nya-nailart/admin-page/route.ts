@@ -8,18 +8,20 @@ export const dynamic = 'force-dynamic';
 const LOAD_MARKER = "if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});load().catch(()=>showLogin());";
 const CALENDAR_CSS = '<link rel="stylesheet" href="/2nya-nailart/admin-calendar.css?v=20260926-1">';
 const EXPERIENCE_CSS = '<link rel="stylesheet" href="/2nya-nailart/admin-experience.css?v=20260927-2">';
-const BRAND_SCRIPT = '<script defer src="/2nya-nailart/brand-motion.js?v=20260927-1"></script>';
+const INBOX_CSS = '<link rel="stylesheet" href="/2nya-nailart/admin-inbox.css?v=20260927-1">';
+const BRAND_SCRIPT = '<script defer src="/2nya-nailart/brand-motion.js?v=20260927-3"></script>';
 
 export async function GET() {
   try {
     const publicDir = path.join(process.cwd(), 'public', '2nya-nailart');
-    const [html, calendarJs, workflowJs, galleryJs, experienceJs, persianCalendarJs] = await Promise.all([
+    const [html, calendarJs, workflowJs, galleryJs, experienceJs, persianCalendarJs, inboxJs] = await Promise.all([
       readFile(path.join(publicDir, 'admin.html'), 'utf8'),
       readFile(path.join(publicDir, 'admin-calendar.js'), 'utf8'),
       readFile(path.join(publicDir, 'admin-workflow.js'), 'utf8'),
       readFile(path.join(publicDir, 'admin-gallery.js'), 'utf8'),
       readFile(path.join(publicDir, 'admin-experience.js'), 'utf8'),
       readFile(path.join(publicDir, 'admin-persian-calendar.js'), 'utf8'),
+      readFile(path.join(publicDir, 'admin-inbox.js'), 'utf8'),
     ]);
 
     if (!html.includes(LOAD_MARKER)) {
@@ -27,19 +29,19 @@ export async function GET() {
       return new NextResponse('Admin page is temporarily unavailable.', { status: 503 });
     }
 
-    const withStyles = html.replace('</head>', `${CALENDAR_CSS}${EXPERIENCE_CSS}${BRAND_SCRIPT}</head>`);
+    const withStyles = html.replace('</head>', `${CALENDAR_CSS}${EXPERIENCE_CSS}${INBOX_CSS}${BRAND_SCRIPT}</head>`);
     const page = withStyles.replace(
       LOAD_MARKER,
-      `${calendarJs}\n${workflowJs}\n${galleryJs}\n${experienceJs}\n${persianCalendarJs}\n${LOAD_MARKER}`,
+      `${calendarJs}\n${workflowJs}\n${galleryJs}\n${experienceJs}\n${persianCalendarJs}\n${inboxJs}\n${LOAD_MARKER}`,
     );
 
     return new NextResponse(page, {
       status: 200,
       headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-store, max-age=0',
-        'X-Content-Type-Options': 'nosniff',
-        'X-Robots-Tag': 'noindex, nofollow',
+        'Content-Type':'text/html; charset=utf-8',
+        'Cache-Control':'no-store, max-age=0',
+        'X-Content-Type-Options':'nosniff',
+        'X-Robots-Tag':'noindex, nofollow',
       },
     });
   } catch (error) {
