@@ -9,9 +9,11 @@ export async function POST(request:NextRequest){
     const db=publicClient();
     const {data,error}=await db.rpc('nail_2nya_create_booking',{p_service_id:serviceId,p_start_at:startAt,p_name:name,p_phone:phone,p_instagram:String(body?.instagram??'').slice(0,120)||null,p_email:String(body?.email??'').slice(0,254)||null,p_notes:String(body?.notes??'').slice(0,1500)||null});
     if(error)throw error;
-    if(!data?.ok){const code=data?.code||'booking_failed';const status=code==='slot_taken'?409:400;return NextResponse.json({ok:false,code,error:code==='slot_taken'?'این زمان همین الان توسط مشتری دیگری رزرو شده است.':'رزرو ثبت نشد.'},{status});}
+    if(!data?.ok){const code=data?.code||'booking_failed';const status=code==='slot_taken'?409:400;return NextResponse.json({ok:false,code,error:code==='slot_taken'?'این زمان همین الان توسط مشتری دیگری رزرو شده است.':'درخواست وقت ثبت نشد.'},{status});}
     const managementUrl=`/booking/${encodeURIComponent(data.appointment_id)}?token=${encodeURIComponent(data.management_token)}`;
-    fetch('https://dezbacyuvsdrlpmmpjht.supabase.co/functions/v1/two-nya-push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({appointment_id:data.appointment_id})}).catch(()=>{});
+    try{
+      await fetch('https://dezbacyuvsdrlpmmpjht.supabase.co/functions/v1/two-nya-push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({appointment_id:data.appointment_id,event_type:'booking_requested',target:'admin'}),cache:'no-store'});
+    }catch(error){console.error('2nya_admin_push_failed',{message:error instanceof Error?error.message:'unknown'});}
     return NextResponse.json({...data,management_url:managementUrl},{status:201,headers:{'Cache-Control':'no-store'}});
-  }catch(error){console.error('2nya_booking_failed',{message:error instanceof Error?error.message:'unknown'});return NextResponse.json({ok:false,error:'ثبت رزرو انجام نشد. لطفاً دوباره تلاش کنید.'},{status:503});}
+  }catch(error){console.error('2nya_booking_failed',{message:error instanceof Error?error.message:'unknown'});return NextResponse.json({ok:false,error:'ثبت درخواست وقت انجام نشد. لطفاً دوباره تلاش کنید.'},{status:503});}
 }
