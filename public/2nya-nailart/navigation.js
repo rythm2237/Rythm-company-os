@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION='20260927-2';
+  const VERSION='20260927-3';
   const NAV_CSS=`/2nya-nailart/navigation.css?v=${VERSION}`;
   const FIT_CSS='/2nya-nailart/viewport-fit.css?v=20260925-1';
   const NAV_ITEMS=[
@@ -32,6 +32,15 @@
       document.head.append(link);
     });
     ensureNotificationStyles();
+  };
+
+  const loadGalleryRuntime=()=>{
+    if(!document.querySelector('#portfolio')||document.querySelector('script[data-donya-gallery-runtime]'))return;
+    const script=document.createElement('script');
+    script.src=`/2nya-nailart/gallery-runtime.js?v=${VERSION}`;
+    script.defer=true;
+    script.dataset.donyaGalleryRuntime='true';
+    document.body.append(script);
   };
 
   const cleanPath=value=>{
@@ -262,6 +271,7 @@
     window.addEventListener('hashchange',()=>setActive(header));
     scrollState();
     enhanceBooking();
+    loadGalleryRuntime();
   };
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
