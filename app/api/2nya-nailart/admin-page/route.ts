@@ -9,7 +9,7 @@ const LOAD_MARKER = "if('serviceWorker'in navigator)navigator.serviceWorker.regi
 const CALENDAR_CSS = '<link rel="stylesheet" href="/2nya-nailart/admin-calendar.css?v=20260926-1">';
 const EXPERIENCE_CSS = '<link rel="stylesheet" href="/2nya-nailart/admin-experience.css?v=20260927-2">';
 const INBOX_CSS = '<link rel="stylesheet" href="/2nya-nailart/admin-inbox.css?v=20260927-1">';
-const BRAND_SCRIPT = '<script defer src="/2nya-nailart/brand-motion.js?v=20260927-3"></script>';
+const BRAND_SCRIPT = '<script defer src="/2nya-nailart/brand-motion.js?v=20260927-4"></script>';
 
 export async function GET() {
   try {
