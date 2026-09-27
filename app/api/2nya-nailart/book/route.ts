@@ -1,11 +1,23 @@
 import { NextRequest,NextResponse } from 'next/server';
 import { publicClient } from '@/lib/2nya-nailart/server';
 export const dynamic='force-dynamic';
+
+function normalizeIranMobile(value:unknown){
+  const latin=String(value??'').trim()
+    .replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  if(!latin||!/^[0-9\s\u00a0]+$/.test(latin))return null;
+  const digits=latin.replace(/[\s\u00a0]+/g,'');
+  if(/^09\d{9}$/.test(digits))return digits.slice(1);
+  if(/^9\d{9}$/.test(digits))return digits;
+  return null;
+}
+
 export async function POST(request:NextRequest){
   try{
     const body=await request.json();
-    const name=String(body?.name??'').trim(),phone=String(body?.phone??'').trim(),serviceId=String(body?.service_id??''),startAt=String(body?.start_at??'');
-    if(!name||name.length>120||!phone||phone.length>50||!serviceId||!startAt||Number.isNaN(Date.parse(startAt)))return NextResponse.json({ok:false,code:'invalid_input',error:'اطلاعات رزرو را بررسی کنید.'},{status:400});
+    const name=String(body?.name??'').trim(),phone=normalizeIranMobile(body?.phone),serviceId=String(body?.service_id??''),startAt=String(body?.start_at??'');
+    if(!name||name.length>120||!phone||!serviceId||!startAt||Number.isNaN(Date.parse(startAt)))return NextResponse.json({ok:false,code:'invalid_input',error:!phone?'شماره موبایل باید به شکل 09xx xxx xxxx یا 9xxxxxxxxx باشد.':'اطلاعات رزرو را بررسی کنید.'},{status:400});
     const db=publicClient();
     const {data,error}=await db.rpc('nail_2nya_create_booking',{p_service_id:serviceId,p_start_at:startAt,p_name:name,p_phone:phone,p_instagram:String(body?.instagram??'').slice(0,120)||null,p_email:String(body?.email??'').slice(0,254)||null,p_notes:String(body?.notes??'').slice(0,1500)||null});
     if(error)throw error;
