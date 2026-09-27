@@ -1,7 +1,0 @@
-/* Shared Donya logo presentation. The black/gold source artwork stays visually intact. */
-img[src*="donya-logo.webp"]{background:#050505;border:1px solid rgba(224,185,95,.42);box-shadow:0 10px 28px rgba(20,15,6,.13)}
-.donya-brand img{background:#050505!important;border:1px solid rgba(224,185,95,.5)!important;border-radius:16px!important;padding:4px!important;box-shadow:0 7px 20px rgba(20,15,6,.15)!important;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease!important}
-.footer-brand img{background:#050505!important;border:1px solid rgba(224,185,95,.46)!important;border-radius:19px!important;padding:6px!important;box-shadow:0 10px 30px rgba(0,0,0,.2)!important}
-.contact-card img{background:#050505!important;border:1px solid rgba(244,215,142,.48)!important;border-radius:20px!important;padding:6px!important;box-shadow:0 12px 32px rgba(0,0,0,.22)!important}
-@media(hover:hover){.donya-brand:hover img{transform:translateY(-2px) scale(1.025);border-color:rgba(244,215,142,.72)!important;box-shadow:0 11px 28px rgba(20,15,6,.2)!important}}
-@media(prefers-reduced-motion:reduce){.donya-brand img{transition:none!important}}
