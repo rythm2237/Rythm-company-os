@@ -1,9 +1,9 @@
 (()=>{
   if(window.__donyaBrandMotion)return;window.__donyaBrandMotion=true;
-  const LOGO='/api/2nya-nailart/logo';
+  const LOGO='/api/2nya-nailart/logo?v=20260927-3';
   const PORTRAIT='/2nya-nailart/donya-about-portrait.webp';
   const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const css=document.createElement('link');css.rel='stylesheet';css.href='/2nya-nailart/brand-motion.css?v=20260927-2';document.head.append(css);
+  const css=document.createElement('link');css.rel='stylesheet';css.href='/2nya-nailart/brand-motion.css?v=20260927-3';document.head.append(css);
   const logoSources=['/2nya-media/donya-logo.webp','/assets/logo.webp','/2nya-nailart/assets/logo.webp'];
   const isLogo=img=>{const src=img.getAttribute('src')||'';return logoSources.some(x=>src.includes(x))||/logo/i.test(img.className||'')||/لوگو/.test(img.alt||'')};
   function wrapLogo(img,index){
