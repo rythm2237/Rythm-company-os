@@ -1,1 +1,99 @@
-<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>پیگیری درخواست وقت | Donya Nail Art</title><meta name="theme-color" content="#17110f"><link rel="manifest" href="/manifest.webmanifest"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Estedad:wght@500;600;700;800&family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet"><style>:root{--ink:#17110f;--paper:#f8f3ed;--wine:#731724;--muted:#756b63;--line:rgba(23,17,15,.13)}*{box-sizing:border-box}body{margin:0;min-height:100svh;display:grid;place-items:center;background:linear-gradient(150deg,#f8f3ed,#eadfd6);font-family:Vazirmatn,system-ui;color:var(--ink);padding:20px}.card{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:28px;padding:22px;box-shadow:0 18px 70px rgba(35,18,15,.1)}.brand{display:flex;align-items:center;gap:11px;margin-bottom:20px}.brand img{width:48px;height:48px;border-radius:14px}.brand b,h1{font-family:Estedad}.muted{color:var(--muted)}.row{display:flex;justify-content:space-between;gap:18px;padding:13px 0;border-bottom:1px solid var(--line)}.row:last-child{border:0}.btn{width:100%;border:0;border-radius:14px;padding:13px;font:700 16px Vazirmatn;margin-top:14px;cursor:pointer}.danger{background:#8c2733;color:#fff}.home{background:#eee4db;color:var(--ink)}.notify{background:var(--wine);color:#fff}.error{padding:15px;border-radius:14px;background:#f6e4e6;color:#7b2732}.ok{padding:14px;border-radius:14px;background:#e6f1e7;color:#25582c;margin-top:12px}.pending{padding:12px 14px;border-radius:14px;background:#fff4d6;color:#6a4c08;margin:12px 0}.status-confirmed{color:#235f32}.status-cancelled{color:#872b36}.status-pending{color:#805b12}</style></head><body><main class="card"><div class="brand"><img src="/assets/logo.webp" alt="Donya Nail Art"><div><b>Donya Nail Art</b><div class="muted">پیگیری درخواست وقت شما</div></div></div><div id="content"><p class="muted">در حال دریافت اطلاعات…</p></div><a href="/" style="text-decoration:none"><button class="btn home">بازگشت به سایت</button></a></main><script>const qs=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const url=new URL(location.href),id=url.searchParams.get('id')||location.pathname.split('/').filter(Boolean).pop(),token=url.searchParams.get('token');let bookingData=null,timezone='UTC';const fdate=d=>new Intl.DateTimeFormat('fa-IR',{timeZone:timezone,weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(d);const b64Key=value=>{const s=String(value||'').replace(/-/g,'+').replace(/_/g,'/'),raw=atob(s+'='.repeat((4-s.length%4)%4));return Uint8Array.from(raw,c=>c.charCodeAt(0))};async function load(){if(!id||!token){showError('لینک پیگیری درخواست کامل نیست.');return}try{const r=await fetch(`/api/2nya-nailart/manage?id=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`,{cache:'no-store'}),j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'درخواست پیدا نشد.');bookingData=j.booking;timezone=j.timezone||'UTC';const b=j.booking;qs('#content').innerHTML=`<h1>درخواست ${esc(b.booking_reference)}</h1>${b.status==='pending'?'<div class="pending">درخواست شما ثبت شده و منتظر تأیید دنیا است.</div>':''}<div class="row"><span>سرویس</span><b>${esc(b.service_name)}</b></div><div class="row"><span>زمان</span><b>${fdate(new Date(b.start_at))}</b></div><div class="row"><span>نام</span><b>${esc(b.customer_name)}</b></div><div class="row"><span>وضعیت</span><b class="status-${esc(b.status)}">${statusFa(b.status)}</b></div>${b.status==='pending'?'<button id="notify" class="btn notify">اعلان نتیجه درخواست روی موبایل</button><div id="notifyMsg" class="muted"></div>':''}${['pending','confirmed'].includes(b.status)?'<button id="cancel" class="btn danger">لغو این وقت</button>':''}`;if(qs('#cancel'))qs('#cancel').onclick=cancel;if(qs('#notify'))qs('#notify').onclick=enablePush}catch(e){showError(e.message)}}async function enablePush(){const btn=qs('#notify'),msg=qs('#notifyMsg');try{btn.disabled=true;if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window))throw Error('اعلان روی این مرورگر پشتیبانی نمی‌شود.');const p=await Notification.requestPermission();if(p!=='granted')throw Error('اجازه اعلان داده نشد.');const kr=await fetch('/api/2nya-nailart/push-key',{cache:'no-store'}),kj=await kr.json();if(!kr.ok||!kj.public_key)throw Error('سرویس اعلان در دسترس نیست.');const reg=await navigator.serviceWorker.ready,old=await reg.pushManager.getSubscription(),newKey=b64Key(kj.public_key);if(old){const a=old.options?.applicationServerKey?Array.from(new Uint8Array(old.options.applicationServerKey)).join(','):'',b=Array.from(newKey).join(',');if(a&&a!==b)await old.unsubscribe()}const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:newKey});const r=await fetch('/api/2nya-nailart/manage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'push_subscribe',id,token,subscription:sub.toJSON()})}),j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'فعال‌سازی اعلان انجام نشد.');msg.textContent='اعلان فعال شد. نتیجه تأیید یا رد درخواست روی این دستگاه ارسال می‌شود.';btn.remove()}catch(e){msg.textContent=e.message;btn.disabled=false}}async function cancel(){if(!confirm('این وقت لغو شود؟'))return;const b=qs('#cancel');b.disabled=true;const r=await fetch('/api/2nya-nailart/manage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'cancel',id,token})}),j=await r.json();if(!r.ok||!j.ok){alert(j.error||'لغو انجام نشد');b.disabled=false;return}await load()}function showError(m){qs('#content').innerHTML=`<div class="error">${esc(m)}</div>`}function statusFa(s){return ({pending:'در انتظار تأیید',confirmed:'تأیید شده',completed:'انجام شده',cancelled:'لغو / رد شده',no_show:'عدم حضور'})[s]||s}if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});load();</script></body></html>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>پیگیری درخواست وقت | Donya Nail Art</title>
+<meta name="theme-color" content="#731724">
+<link rel="manifest" href="/2nya-nailart/customer.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Estedad:wght@500;600;700;800&family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#17110f;--paper:#f8f3ed;--wine:#731724;--muted:#756b63;--line:rgba(23,17,15,.13)}*{box-sizing:border-box}body{margin:0;min-height:100svh;display:grid;place-items:center;background:linear-gradient(150deg,#f8f3ed,#eadfd6);font-family:Vazirmatn,system-ui;color:var(--ink);padding:20px}.card{width:min(540px,100%);background:#fff;border:1px solid var(--line);border-radius:28px;padding:22px;box-shadow:0 18px 70px rgba(35,18,15,.1)}.brand{display:flex;align-items:center;gap:11px;margin-bottom:20px}.brand img{width:48px;height:48px;border-radius:14px}.brand b,h1,h2,h3{font-family:Estedad}.muted{color:var(--muted)}.row{display:flex;justify-content:space-between;gap:18px;padding:13px 0;border-bottom:1px solid var(--line)}.row:last-child{border:0}.btn{width:100%;border:0;border-radius:14px;padding:13px;font:700 16px Vazirmatn;margin-top:14px;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center}.danger{background:#8c2733;color:#fff}.home{background:#eee4db;color:var(--ink)}.notify{background:var(--wine);color:#fff}.error{padding:15px;border-radius:14px;background:#f6e4e6;color:#7b2732}.ok{padding:14px;border-radius:14px;background:#e6f1e7;color:#25582c;margin-top:12px}.pending{padding:12px 14px;border-radius:14px;background:#fff4d6;color:#6a4c08;margin:12px 0}.status-confirmed{color:#235f32}.status-cancelled{color:#872b36}.status-pending{color:#805b12}.notify-card{margin-top:18px;padding:16px;border:1px solid rgba(115,23,36,.14);border-radius:20px;background:#fff9f5}.notify-card h3{font-size:1rem;margin:0 0 7px}.notify-card p{font-size:.9rem;line-height:1.8;margin:0 0 12px;color:var(--muted)}.device{display:inline-flex;padding:5px 9px;border-radius:999px;background:#f5e8e3;color:#6d1835;font-size:.78rem;font-weight:800;margin-bottom:9px}.steps{margin:7px 0 12px;padding:0 22px 0 0;font-size:.88rem;line-height:2;color:#4c383d}.choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice .btn{margin:0}.secondary{background:#eee4db;color:var(--ink)}.switch{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.switch button{border:1px solid rgba(86,42,50,.16);border-radius:999px;background:#fff;padding:6px 10px;font:700 .76rem Vazirmatn;color:#5f4b4f}.small{font-size:.78rem!important;margin-top:9px!important}.success-notify{padding:12px;border-radius:14px;background:#e8f3e9;color:#245d30;font-size:.88rem}.track{color:var(--wine);font-weight:800;text-underline-offset:3px}@media(max-width:520px){body{padding:12px}.card{padding:18px}.choice{grid-template-columns:1fr}.steps{font-size:.84rem}}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand"><img src="/assets/logo.webp" alt="Donya Nail Art"><div><b>Donya Nail Art</b><div class="muted">پیگیری درخواست وقت شما</div></div></div>
+  <div id="content"><p class="muted">در حال دریافت اطلاعات…</p></div>
+  <a href="/" style="text-decoration:none"><button class="btn home">بازگشت به سایت</button></a>
+</main>
+<script>
+const qs=s=>document.querySelector(s),qsa=s=>[...document.querySelectorAll(s)],esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const url=new URL(location.href),id=url.searchParams.get('id')||location.pathname.split('/').filter(Boolean).pop(),token=url.searchParams.get('token'),notifyMode=url.searchParams.get('notify')==='1';
+let bookingData=null,timezone='UTC',forcedPlatform=null;
+const fdate=d=>new Intl.DateTimeFormat('fa-IR',{timeZone:timezone,weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(d);
+const b64Key=value=>{const s=String(value||'').replace(/-/g,'+').replace(/_/g,'/'),raw=atob(s+'='.repeat((4-s.length%4)%4));return Uint8Array.from(raw,c=>c.charCodeAt(0))};
+const isStandalone=()=>window.matchMedia?.('(display-mode: standalone)').matches||window.navigator.standalone===true;
+const detectPlatform=()=>{const ua=String(navigator.userAgent||''),platform=String(navigator.userAgentData?.platform||navigator.platform||'');if(/iPad|iPhone|iPod/i.test(ua)||(platform==='MacIntel'&&navigator.maxTouchPoints>1))return'ios';if(/Android/i.test(ua)||/Android/i.test(platform))return'android';return'other'};
+const platformLabel=p=>p==='ios'?'آیفون / iOS':p==='android'?'اندروید':'این دستگاه';
+
+async function load(){
+  if(!id||!token){showError('لینک پیگیری درخواست کامل نیست.');return}
+  try{
+    const r=await fetch(`/api/2nya-nailart/manage?id=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`,{cache:'no-store'}),j=await r.json();
+    if(!r.ok||!j.ok)throw Error(j.error||'درخواست پیدا نشد.');
+    bookingData=j.booking;timezone=j.timezone||'UTC';
+    const b=j.booking;
+    qs('#content').innerHTML=`<h1>درخواست ${esc(b.booking_reference)}</h1>${b.status==='pending'?'<div class="pending">درخواست شما ثبت شده و منتظر تأیید دنیا است.</div>':''}<div class="row"><span>سرویس</span><b>${esc(b.service_name)}</b></div><div class="row"><span>زمان</span><b>${fdate(new Date(b.start_at))}</b></div><div class="row"><span>نام</span><b>${esc(b.customer_name)}</b></div><div class="row"><span>وضعیت</span><b class="status-${esc(b.status)}">${statusFa(b.status)}</b></div>${b.status==='pending'?'<div id="notifyArea" class="notify-card"></div>':''}${['pending','confirmed'].includes(b.status)?'<button id="cancel" class="btn danger">لغو این وقت</button>':''}`;
+    if(qs('#cancel'))qs('#cancel').onclick=cancel;
+    if(b.status==='pending')renderNotifyArea(notifyMode?'guide':'choice');
+  }catch(e){showError(e.message)}
+}
+
+function renderNotifyArea(mode='choice'){
+  const box=qs('#notifyArea');if(!box)return;
+  if(mode==='choice'){
+    box.innerHTML='<h3>می‌خواهی نتیجه تأیید یا رد وقت را با نوتیفیکیشن دریافت کنی؟</h3><p>اگر فعالش کنی، نتیجه مستقیم روی همین گوشی نمایش داده می‌شود.</p><div class="choice"><button class="btn notify" id="notifyYes">بله، اطلاع بده</button><button class="btn secondary" id="notifyNo">فعلاً نه</button></div>';
+    qs('#notifyYes').onclick=()=>renderNotifyArea('guide');
+    qs('#notifyNo').onclick=()=>{box.innerHTML='<h3>پیگیری بدون نوتیفیکیشن</h3><p>همین لینک را نگه دار. هر زمان آن را باز کنی، وضعیت تأیید یا رد درخواست به‌روز نمایش داده می‌شود.</p><a class="track" href="'+esc(location.href.replace(/[?&]notify=1(&|$)/,'$1'))+'">لینک پیگیری همین درخواست</a>'};
+    return;
+  }
+  renderGuide(forcedPlatform||detectPlatform());
+}
+
+function renderGuide(platform){
+  forcedPlatform=platform;
+  const box=qs('#notifyArea');if(!box)return;
+  if(platform==='ios'&&!isStandalone()){
+    box.innerHTML=`<span class="device">دستگاه شناسایی‌شده: ${platformLabel(platform)}</span><h3>فعال‌سازی اعلان در آیفون</h3><p>روی آیفون، اعلان وب فقط وقتی سایت از Home Screen باز شود فعال می‌شود.</p><ol class="steps"><li>در همین صفحه روی دکمه <b>Share</b> مرورگر بزن.</li><li><b>Add to Home Screen</b> را انتخاب کن.</li><li>روی <b>Add</b> بزن.</li><li>از آیکن <b>Donya Nail Art</b> روی Home Screen همین صفحه را باز کن.</li><li>بعد روی «فعال‌سازی اعلان» بزن و اجازه Notifications را بده.</li></ol><div class="pending">بعد از بازکردن از Home Screen، آموزش به دکمه فعال‌سازی تبدیل می‌شود.</div><p class="small muted">اگر تشخیص دستگاه اشتباه است:</p><div class="switch"><button data-platform="ios">آیفون</button><button data-platform="android">اندروید</button></div>`;
+    bindSwitch();return;
+  }
+  const steps=platform==='android'?'<li>روی «فعال‌سازی اعلان» بزن.</li><li>در پیام مرورگر، <b>Allow / اجازه</b> را انتخاب کن.</li>':'<li>روی «فعال‌سازی اعلان» بزن.</li><li>در پیام مرورگر، اجازه Notifications را بده.</li>';
+  box.innerHTML=`<span class="device">دستگاه شناسایی‌شده: ${platformLabel(platform)}</span><h3>فعال‌سازی اعلان نتیجه</h3><ol class="steps">${steps}</ol><button id="notify" class="btn notify">فعال‌سازی اعلان</button><div id="notifyMsg" class="muted" style="margin-top:8px"></div><p class="small muted">اگر تشخیص دستگاه اشتباه است:</p><div class="switch"><button data-platform="ios">آیفون</button><button data-platform="android">اندروید</button></div>`;
+  qs('#notify').onclick=enablePush;bindSwitch();
+}
+
+function bindSwitch(){qsa('[data-platform]').forEach(b=>b.onclick=()=>renderGuide(b.dataset.platform))}
+
+async function enablePush(){
+  const btn=qs('#notify'),msg=qs('#notifyMsg');
+  try{
+    btn.disabled=true;
+    if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window))throw Error('اعلان روی این مرورگر پشتیبانی نمی‌شود.');
+    const p=await Notification.requestPermission();if(p!=='granted')throw Error('اجازه اعلان داده نشد.');
+    const kr=await fetch('/api/2nya-nailart/push-key',{cache:'no-store'}),kj=await kr.json();if(!kr.ok||!kj.public_key)throw Error('سرویس اعلان در دسترس نیست.');
+    const reg=await navigator.serviceWorker.ready,old=await reg.pushManager.getSubscription(),newKey=b64Key(kj.public_key);
+    if(old){const a=old.options?.applicationServerKey?Array.from(new Uint8Array(old.options.applicationServerKey)).join(','):'',b=Array.from(newKey).join(',');if(a&&a!==b)await old.unsubscribe()}
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:newKey});
+    const r=await fetch('/api/2nya-nailart/manage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'push_subscribe',id,token,subscription:sub.toJSON()})}),j=await r.json();
+    if(!r.ok||!j.ok)throw Error(j.error||'فعال‌سازی اعلان انجام نشد.');
+    qs('#notifyArea').innerHTML='<div class="success-notify"><b>اعلان فعال شد ✓</b><br>بعد از تأیید یا رد درخواست، نتیجه روی همین دستگاه ارسال می‌شود.</div>';
+  }catch(e){msg.textContent=e.message;btn.disabled=false}
+}
+
+async function cancel(){
+  if(!confirm('این وقت لغو شود؟'))return;
+  const b=qs('#cancel');b.disabled=true;
+  const r=await fetch('/api/2nya-nailart/manage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'cancel',id,token})}),j=await r.json();
+  if(!r.ok||!j.ok){alert(j.error||'لغو انجام نشد');b.disabled=false;return}
+  await load();
+}
+function showError(m){qs('#content').innerHTML=`<div class="error">${esc(m)}</div>`}
+function statusFa(s){return ({pending:'در انتظار تأیید',confirmed:'تأیید شده',completed:'انجام شده',cancelled:'لغو / رد شده',no_show:'عدم حضور'})[s]||s}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+load();
+</script>
+</body>
+</html>

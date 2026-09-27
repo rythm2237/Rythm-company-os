@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION='20260927-1';
+  const VERSION='20260927-2';
   const NAV_CSS=`/2nya-nailart/navigation.css?v=${VERSION}`;
   const FIT_CSS='/2nya-nailart/viewport-fit.css?v=20260925-1';
   const NAV_ITEMS=[
@@ -12,6 +12,17 @@
     {href:'/contact',label:'تماس',key:'contact'},
   ];
 
+  const ensureNotificationStyles=()=>{
+    if(document.getElementById('donya-notification-onboarding-style'))return;
+    const style=document.createElement('style');
+    style.id='donya-notification-onboarding-style';
+    style.textContent=`
+      .push-onboard{margin-top:16px;padding:16px;border:1px solid rgba(123,16,56,.14);border-radius:20px;background:#fffaf7;text-align:right}.push-onboard h4{font-family:Estedad,Vazirmatn,sans-serif;margin:0 0 7px;font-size:1rem}.push-onboard p{margin:0 0 12px;color:#765e60;font-size:.9rem;line-height:1.8}.push-choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}.push-choice .btn{min-height:46px;padding:10px 12px}.push-choice .secondary{background:#eee4db!important;color:#2b171c!important}.push-steps{margin:9px 0 14px;padding:0 22px 0 0;color:#4f3c40;font-size:.88rem;line-height:2}.push-steps li{padding-right:3px}.push-device{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:#f5e8e3;color:#6d1835;font-size:.78rem;font-weight:800;margin-bottom:9px}.push-switch{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.push-switch button{border:1px solid rgba(86,42,50,.16);border-radius:999px;background:#fff;padding:6px 10px;font:700 .76rem Vazirmatn;color:#5f4b4f}.push-success{padding:11px 12px;border-radius:14px;background:#e8f3e9;color:#245d30;font-size:.88rem}.push-fallback{padding:12px;border-radius:15px;background:#f6eee8}.push-track{display:inline-flex;margin-top:8px;color:#731724;font-weight:800;text-decoration:underline;text-underline-offset:3px}.push-ios-cta{display:flex!important;width:100%!important;text-decoration:none!important}.push-small{font-size:.78rem!important;color:#826d70!important;margin-top:9px!important}
+      @media(max-width:520px){.push-choice{grid-template-columns:1fr}.push-onboard{padding:14px}.push-steps{font-size:.84rem}}
+    `;
+    document.head.append(style);
+  };
+
   const ensureStyles=()=>{
     [[NAV_CSS,'navigation.css'],[FIT_CSS,'viewport-fit.css']].forEach(([href,needle])=>{
       if(document.querySelector(`link[href*="${needle}"]`)) return;
@@ -20,6 +31,7 @@
       link.href=href;
       document.head.append(link);
     });
+    ensureNotificationStyles();
   };
 
   const cleanPath=value=>{
@@ -89,6 +101,19 @@
     return Uint8Array.from(raw,c=>c.charCodeAt(0));
   };
 
+  const isStandalone=()=>window.matchMedia?.('(display-mode: standalone)').matches||window.navigator.standalone===true;
+  const detectPlatform=()=>{
+    const ua=String(navigator.userAgent||''),platform=String(navigator.userAgentData?.platform||navigator.platform||'');
+    if(/iPad|iPhone|iPod/i.test(ua)||(platform==='MacIntel'&&navigator.maxTouchPoints>1))return 'ios';
+    if(/Android/i.test(ua)||/Android/i.test(platform))return 'android';
+    return 'other';
+  };
+  const platformLabel=p=>p==='ios'?'آیفون / iOS':p==='android'?'اندروید':'این دستگاه';
+  const notifyResumeUrl=booking=>{
+    if(!booking?.management_url)return '';
+    return `${booking.management_url}${booking.management_url.includes('?')?'&':'?'}notify=1`;
+  };
+
   const enableCustomerPush=async booking=>{
     if(!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window))throw new Error('اعلان روی این مرورگر پشتیبانی نمی‌شود.');
     const permission=await Notification.requestPermission();
@@ -102,6 +127,40 @@
     const r=await fetch('/api/2nya-nailart/manage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'push_subscribe',id:booking.appointment_id,token:booking.management_token,subscription:subscription.toJSON()})}),j=await r.json();
     if(!r.ok||!j.ok)throw new Error(j.error||'فعال‌سازی اعلان انجام نشد.');
     return true;
+  };
+
+  const showTrackingFallback=booking=>{
+    const panel=qs('#pushOnboard');if(!panel)return;
+    panel.innerHTML=`<div class="push-fallback"><h4>مشکلی نیست</h4><p>برای دیدن نتیجه تأیید یا رد، لینک پیگیری درخواستت را نگه دار. وضعیت همیشه در این صفحه به‌روز می‌شود.</p>${booking.management_url?`<a class="push-track" href="${esc(booking.management_url)}">پیگیری وضعیت درخواست</a>`:''}</div>`;
+  };
+
+  const bindPlatformSwitch=(booking,current)=>{
+    qsa('[data-push-platform]').forEach(button=>button.onclick=()=>renderPushGuide(booking,button.dataset.pushPlatform));
+    const active=qs(`[data-push-platform="${current}"]`);if(active)active.setAttribute('aria-current','true');
+  };
+
+  const renderPushGuide=(booking,forcedPlatform=null)=>{
+    const panel=qs('#pushOnboard');if(!panel)return;
+    const platform=forcedPlatform||detectPlatform(),standalone=isStandalone();
+    if(platform==='ios'&&!standalone){
+      const resume=notifyResumeUrl(booking);
+      panel.innerHTML=`<span class="push-device">دستگاه شناسایی‌شده: ${platformLabel(platform)}</span><h4>اعلان روی آیفون</h4><p>برای آیفون، اعلان وب فقط بعد از اضافه‌کردن سایت به Home Screen فعال می‌شود.</p><ol class="push-steps"><li>روی «ادامه برای آیفون» بزن.</li><li>در صفحه پیگیری، دکمه Share را بزن و <b>Add to Home Screen</b> را انتخاب کن.</li><li>روی <b>Add</b> بزن و بعد سایت را از آیکن Donya Nail Art روی Home Screen باز کن.</li><li>در همان صفحه روی «فعال‌سازی اعلان» بزن و اجازه Notifications را بده.</li></ol>${resume?`<a class="btn primary push-ios-cta" href="${esc(resume)}">ادامه برای آیفون</a>`:'<div class="empty">لینک پیگیری در دسترس نیست.</div>'}<p class="push-small">اگر دستگاه اشتباه تشخیص داده شده، گزینه درست را انتخاب کن:</p><div class="push-switch"><button type="button" data-push-platform="ios">آیفون</button><button type="button" data-push-platform="android">اندروید</button></div>`;
+      bindPlatformSwitch(booking,platform);return;
+    }
+    const instructions=platform==='android'
+      ?'<li>روی «فعال‌سازی اعلان» بزن.</li><li>در پیام مرورگر، گزینه <b>Allow / اجازه</b> را انتخاب کن.</li>'
+      :'<li>روی «فعال‌سازی اعلان» بزن.</li><li>اگر مرورگر اجازه خواست، Notifications را روی Allow قرار بده.</li>';
+    panel.innerHTML=`<span class="push-device">دستگاه شناسایی‌شده: ${platformLabel(platform)}</span><h4>فعال‌سازی اعلان نتیجه</h4><ol class="push-steps">${instructions}</ol><button type="button" class="btn primary" id="activateCustomerPush">فعال‌سازی اعلان</button><div id="customerPushMsg" class="muted" style="margin-top:8px"></div><p class="push-small">اگر دستگاه اشتباه تشخیص داده شده:</p><div class="push-switch"><button type="button" data-push-platform="ios">آیفون</button><button type="button" data-push-platform="android">اندروید</button></div>`;
+    bindPlatformSwitch(booking,platform);
+    const activate=qs('#activateCustomerPush');
+    activate.onclick=async()=>{activate.disabled=true;const msg=qs('#customerPushMsg');msg.textContent='در حال فعال‌سازی…';try{await enableCustomerPush(booking);panel.innerHTML='<div class="push-success"><b>اعلان فعال شد ✓</b><br>بعد از تأیید یا رد درخواست، نتیجه روی همین دستگاه ارسال می‌شود.</div>';}catch(error){msg.textContent=error.message||'فعال‌سازی اعلان انجام نشد.';activate.disabled=false;}};
+  };
+
+  const renderNotificationQuestion=booking=>{
+    const panel=qs('#pushOnboard');if(!panel)return;
+    panel.innerHTML=`<h4>می‌خواهی نتیجه تأیید یا رد وقت را با نوتیفیکیشن دریافت کنی؟</h4><p>اگر فعالش کنی، لازم نیست برای نتیجه دوباره سایت را چک کنی.</p><div class="push-choice"><button type="button" class="btn primary" id="pushYes">بله، اطلاع بده</button><button type="button" class="btn secondary" id="pushNo">فعلاً نه</button></div>`;
+    qs('#pushYes').onclick=()=>renderPushGuide(booking);
+    qs('#pushNo').onclick=()=>showTrackingFallback(booking);
   };
 
   const enhanceBooking=()=>{
@@ -150,10 +209,9 @@
       try{
         const r=await fetch('/api/2nya-nailart/book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:state.service.id,start_at:state.slot.start_at,name:qs('#name').value,phone:qs('#phone').value,instagram:qs('#ig').value,email:qs('#email').value,notes:qs('#notes').value})}),j=await r.json();
         if(!r.ok||!j.ok)throw new Error(j.error||'ثبت درخواست وقت انجام نشد.');
-        qs('#result').innerHTML=`<div class="success"><h3>درخواست وقت ثبت شد ✓</h3><p>این زمان تا بررسی دنیا در حالت <b>انتظار برای تأیید</b> است.</p><p>کد درخواست: <b dir="ltr">${esc(j.reference||'')}</b></p>${j.management_url?`<p><a href="${j.management_url}">مشاهده و مدیریت درخواست</a></p>`:''}<button type="button" class="btn primary" id="customerPushOptIn">اعلان نتیجه درخواست روی موبایل</button><div id="customerPushMsg" class="muted" style="margin-top:8px"></div></div>`;
+        qs('#result').innerHTML=`<div class="success"><h3>درخواست وقت ثبت شد ✓</h3><p>این زمان تا بررسی دنیا در حالت <b>انتظار برای تأیید</b> است.</p><p>کد درخواست: <b dir="ltr">${esc(j.reference||'')}</b></p>${j.management_url?`<p><a href="${j.management_url}">مشاهده و مدیریت درخواست</a></p>`:''}<div class="push-onboard" id="pushOnboard"></div></div>`;
         btn.style.display='none';qs('#back').style.display='none';
-        const pushBtn=qs('#customerPushOptIn');
-        if(pushBtn)pushBtn.onclick=async()=>{pushBtn.disabled=true;const msg=qs('#customerPushMsg');msg.textContent='در حال فعال‌سازی…';try{await enableCustomerPush(j);msg.textContent='اعلان فعال شد. بعد از تأیید یا رد درخواست، روی این دستگاه پیام دریافت می‌کنید.';pushBtn.remove();}catch(error){msg.textContent=error.message||'فعال‌سازی اعلان انجام نشد.';pushBtn.disabled=false;}};
+        renderNotificationQuestion(j);
       }catch(error){qs('#result').innerHTML=`<div class="empty">${esc(error.message)}</div>`;btn.disabled=false;btn.textContent='ثبت نهایی رزرو';}
     };
   };

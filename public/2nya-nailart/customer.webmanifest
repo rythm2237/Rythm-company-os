@@ -1,0 +1,11 @@
+{
+  "name": "Donya Nail Art",
+  "short_name": "Donya Nail Art",
+  "description": "پیگیری درخواست وقت و دریافت اعلان نتیجه رزرو Donya Nail Art",
+  "lang": "fa",
+  "dir": "rtl",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fff8f3",
+  "theme_color": "#731724"
+}
