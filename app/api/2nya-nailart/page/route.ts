@@ -16,6 +16,11 @@ const PAGES = {
 type PageName = keyof typeof PAGES;
 
 const NAV_ROOT = '<div id="donya-navigation-root" aria-label="ناوبری اصلی"></div>';
+const NAV_CSS = '/2nya-nailart/navigation.css?v=20260928-2';
+const INNER_LAYOUT_CSS = '/2nya-nailart/inner-page-layout.css?v=20260928-1';
+const FIT_CSS = '/2nya-nailart/viewport-fit.css?v=20260925-1';
+const NAV_JS = '/2nya-nailart/navigation.js?v=20260928-1';
+const MOTION_JS = '/2nya-nailart/brand-motion.js?v=20260928-2';
 
 function tagBody(html: string, pageName: PageName) {
   const classes = `donya-inner-page donya-page-${pageName}`;
@@ -25,7 +30,8 @@ function tagBody(html: string, pageName: PageName) {
 
     const quote = classMatch[1];
     const value = classMatch[2];
-    const replacement = ` class=${quote}${value} ${classes}${quote}`;
+    const tokens = new Set(`${value} ${classes}`.trim().split(/\s+/));
+    const replacement = ` class=${quote}${Array.from(tokens).join(' ')}${quote}`;
     return match.replace(classMatch[0], replacement);
   });
 }
@@ -42,6 +48,21 @@ function ensureNavigationRoot(html: string) {
   return html.replace(/<body([^>]*)>/i, (match) => `${match}${NAV_ROOT}`);
 }
 
+function ensureHeadAsset(html: string, needle: string, markup: string) {
+  if (html.includes(needle)) return html;
+  return html.replace('</head>', `${markup}</head>`);
+}
+
+function ensurePageAssets(html: string) {
+  let page = html;
+  page = ensureHeadAsset(page, 'navigation.css', `<link rel="stylesheet" href="${NAV_CSS}">`);
+  page = ensureHeadAsset(page, 'inner-page-layout.css', `<link rel="stylesheet" href="${INNER_LAYOUT_CSS}">`);
+  page = ensureHeadAsset(page, 'viewport-fit.css', `<link rel="stylesheet" href="${FIT_CSS}">`);
+  page = ensureHeadAsset(page, 'navigation.js', `<script defer src="${NAV_JS}"></script>`);
+  page = ensureHeadAsset(page, 'brand-motion.js', `<script defer src="${MOTION_JS}"></script>`);
+  return page;
+}
+
 export async function GET(request: Request) {
   const name = new URL(request.url).searchParams.get('name') as PageName | null;
   if (!name || !(name in PAGES)) {
@@ -52,10 +73,7 @@ export async function GET(request: Request) {
   const html = await readFile(filePath, 'utf8');
   const normalized = ensureNavigationRoot(replaceLegacyHeader(html));
   const tagged = tagBody(normalized, name);
-  const page = tagged.replace(
-    '</head>',
-    '<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260928-1"><link rel="stylesheet" href="/2nya-nailart/viewport-fit.css?v=20260925-1"><script defer src="/2nya-nailart/navigation.js?v=20260928-1"></script><script defer src="/2nya-nailart/brand-motion.js?v=20260928-2"></script></head>',
-  );
+  const page = ensurePageAssets(tagged);
 
   return new NextResponse(page, {
     status: 200,
