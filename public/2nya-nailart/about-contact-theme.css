@@ -1,31 +1,19 @@
-:root{--about-wine:#7b1038;--about-wine-dark:#4c0d25;--about-ink:#351b22;--about-gold:#c88943;--about-glass:rgba(255,249,246,.68)}
+/* Shared visual backdrop with Contact. Layout and components live in about-premium.css. */
 html{background:#fdf1eb}
-body.donya-page-about{margin:0;color:var(--about-ink);font-family:Vazirmatn,system-ui,sans-serif;background-image:linear-gradient(rgba(255,249,246,.08),rgba(255,249,246,.08)),url('/2nya-nailart/contact-bg-desktop-user.webp?v=20260928-1');background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed}
-.donya-page-about .about-page{overflow:clip;padding-top:112px}
-.donya-page-about .about-hero{background:transparent!important;min-height:calc(100svh - 112px);display:grid;align-items:center;padding:24px 0 46px}
-.donya-page-about .about-hero:after{display:none!important}
-.donya-page-about .about-shell{width:min(1220px,calc(100% - 52px));min-height:auto!important;margin:auto;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(360px,.78fr);gap:24px;align-items:stretch;padding:0!important}
-.donya-page-about .about-copy,.donya-page-about .about-portrait-wrap{border:1px solid rgba(255,255,255,.9);background:linear-gradient(145deg,rgba(255,252,249,.76),rgba(255,239,233,.57));backdrop-filter:blur(19px) saturate(120%);-webkit-backdrop-filter:blur(19px) saturate(120%);box-shadow:0 24px 62px rgba(88,40,43,.14),inset 0 1px 0 rgba(255,255,255,.94)}
-.donya-page-about .about-copy{max-width:none!important;border-radius:34px;padding:clamp(28px,4vw,52px);display:flex;flex-direction:column;justify-content:center}
-.donya-page-about .about-kicker{color:var(--about-gold);font-weight:800}.donya-page-about .about-kicker i{background:currentColor}
-.donya-page-about h1{color:var(--about-wine)!important;font-size:clamp(3rem,5.2vw,5rem)!important;margin:9px 0 4px!important;letter-spacing:-.055em}
-.donya-page-about .about-lead{color:#a45d40!important;margin:0 0 16px!important}
-.donya-page-about .about-intro{color:#553c42!important;font-size:1rem!important;line-height:2.05!important}
-.donya-page-about .about-values{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin:22px 0 0!important}
-.donya-page-about .about-values article{border:1px solid rgba(255,255,255,.9)!important;background:rgba(255,252,249,.7)!important;border-radius:18px!important;box-shadow:0 8px 22px rgba(83,40,42,.05)!important;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
-.donya-page-about .about-values article:hover{transform:translateY(-3px);box-shadow:0 14px 28px rgba(83,40,42,.09)!important;border-color:rgba(200,137,67,.38)!important}
-.donya-page-about .value-icon{background:#f7e2dc!important;color:var(--about-wine)!important}
-.donya-page-about .about-values strong{color:var(--about-wine)!important}
-.donya-page-about .about-actions{margin-top:22px!important}.donya-page-about .about-btn.primary{background:linear-gradient(180deg,#982443,#74102f)!important}.donya-page-about .about-btn.secondary{background:rgba(255,255,255,.62)!important}
-.donya-page-about .about-portrait-wrap{width:auto!important;max-width:none!important;justify-self:stretch!important;padding:24px!important;border-radius:34px!important;display:flex;align-items:center;justify-content:center;position:relative}
-.donya-page-about .about-portrait-glow{inset:12% 5% 8%!important;background:radial-gradient(circle,rgba(255,220,166,.33),transparent 67%)!important;filter:blur(10px);transform:none!important;box-shadow:none!important}
-.donya-page-about .about-portrait-card{width:min(100%,410px);padding:8px!important;border-radius:30px 30px 60px 30px!important;transform:rotate(.7deg)!important;background:rgba(255,255,255,.84)!important;box-shadow:0 22px 52px rgba(70,30,38,.16)!important}
-.donya-page-about .about-portrait-card img{max-height:58svh!important;border-radius:24px 24px 53px 24px!important;object-position:center 30%!important}
-.donya-page-about .experience-badge{left:12px!important;bottom:12%!important;border-color:#fff8f3!important;background:linear-gradient(145deg,#8e183c,#59102a)!important}
-.donya-page-about .about-story{width:min(1180px,calc(100% - 52px));margin:0 auto 28px;background:linear-gradient(145deg,rgba(255,251,248,.74),rgba(255,239,233,.57))!important;border:1px solid rgba(255,255,255,.88)!important;border-radius:30px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 20px 55px rgba(88,40,43,.11)}
-.donya-page-about .about-story-shell{width:auto!important;padding:34px 38px!important;grid-template-columns:.9fr 1.1fr!important;gap:48px!important}.donya-page-about .story-heading h2{color:#4a222a}.donya-page-about .story-copy p{color:#584247!important}
-.donya-page-about .about-cta{padding:0 26px 54px!important;background:transparent!important}.donya-page-about .about-cta-card{background:linear-gradient(135deg,rgba(69,16,31,.94),rgba(125,21,54,.93) 68%,rgba(80,16,33,.95))!important;border:1px solid rgba(255,224,174,.18);box-shadow:0 20px 56px rgba(94,18,47,.19)!important;backdrop-filter:blur(14px)}
-.donya-page-about .about-copy,.donya-page-about .about-portrait-wrap,.donya-page-about .about-story,.donya-page-about .about-cta-card{animation:aboutReveal .72s cubic-bezier(.2,.78,.2,1) both}.donya-page-about .about-portrait-wrap{animation-delay:.08s}.donya-page-about .about-story{animation-delay:.14s}.donya-page-about .about-cta-card{animation-delay:.18s}@keyframes aboutReveal{from{opacity:0;transform:translateY(22px);filter:blur(5px)}to{opacity:1;transform:none;filter:none}}
-@media(max-width:980px){body.donya-page-about{background-attachment:scroll}.donya-page-about .about-page{padding-top:82px}.donya-page-about .about-hero{min-height:auto;padding:12px 0 30px}.donya-page-about .about-shell{grid-template-columns:1fr!important;width:calc(100% - 24px)!important;gap:12px!important}.donya-page-about .about-portrait-wrap{order:-1!important;min-height:410px}.donya-page-about .about-story{width:calc(100% - 24px)!important}.donya-page-about .about-story-shell{grid-template-columns:1fr!important;gap:12px!important}}
-@media(max-width:620px){body.donya-page-about{background-image:linear-gradient(rgba(255,249,246,.06),rgba(255,249,246,.06)),url('/2nya-nailart/contact-bg-mobile-user.webp?v=20260928-1');background-size:cover;background-position:center;background-repeat:no-repeat}.donya-page-about .about-page{padding-top:76px}.donya-page-about .about-shell{width:calc(100% - 14px)!important}.donya-page-about .about-copy{display:flex!important;padding:22px 18px!important;border-radius:24px!important}.donya-page-about h1{font-size:2.45rem!important}.donya-page-about .about-values{grid-template-columns:1fr!important}.donya-page-about .about-portrait-wrap{width:auto!important;min-height:360px;padding:12px!important;border-radius:24px!important}.donya-page-about .about-portrait-card{width:min(85vw,330px)!important}.donya-page-about .about-portrait-card img{height:360px!important;max-height:44svh!important}.donya-page-about .about-story{width:calc(100% - 14px)!important;border-radius:24px!important}.donya-page-about .about-story-shell{padding:25px 20px!important}.donya-page-about .about-cta{padding:0 7px 28px!important}.donya-page-about .about-cta-card{border-radius:24px!important}.donya-page-about .experience-badge{width:82px!important;height:82px!important;left:4px!important}.donya-page-about .experience-badge strong{font-size:1.2rem!important}}
-@media(prefers-reduced-motion:reduce){.donya-page-about .about-copy,.donya-page-about .about-portrait-wrap,.donya-page-about .about-story,.donya-page-about .about-cta-card{animation:none!important}.donya-page-about .about-values article{transition:none!important}}
+body.donya-page-about{
+  background-color:#fdf1eb!important;
+  background-image:linear-gradient(rgba(255,249,246,.015),rgba(255,249,246,.015)),url('/2nya-nailart/contact-bg-desktop-20260928.webp?v=20260928-2')!important;
+  background-size:cover!important;
+  background-position:center top!important;
+  background-repeat:no-repeat!important;
+  background-attachment:fixed!important;
+}
+.donya-page-about .about-page,.donya-page-about .about-hero,.donya-page-about .about-story,.donya-page-about .about-cta{background:transparent!important}
+@media(max-width:980px){
+  body.donya-page-about{
+    background-image:linear-gradient(rgba(255,249,246,.01),rgba(255,249,246,.01)),url('/2nya-nailart/contact-bg-mobile-20260928.webp?v=20260928-2')!important;
+    background-position:center top!important;
+    background-size:cover!important;
+    background-attachment:scroll!important;
+  }
+}
