@@ -1,7 +1,7 @@
-/* User-provided Donya contact backgrounds: landscape for desktop, portrait for mobile. */
+/* Exact user-provided Donya contact backgrounds: landscape on desktop, portrait on mobile. */
 html,body{background-color:#fdf1eb!important}
 body{
-  background-image:linear-gradient(rgba(255,249,246,.02),rgba(255,249,246,.02)),url('/2nya-nailart/contact-bg-desktop-user.webp?v=20260928-1')!important;
+  background-image:linear-gradient(rgba(255,249,246,.015),rgba(255,249,246,.015)),url('/2nya-nailart/contact-bg-desktop-20260928.webp?v=20260928-2')!important;
   background-size:cover!important;
   background-position:center center!important;
   background-repeat:no-repeat!important;
@@ -9,9 +9,9 @@ body{
 .contact-page{background:transparent!important}
 @media(max-width:900px){
   body{
-    background-image:linear-gradient(rgba(255,249,246,.015),rgba(255,249,246,.015)),url('/2nya-nailart/contact-bg-mobile-user.webp?v=20260928-1')!important;
+    background-image:linear-gradient(rgba(255,249,246,.01),rgba(255,249,246,.01)),url('/2nya-nailart/contact-bg-mobile-20260928.webp?v=20260928-2')!important;
     background-size:cover!important;
-    background-position:center center!important;
+    background-position:center top!important;
     background-repeat:no-repeat!important;
   }
 }
