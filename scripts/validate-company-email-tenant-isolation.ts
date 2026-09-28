@@ -17,6 +17,10 @@ const outboundEnablement = readFileSync(
   "supabase/migrations/20260928170000_enable_managed_outbound_email.sql",
   "utf8",
 ).toLowerCase();
+const managedResendBoundary = readFileSync(
+  "supabase/migrations/20260928191000_managed_resend_service_boundary.sql",
+  "utf8",
+).toLowerCase();
 
 function requireText(source: string, value: string, label: string) {
   assert.ok(source.includes(value), `${label}: missing ${value}`);
@@ -46,6 +50,15 @@ requireText(
   route,
   "providerConnection.outbound_enabled !== true",
   "tenant outbound enablement enforcement",
+);
+requireText(
+  route,
+  '"ensure_managed_resend_integration_v1"',
+  "service-only managed Resend provisioning",
+);
+assert.ok(
+  !route.includes('.from("organization_integrations")\n    .upsert('),
+  "outbound route must not directly forge a connected managed integration",
 );
 
 // New company namespace + automatic mailboxes.
@@ -85,6 +98,48 @@ requireText(outboundEnablement, "status = 'connected'", "provider connected stat
 requireText(outboundEnablement, "auto_send_enabled = false", "auto-send remains disabled");
 requireText(outboundEnablement, "default_approval_mode = 'approval_required'", "approval requirement retained");
 requireText(outboundEnablement, "'transport_state', 'connected'", "connected transport metadata");
+
+// Platform-managed Resend is provisioned only through a service-role boundary.
+requireText(
+  managedResendBoundary,
+  "ensure_managed_resend_integration_v1",
+  "managed Resend service RPC",
+);
+requireText(
+  managedResendBoundary,
+  "app.rythm_managed_resend_provisioning",
+  "transaction-local managed provisioning capability",
+);
+requireText(
+  managedResendBoundary,
+  "'credential_source', 'platform_env'",
+  "platform environment credential source",
+);
+requireText(
+  managedResendBoundary,
+  "'managed_by', 'rythm_platform'",
+  "platform ownership marker",
+);
+requireText(
+  managedResendBoundary,
+  "'verification_result', 'verified'",
+  "verified managed integration marker",
+);
+requireText(
+  managedResendBoundary,
+  "rythm-managed resend integration is service-controlled",
+  "tenant mutation protection",
+);
+requireText(
+  managedResendBoundary,
+  "revoke all on function public.ensure_managed_resend_integration_v1(uuid, uuid)",
+  "managed Resend RPC public access revoked",
+);
+requireText(
+  managedResendBoundary,
+  "grant execute on function public.ensure_managed_resend_integration_v1(uuid, uuid)\n  to service_role",
+  "managed Resend RPC service-role execution",
+);
 
 // Trigger-only definer functions are not exposed as public RPCs.
 for (const signature of [
