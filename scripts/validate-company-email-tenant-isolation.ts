@@ -13,6 +13,10 @@ const fkSemantics = readFileSync(
   "supabase/migrations/20260928154100_tenant_fk_delete_semantics.sql",
   "utf8",
 ).toLowerCase();
+const outboundEnablement = readFileSync(
+  "supabase/migrations/20260928170000_enable_managed_outbound_email.sql",
+  "utf8",
+).toLowerCase();
 
 function requireText(source: string, value: string, label: string) {
   assert.ok(source.includes(value), `${label}: missing ${value}`);
@@ -28,6 +32,21 @@ requireText(
 );
 requireText(route, 'sendingDomain: "rythm-os.com"', "verified sending domain status");
 requireText(route, 'approvalRequired: true', "outbound governance remains explicit");
+requireText(
+  route,
+  '.from("communication_provider_connections")',
+  "tenant outbound provider lookup",
+);
+requireText(
+  route,
+  'providerConnection?.status !== "connected"',
+  "connected provider enforcement",
+);
+requireText(
+  route,
+  "providerConnection.outbound_enabled !== true",
+  "tenant outbound enablement enforcement",
+);
 
 // New company namespace + automatic mailboxes.
 requireText(hardening, "allocate_organization_email_identity_v1", "race-safe namespace allocator");
@@ -59,6 +78,14 @@ assert.ok(
 requireText(hardening, "v_priority := 'normal'", "valid communication thread priority");
 requireText(hardening, "v_risk := 'medium'", "medium governance risk retained");
 
+// Managed outbound is enabled, but auto-send stays disabled and approval-required.
+requireText(outboundEnablement, "outbound_enabled = true", "existing tenant outbound activation");
+requireText(outboundEnablement, "true, true", "new tenant inbound/outbound activation");
+requireText(outboundEnablement, "status = 'connected'", "provider connected state");
+requireText(outboundEnablement, "auto_send_enabled = false", "auto-send remains disabled");
+requireText(outboundEnablement, "default_approval_mode = 'approval_required'", "approval requirement retained");
+requireText(outboundEnablement, "'transport_state', 'connected'", "connected transport metadata");
+
 // Trigger-only definer functions are not exposed as public RPCs.
 for (const signature of [
   "public.allocate_organization_email_identity_v1()",
@@ -76,5 +103,15 @@ for (const signature of [
     `${signature} service execution`,
   );
 }
+requireText(
+  outboundEnablement,
+  "revoke all on function public.provision_default_communication_workspace() from public, anon, authenticated",
+  "outbound provisioning function RPC hardening",
+);
+requireText(
+  outboundEnablement,
+  "grant execute on function public.provision_default_communication_workspace() to service_role",
+  "outbound provisioning function service execution",
+);
 
 console.log("Company email and tenant isolation validation passed.");

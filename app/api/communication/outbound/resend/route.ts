@@ -119,12 +119,20 @@ export async function POST(request: Request) {
   if (!recipients.length)
     return jsonError("No valid recipient is available.", 400);
 
-  const { data: mailbox } = await supabase
-    .from("communication_mailboxes")
-    .select("id,address,is_active,approval_mode")
-    .eq("organization_id", organizationId)
-    .eq("id", message.mailbox_id)
-    .maybeSingle();
+  const [{ data: mailbox }, { data: providerConnection }] = await Promise.all([
+    supabase
+      .from("communication_mailboxes")
+      .select("id,address,is_active,approval_mode")
+      .eq("organization_id", organizationId)
+      .eq("id", message.mailbox_id)
+      .maybeSingle(),
+    supabase
+      .from("communication_provider_connections")
+      .select("status,outbound_enabled")
+      .eq("organization_id", organizationId)
+      .eq("provider_code", "rythm_managed")
+      .maybeSingle(),
+  ]);
 
   if (!mailbox?.is_active || mailbox.address !== message.sender_email) {
     return jsonError("Mailbox is not available for delivery.", 409);
@@ -132,6 +140,15 @@ export async function POST(request: Request) {
   if (mailbox.approval_mode === "draft_only") {
     return jsonError(
       "This mailbox is configured for draft-only outbound communication.",
+      409,
+    );
+  }
+  if (
+    providerConnection?.status !== "connected" ||
+    providerConnection.outbound_enabled !== true
+  ) {
+    return jsonError(
+      "Managed outbound email is not enabled for this company.",
       409,
     );
   }
