@@ -22,6 +22,12 @@
       img.dataset.donyaPortrait='1';img.src=PORTRAIT;img.alt='دنیا وردی‌نژاد، مدیر Donya Nail Art';img.decoding='async';
     });
   }
+  function removeLegacyLandingAbout(){
+    const path=(location.pathname||'/').replace(/\/+$/,'')||'/';
+    if(path!=='/')return;
+    const duplicate=document.querySelector('#homeView > #about.about-section');
+    if(duplicate)duplicate.remove();
+  }
   function loadBookingCustomerUx(){
     if(!document.querySelector('#modal')||document.querySelector('script[data-donya-booking-customer-ux]'))return;
     const script=document.createElement('script');script.src='/2nya-nailart/booking-customer-ux.js?v=20260927-1';script.defer=true;script.dataset.donyaBookingCustomerUx='true';document.body.append(script);
@@ -45,6 +51,6 @@
     document.querySelectorAll('.motion-reveal:not(.is-visible)').forEach(el=>io.observe(el));
   }
   function heroMotion(){const hero=document.querySelector('.donya-hero');if(!hero||reduced)return;hero.classList.add('hero-motion-ready');requestAnimationFrame(()=>requestAnimationFrame(()=>hero.classList.add('hero-motion-run')))}
-  function init(){refreshLogos();syncManagerPortrait();loadBookingCustomerUx();prepareReveal();heroMotion();const obs=new MutationObserver(()=>{refreshLogos();syncManagerPortrait();loadBookingCustomerUx();prepareReveal()});obs.observe(document.body,{childList:true,subtree:true})}
+  function init(){removeLegacyLandingAbout();refreshLogos();syncManagerPortrait();loadBookingCustomerUx();prepareReveal();heroMotion();const obs=new MutationObserver(()=>{removeLegacyLandingAbout();refreshLogos();syncManagerPortrait();loadBookingCustomerUx();prepareReveal()});obs.observe(document.body,{childList:true,subtree:true})}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
