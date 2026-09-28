@@ -171,29 +171,14 @@ export async function POST(request: Request) {
   }
 
   const service = createExecutionServiceClient();
-  const { data: integration, error: integrationError } = await service
-    .from("organization_integrations")
-    .upsert(
-      {
-        organization_id: organizationId,
-        provider_key: "resend",
-        display_name: "RYTHM Managed Resend",
-        account_ref: "rythm-managed",
-        auth_type: "token",
-        status: "connected",
-        enabled: true,
-        granted_scopes: ["email.send"],
-        metadata: { credential_source: "platform_env" },
-        connected_by_user_id: user.id,
-        connected_at: new Date().toISOString(),
-        last_verified_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "organization_id,provider_key,display_name" },
-    )
-    .select("id")
-    .single();
-  if (integrationError || !integration)
+  const { data: integrationId, error: integrationError } = await service.rpc(
+    "ensure_managed_resend_integration_v1",
+    {
+      target_organization_id: organizationId,
+      target_user_id: user.id,
+    },
+  );
+  if (integrationError || !integrationId)
     return jsonError("Governed Resend connection could not be prepared.", 500);
 
   const exactPayload = {
@@ -209,7 +194,7 @@ export async function POST(request: Request) {
   const execution = await requestToolExecution(service, {
     organizationId,
     userId: user.id,
-    integrationId: integration.id,
+    integrationId: String(integrationId),
     toolId: "resend.email",
     capabilityKey: "email.send",
     targetRef: recipients.join(", "),
