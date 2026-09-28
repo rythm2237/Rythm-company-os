@@ -1,6 +1,7 @@
--- Keep the existing single-column ON DELETE behavior authoritative while the
+-- Keep the existing single-column delete behavior authoritative while the
 -- composite foreign keys enforce only the tenant-boundary invariant.
--- A composite ON DELETE SET NULL would also try to null organization_id.
+-- The composite constraints intentionally have no delete action of their own,
+-- so organization_id can never be nulled by a relationship cleanup.
 
 alter table public.agents
   drop constraint if exists agents_organization_department_tenant_fkey;
