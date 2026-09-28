@@ -9,8 +9,9 @@
 <link rel="canonical" href="https://2nya-nailart.rythm-os.com/contact">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Estedad:wght@400;600;700;800&family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260927-6">
+<link rel="stylesheet" href="/2nya-nailart/navigation.css?v=20260928-1">
 <link rel="stylesheet" href="/2nya-nailart/contact-premium.css?v=20260927-3">
+<link rel="stylesheet" href="/2nya-nailart/contact-background-20260928.css?v=20260928-1">
 </head>
 <body>
 <div class="contact-page">
@@ -25,7 +26,7 @@
         <a class="contact-link" href="tel:+82103960939" aria-label="تماس تلفنی"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.2 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.8a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.28-1.28a2 2 0 0 1 2.11-.45c.9.33 1.84.56 2.8.69A2 2 0 0 1 22 16.92Z"/></svg><b dir="ltr">+82 10 3960 939</b></a>
         <a class="contact-link" href="https://www.instagram.com/2nya._nailart/" target="_blank" rel="noopener noreferrer" aria-label="اینستاگرام Donya Nail Art"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg><b dir="ltr">@2nya._nailart</b></a>
       </div>
-      <div class="contact-book"><a class="book" href="/?book="><span aria-hidden="true">▣</span><span>رزرو آنلاین وقت</span><span aria-hidden="true">‹</span></a></div>
+      <div class="contact-book"><a class="book" href="/book"><span aria-hidden="true">▣</span><span>رزرو آنلاین وقت</span><span aria-hidden="true">‹</span></a></div>
     </section>
     <section class="contact-card contact-form-panel">
       <div class="contact-heading"><span class="eyebrow">DONYA NAIL ART</span><h1 id="contactTitle">تماس با ما</h1><p>برای سؤال، هماهنگی یا ارسال پیام، فرم زیر را تکمیل کنید.</p></div>
@@ -41,8 +42,8 @@
     </section>
   </main>
 </div>
-<script src="/2nya-nailart/navigation.js?v=20260927-4" defer></script>
-<script src="/2nya-nailart/brand-motion.js?v=20260927-5" defer></script>
+<script src="/2nya-nailart/navigation.js?v=20260928-1" defer></script>
+<script src="/2nya-nailart/brand-motion.js?v=20260928-2" defer></script>
 <script>
 (()=>{const form=document.getElementById('contactForm'),phone=document.getElementById('contactPhone'),hint=document.getElementById('phoneHint'),result=document.getElementById('formResult'),button=document.getElementById('sendMessage');const faToEn=value=>String(value||'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));const normalizePhone=value=>{const raw=faToEn(value).trim();if(!raw)return'';if(!/^[0-9\s\u00a0]+$/.test(raw))return null;const digits=raw.replace(/[\s\u00a0]+/g,'');if(/^09\d{9}$/.test(digits))return digits.slice(1);if(/^9\d{9}$/.test(digits))return digits;return null};const firstName=()=>document.getElementById('contactName').value.trim().split(/\s+/)[0]||'';const person=value=>{const n=firstName();return n?`${n} جان، ${value}`:value};const checkPhone=()=>{const value=normalizePhone(phone.value);phone.classList.toggle('invalid',value===null);hint.className='phone-hint'+(value===null?' error':value?' ok':'');hint.textContent=value===null?'شماره باید 09xx xxx xxxx یا 9xxxxxxxxx باشد.':value?'شماره معتبر است ✓':'با صفر یا بدون صفر، فاصله مجاز است.';return value};phone.addEventListener('input',checkPhone);form.addEventListener('submit',async event=>{event.preventDefault();result.className='form-result';result.textContent='';const name=document.getElementById('contactName').value.trim(),subject=document.getElementById('contactSubject').value,message=document.getElementById('contactMessage').value.trim(),normalized=checkPhone();if(!name){result.className='form-result error';result.textContent='لطفاً نامت را وارد کن.';document.getElementById('contactName').focus();return}if(normalized===null){result.className='form-result error';result.textContent=person('شماره موبایل را بررسی کن.');phone.focus();return}if(!subject){result.className='form-result error';result.textContent=person('موضوع پیام را انتخاب کن.');document.getElementById('contactSubject').focus();return}if(message.length<2){result.className='form-result error';result.textContent=person('متن پیامت را بنویس.');document.getElementById('contactMessage').focus();return}button.disabled=true;button.innerHTML='<span class="button-spinner" aria-hidden="true"></span><span>در حال ارسال…</span>';try{const response=await fetch('/api/2nya-nailart/contact-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone:phone.value,subject,message,website:document.getElementById('contactWebsite').value})});const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'ارسال پیام انجام نشد.');result.className='form-result ok';result.textContent=person('پیامت برای دنیا ارسال شد ✓');form.reset();hint.className='phone-hint';hint.textContent='با صفر یا بدون صفر، فاصله مجاز است.'}catch(error){result.className='form-result error';result.textContent=person(error.message||'ارسال پیام انجام نشد. دوباره تلاش کن.')}finally{button.disabled=false;button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg><span>ارسال پیام</span>'}})})();
 </script>
