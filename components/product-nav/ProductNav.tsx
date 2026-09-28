@@ -52,6 +52,7 @@ const groups = [
   { label: "Admin", items: [
     { label: "Customers", href: "/admin/customers", icon: "▣" },
     { label: "Admin Studio", href: "/admin", icon: "◆" },
+    { label: "Capabilities", href: "/admin/capabilities", icon: "◈" },
     { label: "Automation Center", href: "/admin/automation", icon: "↻" },
   ]},
 ] as const;
