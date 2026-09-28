@@ -14,13 +14,28 @@ function jsonError(error: string, status: number) {
   );
 }
 
+function safeEmailDisplayName(value: unknown) {
+  const displayName = String(value ?? "")
+    .replace(/[\r\n<>\"]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 100);
+  return displayName || "Company";
+}
+
 export async function GET(request: Request) {
   const configured = Boolean(process.env.RESEND_API_KEY?.trim());
   const url = new URL(request.url);
 
   if (url.searchParams.get("status") === "1") {
     return NextResponse.json(
-      { ok: true, configured },
+      {
+        ok: true,
+        configured,
+        provider: "resend",
+        sendingDomain: "rythm-os.com",
+        approvalRequired: true,
+      },
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   }
@@ -63,17 +78,27 @@ export async function POST(request: Request) {
   const messageId = String(payload.messageId ?? "").trim();
   if (!messageId) return jsonError("messageId is required.", 400);
 
-  const { data: message, error: messageError } = await supabase
-    .from("communication_messages")
-    .select(
-      "id,thread_id,mailbox_id,status,direction,sender_email,recipients,subject,body_text,approved_by_user_id,approved_at",
-    )
-    .eq("organization_id", organizationId)
-    .eq("id", messageId)
-    .maybeSingle();
+  const [{ data: message, error: messageError }, { data: organization }] =
+    await Promise.all([
+      supabase
+        .from("communication_messages")
+        .select(
+          "id,thread_id,mailbox_id,status,direction,sender_email,recipients,subject,body_text,approved_by_user_id,approved_at",
+        )
+        .eq("organization_id", organizationId)
+        .eq("id", messageId)
+        .maybeSingle(),
+      supabase
+        .from("organizations")
+        .select("name")
+        .eq("id", organizationId)
+        .maybeSingle(),
+    ]);
 
   if (messageError) return jsonError("Message could not be loaded.", 500);
   if (!message) return jsonError("Message not found.", 404);
+  if (!organization?.name)
+    return jsonError("Company identity could not be loaded.", 500);
   if (
     message.status !== "ready_for_delivery" ||
     !message.approved_by_user_id ||
@@ -153,15 +178,17 @@ export async function POST(request: Request) {
     .single();
   if (integrationError || !integration)
     return jsonError("Governed Resend connection could not be prepared.", 500);
+
   const exactPayload = {
     messageId: message.id,
     threadId: message.thread_id,
-    from: `RYTHM <${mailbox.address}>`,
+    from: `${safeEmailDisplayName(organization.name)} <${mailbox.address}>`,
     to: recipients,
     subject: message.subject || "(no subject)",
     text: message.body_text || "",
     ...(Object.keys(headers).length ? { headers } : {}),
   };
+
   const execution = await requestToolExecution(service, {
     organizationId,
     userId: user.id,
@@ -181,6 +208,7 @@ export async function POST(request: Request) {
     payloadSummary: {
       subject: exactPayload.subject,
       recipientCount: recipients.length,
+      senderCompany: safeEmailDisplayName(organization.name),
     },
     payloadReference: `communication_message:${message.id}`,
     idempotencyKey: `resend:${organizationId}:${message.id}:${message.approved_at}`,
