@@ -90,3 +90,6 @@
 @media(prefers-reduced-motion:reduce){
   .portfolio-turn-v4 .turn-cube,.portfolio-turn-v4 .portfolio-nav,.portfolio-turn-v4 .portfolio-dots button,.portfolio-turn-v4 .turn-shadow,.portfolio-turn-v4 .turn-fallback{transition-duration:.01ms!important}
 }
+
+/* Canonical About lives at /about. The old full About section embedded in the landing page is intentionally hidden. */
+#homeView > #about.about-section{display:none!important}
