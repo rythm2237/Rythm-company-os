@@ -16,7 +16,7 @@ const SELECTABLE_TEMPLATES = new Set([
 ]);
 
 function safeInternalPath(value: string) {
-  if (!value.startsWith("/") || value.startsWith("//")) return "/command-center";
+  if (!value.startsWith("/") || value.startsWith("//")) return "/home";
   return value;
 }
 
@@ -50,7 +50,7 @@ async function requestOrigin() {
 export async function signInWithOAuth(formData: FormData) {
   const rawProvider = String(formData.get("provider") ?? "").toLowerCase();
   const source = formData.get("source") === "signup" ? "signup" : "login";
-  const requestedNext = String(formData.get("next") ?? "/command-center");
+  const requestedNext = String(formData.get("next") ?? "/home");
   const requestedProduct = String(formData.get("productCode") ?? "company_studio");
   const productCode = requestedProduct === "ready_company" ? "ready_company" : "company_studio";
   const requestedTemplate = String(formData.get("templateKey") ?? "").trim();

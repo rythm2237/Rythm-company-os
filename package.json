@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email",
+    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -31,6 +31,7 @@
     "test:seo-authority": "node scripts/validate-referring-domain-authority.mjs",
     "test:seo-community": "node scripts/validate-community-participation.mjs",
     "test:admin-automation": "node --import tsx scripts/validate-admin-automation-center.ts",
+    "test:cockpit": "node --import tsx scripts/validate-simple-cockpit.ts",
     "test:project-os": "node --import tsx scripts/validate-project-operating-system.ts",
     "test:project-supervisor": "node --import tsx scripts/validate-project-autonomy-supervisor.ts",
     "test:connections-phase1": "node --import tsx scripts/validate-customer-connection-platform.ts",

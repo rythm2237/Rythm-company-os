@@ -46,8 +46,9 @@ async function resolveDecision(formData: FormData) {
   if (responseNote.length < 3) redirect(`/approvals/decisions?approval=${approvalId}&error=CEO%20decision%20note%20is%20required.`);
 
   const { data: approval } = await supabase.from("approval_requests")
-    .select("id,title,risk_level,status,project_id")
+    .select("id,title,risk_level,status,project_id,subject_type")
     .eq("organization_id", organizationId).eq("id", approvalId).maybeSingle();
+  if (approval?.subject_type === "project_task" && approval.project_id) redirect(`/projects/operating?project=${approval.project_id}&view=decisions`);
   if (!approval || approval.status !== "pending") redirect("/approvals/decisions?error=Only%20pending%20decisions%20can%20be%20resolved.");
 
   const now = new Date().toISOString();

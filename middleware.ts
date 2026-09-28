@@ -26,6 +26,11 @@ const SAFE_OPERATIONAL_ERROR =
   "The request could not be completed. Refresh and retry. If the problem persists, check Operations Health.";
 
 const PROTECTED_ROUTE_PREFIXES = [
+  "/home",
+  "/inbox",
+  "/reports",
+  "/settings",
+  "/more",
   "/actions",
   "/activation",
   "/agents",
@@ -202,7 +207,7 @@ export async function middleware(request: NextRequest) {
       .limit(1);
 
     const target = request.nextUrl.clone();
-    target.pathname = memberships?.length ? "/command-center" : "/demo";
+    target.pathname = memberships?.length ? "/home" : "/demo";
     target.search = "";
     return NextResponse.redirect(target);
   }
@@ -213,6 +218,11 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/login",
+    "/home/:path*",
+    "/inbox/:path*",
+    "/reports/:path*",
+    "/settings/:path*",
+    "/more/:path*",
     "/activation/:path*",
     "/command-center/:path*",
     "/decisions/:path*",

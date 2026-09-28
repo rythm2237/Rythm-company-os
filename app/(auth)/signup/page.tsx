@@ -24,7 +24,7 @@ export default async function SignupPage({ searchParams }: Props) {
   const { data: { user } } = await supabase.auth.getUser();
   const loginNext = selectedTemplate
     ? `/setup/company?product=${encodeURIComponent(selectedProduct ?? "ready_company")}&template=${encodeURIComponent(selectedTemplate)}`
-    : "/command-center";
+    : "/home";
 
   return (
     <main className="auth-shell">
@@ -46,7 +46,7 @@ export default async function SignupPage({ searchParams }: Props) {
             <form action={signOutForSignup}>
               <button type="submit">Sign out and create another account</button>
             </form>
-            <Link href="/command-center">Return to current company</Link>
+            <Link href="/home">Return to current company</Link>
           </div>
         ) : (
           <>

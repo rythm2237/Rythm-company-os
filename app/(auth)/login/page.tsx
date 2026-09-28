@@ -10,7 +10,7 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const next = params.next ?? "/command-center";
+  const next = params.next ?? "/home";
 
   return (
     <main className="auth-shell">
