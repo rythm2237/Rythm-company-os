@@ -128,7 +128,7 @@ requireText(intake,'name="files" multiple',"multi-file intake");
 requireText(dashboard,"Execution Readiness","readiness UX");
 requireText(dashboard,"Executive Inbox","executive attention UX");
 requireText(dashboard,"persisted server-side","offline execution UX");
-for(const view of ["Overview","Live AI","Agents","Tasks","Approvals","Actions","Files","Activity"])requireText(dashboard,view,`mission control view ${view}`);
+for(const view of ["Overview","Roadmap","Work","Activity","Decisions","Files","Results","Advanced"])requireText(dashboard,view,`mission control view ${view}`);
 requireText(dashboard,"progress.progressPercent","canonical operating progress");
 requireText(intake,"progressSnapshots","canonical portfolio progress");
 if(vercel.includes('"path": "/api/projects/dispatch"'))throw new Error("Frequent project dispatch must not rely on Vercel Hobby Cron.");

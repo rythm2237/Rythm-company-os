@@ -165,13 +165,14 @@ async function resolveApproval(formData: FormData) {
   const { data: approval } = await supabase
     .from("approval_requests")
     .select(
-      "id, title, risk_level, status, expires_at, approver_user_id,subject_type,subject_id",
+      "id, title, risk_level, status, expires_at, approver_user_id,subject_type,subject_id,project_id",
     )
     .eq("id", approvalId)
     .eq("organization_id", organizationId)
     .maybeSingle();
 
   if (!approval) redirect("/approvals?error=Approval%20request%20not%20found.");
+  if (approval.subject_type === "project_task" && approval.project_id) redirect(`/projects/operating?project=${approval.project_id}&view=decisions`);
   if (approval.status !== "pending") {
     redirect(
       `/approvals?approval=${approvalId}&error=Only%20pending%20requests%20can%20be%20resolved.`,

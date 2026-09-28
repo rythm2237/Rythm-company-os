@@ -8,8 +8,8 @@ import { ACTIVE_ORGANIZATION_COOKIE } from "@/lib/auth/organization-context";
 
 export async function switchOrganization(formData: FormData) {
   const organizationId = String(formData.get("organizationId") ?? "");
-  const next = String(formData.get("next") ?? "/command-center");
-  if (!organizationId) redirect("/command-center?error=Organization%20selection%20is%20required.");
+  const next = String(formData.get("next") ?? "/home");
+  if (!organizationId) redirect("/home?error=Organization%20selection%20is%20required.");
 
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -21,7 +21,7 @@ export async function switchOrganization(formData: FormData) {
 
   if (error || String(selectedOrganizationId ?? "") !== organizationId) {
     console.error("organization_context_switch_failed", { userId: user.id, organizationId, error });
-    redirect("/command-center?error=You%20are%20not%20authorized%20for%20that%20organization.");
+    redirect("/home?error=You%20are%20not%20authorized%20for%20that%20organization.");
   }
 
   // Cookie is a non-authoritative UI/cache hint. Database active_organization_id is
@@ -36,6 +36,6 @@ export async function switchOrganization(formData: FormData) {
   });
 
   revalidatePath("/", "layout");
-  const safeNext = next === "/command-center" ? next : "/command-center";
+  const safeNext = next === "/home" ? next : "/home";
   redirect(safeNext);
 }

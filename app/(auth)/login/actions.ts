@@ -6,7 +6,7 @@ import { createAuthServerClient } from "@/lib/supabase/auth-server";
 export async function login(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/command-center");
+  const next = String(formData.get("next") ?? "/home");
 
   if (!email || !password) {
     redirect(`/login?error=${encodeURIComponent("Email and password are required.")}`);
@@ -29,6 +29,6 @@ export async function login(formData: FormData) {
   // Company creation is an explicit choice, not a login prerequisite.
   if (!memberships?.length) redirect("/demo");
 
-  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/command-center";
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/home";
   redirect(safeNext);
 }

@@ -20,7 +20,7 @@ type PulseNode = {
 };
 
 const footerGroups = [
-  { label: "Workspace", links: [["Command", "/command-center"], ["Projects", "/projects"], ["Agent Studio", "/studio/agents"], ["Boardroom", "/meetings/room"]] },
+  { label: "Workspace", links: [["Home", "/home"], ["Projects", "/projects"], ["Inbox", "/inbox"], ["Company", "/company"]] },
   { label: "Trust", links: [["Security", "/security"], ["Trust center", "/trust"], ["AI transparency", "/ai-transparency"], ["Subprocessors", "/subprocessors"]] },
   { label: "Legal", links: [["Privacy", "/privacy"], ["Terms", "/terms"], ["DPA", "/dpa"], ["Data requests", "/data-requests"]] },
   { label: "Help", links: [["Support", "/support"], ["Contact", "/contact"], ["Workspace guide", "/onboarding"]] },
