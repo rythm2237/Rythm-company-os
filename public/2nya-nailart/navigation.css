@@ -20,13 +20,21 @@ body:not(.donya-inner-page) .donya-top.is-scrolled{position:fixed!important;inse
 @media(max-width:520px){.donya-brand-copy{display:none!important}.nav-book .nav-book-icon{display:none!important}.donya-nav-shell{grid-template-columns:minmax(0,1fr) auto auto!important}.donya-brand img{width:42px!important;height:45px!important}}
 @media(prefers-reduced-motion:reduce){.donya-top,.desktop-nav a,.desktop-nav a:after,.desktop-nav a:before,.nav-book,.mobile-nav,.back-top{transition:none!important}}
 
-/* Booking modal: keep the dialog above the fixed navigation and make its own
-   scroll container authoritative on mobile Safari instead of the locked page. */
+/* Booking modal: keep the dialog above fixed navigation. Desktop keeps the
+   normal page lock; mobile owns the entire viewport and scrolls internally
+   without locking body, which avoids iOS/WebKit scroll deadlocks. */
 body.lock{overflow:hidden!important;overscroll-behavior:none}
-body.lock .donya-top{pointer-events:none!important}
+body.lock .donya-top{pointer-events:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body.lock .donya-hero video{visibility:hidden!important}
 .modal{z-index:200!important;overflow:hidden!important;overscroll-behavior:contain}
 .modal .sheet{min-height:0;max-height:calc(100dvh - env(safe-area-inset-top,0px));overscroll-behavior:contain}
 .modal .sheet>.body{min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
 .modal .sheet-head,.modal .sheet-actions{flex:none}
-@media(max-width:800px){.modal{align-items:flex-end!important}.modal .sheet{height:min(94dvh,820px)!important;margin:0 auto!important;border-radius:24px 24px 0 0!important}}
-/* production-deploy-retry: 2026-09-27 */
+@media(max-width:800px){
+  body.lock{overflow:visible!important;overscroll-behavior:auto!important}
+  .modal{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;align-items:stretch!important;touch-action:none!important}
+  .modal .sheet{width:100%!important;height:100dvh!important;max-height:100dvh!important;margin:0!important;border-radius:0!important;display:flex!important;flex-direction:column!important;touch-action:auto!important}
+  .modal .sheet-head{position:relative!important;flex:0 0 auto!important;padding-top:calc(14px + env(safe-area-inset-top,0px))!important}
+  .modal .sheet>.body{flex:1 1 auto!important;min-height:0!important;padding-bottom:22px!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-y:contain!important;touch-action:pan-y!important}
+  .modal .sheet-actions{position:relative!important;inset:auto!important;bottom:auto!important;width:100%!important;flex:0 0 auto!important}
+}
