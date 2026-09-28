@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { calculateProjectProgressSnapshot } from "../lib/projects/project-progress";
+import { recordedPhaseProgress } from "../lib/projects/phase-progress-display";
 
 const root=process.cwd();
 const read=(file:string)=>fs.readFileSync(path.join(root,file),"utf8");
@@ -156,4 +157,6 @@ const weighted=calculateProjectProgressSnapshot([{project_id:"p",execution_id:"e
 if(weighted.progressPercent!==10||weighted.taskCompletionPercent!==33||weighted.currentPhase!=="Discovery")throw new Error("Project progress must use roadmap phase/task weights, not raw completed task count.");
 const approvalBlocked=calculateProjectProgressSnapshot([{project_id:"p",execution_id:"e",roadmap_id:"r",roadmap_phase_id:"p1",work_weight:1,status:"completed"},{project_id:"p",execution_id:"e",roadmap_id:"r",roadmap_phase_id:"p1",work_weight:1,status:"waiting_for_approval"}],1,"active",null,roadmap);
 if(approvalBlocked.progressPercent!==10||approvalBlocked.awaitingApproval!==1)throw new Error("Approvals must remain visible without inflating weighted project progress.");
+if(recordedPhaseProgress("in_progress",null)!==null||recordedPhaseProgress("blocked",null)!==null||recordedPhaseProgress("waiting_for_approval",null)!==null)throw new Error("Phase status must not invent a percentage.");
+if(recordedPhaseProgress("in_progress",39)!==39||recordedPhaseProgress("completed",null)!==100||recordedPhaseProgress("queued",Number.NaN)!==null)throw new Error("Only recorded outcomes or completed phases may display a percentage.");
 console.log("Project Operating System static architecture validation passed.");
