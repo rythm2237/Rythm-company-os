@@ -52,6 +52,10 @@ begin
     end loop;
   end if;
 
+  if new.status in ('approved', 'rejected') and v_affected = 0 then
+    raise exception 'Project task approval has no waiting task';
+  end if;
+
   if v_affected > 0 and new.status in ('approved', 'rejected') then
     update public.approval_requests
     set consumed_at = coalesce(consumed_at, new.resolved_at, now()),
