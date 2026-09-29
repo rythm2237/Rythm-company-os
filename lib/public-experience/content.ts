@@ -25,6 +25,7 @@ export type PublicTemplate = {
   capabilities: string[];
   templateKey?: string;
   productCode?: "ready_company" | "company_studio";
+  maturity?: "preview";
   cta?: string;
 };
 
@@ -88,7 +89,8 @@ export const PUBLIC_TEMPLATES: PublicTemplate[] = [
     capabilities: ["Product discovery", "Engineering delivery", "Quality gates", "Growth operations"],
     templateKey: "ready_saas_startup_v1",
     productCode: "ready_company",
-    cta: "Choose SaaS Startup",
+    maturity: "preview",
+    cta: "Explore the operating model",
   },
   {
     id: "ai-advertising-agency",
