@@ -52,7 +52,7 @@ begin
       raise exception 'Selected template is unavailable for this product';
     end if;
     if cardinality(v_template.agent_template_refs) + 1 >
-      case v_product_code when 'ready_company' then 12 else 50 end then
+      (case v_product_code when 'ready_company' then 12 else 50 end) then
       raise exception 'Selected product has insufficient Agent capacity';
     end if;
   end if;
