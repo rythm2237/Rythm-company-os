@@ -2,7 +2,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type ProjectProgressSnapshot={
   progressPercent:number;
+  overallProjectProgress:number;
+  workProgress:number;
+  deliverableProgress:number;
+  implementationProgress:number;
+  verificationProgress:number;
+  outcomeProgress:number;
   outcomeProgressPercent:number|null;
+  acceptanceProgress:number;
+  closeoutProgress:number;
+  lifecycleState:string|null;
+  completionEligible:boolean;
+  nextRequiredAction:string|null;
+  blockingReasons:unknown[];
   hasApprovedRoadmap:boolean;
   roadmapVersion:number|null;
   roadmapStatus:string|null;
@@ -26,12 +38,30 @@ type ActivityRow={project_id:string;created_at:string};
 type ProjectSeed={id:string;status?:string|null;updated_at?:string|null};
 type RoadmapRow={id:string;project_id:string;version:number;status:string;is_baseline:boolean};
 type PhaseRow={id:string;project_id:string;roadmap_id:string;phase_order:number;title:string;milestone?:string|null;weight:number|string;status:string;outcome_progress_percent?:number|string|null};
+type CompletionRow={
+  id:string;
+  lifecycle_state?:string|null;
+  work_progress?:number|string|null;
+  deliverable_progress?:number|string|null;
+  implementation_progress?:number|string|null;
+  verification_progress?:number|string|null;
+  outcome_progress?:number|string|null;
+  acceptance_progress?:number|string|null;
+  closeout_progress?:number|string|null;
+  overall_project_progress?:number|string|null;
+  completion_eligible?:boolean|null;
+  next_required_action?:string|null;
+  completion_blocking_reasons?:unknown;
+  completion_evaluator_version?:string|null;
+};
 
 const terminalExcluded=new Set(["cancelled"]);
 const queuedStatuses=new Set(["queued","pending","retrying"]);
 const blockedStatuses=new Set(["blocked","waiting_for_connection","waiting_for_data"]);
 const timestamp=(...values:Array<string|null|undefined>)=>values.filter(Boolean).sort().at(-1)??null;
-const clamp=(value:number)=>Math.max(0,Math.min(100,value));
+const clamp=(value:number)=>Math.max(0,Math.min(100,Number.isFinite(value)?value:0));
+const percent=(value:unknown,fallback=0)=>value==null?fallback:clamp(Number(value));
+const list=(value:unknown):unknown[]=>Array.isArray(value)?value:[];
 
 export function calculateProjectProgressSnapshot(
   tasks:TaskRow[],
@@ -39,13 +69,14 @@ export function calculateProjectProgressSnapshot(
   projectStatus?:string|null,
   lastActivityAt?:string|null,
   roadmap?:{id:string;version:number;status:string;phases:PhaseRow[]}|null,
+  completion?:CompletionRow|null,
 ):ProjectProgressSnapshot{
   const executable=tasks.filter(task=>!terminalExcluded.has(task.status));
   const completedTasks=executable.filter(task=>task.status==="completed").length;
   const totalTasks=executable.length;
   const taskCompletionPercent=totalTasks?Math.round((completedTasks/totalTasks)*100):(projectStatus==="completed"?100:0);
-  let progressPercent=projectStatus==="completed"?100:0;
-  let outcomeProgressPercent:number|null=null;
+  let workProgress=projectStatus==="completed"?100:0;
+  let recordedOutcomeProgress:number|null=null;
   let currentPhase:string|null=null;
   let nextMilestone:string|null=null;
 
@@ -64,14 +95,36 @@ export function calculateProjectProgressSnapshot(
       if(phase.outcome_progress_percent!=null){weightedOutcome+=Math.max(0,Number(phase.weight)||0)*clamp(Number(phase.outcome_progress_percent));outcomeWeight+=Math.max(0,Number(phase.weight)||0);}
       if(!currentPhase&&phaseProgress<100&&(phaseProgress>0||phase.status==="in_progress"||phaseTasks.some(task=>["running","waiting_for_approval","blocked","queued","retrying","waiting_for_connection","waiting_for_data"].includes(task.status)))){currentPhase=phase.title;nextMilestone=phase.milestone??null;}
     }
-    progressPercent=totalPhaseWeight?Math.round(weightedExecution/totalPhaseWeight):0;
-    outcomeProgressPercent=outcomeWeight?Math.round(weightedOutcome/outcomeWeight):null;
+    workProgress=totalPhaseWeight?Math.round(weightedExecution/totalPhaseWeight):0;
+    recordedOutcomeProgress=outcomeWeight?Math.round(weightedOutcome/outcomeWeight):null;
     if(!currentPhase){const next=phases.find(phase=>phase.status!=="completed");currentPhase=next?.title??phases.at(-1)?.title??null;nextMilestone=next?.milestone??null;}
   }
 
+  const authoritative=Boolean(completion?.completion_evaluator_version);
+  const canonicalWork=authoritative?percent(completion?.work_progress,workProgress):clamp(workProgress);
+  const deliverable=authoritative?percent(completion?.deliverable_progress):0;
+  const implementation=authoritative?percent(completion?.implementation_progress):0;
+  const verification=authoritative?percent(completion?.verification_progress):0;
+  const outcome=authoritative?percent(completion?.outcome_progress,recordedOutcomeProgress??0):(recordedOutcomeProgress??0);
+  const acceptance=authoritative?percent(completion?.acceptance_progress):0;
+  const closeout=authoritative?percent(completion?.closeout_progress):0;
+  const overall=authoritative?percent(completion?.overall_project_progress):clamp(workProgress);
+
   return {
-    progressPercent:clamp(progressPercent),
-    outcomeProgressPercent,
+    progressPercent:overall,
+    overallProjectProgress:overall,
+    workProgress:canonicalWork,
+    deliverableProgress:deliverable,
+    implementationProgress:implementation,
+    verificationProgress:verification,
+    outcomeProgress:outcome,
+    outcomeProgressPercent:authoritative?outcome:recordedOutcomeProgress,
+    acceptanceProgress:acceptance,
+    closeoutProgress:closeout,
+    lifecycleState:completion?.lifecycle_state??null,
+    completionEligible:Boolean(completion?.completion_eligible),
+    nextRequiredAction:completion?.next_required_action??null,
+    blockingReasons:list(completion?.completion_blocking_reasons),
     hasApprovedRoadmap:Boolean(roadmap),
     roadmapVersion:roadmap?.version??null,
     roadmapStatus:roadmap?.status??null,
@@ -97,13 +150,14 @@ export async function getProjectProgressSnapshots(
   const ids=projects.map(project=>project.id);
   const snapshots=new Map<string,ProjectProgressSnapshot>();
   if(!ids.length)return snapshots;
-  const [executionsResult,tasksResult,approvalsResult,activityResult,roadmapsResult,phasesResult]=await Promise.all([
+  const [executionsResult,tasksResult,approvalsResult,activityResult,roadmapsResult,phasesResult,completionResult]=await Promise.all([
     supabase.from("project_executions").select("id,project_id,execution_no,status,roadmap_id,started_at,last_heartbeat_at,updated_at").eq("organization_id",organizationId).in("project_id",ids).order("execution_no",{ascending:false}),
     supabase.from("project_task_runs").select("project_id,execution_id,status,roadmap_id,roadmap_phase_id,work_weight,started_at,completed_at,updated_at").eq("organization_id",organizationId).in("project_id",ids),
     supabase.from("approval_requests").select("project_id,status").eq("organization_id",organizationId).in("project_id",ids).eq("status","pending"),
     supabase.from("project_activity_events").select("project_id,created_at").eq("organization_id",organizationId).in("project_id",ids).order("created_at",{ascending:false}),
     supabase.from("project_roadmaps").select("id,project_id,version,status,is_baseline").eq("organization_id",organizationId).in("project_id",ids).eq("status","approved").eq("is_baseline",true).order("version",{ascending:false}),
     supabase.from("project_roadmap_phases").select("id,project_id,roadmap_id,phase_order,title,milestone,weight,status,outcome_progress_percent").eq("organization_id",organizationId).in("project_id",ids).order("phase_order"),
+    supabase.from("projects").select("id,lifecycle_state,work_progress,deliverable_progress,implementation_progress,verification_progress,outcome_progress,acceptance_progress,closeout_progress,overall_project_progress,completion_eligible,next_required_action,completion_blocking_reasons,completion_evaluator_version").eq("organization_id",organizationId).in("id",ids),
   ]);
   const executions=(executionsResult.data??[]) as ExecutionRow[];
   const tasks=(tasksResult.data??[]) as TaskRow[];
@@ -111,6 +165,7 @@ export async function getProjectProgressSnapshots(
   const activities=(activityResult.data??[]) as ActivityRow[];
   const roadmaps=(roadmapsResult.data??[]) as RoadmapRow[];
   const phases=(phasesResult.data??[]) as PhaseRow[];
+  const completionRows=(completionResult.data??[]) as CompletionRow[];
   for(const project of projects){
     const latestExecution=executions.find(execution=>execution.project_id===project.id);
     const projectTasks=tasks.filter(task=>task.project_id===project.id&&(!latestExecution||task.execution_id===latestExecution.id));
@@ -119,7 +174,8 @@ export async function getProjectProgressSnapshots(
     const pendingApprovals=approvals.filter(approval=>approval.project_id===project.id).length;
     const latestActivity=activities.find(activity=>activity.project_id===project.id)?.created_at??null;
     const lastActivityAt=timestamp(project.updated_at,latestActivity,latestExecution?.updated_at,latestExecution?.last_heartbeat_at,latestExecution?.started_at);
-    snapshots.set(project.id,calculateProjectProgressSnapshot(projectTasks,pendingApprovals,project.status,lastActivityAt,roadmap));
+    const completion=completionRows.find(row=>row.id===project.id)??null;
+    snapshots.set(project.id,calculateProjectProgressSnapshot(projectTasks,pendingApprovals,project.status,lastActivityAt,roadmap,completion));
   }
   return snapshots;
 }
@@ -130,5 +186,5 @@ export async function getProjectProgressSnapshot(
   project:ProjectSeed,
 ):Promise<ProjectProgressSnapshot>{
   const snapshots=await getProjectProgressSnapshots(supabase,organizationId,[project]);
-  return snapshots.get(project.id)??calculateProjectProgressSnapshot([],0,project.status,project.updated_at,null);
+  return snapshots.get(project.id)??calculateProjectProgressSnapshot([],0,project.status,project.updated_at,null,null);
 }
