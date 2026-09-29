@@ -29,6 +29,7 @@ export async function startProjectExecutionWithoutGlobalGate(
     .in("status", ["queued", "running", "paused"])
     .maybeSingle();
 
+  if (active.error) throw new Error(`Unable to check active project execution: ${active.error.message}`);
   if (active.data) return active.data;
 
   const roadmap = await getApprovedProjectRoadmap(supabase, organizationId, projectId);
@@ -41,6 +42,7 @@ export async function startProjectExecutionWithoutGlobalGate(
     .order("execution_no", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (latest.error) throw new Error(`Unable to read project execution history: ${latest.error.message}`);
 
   const phaseByTaskKey = new Map<string, { phaseId: string; phaseKey: string; task: RoadmapTask }>();
   for (const phase of roadmap.phases) {
@@ -98,7 +100,9 @@ export async function startProjectExecutionWithoutGlobalGate(
       project_id: projectId,
       roadmap_id: roadmap.id,
       execution_no: executionNo,
-      status: "running",
+      // The worker only claims queued/running executions. Keep this paused until
+      // every task and its approval gate has been persisted successfully.
+      status: "paused",
       execution_context: {
         project_code: project.data.project_code,
         autonomy_mode: project.data.autonomy_mode,
@@ -123,9 +127,12 @@ export async function startProjectExecutionWithoutGlobalGate(
     throw new Error(execution.error?.message || "Unable to create project execution.");
   }
 
+  const createdApprovalIds: string[] = [];
+  const createdActionIds: string[] = [];
+  try {
   const agentIds = [...new Set(tasks.map((task) => task.agentId).filter(Boolean))] as string[];
   for (const agentId of agentIds) {
-    await supabase.from("project_agents").upsert(
+    const assignment = await supabase.from("project_agents").upsert(
       {
         project_id: projectId,
         agent_id: agentId,
@@ -137,7 +144,8 @@ export async function startProjectExecutionWithoutGlobalGate(
       },
       { onConflict: "project_id,agent_id" },
     );
-    await supabase.from("project_agent_capacity").upsert(
+    if (assignment.error) throw new Error(`Unable to assign project agent: ${assignment.error.message}`);
+    const capacity = await supabase.from("project_agent_capacity").upsert(
       {
         organization_id: organizationId,
         project_id: projectId,
@@ -147,6 +155,7 @@ export async function startProjectExecutionWithoutGlobalGate(
       },
       { onConflict: "project_id,agent_id" },
     );
+    if (capacity.error) throw new Error(`Unable to assign agent capacity: ${capacity.error.message}`);
   }
 
   for (const task of tasks) {
@@ -169,7 +178,9 @@ export async function startProjectExecutionWithoutGlobalGate(
       })
       .select("id")
       .maybeSingle();
-    if (action.data) actionId = action.data.id;
+    if (action.error || !action.data) throw new Error(`Unable to create project action: ${action.error?.message ?? "No row returned."}`);
+    actionId = action.data.id;
+    createdActionIds.push(action.data.id);
 
     let approvalId: string | null = null;
     if (task.requiresApproval) {
@@ -179,7 +190,7 @@ export async function startProjectExecutionWithoutGlobalGate(
           organization_id: organizationId,
           project_id: projectId,
           subject_type: "project_task",
-          subject_id: actionId ?? execution.data.id,
+          subject_id: actionId,
           title: `Decision required: ${task.title}`,
           summary: task.approvalReason || `Authorization is required before ${task.title} can execute.`,
           risk_level: task.risk,
@@ -189,10 +200,12 @@ export async function startProjectExecutionWithoutGlobalGate(
         })
         .select("id")
         .single();
-      approvalId = approval.data?.id ?? null;
+      if (approval.error || !approval.data) throw new Error(`Unable to create task approval: ${approval.error?.message ?? "No row returned."}`);
+      approvalId = approval.data.id;
+      createdApprovalIds.push(approval.data.id);
     }
 
-    await supabase.from("project_task_runs").insert({
+    const taskRun = await supabase.from("project_task_runs").insert({
       organization_id: organizationId,
       project_id: projectId,
       execution_id: execution.data.id,
@@ -210,15 +223,17 @@ export async function startProjectExecutionWithoutGlobalGate(
       idempotency_key: `project:${projectId}:execution:${executionNo}:task:${task.key}`,
       input: { description: task.description, risk: task.risk, roadmap_id: roadmap.id, roadmap_version: roadmap.version, roadmap_phase_id: task.phaseId, roadmap_phase_key: task.phaseKey },
     });
+    if (taskRun.error) throw new Error(`Unable to create project task: ${taskRun.error.message}`);
   }
 
-  await supabase
+  const projectUpdate = await supabase
     .from("projects")
     .update({ status: "active", stage: "execution", progress_percent: 0, last_heartbeat_at: now, updated_at: now })
     .eq("id", projectId)
     .eq("organization_id", organizationId);
+  if (projectUpdate.error) throw new Error(`Unable to activate project: ${projectUpdate.error.message}`);
 
-  await supabase.from("project_activity_events").insert({
+  const activity = await supabase.from("project_activity_events").insert({
     organization_id: organizationId,
     project_id: projectId,
     execution_id: execution.data.id,
@@ -228,6 +243,33 @@ export async function startProjectExecutionWithoutGlobalGate(
     importance: "major",
     metadata: { readiness_at_start: Number(project.data.readiness_score ?? 0), global_readiness_gate: false, roadmap_id: roadmap.id, roadmap_version: roadmap.version },
   });
+  if (activity.error) throw new Error(`Unable to record execution start: ${activity.error.message}`);
 
-  return { ...execution.data, taskCount: tasks.length, roadmapVersion: roadmap.version };
+  const activation = await supabase.from("project_executions")
+    .update({ status: "running", updated_at: new Date().toISOString() })
+    .eq("id", execution.data.id).eq("organization_id", organizationId).eq("status", "paused")
+    .select("id,execution_no,status,roadmap_id").single();
+  if (activation.error || !activation.data) throw new Error(`Unable to activate project execution: ${activation.error?.message ?? "No row returned."}`);
+
+  return { ...activation.data, taskCount: tasks.length, roadmapVersion: roadmap.version };
+  } catch (error) {
+    // No queued work is claimable while this execution is paused. Cancel all
+    // partial records before reporting a failed start so a retry can create a
+    // clean execution number and cannot inherit an orphaned approval gate.
+    const cancelledAt = new Date().toISOString();
+    const cancelledExecution = await supabase.from("project_executions")
+      .update({ status: "cancelled", cancelled_at: cancelledAt, updated_at: cancelledAt })
+      .eq("id", execution.data.id).eq("organization_id", organizationId).eq("status", "paused");
+    const cleanup = await Promise.all([
+      supabase.from("project_task_runs").update({ status: "cancelled", updated_at: cancelledAt })
+        .eq("execution_id", execution.data.id).eq("organization_id", organizationId),
+      ...(createdApprovalIds.length ? [supabase.from("approval_requests").update({ status: "cancelled" })
+        .eq("organization_id", organizationId).in("id", createdApprovalIds).eq("status", "pending")] : []),
+      ...(createdActionIds.length ? [supabase.from("action_items").update({ status: "cancelled" })
+        .eq("organization_id", organizationId).in("id", createdActionIds)] : []),
+    ]);
+    const failedCleanup = [cancelledExecution, ...cleanup].find((result) => result.error);
+    if (failedCleanup?.error) throw new Error(`Project execution start failed and cleanup needs attention: ${failedCleanup.error.message}`, { cause: error });
+    throw error;
+  }
 }
