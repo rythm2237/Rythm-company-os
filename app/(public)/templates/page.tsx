@@ -39,13 +39,15 @@ export default async function PublicTemplatesPage() {
 
           return (
             <article key={template.id}>
-              <p className="marketing-kicker">{template.family}</p>
+              <p className="marketing-kicker">{template.family}{template.maturity === "preview" ? " · Preview — not launch-ready" : ""}</p>
               <h2>{template.name}</h2>
               <p className="template-audience"><strong>Best for:</strong> {template.audience}</p>
               <p>{template.description}</p>
               <div className="template-counts"><span><strong>{template.departments || "Custom"}</strong> Departments</span><span><strong>{template.agents || "Custom"}</strong> AI Agents</span></div>
               <ul>{template.capabilities.map((capability) => <li key={capability}>{capability}</li>)}</ul>
-              <Link href={href}>{template.cta ?? "Choose this company"} <span aria-hidden="true">→</span></Link>
+              {template.maturity === "preview"
+                ? <Link href="/demo?surface=templates">{template.cta} <span aria-hidden="true">→</span></Link>
+                : <Link href={href}>{template.cta ?? "Choose this company"} <span aria-hidden="true">→</span></Link>}
             </article>
           );
         })}
