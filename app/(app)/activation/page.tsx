@@ -78,6 +78,7 @@ export default async function ActivationPage({ searchParams }: Props) {
 
         <div className="activation-status">
           <span>Organization</span><strong>{context.organization.name}</strong>
+          <span>Organization ID</span><strong>{context.organizationId}</strong>
           <span>Selected product</span><strong>{productLabel}</strong>
           {selectedTemplate ? <><span>Selected Ready Company</span><strong>{commercialTemplateName(selectedTemplate)}</strong></> : null}
           <span>Subscription</span><strong>{price}{commercialRecord?.billing_interval ? ` / ${commercialRecord.billing_interval}` : ""} + AI usage</strong>
@@ -92,19 +93,17 @@ export default async function ActivationPage({ searchParams }: Props) {
         </div>
 
         <p>
-          Paid Public Beta uses controlled commercial confirmation. RYTHM may confirm invoices
-          manually; a payment-provider webhook is not required for launch. When payment is
-          confirmed, the entitlement becomes active. Your selected Ready Company opens in the
+          Paid Public Beta uses assisted B2B activation. Contact Billing with your organization ID
+          and selected product. RYTHM confirms scope, taxes, invoice and payment before a
+          platform administrator records the paid service period and activates your entitlement. Your selected Ready Company opens in the
           template library, where you confirm provisioning before it is installed.
         </p>
         <p>
-          This boundary is enforced server-side and in database mutation guards. A pending
-          entitlement cannot create or modify Agents, provision company templates, or use Company
-          Builder capabilities even if a restricted URL is opened directly.
+          Creating this account does not place an order or charge you. AI usage and connected-provider costs are confirmed separately from the company subscription.
         </p>
 
         <div className="activation-actions">
-          <Link className="primary-link" href="/contact?topic=activation">Continue commercial activation</Link>
+          <Link className="primary-link" href="/contact?topic=activation">Request invoice and activation</Link>
           <Link href="/pricing">Review product and pricing</Link>
         </div>
       </section>

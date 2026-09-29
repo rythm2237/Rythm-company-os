@@ -24,7 +24,7 @@ export default async function PricingPage() {
       <div className="marketing-section-heading">
         <p className="marketing-kicker">PUBLIC BETA PRICING</p>
         <h1>Choose the level of company control you need.</h1>
-        <p>AI model usage is metered separately so every organization can keep a visible budget ceiling. Catalog reviewed 1 September 2026.</p>
+        <p>AI model usage is metered separately so every organization can keep a visible budget ceiling. Paid activation is assisted for business customers. Creating an account does not place an order or charge you.</p>
       </div>
       <div className="pricing-grid">
         {offers.map((offer) => (
@@ -39,7 +39,7 @@ export default async function PricingPage() {
         ))}
       </div>
       <div className="pricing-note">
-        <p>Displayed Public Beta catalog prices are commercial starting points and are not yet a consumer checkout total. For a consumer purchase, the final checkout must display the full amount payable including applicable VAT/taxes, mandatory charges, billing interval, duration, renewal and cancellation conditions before any payment obligation is created.</p>
+        <p>Displayed Public Beta prices are commercial starting points. RYTHM confirms business scope, invoice, taxes, billing period and payment with you before activating access. For a consumer purchase, the final checkout must display the full amount payable including applicable VAT/taxes, mandatory charges, billing interval, duration, renewal and cancellation conditions before any payment obligation is created.</p>
         <p>Online consumer payment remains disabled until that calculation and invoicing flow is connected. Read <Link href="/consumer-rights">Consumer Rights</Link> and <Link href="/consumer-terms">Consumer Terms</Link>.</p>
       </div>
       </section>
@@ -52,7 +52,7 @@ export default async function PricingPage() {
       <section className="marketing-section knowledge-faq">
         <div className="marketing-section-heading"><p className="marketing-kicker">PRICING QUESTIONS</p><h2>What buyers need to know</h2></div>
         <div className="knowledge-answer-list">
-          <article><h3>Is AI usage included?</h3><p>No. The current catalog states that AI model usage is metered separately so the organization can apply a visible budget ceiling.</p></article>
+          <article><h3>Is AI usage included?</h3><p>Company subscriptions meter AI usage separately. Personal AI plan allowances are shown on their cards; paid personal plans are not available through online checkout.</p></article>
           <article><h3>Is there a free plan?</h3><p>No free persistent company plan is currently listed. The public Demo is synthetic and read-only and can be explored before signup.</p></article>
           <article><h3>Can I switch from Ready to Custom?</h3><p>Commercial migration terms are not promised on this page. Contact Sales before purchase if future company-structure portability is a decision requirement.</p></article>
           <article><h3>Are integrations included?</h3><p>Integration architecture and availability depend on the plan, provider, rollout state and customer configuration. Provider usage fees may be separate.</p></article>

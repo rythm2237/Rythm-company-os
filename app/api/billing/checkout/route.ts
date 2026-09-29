@@ -1,9 +1,12 @@
+import {ONLINE_CHECKOUT_ENABLED,ASSISTED_ACTIVATION_COPY} from "@/lib/commercial/activation-policy";
 import {NextRequest,NextResponse} from "next/server";
 import {requireOwnerOrganizationContext} from "@/lib/auth/organization-context";
 import {stripePost} from "@/lib/billing/stripe-rest";
 import {ensurePersonalWorkspace,serviceClient} from "@/lib/ai-workspace/service";
 
-export async function POST(req:NextRequest){try{
+export async function POST(req:NextRequest){
+  if(!ONLINE_CHECKOUT_ENABLED)return NextResponse.json({error:"ASSISTED_ACTIVATION_REQUIRED",message:ASSISTED_ACTIVATION_COPY,contact:"/contact?topic=activation"},{status:409});
+  try{
   const {supabase,user,organizationId,organization}=await requireOwnerOrganizationContext();
   const form=await req.formData();
   const offerCode=String(form.get("offerCode")??"");

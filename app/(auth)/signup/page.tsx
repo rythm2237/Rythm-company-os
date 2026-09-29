@@ -28,7 +28,7 @@ export default async function SignupPage({ searchParams }: Props) {
         <div>
           <p className="eyebrow">RYTHM PAID PUBLIC BETA</p>
           <h1 id="signup-title" className="auth-title">Create your Human CEO account</h1>
-          <p className="auth-copy">Create a B2B account first. Your governed AI company is provisioned in the next step.</p>
+          <p className="auth-copy">Create a B2B account, reserve your company, then request assisted activation. No order or payment is created by signup.</p>
           {selectedTemplate ? <p className="security-note">Your selected Ready Company will remain selected through setup and activation.</p> : null}
         </div>
 

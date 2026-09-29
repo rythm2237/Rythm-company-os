@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel",
+    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -45,7 +45,8 @@
     "test:software-company": "node --experimental-strip-types scripts/validate-software-company-template.ts",
     "test:customers": "node --import tsx scripts/validate-customer-management.tsx",
     "test:company-logo": "node --import tsx scripts/validate-company-logo.ts",
-    "test:company-chart": "node --import tsx scripts/validate-company-chart.tsx"
+    "test:company-chart": "node --import tsx scripts/validate-company-chart.tsx",
+    "test:commercial-payment": "node --import tsx scripts/validate-commercial-payment.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -55,10 +56,11 @@
     "openai": "^5.12.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "xlsx": "^0.18.5",
-    "sharp": "0.35.4"
+    "sharp": "0.35.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@types/node": "^24.1.0",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
