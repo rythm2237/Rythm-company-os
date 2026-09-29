@@ -23,7 +23,7 @@ The following functions are intentionally callable by authenticated users withou
 - `is_org_owner(...)` — owner helper keyed to `auth.uid()`.
 - `is_platform_admin()` — platform-admin check keyed to `auth.uid()`.
 - `list_my_organizations()` — returns only memberships for `auth.uid()`.
-- `provision_customer_organization(...)` — requires authentication and creates an organization owned by the caller with a pending entitlement.
+- `provision_commercial_company_v1(...)` — current authenticated customer entrypoint; checks the public offer, product, template and capacity before creating an owner-scoped organization with a pending entitlement. The older `provision_customer_organization(...)` is callable by trusted infrastructure only.
 - `set_active_organization(...)` — requires authenticated membership in the target organization.
 - `set_organization_integration_secret_v1(...)` — requires active owner membership for the target integration organization.
 

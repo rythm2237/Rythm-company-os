@@ -10,7 +10,7 @@ import styles from "./marketplace.module.css";
 export const dynamic = "force-dynamic";
 
 type TemplatePageProps = {
-  searchParams: Promise<{ error?: string; message?: string }>;
+  searchParams: Promise<{ error?: string; message?: string; template?: string }>;
 };
 type DepartmentTemplate = {
   key?: string;
@@ -283,6 +283,7 @@ export default async function CompanyTemplateLibraryPage({
               <details
                 className={styles.card}
                 key={`${template.template_key}-${template.version}`}
+                open={params.template === template.template_key}
               >
                 <summary className={styles.summary}>
                   <div className={styles.cardTop}>
@@ -520,7 +521,7 @@ export default async function CompanyTemplateLibraryPage({
 
                     {!supported ? (
                       <span className="form-error">
-                        Not included in the active product entitlement.
+                        Not included in the active product entitlement. <Link href="/pricing">Review the required plan</Link>.
                       </span>
                     ) : null}
                     {!hasCapacity ? (

@@ -604,7 +604,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
               <p>Keep exploring, compare company models, or start when you want to make the experience persistent.</p>
               <div>
                 <Link href="/pricing" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "pricing", locale } })}>Explore plans</Link>
-                <Link className="marketing-button" href="/signup" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "signup", locale } })}>Build your company</Link>
+                <Link className="marketing-button" href="/templates" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { destination: "templates", locale } })}>Build your company</Link>
               </div>
             </>
           )}

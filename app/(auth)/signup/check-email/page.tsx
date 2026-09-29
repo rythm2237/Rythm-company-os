@@ -1,12 +1,13 @@
 import Link from "next/link";
+import { commercialSetupPath, commercialSignupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
 
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: Promise<{ product?: string; error?: string }> };
+type Props = { searchParams: Promise<{ product?: string; template?: string; error?: string }> };
 
 export default async function SignupCheckEmailPage({ searchParams }: Props) {
   const params = await searchParams;
-  const product = params.product === "ready_company" ? "ready_company" : "company_studio";
+  const selection = selectedCommercialOffer(params.product, params.template);
 
   return (
     <main className="auth-shell">
@@ -30,9 +31,9 @@ export default async function SignupCheckEmailPage({ searchParams }: Props) {
             If this email address already belonged to an older RYTHM account, your existing password may still apply.
             If sign-in fails after confirmation, use password reset rather than creating the same account again.
           </p>
-          <Link href={`/login?next=${encodeURIComponent(`/setup/company?product=${product}`)}`}>I already confirmed my email</Link>
+          <Link href={`/login?next=${encodeURIComponent(commercialSetupPath(selection))}`}>I already confirmed my email</Link>
           <Link href="/forgot-password">I need to reset my password</Link>
-          <Link href="/signup">Use a different email address</Link>
+          <Link href={commercialSignupPath(selection)}>Use a different email address</Link>
         </div>
 
         <p className="security-note">

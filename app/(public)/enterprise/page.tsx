@@ -93,7 +93,7 @@ export default async function EnterprisePage({ searchParams }: Props) {
             </form>
           )}
           <p className="security-note">A qualified attribution outcome is recorded only when server-side criteria indicate an active Enterprise deployment: a non-consumer work email, 50+ employee company, deployment horizon within six months, and decision-maker or executive-sponsor responsibility.</p>
-          <div className="hero-actions"><Link href={liveMeetingRequested ? "/live-ai-meeting" : "/pricing"}>Review product details</Link><Link href="/signup">Create an account</Link></div>
+          <div className="hero-actions"><Link href={liveMeetingRequested ? "/live-ai-meeting" : "/pricing"}>Review product details</Link><Link href="/pricing">Choose a plan</Link></div>
         </div>
       </section>
       </main>

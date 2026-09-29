@@ -4,12 +4,7 @@ import { redirect } from "next/navigation";
 import { recordConfirmedPublicConversion } from "@/lib/analytics/server-conversions";
 import { SITE_ORIGIN } from "@/lib/seo/site";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
-
-const selectableTemplates = new Set([
-  "ready_saas_startup_v1",
-  "ready_ai_advertising_agency_v1",
-  "ready_software_company_v1",
-]);
+import { commercialSetupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
 
 function signupErrorMessage(error: { message?: string; code?: string; status?: number }) {
   const message = String(error.message ?? "").toLowerCase();
@@ -28,10 +23,13 @@ function signupErrorMessage(error: { message?: string; code?: string; status?: n
   return "Account could not be created. Try again or use a different email address.";
 }
 
-export async function signOutForSignup() {
+export async function signOutForSignup(formData: FormData) {
   const supabase = await createAuthServerClient();
   await supabase.auth.signOut();
-  redirect("/signup");
+  const requested = String(formData.get("returnTo") ?? "");
+  const url = new URL(requested, SITE_ORIGIN);
+  const selection = selectedCommercialOffer(url.searchParams.get("product"), url.searchParams.get("template"));
+  redirect(`/signup?product=${selection.productCode}${selection.templateKey ? `&template=${encodeURIComponent(selection.templateKey)}` : ""}`);
 }
 
 export async function signup(formData: FormData) {
@@ -39,30 +37,27 @@ export async function signup(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
   const fullName = String(formData.get("fullName") ?? "").trim();
-  const requestedProduct = String(formData.get("productCode") ?? "company_studio");
-  const productCode = requestedProduct === "ready_company" ? "ready_company" : "company_studio";
-  const requestedTemplate = String(formData.get("templateKey") ?? "").trim();
-  const templateKey = selectableTemplates.has(requestedTemplate) ? requestedTemplate : "";
+  const selection = selectedCommercialOffer(String(formData.get("productCode") ?? ""), String(formData.get("templateKey") ?? ""));
+  const { productCode, templateKey } = selection;
+  const signupPath = `/signup?product=${productCode}${templateKey ? `&template=${encodeURIComponent(templateKey)}` : ""}`;
 
   if (!email || !password || fullName.length < 2) {
-    redirect(`/signup?error=${encodeURIComponent("Name, email, and password are required.")}`);
+    redirect(`${signupPath}&error=${encodeURIComponent("Name, email, and password are required.")}`);
   }
   if (password.length < 8) {
-    redirect(`/signup?error=${encodeURIComponent("Password must contain at least 8 characters.")}`);
+    redirect(`${signupPath}&error=${encodeURIComponent("Password must contain at least 8 characters.")}`);
   }
   if (password !== confirmPassword) {
-    redirect(`/signup?error=${encodeURIComponent("Passwords do not match.")}`);
+    redirect(`${signupPath}&error=${encodeURIComponent("Passwords do not match.")}`);
   }
 
   const supabase = await createAuthServerClient();
   const { data: { user: currentUser } } = await supabase.auth.getUser();
   if (currentUser) {
-    redirect(`/signup?error=${encodeURIComponent(`You are already signed in as ${currentUser.email ?? "another account"}. Sign out before creating a separate customer account.`)}`);
+    redirect(`${signupPath}&error=${encodeURIComponent(`You are already signed in as ${currentUser.email ?? "another account"}. Sign out before creating a separate customer account.`)}`);
   }
 
-  const setupPath = templateKey
-    ? `/setup/company?product=${encodeURIComponent(productCode)}&template=${encodeURIComponent(templateKey)}`
-    : "/demo";
+  const setupPath = commercialSetupPath(selection);
   const callbackUrl = new URL("/auth/callback", SITE_ORIGIN);
   callbackUrl.searchParams.set("next", setupPath);
   callbackUrl.searchParams.set("flow", "signup");
@@ -85,7 +80,7 @@ export async function signup(formData: FormData) {
       status: error.status ?? null,
       message: error.message,
     });
-    redirect(`/signup?error=${encodeURIComponent(signupErrorMessage(error))}`);
+    redirect(`${signupPath}&error=${encodeURIComponent(signupErrorMessage(error))}`);
   }
 
   if (data.session && data.user) {

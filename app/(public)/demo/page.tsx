@@ -31,7 +31,7 @@ export default async function DemoPage({ searchParams }: Props) {
       <SolutionFinder />
       <section className="demo-conversion-section">
         <div><p className="marketing-kicker">THE DEMO IS TEMPORARY. A RYTHM COMPANY IS PERSISTENT.</p><h2>Ready to make this relevant to your organization?</h2><p>After you explore, RYTHM can recommend the simplest product path for your situation—or you can compare every option yourself.</p></div>
-        <div className="hero-actions"><Link className="marketing-button" href="/pricing">Compare products</Link><Link href="/signup">Get Started</Link></div>
+        <div className="hero-actions"><Link className="marketing-button" href="/pricing">Compare products</Link><Link href="/templates">Get Started</Link></div>
       </section>
     </main>
   );
