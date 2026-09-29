@@ -3,6 +3,7 @@ import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { provisionCompany } from "./actions";
 import { commercialSetupPath, commercialTemplateName, selectedCommercialOffer } from "@/lib/commercial/selection";
 import { isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
+import { getCommercialCatalog } from "@/lib/commercial/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,9 @@ export default async function CompanySetupPage({ searchParams }: Props) {
   const selection = selectedCommercialOffer(requestedProduct, requestedTemplate);
   const selectedProduct = selection.productCode;
   const selectedTemplate = selection.templateKey;
+  const offers = await getCommercialCatalog();
+  const readyPrice = offers.find((item) => item.offer_code === "ready_ai_company")?.price_label ?? "see Pricing";
+  const studioPrice = offers.find((item) => item.offer_code === "custom_ai_company")?.price_label ?? "see Pricing";
 
   const organizationContext = await resolveOrganizationContext();
   if (organizationContext) {
@@ -55,11 +59,11 @@ export default async function CompanySetupPage({ searchParams }: Props) {
           <input type="hidden" name="templateKey" value={selectedTemplate}/>
           <label>Company name<input name="companyName" required minLength={2} maxLength={120} autoComplete="organization"/></label>
           {selectedTemplate ? (
-            <p className="security-note"><strong>Required product:</strong> {selectedProduct === "ready_company" ? "Ready AI Company — €249/month + AI usage" : "Custom AI Company with Company Studio — €699/month + AI usage"}</p>
+            <p className="security-note"><strong>Required product:</strong> {selectedProduct === "ready_company" ? `Ready AI Company — ${readyPrice}` : `Custom AI Company with Company Studio — ${studioPrice}`}</p>
           ) : <label>Product
             <select name="productCode" defaultValue={selectedProduct}>
-              <option value="ready_company">Ready AI Company — €249/month + AI usage</option>
-              <option value="company_studio">Custom AI Company with Company Studio — €699/month + AI usage</option>
+              <option value="ready_company">Ready AI Company — {readyPrice}</option>
+              <option value="company_studio">Custom AI Company with Company Studio — {studioPrice}</option>
             </select>
           </label>}
           {selectedTemplate ? <input type="hidden" name="productCode" value={selectedProduct} /> : null}

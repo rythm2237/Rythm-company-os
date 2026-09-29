@@ -4,11 +4,13 @@ import { PUBLIC_TEMPLATES } from "@/lib/public-experience/content";
 import { createPublicMetadata } from "@/lib/seo/site";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { commercialSetupPath, commercialSignupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
+import { getCommercialCatalog } from "@/lib/commercial/catalog";
 
 export const metadata: Metadata = createPublicMetadata("/templates");
 export const dynamic = "force-dynamic";
 
 export default async function PublicTemplatesPage() {
+  const offers = await getCommercialCatalog();
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: memberships } = user
@@ -25,6 +27,7 @@ export default async function PublicTemplatesPage() {
       <section className="marketing-section public-template-grid" aria-label="Public company templates">
         {PUBLIC_TEMPLATES.map((template) => {
           const selection = selectedCommercialOffer(template.productCode, template.templateKey);
+          const offer = offers.find((item) => item.offer_code === selection.offerCode);
           const href = template.templateKey
             ? hasOrganization
               ? `/studio/templates?template=${encodeURIComponent(template.templateKey)}`
@@ -43,8 +46,8 @@ export default async function PublicTemplatesPage() {
               <h2>{template.name}</h2>
               <p className="template-audience"><strong>Best for:</strong> {template.audience}</p>
               <p>{template.description}</p>
-              {template.templateKey === "ready_software_company_v1" ? <p><strong>Requires Custom AI Company with Company Studio — €699/month + AI usage.</strong> The Ready AI Company plan has insufficient Agent capacity for this 19-Agent template.</p> : null}
-              {template.templateKey === "ready_ai_advertising_agency_v1" ? <p><strong>Ready AI Company — €249/month + AI usage.</strong></p> : null}
+              {template.templateKey === "ready_software_company_v1" ? <p><strong>Requires Custom AI Company with Company Studio — {offer?.price_label ?? "see Pricing"}.</strong> The Ready AI Company plan has insufficient Agent capacity for this 19-Agent template.</p> : null}
+              {template.templateKey === "ready_ai_advertising_agency_v1" ? <p><strong>Ready AI Company — {offer?.price_label ?? "see Pricing"}.</strong></p> : null}
               <div className="template-counts"><span><strong>{template.departments || "Custom"}</strong> Departments</span><span><strong>{template.agents || "Custom"}</strong> AI Agents</span></div>
               <ul>{template.capabilities.map((capability) => <li key={capability}>{capability}</li>)}</ul>
               {template.maturity === "preview"
