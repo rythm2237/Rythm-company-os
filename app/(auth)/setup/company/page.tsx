@@ -50,7 +50,7 @@ export default async function CompanySetupPage({ searchParams }: Props) {
           <h1 id="company-setup-title" className="auth-title">Reserve your RYTHM company</h1>
           <p className="auth-copy">
             This creates an isolated organization shell and a locked product entitlement. Product
-            capabilities are provisioned only after commercial and payment / invoice confirmation.
+            capabilities remain locked until RYTHM confirms your invoice and payment. This step does not place an order or charge you.
           </p>
           {selectedTemplate ? <p className="security-note"><strong>Selected Ready Company:</strong> {commercialTemplateName(selectedTemplate)}</p> : null}
         </div>

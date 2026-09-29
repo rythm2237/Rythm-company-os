@@ -1,5 +1,7 @@
 # Public Beta commercial selection
 
+Activation model: assisted B2B invoice confirmation; signup is not an online purchase. See `activation-model.md`.
+
 | Public choice | Template key | Offer | Entitlement product | Plan | Monthly base price | Capacity |
 | --- | --- | --- | --- | --- | --- | --- |
 | AI Advertising Agency | `ready_ai_advertising_agency_v1` | `ready_ai_company` | `ready_company` | `public_beta` | €249 + AI usage | 12 Agents (11 template roles and communications) |

@@ -31,7 +31,12 @@ const contactChannels = [
   },
 ] as const;
 
-export default function ContactPage() {
+export default async function ContactPage({ searchParams }: { searchParams: Promise<{ topic?: string; offer?: string }> }) {
+  const params = await searchParams;
+  const activation = params.topic === "activation";
+  const offer = ["ready_ai_company", "custom_ai_company", "ai_workspace_starter", "ai_workspace_pro", "ai_workspace_power"].includes(params.offer ?? "") ? params.offer : "";
+  const subject = `RYTHM activation request${offer ? ` — ${offer}` : ""}`;
+
   return (
     <main className="contact-page marketing-section public-contact-page">
       <div className="marketing-section-heading">
@@ -40,6 +45,11 @@ export default function ContactPage() {
         <p>Choose the channel that matches your request so it can be handled correctly.</p>
       </div>
 
+      {activation ? <section className="contact-card"><h2>Request assisted activation</h2>
+        <p>For business company access, email Billing with your organization ID and selected product. RYTHM confirms scope, taxes, invoice, service dates and payment before activating access. No order or charge is created by this request.</p>
+        {offer?.startsWith("ai_workspace_") ? <p>Online purchase of personal AI plans is unavailable. Contact us about availability; this request does not activate a paid AI allowance.</p> : null}
+        <a className="marketing-button" href={`mailto:billing@rythm-os.com?subject=${encodeURIComponent(subject)}`}>Email Billing about activation</a>
+      </section> : null}
       <div className="public-contact-grid">
         {contactChannels.map((channel) => (
           <article className="contact-card public-contact-card" key={channel.email}>
