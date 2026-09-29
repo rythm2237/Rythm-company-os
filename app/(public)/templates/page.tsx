@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PUBLIC_TEMPLATES } from "@/lib/public-experience/content";
 import { createPublicMetadata } from "@/lib/seo/site";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { commercialSetupPath, commercialSignupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
 
 export const metadata: Metadata = createPublicMetadata("/templates");
 export const dynamic = "force-dynamic";
@@ -23,19 +24,18 @@ export default async function PublicTemplatesPage() {
       </section>
       <section className="marketing-section public-template-grid" aria-label="Public company templates">
         {PUBLIC_TEMPLATES.map((template) => {
-          const product = template.productCode ?? "ready_company";
-          const templateQuery = template.templateKey ? `&template=${encodeURIComponent(template.templateKey)}` : "";
+          const selection = selectedCommercialOffer(template.productCode, template.templateKey);
           const href = template.templateKey
             ? hasOrganization
               ? `/studio/templates?template=${encodeURIComponent(template.templateKey)}`
               : user
-                ? `/setup/company?product=${product}${templateQuery}`
-                : `/signup?product=${product}${templateQuery}`
+                ? commercialSetupPath(selection)
+                : commercialSignupPath(selection)
             : hasOrganization
               ? "/studio/builder"
               : user
-                ? `/setup/company?product=${product}`
-                : `/signup?product=${product}`;
+                ? commercialSetupPath(selection)
+                : commercialSignupPath(selection);
 
           return (
             <article key={template.id}>
@@ -43,6 +43,8 @@ export default async function PublicTemplatesPage() {
               <h2>{template.name}</h2>
               <p className="template-audience"><strong>Best for:</strong> {template.audience}</p>
               <p>{template.description}</p>
+              {template.templateKey === "ready_software_company_v1" ? <p><strong>Requires Custom AI Company with Company Studio — €699/month + AI usage.</strong> The Ready AI Company plan has insufficient Agent capacity for this 19-Agent template.</p> : null}
+              {template.templateKey === "ready_ai_advertising_agency_v1" ? <p><strong>Ready AI Company — €249/month + AI usage.</strong></p> : null}
               <div className="template-counts"><span><strong>{template.departments || "Custom"}</strong> Departments</span><span><strong>{template.agents || "Custom"}</strong> AI Agents</span></div>
               <ul>{template.capabilities.map((capability) => <li key={capability}>{capability}</li>)}</ul>
               {template.maturity === "preview"

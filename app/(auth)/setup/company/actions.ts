@@ -4,53 +4,48 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { ACTIVE_ORGANIZATION_COOKIE } from "@/lib/auth/organization-context";
-
-const productCodes = new Set(["ready_company", "company_studio"]);
-const selectableTemplates = new Set([
-  "ready_saas_startup_v1",
-  "ready_ai_advertising_agency_v1",
-  "ready_software_company_v1",
-]);
+import { commercialSetupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
 
 export async function provisionCompany(formData: FormData) {
   const companyName = String(formData.get("companyName") ?? "").trim();
-  const productCode = String(formData.get("productCode") ?? "company_studio");
-  const requestedTemplate = String(formData.get("templateKey") ?? "").trim();
-  const templateKey = selectableTemplates.has(requestedTemplate) ? requestedTemplate : "";
+  const selection = selectedCommercialOffer(String(formData.get("productCode") ?? ""), String(formData.get("templateKey") ?? ""));
+  const { productCode, templateKey } = selection;
+  const setupPath = commercialSetupPath(selection);
 
-  if (companyName.length < 2 || companyName.length > 120 || !productCodes.has(productCode)) {
-    redirect(`/setup/company?error=${encodeURIComponent("Enter a valid company name and product.")}`);
+  if (companyName.length < 2 || companyName.length > 120) {
+    redirect(`${setupPath}&error=${encodeURIComponent("Enter a valid company name and product.")}`);
   }
 
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login?next=/setup/company");
+  if (!user) redirect(`/login?next=${encodeURIComponent(setupPath)}`);
 
-  if (templateKey) {
+  {
     const { error: metadataError } = await supabase.auth.updateUser({
       data: {
         ...user.user_metadata,
         selected_product_code: productCode,
-        selected_template_key: templateKey,
+        selected_template_key: templateKey || null,
       },
     });
     if (metadataError) {
       console.error("selected_template_intent_persist_failed", { userId: user.id, templateKey, error: metadataError });
+      redirect(`${setupPath}&error=${encodeURIComponent("Your selection could not be saved. Please try again.")}`);
     }
   }
 
   // This RPC creates only the isolated customer organization shell, Owner membership,
   // and a PENDING commercial entitlement. Active commercial capabilities remain
   // fail-closed until RYTHM confirms payment/invoice status and activates entitlement.
-  const { data: organizationId, error } = await supabase.rpc("provision_customer_organization", {
+  const { data: organizationId, error } = await supabase.rpc("provision_commercial_company_v1", {
     target_company_name: companyName,
     target_product_code: productCode,
-    target_plan_code: "public_beta",
+    target_template_key: templateKey || null,
   });
 
   if (error || !organizationId) {
     console.error("customer_organization_provision_failed", { userId: user.id, error });
-    redirect(`/setup/company?error=${encodeURIComponent("Company setup could not be completed. No commercial activation was performed.")}`);
+    redirect(`${setupPath}&error=${encodeURIComponent("Company setup could not be completed. No commercial activation was performed.")}`);
   }
 
   const organizationIdString = String(organizationId);
@@ -64,7 +59,7 @@ export async function provisionCompany(formData: FormData) {
       organizationId: organizationIdString,
       error: contextError,
     });
-    redirect(`/setup/company?error=${encodeURIComponent("Company setup was created, but its active context could not be selected. Contact RYTHM support before continuing.")}`);
+    redirect(`${setupPath}&error=${encodeURIComponent("Company setup was created, but its active context could not be selected. Contact RYTHM support before continuing.")}`);
   }
 
   const cookieStore = await cookies();

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email",
+    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -38,6 +38,7 @@
     "test:connections-phase2": "node --import tsx scripts/validate-customer-connection-platform-phase2.ts",
     "test:security-definer": "node --experimental-strip-types scripts/validate-security-definer-hardening.ts && node --experimental-strip-types scripts/validate-paid-launch-security.ts",
     "test:tenant-email": "node --import tsx scripts/validate-company-email-tenant-isolation.ts",
+    "test:commercial-funnel": "node --import tsx scripts/validate-commercial-funnel.ts",
     "test:ai-workspace": "node --import tsx scripts/validate-rythm-ai-workspace.ts",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "test:routing": "node --import tsx scripts/validate-adaptive-routing.ts",

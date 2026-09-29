@@ -4,6 +4,7 @@ import {
   isOrganizationEntitlementActive,
   requireOwnerOrganizationContext,
 } from "@/lib/auth/organization-context";
+import { commercialTemplateName, selectedCommercialOffer } from "@/lib/commercial/selection";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +14,6 @@ const PRODUCT_LABELS: Record<string, string> = {
   ready_company: "Ready AI Company",
   company_studio: "Custom AI Company with Company Studio",
   custom_company: "Legacy Custom Company",
-};
-const TEMPLATE_LABELS: Record<string, string> = {
-  ready_saas_startup_v1: "SaaS Startup",
-  ready_ai_advertising_agency_v1: "AI Advertising Agency",
-  ready_software_company_v1: "Software Company",
 };
 
 function formatPrice(currency: string | undefined, value: number | undefined) {
@@ -36,12 +32,21 @@ function formatPrice(currency: string | undefined, value: number | undefined) {
 export default async function ActivationPage({ searchParams }: Props) {
   const params = await searchParams;
   const context = await requireOwnerOrganizationContext();
-  const { data: { user } } = await context.supabase.auth.getUser();
-  const metadataTemplate = typeof user?.user_metadata?.selected_template_key === "string"
-    ? user.user_metadata.selected_template_key
-    : "";
-  const requestedTemplate = params.template ?? metadataTemplate;
-  const selectedTemplate = TEMPLATE_LABELS[requestedTemplate] ? requestedTemplate : "";
+  const { data: commercialRecord } = context.entitlement
+    ? await context.supabase
+        .from("organization_entitlements")
+        .select("currency,base_price,billing_interval,ai_usage_policy,selected_template_key")
+        .eq("organization_id", context.organizationId)
+        .maybeSingle()
+    : { data: null };
+  const persistedTemplate = commercialRecord?.selected_template_key;
+  const requestedTemplate = isOrganizationEntitlementActive(context.entitlement)
+    ? params.template ?? persistedTemplate
+    : persistedTemplate;
+  const chosen = selectedCommercialOffer(context.entitlement?.product_code, requestedTemplate);
+  // A URL or mutable user metadata cannot substitute another product's template.
+  const selectedTemplate = chosen.templateKey && chosen.productCode === context.entitlement?.product_code
+    ? chosen.templateKey : "";
 
   if (isOrganizationEntitlementActive(context.entitlement)) {
     redirect(selectedTemplate
@@ -51,14 +56,6 @@ export default async function ActivationPage({ searchParams }: Props) {
 
   const entitlement = context.entitlement;
   const status = entitlement?.status ?? "not provisioned";
-
-  const { data: commercialRecord } = entitlement
-    ? await context.supabase
-        .from("organization_entitlements")
-        .select("currency,base_price,billing_interval,ai_usage_policy")
-        .eq("organization_id", context.organizationId)
-        .maybeSingle()
-    : { data: null };
 
   const productLabel = entitlement
     ? PRODUCT_LABELS[entitlement.product_code] ?? entitlement.product_code
@@ -82,7 +79,7 @@ export default async function ActivationPage({ searchParams }: Props) {
         <div className="activation-status">
           <span>Organization</span><strong>{context.organization.name}</strong>
           <span>Selected product</span><strong>{productLabel}</strong>
-          {selectedTemplate ? <><span>Selected Ready Company</span><strong>{TEMPLATE_LABELS[selectedTemplate]}</strong></> : null}
+          {selectedTemplate ? <><span>Selected Ready Company</span><strong>{commercialTemplateName(selectedTemplate)}</strong></> : null}
           <span>Subscription</span><strong>{price}{commercialRecord?.billing_interval ? ` / ${commercialRecord.billing_interval}` : ""} + AI usage</strong>
           <span>Entitlement status</span><strong>{status}</strong>
         </div>
@@ -97,8 +94,8 @@ export default async function ActivationPage({ searchParams }: Props) {
         <p>
           Paid Public Beta uses controlled commercial confirmation. RYTHM may confirm invoices
           manually; a payment-provider webhook is not required for launch. When payment is
-          confirmed, the entitlement becomes active and an explicitly selected Ready Company is
-          resumed without asking you to find it again.
+          confirmed, the entitlement becomes active. Your selected Ready Company opens in the
+          template library, where you confirm provisioning before it is installed.
         </p>
         <p>
           This boundary is enforced server-side and in database mutation guards. A pending

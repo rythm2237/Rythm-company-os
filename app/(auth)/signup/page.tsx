@@ -1,30 +1,26 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { signInWithOAuth } from "../oauth-actions";
 import { signup, signOutForSignup } from "./actions";
+import { commercialSetupPath, commercialSignupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
 
 export const dynamic = "force-dynamic";
 
 type Props = { searchParams: Promise<{ error?: string; product?: string; template?: string }> };
 
-const selfServeProducts = new Set(["ready_company", "company_studio"]);
-const selectableTemplates = new Set([
-  "ready_saas_startup_v1",
-  "ready_ai_advertising_agency_v1",
-  "ready_software_company_v1",
-]);
-
 export default async function SignupPage({ searchParams }: Props) {
   const params = await searchParams;
-  const selectedProduct = selfServeProducts.has(params.product ?? "")
-    ? params.product
-    : "company_studio";
-  const selectedTemplate = selectableTemplates.has(params.template ?? "") ? params.template ?? "" : "";
+  if (!params.product && !params.template) redirect("/pricing");
+  const selection = selectedCommercialOffer(params.product, params.template);
+  const selectedProduct = selection.productCode;
+  const selectedTemplate = selection.templateKey;
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const loginNext = selectedTemplate
-    ? `/setup/company?product=${encodeURIComponent(selectedProduct ?? "ready_company")}&template=${encodeURIComponent(selectedTemplate)}`
-    : "/home";
+  const { data: memberships } = user
+    ? await supabase.from("organization_members").select("organization_id").eq("user_id", user.id).limit(1)
+    : { data: null };
+  const loginNext = commercialSetupPath(selection);
 
   return (
     <main className="auth-shell">
@@ -41,9 +37,15 @@ export default async function SignupPage({ searchParams }: Props) {
         {user ? (
           <div className="auth-form" style={{ marginTop: 18 }}>
             <p className="form-error" role="alert" style={{ margin: 0 }}>
-              You are currently signed in as {user.email ?? "an existing account"}. A second customer account must be created in a separate authenticated session.
+              You are currently signed in as {user.email ?? "an existing account"}.
             </p>
+            <Link href={memberships?.length
+              ? selectedTemplate ? `/studio/templates?template=${encodeURIComponent(selectedTemplate)}` : "/studio/templates"
+              : commercialSetupPath(selection)}>
+              Continue with this account
+            </Link>
             <form action={signOutForSignup}>
+              <input type="hidden" name="returnTo" value={commercialSignupPath(selection)} />
               <button type="submit">Sign out and create another account</button>
             </form>
             <Link href="/home">Return to current company</Link>
