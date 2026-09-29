@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
-import { ACTIVE_ORGANIZATION_COOKIE } from "@/lib/auth/organization-context";
+import { ACTIVE_ORGANIZATION_COOKIE, isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
 import { commercialSetupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
 
 export async function provisionCompany(formData: FormData) {
@@ -19,6 +19,11 @@ export async function provisionCompany(formData: FormData) {
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(setupPath)}`);
+  const existing = await resolveOrganizationContext();
+  if (existing) {
+    redirect(isOrganizationEntitlementActive(existing.entitlement) && templateKey
+      ? `/studio/templates?template=${encodeURIComponent(templateKey)}` : "/activation");
+  }
 
   {
     const { error: metadataError } = await supabase.auth.updateUser({

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { provisionCompany } from "./actions";
 import { commercialSetupPath, commercialTemplateName, selectedCommercialOffer } from "@/lib/commercial/selection";
+import { isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
 
 export const dynamic = "force-dynamic";
 
@@ -29,16 +30,9 @@ export default async function CompanySetupPage({ searchParams }: Props) {
   const selectedProduct = selection.productCode;
   const selectedTemplate = selection.templateKey;
 
-  const { data: memberships } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  if (memberships?.length) {
-    const { data: entitlement } = await supabase.from("organization_entitlements")
-      .select("status").eq("organization_id", memberships[0].organization_id).maybeSingle();
-    if (entitlement?.status === "active" && selectedTemplate) {
+  const organizationContext = await resolveOrganizationContext();
+  if (organizationContext) {
+    if (isOrganizationEntitlementActive(organizationContext.entitlement) && selectedTemplate) {
       redirect(`/studio/templates?template=${encodeURIComponent(selectedTemplate)}`);
     }
     redirect("/activation");
