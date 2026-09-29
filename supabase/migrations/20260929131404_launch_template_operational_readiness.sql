@@ -85,7 +85,7 @@ where template_key='ready_saas_startup_v1' and version='1.0';
 -- The two-agent Web Development overlay cannot resolve its borrowed 19-agent
 -- workflow and has no meeting/integration profile. Withdraw it from new sales.
 update public.company_templates
-set status='inactive',maturity='preview',
+set status='draft',maturity='preview',
   compatibility_contract=compatibility_contract ||
     '{"ready_company_minimum_standard_status":"upgrade_required","publication_status":"withdrawn_pending_operational_completion","unresolved_workflow_owners":12,"missing_meetings":true,"missing_integration_profiles":true}'::jsonb,
   updated_at=now()
