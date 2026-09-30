@@ -1,5 +1,6 @@
 "use server";
 
+import { canStartProviderSetup } from "@/lib/integrations/connections/availability";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
@@ -38,6 +39,9 @@ export async function createIntegration(formData: FormData) {
   const secret = text(formData.get("secret"));
   if (!providerKey || !displayName)
     fail("Provider and connection name are required.");
+  const { data: provider } = await context.supabase.from("integration_providers")
+    .select("setup_availability").eq("provider_key", providerKey).eq("enabled", true).maybeSingle();
+  if (!provider || !canStartProviderSetup(provider)) fail("This service is not available for customer setup.");
   const { data: integration, error } = await context.supabase
     .from("organization_integrations")
     .insert({
