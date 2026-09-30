@@ -34,12 +34,13 @@ async function main() {
     if (id === "next/navigation") return { redirect(url: string) { destination = url; throw redirectError; } };
     if (id === "next/cache") return { revalidatePath() {} };
     if (id.includes("auth/organization-context")) return { async requireActiveOwnerOrganizationContext() { return { organizationId: "test-org", user: { id: "test-owner" }, supabase: { from() { return query; } } }; } };
-    if (id.includes("connections/providers") || id.includes("connections/provider-credentials") || id.includes("integrations/service-runner") || id.includes("connections/setup-plans")) return {};
+    if (id.includes("connections/providers") || id.includes("connections/provider-credentials") || id.includes("integrations/service-runner") || id.includes("integrations/execution-gateway") || id.includes("connections/setup-plans")) return {};
     if (id === "server-only") return {};
     return original.call(this, id, ...args);
   };
   try {
     const { createCustomerIntegration } = await import("../app/(app)/integrations/customer-actions");
+    const { createIntegration } = await import("../app/(app)/integrations/actions");
     for (const value of ["coming_later", "unknown", null]) {
       availability = value;
       const form = new FormData();
@@ -47,6 +48,9 @@ async function main() {
       await assert.rejects(createCustomerIntegration(form), error => error === redirectError);
       assert.match(decodeURIComponent(destination), /not available for customer setup/);
       assert.match(destination, /project=test-project/);
+      assert.equal(writes, 0);
+      await assert.rejects(createIntegration(form), error => error === redirectError);
+      assert.match(decodeURIComponent(destination), /not available for customer setup/);
       assert.equal(writes, 0);
     }
   } finally { loader._load = original; }

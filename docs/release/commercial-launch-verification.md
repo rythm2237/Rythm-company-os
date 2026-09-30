@@ -14,7 +14,7 @@ Audit date: 30 September 2026. Baseline: main `35a283daed78e2dffd6697d9b0163c8d3
 
 ## Follow-up changes
 
-Provider setup eligibility now uses an explicit available/setup_available allowlist. Coming-later, missing and unknown availability are excluded from available counts and initial selection; the server action rejects forged setup submissions before any database write. Existing connections remain accessible for management.
+Provider setup eligibility now uses an explicit available/setup_available allowlist. Coming-later, missing and unknown availability are excluded from available counts and initial selection; both current and legacy server actions reject forged setup submissions before any database write. Existing connections remain accessible for management.
 
 CI explicitly runs commercial selection, actual isolated PostgreSQL payment migration tests and the unavailable-provider server-action regression. Prebuild also runs availability validation. The public production smoke can be repeated with `npm run smoke:commercial-public`, or the manually dispatched Commercial Production Smoke workflow. It performs GET requests only and tests health, templates, assisted billing copy, signup and selection-preserving setup redirects.
 
