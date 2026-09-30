@@ -91,7 +91,9 @@ assert.match(readFileSync("components/ai-workspace/FilesPanel.tsx","utf8"),/fetc
 assert.match(readFileSync("components/ai-workspace/WorkspaceResourcePanel.tsx","utf8"),/fetch\(`\/api\/ai-workspace\/resources\//);
 assert.match(readFileSync("components/ai-workspace/CompanyMemberInviteForm.tsx","utf8"),/fetch\(\"\/api\/ai-workspace\/company\/invite/);
 assert.match(readFileSync("components/admin/AIWorkspaceGuestCodeForm.tsx","utf8"),/fetch\(\"\/api\/admin\/ai-workspace\//);
-assert.match(readFileSync("components/projects/project-completion-panel.tsx","utf8"),/fetch\([^\n]*\/api\/projects\/completion/);
+const projectCompletionUi=readFileSync("components/projects/project-completion-panel.tsx","utf8");
+assert.match(projectCompletionUi,/await fetch\(url/);
+assert.match(projectCompletionUi,/request\((?:`|")\/api\/projects\/completion/);
 
 const directPatterns=[/fetch\s*\(\s*["'`]https:\/\//,/new\s+OpenAI\s*\(/,/api\.anthropic\.com/,/generativelanguage\.googleapis\.com/,/stripePost\s*\(/,/await\s+fetch\s*\(url/];
 const discovered=sourceFiles.filter(path=>{const source=readFileSync(path,"utf8");return directPatterns.some(pattern=>pattern.test(source));}).map(path=>relative(".",path));
