@@ -12,7 +12,7 @@ const sourceFiles=[...files("app"),...files("lib"),...files("components")].filte
 const connectionPlatformPaths=CONNECTION_PLATFORM_DIRECT_BOUNDARIES.map(item=>item.path);
 assert.deepEqual(connectionPlatformPaths.sort(),["lib/integrations/connections/github-app.ts","lib/integrations/connections/github-customer-oauth.ts","lib/integrations/connections/platform-oauth.ts","lib/integrations/connections/provider-credentials.ts"].sort(),"Core connection control-plane fetch boundaries must remain explicitly inventoried.");
 
-const sameOriginUiBoundaries=["components/ai-workspace/AIWorkspaceClient.tsx","components/ai-workspace/GuestAIClient.tsx","components/ai-workspace/FilesPanel.tsx","components/ai-workspace/WorkspaceResourcePanel.tsx","components/ai-workspace/CompanyMemberInviteForm.tsx","components/admin/AIWorkspaceGuestCodeForm.tsx"];
+const sameOriginUiBoundaries=["components/ai-workspace/AIWorkspaceClient.tsx","components/ai-workspace/GuestAIClient.tsx","components/ai-workspace/FilesPanel.tsx","components/ai-workspace/WorkspaceResourcePanel.tsx","components/ai-workspace/CompanyMemberInviteForm.tsx","components/admin/AIWorkspaceGuestCodeForm.tsx","components/projects/project-completion-panel.tsx"];
 const nailArtPushBoundaries=[
   "app/api/2nya-nailart/admin/route.ts",
   "app/api/2nya-nailart/book/route.ts",
@@ -91,6 +91,7 @@ assert.match(readFileSync("components/ai-workspace/FilesPanel.tsx","utf8"),/fetc
 assert.match(readFileSync("components/ai-workspace/WorkspaceResourcePanel.tsx","utf8"),/fetch\(`\/api\/ai-workspace\/resources\//);
 assert.match(readFileSync("components/ai-workspace/CompanyMemberInviteForm.tsx","utf8"),/fetch\(\"\/api\/ai-workspace\/company\/invite/);
 assert.match(readFileSync("components/admin/AIWorkspaceGuestCodeForm.tsx","utf8"),/fetch\(\"\/api\/admin\/ai-workspace\//);
+assert.match(readFileSync("components/projects/project-completion-panel.tsx","utf8"),/fetch\([^\n]*\/api\/projects\/completion/);
 
 const directPatterns=[/fetch\s*\(\s*["'`]https:\/\//,/new\s+OpenAI\s*\(/,/api\.anthropic\.com/,/generativelanguage\.googleapis\.com/,/stripePost\s*\(/,/await\s+fetch\s*\(url/];
 const discovered=sourceFiles.filter(path=>{const source=readFileSync(path,"utf8");return directPatterns.some(pattern=>pattern.test(source));}).map(path=>relative(".",path));
