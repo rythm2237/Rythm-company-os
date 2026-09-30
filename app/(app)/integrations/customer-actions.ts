@@ -1,5 +1,6 @@
 "use server";
 
+import { canStartProviderSetup } from "@/lib/integrations/connections/availability";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
@@ -17,8 +18,8 @@ export async function createCustomerIntegration(formData: FormData) {
   const projectId = text(formData.get("projectId"));
   if (!providerKey || !displayName) redirect(`/integrations?error=${encodeURIComponent("Service and connection name are required.")}${projectId ? `&project=${encodeURIComponent(projectId)}` : ""}`);
 
-  const { data: provider } = await context.supabase.from("integration_providers").select("provider_key,display_name,supports_oauth,supports_token").eq("provider_key", providerKey).eq("enabled", true).maybeSingle();
-  if (!provider) redirect(`/integrations?error=${encodeURIComponent("This service is not available for customer setup.")}${projectId ? `&project=${encodeURIComponent(projectId)}` : ""}`);
+  const { data: provider } = await context.supabase.from("integration_providers").select("provider_key,display_name,supports_oauth,supports_token,setup_availability").eq("provider_key", providerKey).eq("enabled", true).maybeSingle();
+  if (!provider || !canStartProviderSetup(provider)) redirect(`/integrations?error=${encodeURIComponent("This service is not available for customer setup.")}${projectId ? `&project=${encodeURIComponent(projectId)}` : ""}`);
 
   const { data: integration, error } = await context.supabase.from("organization_integrations").insert({organization_id:context.organizationId,provider_key:providerKey,display_name:displayName,account_ref:null,base_url:null,auth_type:provider.supports_oauth?"oauth":"token",granted_scopes:[],status:"setup_required",connected_by_user_id:context.user.id,metadata:{customer_setup:true,setup_state:"created_not_authorized",project_context:projectId||null}}).select("id").single();
   if (error || !integration) redirect(`/integrations?error=${encodeURIComponent(error?.message ?? "Service could not be added.")}${projectId ? `&project=${encodeURIComponent(projectId)}` : ""}`);

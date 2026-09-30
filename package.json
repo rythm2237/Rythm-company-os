@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment",
+    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment && npm run test:integration-availability",
     "build": "next build",
     "postbuild": "npm run test:project-completion",
     "start": "next start",
@@ -48,7 +48,9 @@
     "test:customers": "node --import tsx scripts/validate-customer-management.tsx",
     "test:company-logo": "node --import tsx scripts/validate-company-logo.ts",
     "test:company-chart": "node --import tsx scripts/validate-company-chart.tsx",
-    "test:commercial-payment": "node --import tsx scripts/validate-commercial-payment.ts"
+    "test:commercial-payment": "node --import tsx scripts/validate-commercial-payment.ts",
+    "test:integration-availability": "node --import tsx scripts/validate-integration-availability.ts",
+    "smoke:commercial-public": "node scripts/smoke-commercial-public.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
