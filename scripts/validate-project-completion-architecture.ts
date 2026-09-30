@@ -8,6 +8,8 @@ const rejectText=(content:string,text:string,label:string)=>{if(content.includes
 
 const architecture=read("supabase/migrations/20260929190000_project_completion_architecture_v2.sql");
 const evaluator=read("supabase/migrations/20260929190100_project_completion_evaluator_v2.sql");
+const pausedEvaluator=read("supabase/migrations/20260930080000_project_completion_paused_state.sql");
+const stateMachine=`${evaluator}\n${pausedEvaluator}`;
 const runtime=read("supabase/migrations/20260929190300_project_completion_runtime_guards.sql");
 const hardening=read("supabase/migrations/20260929190400_project_completion_rpc_hardening.sql");
 const reporting=read("supabase/migrations/20260930073000_project_completion_reporting_health.sql");
@@ -21,11 +23,12 @@ const report=read("app/(app)/projects/report/page.tsx");
 
 for(const table of ["project_completion_policies","project_completion_criteria","project_completion_evidence","project_observation_windows","project_metric_measurements","project_completion_evaluations","project_closeout_reports"])requireText(architecture,`public.${table}`,"completion schema");
 for(const field of ["work_progress","deliverable_progress","implementation_progress","verification_progress","outcome_progress","acceptance_progress","closeout_progress","overall_project_progress","completion_eligible","next_required_action"])requireText(architecture,field,"project completion columns");
-for(const state of ["DRAFT","DISCOVERY","PLANNING","READY_FOR_EXECUTION","EXECUTION","IMPLEMENTATION_PENDING","VERIFICATION","OUTCOME_VALIDATION","OBSERVATION","ACCEPTANCE_PENDING","CLOSEOUT","COMPLETED","BLOCKED","PAUSED","CANCELLED","FAILED","ON_HOLD"])requireText(evaluator,`'${state}'`,`lifecycle ${state}`);
-requireText(evaluator,"overall_p:=least(overall_p,99)","unfinished projects cannot show 100 overall");
-requireText(evaluator,"workflow_contradiction","contradictory workflow guard");
-requireText(evaluator,"authoritative_source=true","completion audit evidence references");
-requireText(evaluator,"Project completion remains subject to deliverable, implementation, verification, outcome, acceptance and closeout gates.","work/project completion separation");
+for(const state of ["DRAFT","DISCOVERY","PLANNING","READY_FOR_EXECUTION","EXECUTION","IMPLEMENTATION_PENDING","VERIFICATION","OUTCOME_VALIDATION","OBSERVATION","ACCEPTANCE_PENDING","CLOSEOUT","COMPLETED","BLOCKED","PAUSED","CANCELLED","FAILED","ON_HOLD"])requireText(stateMachine,`'${state}'`,`lifecycle ${state}`);
+requireText(pausedEvaluator,"p.status='paused' or p.lifecycle_state='PAUSED'","paused lifecycle preservation");
+requireText(stateMachine,"overall_p:=least(overall_p,99)","unfinished projects cannot show 100 overall");
+requireText(stateMachine,"workflow_contradiction","contradictory workflow guard");
+requireText(stateMachine,"authoritative_source=true","completion audit evidence references");
+requireText(stateMachine,"Project completion remains subject to deliverable, implementation, verification, outcome, acceptance and closeout gates.","work/project completion separation");
 requireText(runtime,"start_eligible_project_observations_v1","observation clock gating");
 requireText(runtime,"project_final_acceptance","final acceptance approval");
 requireText(runtime,"finalize_project_closeout_report_v1","formal closeout finalization");
@@ -44,7 +47,7 @@ requireText(worker,"source_task_run_id:task.id","proposal completion lineage");
 rejectText(worker,"progress_percent:100","structured worker must never force 100 percent");
 rejectText(worker,"status:\"completed\",stage:\"outcome_review\"","structured worker must never close projects");
 requireText(toolExecution,"integration_execution_gateway","authoritative governed execution evidence");
-requireText(toolExecution,"status==\"succeeded\"","only real successful external execution counts");
+requireText(toolExecution,"statuses.every(status=>status===\"succeeded\")","only real successful external execution counts");
 requireText(toolExecution,"terminalFailures=new Set([\"failed\",\"denied\",\"rejected\",\"expired\",\"cancelled\",\"simulated\"])","simulation is not implementation");
 requireText(dispatcher,"dispatchProjectWorkV2","scheduler uses v2 worker");
 rejectText(dispatcher,"dispatchProjectWork(service)","legacy worker is not production scheduler path");
@@ -59,9 +62,9 @@ requireText(report,"observed change","causality-safe final report");
 // Deterministic scenario model used as an architecture regression oracle. The DB
 // function remains the production authority; these cases protect required semantics
 // from being removed during refactors.
-type S={work?:number;deliverable?:number;implementation?:number;verification?:number;outcome?:number;acceptance?:number;closeout?:number;observationRequired?:boolean;observationComplete?:boolean;criticalBlocker?:boolean;riskAccepted?:boolean;allowRiskAcceptance?:boolean;cancelled?:boolean;failed?:boolean;implementationRequired?:boolean;acceptanceRequired?:boolean;closeoutRequired?:boolean;outcomeRequired?:boolean;verificationRequired?:boolean;deliverableRequired?:boolean};
+type S={work?:number;deliverable?:number;implementation?:number;verification?:number;outcome?:number;acceptance?:number;closeout?:number;observationRequired?:boolean;observationComplete?:boolean;criticalBlocker?:boolean;riskAccepted?:boolean;allowRiskAcceptance?:boolean;cancelled?:boolean;failed?:boolean;paused?:boolean;implementationRequired?:boolean;acceptanceRequired?:boolean;closeoutRequired?:boolean;outcomeRequired?:boolean;verificationRequired?:boolean;deliverableRequired?:boolean};
 function state(s:S){
-  if(s.cancelled)return "CANCELLED";if(s.failed)return "FAILED";
+  if(s.cancelled)return "CANCELLED";if(s.failed)return "FAILED";if(s.paused)return "PAUSED";
   if(s.criticalBlocker&&!(s.riskAccepted&&s.allowRiskAcceptance))return "BLOCKED";
   if((s.work??0)<100)return "EXECUTION";
   if((s.deliverableRequired??true)&&(s.deliverable??0)<100)return "EXECUTION";
@@ -84,5 +87,6 @@ if(state({...completeBase,cancelled:true})!=="CANCELLED")throw new Error("Scenar
 if(state({...completeBase,implementation:0,implementationRequired:false})!=="COMPLETED")throw new Error("Scenario 8 failed: research-only implementation N/A");
 if(state({work:100,deliverable:100,verification:100,outcome:100,implementationRequired:false,acceptanceRequired:false,closeoutRequired:false})!=="COMPLETED")throw new Error("Scenario 9 failed: short internal analysis");
 if(state({...completeBase,observationRequired:true,observationComplete:false})!=="OBSERVATION")throw new Error("Scenario 10 failed: 30-day monitoring cannot close early");
+if(state({...completeBase,paused:true})!=="PAUSED")throw new Error("Scenario 11 failed: paused projects remain paused and incomplete");
 
-console.log("Project completion architecture validation passed (10 lifecycle regression scenarios). ");
+console.log("Project completion architecture validation passed (11 lifecycle regression scenarios). ");
