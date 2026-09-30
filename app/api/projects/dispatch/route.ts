@@ -1,12 +1,14 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { dispatchProjectWork } from "@/lib/projects/project-operating-system";
+import { dispatchProjectWorkV2 } from "@/lib/projects/project-work-v2";
 import { dispatchProjectKnowledge } from "@/lib/projects/project-knowledge";
 import { dispatchAutonomousProjectMeetings } from "@/lib/projects/project-autonomous-meetings";
 import { dispatchApprovedProjectProposalActions } from "@/lib/projects/project-proposal-execution";
 import { dispatchApprovedProjectToolExecutions, reconcileDispatchedProjectProposals } from "@/lib/projects/project-tool-execution";
 import { superviseProjectExecutions } from "@/lib/projects/project-supervisor";
+import { reconcileProjectCompletionRuntime } from "@/lib/projects/project-completion";
+import { ensureProjectLifecycleContinuation } from "@/lib/projects/project-completion-continuation";
 import { dispatchConnectionSetupSessions } from "@/lib/integrations/connection-setup-agent";
 
 export const dynamic="force-dynamic";
@@ -56,7 +58,6 @@ export async function GET(request:Request){
     if(health.error){console.error("project_health_refresh_failed",health.error.message);errors.push({step:"health",error:health.error.message});}
     if(meetingRecovery.error){console.error("project_meeting_recovery_failed",meetingRecovery.error.message);errors.push({step:"meeting_recovery",error:meetingRecovery.error.message});}
 
-    // First pass repairs retry-exhausted/deadlocked work before normal workers claim tasks.
     const supervisorBefore=await isolated("supervisor_pre",()=>superviseProjectExecutions(service),errors,[]);
 
     const [knowledgeResults,connectionSetupResults]=await Promise.all([
@@ -66,22 +67,32 @@ export async function GET(request:Request){
     const proposalResults=await isolated("proposal_bridge",()=>dispatchApprovedProjectProposalActions(),errors,[]);
     const proposalConvergence=await isolated("proposal_convergence",()=>reconcileDispatchedProjectProposals(),errors,[]);
     const [taskResults,meetingResults]=await Promise.all([
-      isolated("tasks",()=>dispatchProjectWork(service),errors,[]),
+      isolated("tasks",()=>dispatchProjectWorkV2(service),errors,[]),
       isolated("meetings",()=>dispatchAutonomousProjectMeetings(service),errors,[]),
     ]);
 
-    // Second pass reacts to failures produced in this same dispatcher cycle instead of
-    // leaving the project idle until a human manually restarts it.
     const supervisorAfter=await isolated("supervisor_post",()=>superviseProjectExecutions(service),errors,[]);
     const toolResults=await isolated("external_actions",()=>dispatchApprovedProjectToolExecutions(),errors,[]);
     const terminal=await service.rpc("reconcile_project_execution_terminal_states_v1");
     if(terminal.error){console.error("project_terminal_reconciliation_failed",terminal.error.message);errors.push({step:"terminal_reconciliation",error:terminal.error.message});}
 
+    const runtimeCriteria=await service.rpc("ensure_project_completion_runtime_v1");
+    if(runtimeCriteria.error){console.error("project_completion_runtime_sync_failed",runtimeCriteria.error.message);errors.push({step:"completion_runtime_sync",error:runtimeCriteria.error.message});}
+    const startedObservations=await service.rpc("start_eligible_project_observations_v1");
+    if(startedObservations.error){console.error("project_observation_start_failed",startedObservations.error.message);errors.push({step:"observation_start",error:startedObservations.error.message});}
+
+    const completion=await isolated("completion",()=>reconcileProjectCompletionRuntime(service),errors,{observationWindows:0,projectsEvaluated:0,normalizedTasks:0,generatedReports:0});
+    const lifecycleContinuation=await isolated("completion_continuation",()=>ensureProjectLifecycleContinuation(service),errors,[]);
+    const completionHealth=await service.rpc("refresh_project_completion_health_v1");
+    if(completionHealth.error){console.error("project_completion_health_refresh_failed",completionHealth.error.message);errors.push({step:"completion_health",error:completionHealth.error.message});}
+
     const supervisorResults=[...supervisorBefore,...supervisorAfter];
     return NextResponse.json({
       ok:true,degraded:errors.length>0,errors,
-      processed:knowledgeResults.length+connectionSetupResults.length+taskResults.length+meetingResults.length+proposalResults.length+proposalConvergence.length+toolResults.length+supervisorResults.length,
-      healthEvents:Number(health.data??0),recoveredMeetings:Number(meetingRecovery.data??0),terminalExecutions:Number(terminal.data??0),
+      processed:knowledgeResults.length+connectionSetupResults.length+taskResults.length+meetingResults.length+proposalResults.length+proposalConvergence.length+toolResults.length+supervisorResults.length+lifecycleContinuation.length,
+      healthEvents:Number(health.data??0),completionHealthEvents:Number(completionHealth.data??0),recoveredMeetings:Number(meetingRecovery.data??0),terminalExecutions:Number(terminal.data??0),
+      completion:{...completion,criteriaSynced:Number(runtimeCriteria.data??0),observationsStarted:Number(startedObservations.data??0)},
+      lifecycleContinuation,
       knowledge:knowledgeResults,
       connectionSetup:connectionSetupResults,
       supervisor:supervisorResults,
