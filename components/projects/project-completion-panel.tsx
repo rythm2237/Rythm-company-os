@@ -9,7 +9,13 @@ type Explanation={
   verificationProgress:number;outcomeProgress:number;acceptanceProgress:number;closeoutProgress:number;overallProjectProgress:number;
   blockingReasons:Array<{dimension?:string;reason?:string;state?:string;criterionKey?:string}>;nextRequiredAction:string|null;evaluatorVersion:string|null;
 };
-type CompletionPayload={ok:boolean;error?:string;explanation:Explanation|null;observations:Array<{id:string;status:string;observation_start:string|null;observation_end:string|null;required_duration_days:number;sufficient_data:boolean}>;report:{id:string;status:string;generated_at:string}|null;criteria:Array<{id:string;dimension:string;description:string;state:string}>};
+type CompletionPayload={
+  ok:boolean;error?:string;explanation:Explanation|null;
+  observations:Array<{id:string;status:string;observation_start:string|null;observation_end:string|null;required_duration_days:number;sufficient_data:boolean}>;
+  report:{id:string;status:string;generated_at:string}|null;
+  criteria:Array<{id:string;dimension:string;description:string;state:string;acceptance_disposition?:string|null;acceptance_conditions?:unknown[]}>;
+  policy:{code:string;name:string;acceptance_authority:string|null;customer_signoff_required:boolean;acceptance_waiver_allowed:boolean}|null;
+};
 
 const label=(value:string)=>value.replaceAll("_"," ").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
 const formatDate=(value:string|null)=>value?new Intl.DateTimeFormat("en-GB",{dateStyle:"medium"}).format(new Date(value)):"Not started";
@@ -32,10 +38,22 @@ async function request(url:string,init?:RequestInit){
 }
 
 export function ProjectCompletionPanel({projectId}:{projectId:string}){
-  const router=useRouter();const [data,setData]=useState<CompletionPayload|null>(null);const [error,setError]=useState("");const [busy,setBusy]=useState<string|null>(null);
+  const router=useRouter();
+  const [data,setData]=useState<CompletionPayload|null>(null);
+  const [error,setError]=useState("");
+  const [busy,setBusy]=useState<string|null>(null);
+  const [acceptanceConditions,setAcceptanceConditions]=useState("");
+  const [acceptanceNote,setAcceptanceNote]=useState("");
+  const [residualRisk,setResidualRisk]=useState("");
   const load=useCallback(async()=>{try{setError("");setData(await request(`/api/projects/completion?projectId=${encodeURIComponent(projectId)}`));}catch(e){setError(e instanceof Error?e.message:"Unable to load project completion state.");}},[projectId]);
   useEffect(()=>{void load();},[load]);
   const act=async(action:string,extra:Record<string,unknown>={})=>{setBusy(action);setError("");try{await request("/api/projects/completion",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,action,...extra})});await load();router.refresh();}catch(e){setError(e instanceof Error?e.message:"Request failed.");}finally{setBusy(null);}};
+  const acceptance=(disposition:"accepted"|"accepted_with_conditions"|"rejected"|"waived")=>act("record_acceptance",{
+    acceptanceDisposition:disposition,
+    acceptanceConditions:acceptanceConditions.split(/\r?\n/).map(value=>value.trim()).filter(Boolean),
+    acceptanceResidualRisk:residualRisk,
+    acceptanceNote,
+  });
   if(error&&!data)return <section className="panel" style={{marginTop:18}}><p className="form-error">{error}</p></section>;
   if(!data?.explanation)return <section className="panel" style={{marginTop:18}}><p className="subtitle">Loading project completion state…</p></section>;
   const e=data.explanation;
@@ -51,6 +69,9 @@ export function ProjectCompletionPanel({projectId}:{projectId:string}){
     <div style={{marginTop:14,padding:"12px 14px",border:"1px solid var(--border, #d9d9d9)",borderRadius:12}}><span className="label">Next required action</span><strong style={{display:"block",marginTop:4}}>{e.nextRequiredAction||"RYTHM will determine the next governed action."}</strong></div>
     {observation?<div style={{marginTop:12}}><strong>Observation window</strong><p className="subtitle" style={{marginTop:4}}>{label(observation.status)} · {observation.required_duration_days} days · {formatDate(observation.observation_start)} → {formatDate(observation.observation_end)} · {observation.sufficient_data?"Sufficient data recorded":"Sufficient data not yet confirmed"}</p></div>:null}
     {e.blockingReasons.length?<details style={{marginTop:14}}><summary style={{cursor:"pointer",fontWeight:800}}>Completion details · {e.blockingReasons.length} open condition{e.blockingReasons.length===1?"":"s"}</summary><div className="data-list" style={{marginTop:10}}>{e.blockingReasons.slice(0,20).map((reason,index)=><div className="data-row" key={`${reason.criterionKey??reason.dimension??"reason"}-${index}`}><div><strong>{label(reason.dimension||"Project")}</strong><span>{reason.reason||"Required completion condition is still open."}</span></div><span className="pill">{label(reason.state||"pending")}</span></div>)}</div></details>:null}
+
+    {e.currentLifecycleState==="ACCEPTANCE_PENDING"?<div style={{marginTop:16,padding:"14px",border:"1px solid var(--border, #d9d9d9)",borderRadius:12}}><div className="panel-heading"><div><p className="label">Final Acceptance</p><h3>{data.policy?.acceptance_authority?label(data.policy.acceptance_authority):"Authorized stakeholder"}</h3></div><span className="pill">Decision required</span></div><p className="subtitle">Accept the verified result, accept it with explicit conditions, or reject it. Waiver is available only when the completion policy explicitly permits it.</p><label style={{display:"block",marginTop:10}}>Conditions · one per line<textarea rows={3} value={acceptanceConditions} onChange={event=>setAcceptanceConditions(event.target.value)} placeholder="Required follow-up, limitation, handover condition…"/></label><label style={{display:"block",marginTop:10}}>Residual risk / note<textarea rows={2} value={residualRisk} onChange={event=>setResidualRisk(event.target.value)} placeholder="Residual risk accepted with the result, if applicable"/></label><label style={{display:"block",marginTop:10}}>Decision note<textarea rows={2} value={acceptanceNote} onChange={event=>setAcceptanceNote(event.target.value)} placeholder="Acceptance rationale or rejection reason"/></label><div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:12}}><button type="button" disabled={busy!==null} onClick={()=>void acceptance("accepted")}>Accept</button><button type="button" disabled={busy!==null||!acceptanceConditions.trim()} onClick={()=>void acceptance("accepted_with_conditions")}>Accept with conditions</button><button type="button" disabled={busy!==null} onClick={()=>{if(confirm("Reject the final project result? The project will remain open for remediation."))void acceptance("rejected");}}>Reject</button>{data.policy?.acceptance_waiver_allowed?<button type="button" disabled={busy!==null} onClick={()=>{if(confirm("Waive final acceptance under the configured project policy?"))void acceptance("waived");}}>Waive acceptance</button>:null}</div></div>:null}
+
     <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16}}>
       <button type="button" disabled={busy!==null} onClick={()=>void act("evaluate")}>{busy==="evaluate"?"Checking…":"Recheck completion"}</button>
       {e.currentLifecycleState==="CLOSEOUT"&&!data.report?<button type="button" disabled={busy!==null} onClick={()=>void act("generate_closeout")}>{busy==="generate_closeout"?"Generating…":"Generate Final Report"}</button>:null}
