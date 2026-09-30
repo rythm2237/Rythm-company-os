@@ -7,6 +7,7 @@ import { dispatchAutonomousProjectMeetings } from "@/lib/projects/project-autono
 import { dispatchApprovedProjectProposalActions } from "@/lib/projects/project-proposal-execution";
 import { dispatchApprovedProjectToolExecutions, reconcileDispatchedProjectProposals } from "@/lib/projects/project-tool-execution";
 import { superviseProjectExecutions } from "@/lib/projects/project-supervisor";
+import { reconcileProjectCompletionRuntime } from "@/lib/projects/project-completion";
 import { dispatchConnectionSetupSessions } from "@/lib/integrations/connection-setup-agent";
 
 export const dynamic="force-dynamic";
@@ -77,11 +78,18 @@ export async function GET(request:Request){
     const terminal=await service.rpc("reconcile_project_execution_terminal_states_v1");
     if(terminal.error){console.error("project_terminal_reconciliation_failed",terminal.error.message);errors.push({step:"terminal_reconciliation",error:terminal.error.message});}
 
+    // Completion is recalculated after all task/proposal/tool transitions. This is the
+    // canonical post-work lifecycle pass: observation clocks advance, structured task
+    // semantics are normalized, closeout drafts are generated, and no task-terminal
+    // shortcut is allowed to close a project.
+    const completion=await isolated("completion",()=>reconcileProjectCompletionRuntime(service),errors,{observationWindows:0,projectsEvaluated:0,normalizedTasks:0,generatedReports:0});
+
     const supervisorResults=[...supervisorBefore,...supervisorAfter];
     return NextResponse.json({
       ok:true,degraded:errors.length>0,errors,
       processed:knowledgeResults.length+connectionSetupResults.length+taskResults.length+meetingResults.length+proposalResults.length+proposalConvergence.length+toolResults.length+supervisorResults.length,
       healthEvents:Number(health.data??0),recoveredMeetings:Number(meetingRecovery.data??0),terminalExecutions:Number(terminal.data??0),
+      completion,
       knowledge:knowledgeResults,
       connectionSetup:connectionSetupResults,
       supervisor:supervisorResults,
