@@ -83,12 +83,14 @@ export async function GET(request:Request){
 
     const completion=await isolated("completion",()=>reconcileProjectCompletionRuntime(service),errors,{observationWindows:0,projectsEvaluated:0,normalizedTasks:0,generatedReports:0});
     const lifecycleContinuation=await isolated("completion_continuation",()=>ensureProjectLifecycleContinuation(service),errors,[]);
+    const completionHealth=await service.rpc("refresh_project_completion_health_v1");
+    if(completionHealth.error){console.error("project_completion_health_refresh_failed",completionHealth.error.message);errors.push({step:"completion_health",error:completionHealth.error.message});}
 
     const supervisorResults=[...supervisorBefore,...supervisorAfter];
     return NextResponse.json({
       ok:true,degraded:errors.length>0,errors,
       processed:knowledgeResults.length+connectionSetupResults.length+taskResults.length+meetingResults.length+proposalResults.length+proposalConvergence.length+toolResults.length+supervisorResults.length+lifecycleContinuation.length,
-      healthEvents:Number(health.data??0),recoveredMeetings:Number(meetingRecovery.data??0),terminalExecutions:Number(terminal.data??0),
+      healthEvents:Number(health.data??0),completionHealthEvents:Number(completionHealth.data??0),recoveredMeetings:Number(meetingRecovery.data??0),terminalExecutions:Number(terminal.data??0),
       completion:{...completion,criteriaSynced:Number(runtimeCriteria.data??0),observationsStarted:Number(startedObservations.data??0)},
       lifecycleContinuation,
       knowledge:knowledgeResults,
