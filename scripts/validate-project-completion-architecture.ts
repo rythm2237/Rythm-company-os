@@ -10,7 +10,9 @@ const architecture=read("supabase/migrations/20260929190000_project_completion_a
 const evaluator=read("supabase/migrations/20260929190100_project_completion_evaluator_v2.sql");
 const runtime=read("supabase/migrations/20260929190300_project_completion_runtime_guards.sql");
 const hardening=read("supabase/migrations/20260929190400_project_completion_rpc_hardening.sql");
+const reporting=read("supabase/migrations/20260930073000_project_completion_reporting_health.sql");
 const worker=read("lib/projects/project-work-v2.ts");
+const toolExecution=read("lib/projects/project-tool-execution.ts");
 const dispatcher=read("app/api/projects/dispatch/route.ts");
 const completionService=read("lib/projects/project-completion.ts");
 const continuation=read("lib/projects/project-completion-continuation.ts");
@@ -29,18 +31,30 @@ requireText(runtime,"project_final_acceptance","final acceptance approval");
 requireText(runtime,"finalize_project_closeout_report_v1","formal closeout finalization");
 requireText(runtime,"prevented_completion_writer","legacy completion write guard");
 requireText(hardening,"revoke all on function public.finalize_project_closeout_report_v1", "RPC hardening");
+requireText(reporting,"accepted_with_conditions","conditional acceptance");
+requireText(reporting,"acceptance_waiver_allowed","policy-controlled acceptance waiver");
+requireText(reporting,"direction", "before-after direction");
+requireText(reporting,"causalityConfidence", "causality reporting");
+requireText(reporting,"refresh_project_completion_health_v1", "completion-aware project health");
+requireText(reporting,"project_kpis_completion_sync_v1", "KPI event-driven outcome recalculation");
 
 for(const field of ["work_completed","deliverable_completed","implementation_executed","verification_result","outcome_observed","blockers","evidence","next_required_action"])requireText(worker,field,"agent completion contract");
 requireText(worker,"authority:\"agent_claim_non_authoritative\"","agent claims are non-authoritative");
+requireText(worker,"source_task_run_id:task.id","proposal completion lineage");
 rejectText(worker,"progress_percent:100","structured worker must never force 100 percent");
 rejectText(worker,"status:\"completed\",stage:\"outcome_review\"","structured worker must never close projects");
+requireText(toolExecution,"integration_execution_gateway","authoritative governed execution evidence");
+requireText(toolExecution,"status==\"succeeded\"","only real successful external execution counts");
+requireText(toolExecution,"terminalFailures=new Set([\"failed\",\"denied\",\"rejected\",\"expired\",\"cancelled\",\"simulated\"])","simulation is not implementation");
 requireText(dispatcher,"dispatchProjectWorkV2","scheduler uses v2 worker");
 rejectText(dispatcher,"dispatchProjectWork(service)","legacy worker is not production scheduler path");
 requireText(dispatcher,"ensureProjectLifecycleContinuation","post-analysis lifecycle continuation");
+requireText(dispatcher,"refresh_project_completion_health_v1","scheduled completion health refresh");
 requireText(completionService,"reconcile_project_completion_observations_v1","observation scheduler integration");
 requireText(continuation,"completion_continuation","autonomous lifecycle follow-up");
 requireText(panel,"All currently assigned agent work is complete, but the real-world project outcome is not yet complete.","non-technical completion UX");
-requireText(report,"Observed change","causality-safe final report");
+requireText(panel,"Accept with conditions","structured conditional acceptance UX");
+requireText(report,"observed change","causality-safe final report");
 
 // Deterministic scenario model used as an architecture regression oracle. The DB
 // function remains the production authority; these cases protect required semantics
