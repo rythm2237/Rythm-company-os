@@ -111,7 +111,10 @@ export function calculateProjectProgressSnapshot(
   const overall=authoritative?percent(completion?.overall_project_progress):clamp(workProgress);
 
   return {
-    progressPercent:overall,
+    // Backward-compatible "progressPercent" remains the roadmap/work dimension.
+    // Overall lifecycle completion is deliberately exposed separately so old UI labels
+    // such as "Roadmap progress" cannot accidentally show outcome/acceptance progress.
+    progressPercent:canonicalWork,
     overallProjectProgress:overall,
     workProgress:canonicalWork,
     deliverableProgress:deliverable,
