@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { calculateProjectProgressSnapshot } from "@/lib/projects/project-progress";
+import { getProjectProgressSnapshot } from "@/lib/projects/project-progress";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ type Resolution = "approved" | "rejected";
 async function projectContext(projectId:string){
   const auth=await resolveOwnerApiOrganizationContext();
   if(!auth.ok)return {ok:false as const,response:NextResponse.json({ok:false,error:auth.error},{status:auth.status})};
-  const project=await auth.supabase.from("projects").select("id,name,project_code,status,stage,progress_percent,last_heartbeat_at,updated_at").eq("id",projectId).eq("organization_id",auth.organizationId).maybeSingle();
+  const project=await auth.supabase.from("projects").select("id,name,project_code,status,stage,progress_percent,lifecycle_state,overall_project_progress,work_progress,deliverable_progress,implementation_progress,verification_progress,outcome_progress,acceptance_progress,closeout_progress,completion_eligible,next_required_action,last_heartbeat_at,updated_at").eq("id",projectId).eq("organization_id",auth.organizationId).maybeSingle();
   if(!project.data)return {ok:false as const,response:NextResponse.json({ok:false,error:"Project not found."},{status:404})};
   return {ok:true as const,auth,project:project.data};
 }
@@ -21,21 +21,21 @@ export async function GET(request:Request){
   if(!projectId)return NextResponse.json({ok:false,error:"projectId is required."},{status:400});
   const context=await projectContext(projectId);if(!context.ok)return context.response;
   const {auth,project}=context;
-  const [executionResult,tasksResult,approvalsResult,activityResult,agentsResult]=await Promise.all([
+  const [executionResult,tasksResult,approvalsResult,activityResult,agentsResult,progressSnapshot]=await Promise.all([
     auth.supabase.from("project_executions").select("id,execution_no,status,started_at,last_heartbeat_at,updated_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("execution_no",{ascending:false}).limit(1).maybeSingle(),
-    auth.supabase.from("project_task_runs").select("id,execution_id,task_key,title,status,priority,assigned_agent_id,waiting_on_approval_id,started_at,completed_at,updated_at,agents(agent_code,display_name,name)").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("priority").order("created_at"),
+    auth.supabase.from("project_task_runs").select("id,execution_id,task_key,title,status,priority,assigned_agent_id,waiting_on_approval_id,outcome_status,implementation_status,verification_status,next_required_action,started_at,completed_at,updated_at,agents(agent_code,display_name,name)").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("priority").order("created_at"),
     auth.supabase.from("approval_requests").select("id,subject_type,subject_id,title,summary,risk_level,status,conditions,created_at,expires_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("status","pending").order("created_at",{ascending:false}),
     auth.supabase.from("project_activity_events").select("id,event_type,headline,detail,importance,agent_id,created_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("created_at",{ascending:false}).limit(12),
     auth.supabase.from("project_agents").select("agent_id,status,assignment_role,agents(agent_code,display_name,name,role_title)").eq("project_id",projectId).eq("organization_id",auth.organizationId),
+    getProjectProgressSnapshot(auth.supabase,auth.organizationId,{id:project.id,status:project.status,updated_at:project.updated_at}),
   ]);
   const allTasks=tasksResult.data??[];
   const latestExecutionId=executionResult.data?.id;
   const tasks=latestExecutionId?allTasks.filter((task:any)=>task.execution_id===latestExecutionId):allTasks;
   const approvals=approvalsResult.data??[];
   const activity=activityResult.data??[];
-  const progressSnapshot=calculateProjectProgressSnapshot(tasks as any[],approvals.length,project.status,activity[0]?.created_at??project.last_heartbeat_at??project.updated_at);
   const counts={running:progressSnapshot.runningTasks,queued:progressSnapshot.queuedTasks,waitingApproval:progressSnapshot.awaitingApproval,waitingOther:progressSnapshot.blockedTasks,completed:progressSnapshot.completedTasks,failed:progressSnapshot.failedTasks,total:progressSnapshot.totalTasks};
-  return NextResponse.json({ok:true,project:{...project,progress_percent:progressSnapshot.progressPercent},progressSnapshot,execution:executionResult.data??null,counts,tasks:tasks.slice(0,24),approvals,activity,agents:agentsResult.data??[],serverTime:new Date().toISOString()});
+  return NextResponse.json({ok:true,project:{...project,progress_percent:progressSnapshot.overallProjectProgress,lifecycle_state:progressSnapshot.lifecycleState??project.lifecycle_state},progressSnapshot,execution:executionResult.data??null,counts,tasks:tasks.slice(0,24),approvals,activity,agents:agentsResult.data??[],serverTime:new Date().toISOString()});
 }
 
 export async function POST(request:Request){
@@ -67,12 +67,8 @@ export async function POST(request:Request){
     if(!task||task.status!=="waiting_for_approval")return NextResponse.json({ok:false,error:"The approval is no longer linked to an active project task. Refresh the page and try again."},{status:409});
   }
 
-  // The database trigger transitions the task, action and consumption audit in
-  // this same transaction. Releasing the task before this write creates a race.
   const resolved=await auth.supabase.from("approval_requests").update({status:resolution,response_note:responseNote,resolved_at:resolvedAt,approver_user_id:auth.user.id}).eq("id",approvalId).eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("status","pending").select("id,status").maybeSingle();
-  if(resolved.error||!resolved.data){
-    return NextResponse.json({ok:false,error:resolved.error?.message??"Approval could not be resolved."},{status:409});
-  }
+  if(resolved.error||!resolved.data)return NextResponse.json({ok:false,error:resolved.error?.message??"Approval could not be resolved."},{status:409});
   if(approval.subject_type==="project_task")taskStatus=resolution==="approved"?"queued":"blocked";
 
   await Promise.all([
