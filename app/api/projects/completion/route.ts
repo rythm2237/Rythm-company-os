@@ -6,13 +6,14 @@ import { getProjectCompletionExplanation } from "@/lib/projects/project-completi
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
 
-type Action="evaluate"|"generate_closeout"|"finalize_closeout"|"record_metric";
+type Action="evaluate"|"generate_closeout"|"finalize_closeout"|"record_metric"|"record_acceptance";
+type AcceptanceDisposition="accepted"|"accepted_with_conditions"|"rejected"|"waived";
 
 async function ownedProject(projectId:string){
   const auth=await resolveOwnerApiOrganizationContext();
   if(!auth.ok)return {ok:false as const,response:NextResponse.json({ok:false,error:auth.error},{status:auth.status})};
   const project=await auth.supabase.from("projects")
-    .select("id,organization_id,project_code,name,status,lifecycle_state,work_progress,deliverable_progress,implementation_progress,verification_progress,outcome_progress,acceptance_progress,closeout_progress,overall_project_progress,completion_eligible,next_required_action,completion_blocking_reasons,completion_evaluator_version,completion_evaluated_at")
+    .select("id,organization_id,project_code,name,status,lifecycle_state,completion_policy_id,work_progress,deliverable_progress,implementation_progress,verification_progress,outcome_progress,acceptance_progress,closeout_progress,overall_project_progress,completion_eligible,next_required_action,completion_blocking_reasons,completion_evaluator_version,completion_evaluated_at")
     .eq("id",projectId).eq("organization_id",auth.organizationId).maybeSingle();
   if(!project.data)return {ok:false as const,response:NextResponse.json({ok:false,error:"Project not found."},{status:404})};
   return {ok:true as const,auth,project:project.data};
@@ -23,18 +24,23 @@ export async function GET(request:Request){
   if(!projectId)return NextResponse.json({ok:false,error:"projectId is required."},{status:400});
   const context=await ownedProject(projectId);if(!context.ok)return context.response;
   const {auth,project}=context;
-  const [explanation,criteria,observations,report,metrics]=await Promise.all([
+  const [explanation,criteria,observations,report,metrics,policy]=await Promise.all([
     getProjectCompletionExplanation(auth.supabase,projectId),
-    auth.supabase.from("project_completion_criteria").select("id,dimension,criterion_key,description,required,state,failure_reason,waiver_reason,residual_risk,metadata,updated_at").eq("project_id",projectId).order("dimension").order("created_at"),
+    auth.supabase.from("project_completion_criteria").select("id,dimension,criterion_key,description,required,state,failure_reason,waiver_reason,residual_risk,acceptance_disposition,acceptance_conditions,metadata,updated_at").eq("project_id",projectId).order("dimension").order("created_at"),
     auth.supabase.from("project_observation_windows").select("id,status,observation_start,observation_end,required_duration_days,sufficient_data,metadata,updated_at").eq("project_id",projectId).neq("status","cancelled").order("created_at",{ascending:false}),
     auth.supabase.from("project_closeout_reports").select("id,status,report_data,generated_at,reviewed_at,accepted_at,closure_date,updated_at").eq("project_id",projectId).order("generated_at",{ascending:false}).limit(1).maybeSingle(),
     auth.supabase.from("project_metric_measurements").select("id,metric_name,measurement_kind,source,measurement_start,measurement_end,value,value_text,unit,segmentation,confidence,created_at").eq("project_id",projectId).order("metric_name").order("created_at"),
+    project.completion_policy_id?auth.supabase.from("project_completion_policies").select("id,code,name,acceptance_authority,customer_signoff_required,acceptance_waiver_allowed").eq("id",project.completion_policy_id).maybeSingle():Promise.resolve({data:null,error:null}),
   ]);
-  return NextResponse.json({ok:true,project,explanation,criteria:criteria.data??[],observations:observations.data??[],report:report.data??null,metrics:metrics.data??[]});
+  return NextResponse.json({ok:true,project,explanation,criteria:criteria.data??[],observations:observations.data??[],report:report.data??null,metrics:metrics.data??[],policy:policy.data??null});
 }
 
 export async function POST(request:Request){
-  let body:{projectId?:string;action?:Action;reportId?:string;metricName?:string;measurementKind?:"baseline"|"outcome";source?:string;value?:number|null;valueText?:string;unit?:string;measurementStart?:string;measurementEnd?:string;confidence?:number;segmentation?:Record<string,unknown>};
+  let body:{
+    projectId?:string;action?:Action;reportId?:string;
+    metricName?:string;measurementKind?:"baseline"|"outcome";source?:string;value?:number|null;valueText?:string;unit?:string;measurementStart?:string;measurementEnd?:string;confidence?:number;segmentation?:Record<string,unknown>;
+    acceptanceDisposition?:AcceptanceDisposition;acceptanceConditions?:string[];acceptanceResidualRisk?:string;acceptanceNote?:string;
+  };
   try{body=await request.json();}catch{return NextResponse.json({ok:false,error:"Invalid request."},{status:400});}
   const projectId=String(body.projectId??"").trim();const action=body.action;
   if(!projectId||!action)return NextResponse.json({ok:false,error:"projectId and action are required."},{status:400});
@@ -48,6 +54,24 @@ export async function POST(request:Request){
     if(evaluated.error)return NextResponse.json({ok:false,error:evaluated.error.message},{status:409});
     await service.rpc("ensure_project_final_acceptance_v1",{p_project_id:projectId});
     return NextResponse.json({ok:true,explanation:evaluated.data});
+  }
+
+  if(action==="record_acceptance"){
+    if(project.lifecycle_state!=="ACCEPTANCE_PENDING")return NextResponse.json({ok:false,error:"Project is not awaiting final acceptance."},{status:409});
+    const disposition=body.acceptanceDisposition;
+    if(!disposition||!["accepted","accepted_with_conditions","rejected","waived"].includes(disposition))return NextResponse.json({ok:false,error:"A valid acceptance disposition is required."},{status:400});
+    const conditions=(Array.isArray(body.acceptanceConditions)?body.acceptanceConditions:[]).map(value=>String(value).trim()).filter(Boolean).slice(0,20);
+    if(disposition==="accepted_with_conditions"&&!conditions.length)return NextResponse.json({ok:false,error:"Accepted with conditions requires at least one explicit condition."},{status:400});
+    const recorded=await service.rpc("record_project_acceptance_v1",{
+      p_project_id:projectId,
+      p_disposition:disposition,
+      p_conditions:conditions,
+      p_residual_risk:String(body.acceptanceResidualRisk??"").trim().slice(0,4000)||null,
+      p_note:String(body.acceptanceNote??"").trim().slice(0,4000)||null,
+      p_actor_user_id:auth.user.id,
+    });
+    if(recorded.error)return NextResponse.json({ok:false,error:recorded.error.message},{status:409});
+    return NextResponse.json({ok:true,explanation:recorded.data});
   }
 
   if(action==="generate_closeout"){
