@@ -77,6 +77,7 @@ Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
     const p=object(data.proposal);
     const proposal=await supabase.from("project_proposals").insert({
       organization_id:task.organization_id,project_id:task.project_id,created_by_agent_id:task.assigned_agent_id,
+      source_execution_id:task.execution_id,source_task_run_id:task.id,
       department:agentRow?.role_title??null,proposal_type:text(p.proposal_type,"Strategic Recommendation"),title:text(p.title,task.title),
       executive_summary:text(p.executive_summary,"Agent recommendation requires executive attention."),rationale:text(p.rationale),
       expected_impact:p.expected_impact&&typeof p.expected_impact==="object"?p.expected_impact:{summary:p.expected_impact},
@@ -178,7 +179,5 @@ export async function dispatchProjectWorkV2(supabase:SupabaseClient,workerId=`pr
       results.push({id:task.id,status:exhausted?"failed":"retrying",error:error instanceof Error?error.message:"failed"});
     }
   }
-  // Execution terminality is reconciled centrally by reconcile_project_execution_terminal_states_v1.
-  // This worker deliberately never writes project status=completed or project progress=100.
   return results;
 }
