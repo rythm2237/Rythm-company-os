@@ -98,7 +98,7 @@ assert.match(projectCompletionUi,/request\((?:`|")\/api\/projects\/completion/);
 const directPatterns=[/fetch\s*\(\s*["'`]https:\/\//,/new\s+OpenAI\s*\(/,/api\.anthropic\.com/,/generativelanguage\.googleapis\.com/,/stripePost\s*\(/,/await\s+fetch\s*\(url/];
 const discovered=sourceFiles.filter(path=>{const source=readFileSync(path,"utf8");return directPatterns.some(pattern=>pattern.test(source));}).map(path=>relative(".",path));
 const inventoried=new Set([...DIRECT_EXECUTION_INVENTORY.map(item=>item.path),...connectionPlatformPaths,GOOGLE_OAUTH_REFRESH_BOUNDARY.path,CONNECTION_AGENT_OAUTH_BOUNDARY.path,...nailArtPushBoundaries]);
-const unknown=discovered.filter(path=>!path.startsWith("lib/integrations/adapters/")&&!inventoried.has(path));
+const unknown=discovered.filter(path=>!path.startsWith("lib/integrations/adapters/")&&!sameOriginUiBoundaries.includes(path)&&!inventoried.has(path));
 assert.deepEqual(unknown,[],`Unknown direct provider/external execution paths: ${unknown.join(", ")}`);
 
 const computerUseBoundary=DIRECT_EXECUTION_INVENTORY.find(item=>item.path==="lib/integrations/computer-use/runtime.ts");
