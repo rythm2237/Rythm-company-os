@@ -1,0 +1,11 @@
+-- Project completion architecture is intentionally split into additive migrations:
+-- 20260929190000 schema/policies/legacy classification
+-- 20260929190100 deterministic evaluator/state machine
+-- 20260929190200 RPC/security hardening
+-- 20260929190300 runtime guards/observation/acceptance/closeout
+-- 20260929190400 mutation RPC hardening
+-- 20260930071000 performance/RLS hardening
+-- 20260930073000 reporting/KPI/health semantics
+-- 20260930073100 KPI delete-trigger safety
+-- 20260930074000 execution-evidence indexes
+select 1;
