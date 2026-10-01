@@ -111,8 +111,8 @@
   .app-workspace .connection-agent-dock,
   .app-workspace .integration-guide,
   .app-workspace aside[aria-label="Active company setup guide"],
-  .app-workspace aside[aria-live="polite"][style*="position: fixed"],
-  .app-workspace .ui-button[style*="position: fixed"][style*="bottom: 20px"] {
+  .app-workspace aside[aria-live="polite"],
+  .app-workspace .ui-button[style*="position"][style*="fixed"][style*="bottom"] {
     bottom: calc(84px + env(safe-area-inset-bottom)) !important;
   }
 }
@@ -208,7 +208,7 @@
 @media (max-width: 560px) {
   .app-workspace .connection-agent-dock,
   .app-workspace aside[aria-label="Active company setup guide"],
-  .app-workspace aside[aria-live="polite"][style*="position: fixed"] {
+  .app-workspace aside[aria-live="polite"] {
     right: max(10px, env(safe-area-inset-right)) !important;
     left: max(10px, env(safe-area-inset-left)) !important;
     width: auto !important;
