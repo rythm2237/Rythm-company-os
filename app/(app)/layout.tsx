@@ -16,6 +16,7 @@ import "../crm-center.css";
 import "../admin-studio.css";
 import "../connection-flight-deck.css";
 import "../workspace-flight-deck-hotfix.css";
+import "../workspace-mobile-hardening-v2.css";
 
 export const metadata: Metadata = {
   title: "Company Workspace",
