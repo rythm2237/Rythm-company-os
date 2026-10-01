@@ -50,7 +50,10 @@
 }
 
 @media (max-width: 1100px) {
+  /* The drawer owns the top layer while open. Previously the fixed white header
+     sat above it and hid the first navigation items and the drawer close control. */
   .marketing-site .marketing-sidebar {
+    z-index: 1200;
     height: 100dvh;
     max-height: 100dvh;
     padding-top: max(18px, env(safe-area-inset-top));
@@ -61,6 +64,10 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .marketing-site .marketing-mobile-backdrop {
+    z-index: 1150;
   }
 
   .marketing-site .marketing-sidebar-navigation {
