@@ -1,0 +1,229 @@
+/* Mobile UI hardening V2.
+   Shared, presentation-only fixes for authenticated workspace routes.
+   Keep this file loaded after route-family workspace styles. */
+
+.app-workspace .ui-button-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Structured buttons use Button's loading wrapper. Restore the layout that the
+   component-specific CSS expects instead of treating that wrapper as one item. */
+.app-workspace .company-disclosure-trigger > .ui-button-content {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 17px;
+  text-align: left;
+}
+
+.app-workspace .company-disclosure-trigger > .ui-button-progress,
+.app-workspace .company-pyramid-person > .ui-button-progress {
+  position: absolute;
+  inset: 0;
+}
+
+.app-workspace .company-pyramid-person > .ui-button-content {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  text-align: left;
+}
+
+.app-workspace .company-pyramid-person-label,
+.app-workspace .company-section-label {
+  min-width: 0;
+}
+
+/* The department canvas must start at its real left edge on narrow screens.
+   Centering a max-content row creates a negative initial offset in mobile Safari. */
+.app-workspace .company-pyramid-scroll {
+  max-width: 100%;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-inline: 16px;
+}
+
+.app-workspace .company-pyramid-departments {
+  justify-content: flex-start;
+}
+
+.app-workspace .company-pyramid-branch {
+  scroll-snap-align: start;
+}
+
+/* Shared protection for data-heavy pages. Wide regions remain local to the page
+   instead of expanding the visual viewport. */
+.app-workspace .mobile-scroll-region,
+.app-workspace .table-scroll,
+.app-workspace [role="region"] {
+  max-width: 100%;
+}
+
+@media (max-width: 1100px) {
+  /* The drawer must sit above the fixed mobile header. Otherwise its brand,
+     close button and first navigation rows are hidden under the header. */
+  .app-workspace .product-nav {
+    z-index: 1200;
+    height: 100dvh;
+    max-height: 100dvh;
+    overscroll-behavior: contain;
+  }
+
+  .app-workspace .app-nav-backdrop {
+    z-index: 1150;
+  }
+
+  .app-workspace .product-nav-inner {
+    min-height: 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .app-workspace .product-nav-groups {
+    min-height: 0;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-workspace .app-mobile-bottom {
+    padding-right: max(4px, env(safe-area-inset-right));
+    padding-left: max(4px, env(safe-area-inset-left));
+  }
+
+  .app-workspace .app-mobile-bottom a {
+    min-width: 0;
+    touch-action: manipulation;
+  }
+
+  .app-workspace .app-mobile-bottom small {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Global fixed helpers must clear the persistent bottom navigation. */
+  .app-workspace .connection-agent-dock,
+  .app-workspace .integration-guide,
+  .app-workspace aside[aria-label="Active company setup guide"],
+  .app-workspace aside[aria-live="polite"],
+  .app-workspace .ui-button[style*="position"][style*="fixed"][style*="bottom"] {
+    bottom: calc(84px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (max-width: 800px) {
+  .app-workspace .company-disclosure-trigger > .ui-button-content {
+    gap: 10px;
+  }
+
+  .app-workspace .company-disclosure-trigger {
+    overflow: hidden;
+  }
+
+  .app-workspace .company-section-index,
+  .app-workspace .company-section-action {
+    flex: 0 0 38px;
+  }
+
+  .app-workspace .company-section-label {
+    flex: 1 1 auto;
+  }
+
+  /* Settings is a secondary utility action; it should not become a dominant
+     full-width CTA above the company content on phones. */
+  .app-workspace .company-dashboard .ops-header-actions {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .app-workspace .company-dashboard .ops-header-actions .secondary-button {
+    width: auto;
+    min-width: 120px;
+    max-width: 100%;
+  }
+
+  .app-workspace .company-pyramid-scroll {
+    scroll-snap-type: x proximity;
+    padding-inline: 5px;
+  }
+
+  .app-workspace .company-pyramid-departments {
+    width: max-content;
+    min-width: 100%;
+    justify-content: flex-start;
+    gap: 14px;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .app-workspace .company-pyramid-branch {
+    flex: 0 0 min(310px, calc(100vw - 76px));
+    width: min(310px, calc(100vw - 76px));
+    max-width: calc(100vw - 76px);
+  }
+
+  .app-workspace .company-pyramid-intro {
+    align-items: stretch;
+  }
+
+  .app-workspace .company-org-search,
+  .app-workspace .company-org-search input {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .app-workspace .company-view-switch {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-workspace .company-view-switch .ui-button {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 10px;
+  }
+
+  .app-workspace .company-view-switch .ui-button-content {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .app-workspace :where(.table-scroll, [data-mobile-scroll="true"]) {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 560px) {
+  .app-workspace .connection-agent-dock,
+  .app-workspace aside[aria-label="Active company setup guide"],
+  .app-workspace aside[aria-live="polite"] {
+    right: max(10px, env(safe-area-inset-right)) !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .app-workspace .company-pyramid-branch {
+    flex-basis: min(300px, calc(100vw - 68px));
+    width: min(300px, calc(100vw - 68px));
+    max-width: calc(100vw - 68px);
+  }
+
+  .app-workspace .company-disclosure-body {
+    padding-inline: 14px;
+  }
+}
