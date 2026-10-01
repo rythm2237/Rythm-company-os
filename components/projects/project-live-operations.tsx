@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActionLock, ReadEpoch } from "@/lib/ui/interaction-state";
 import { Button, ButtonGroup } from "@/components/ui/Button";
+import { useProjectApprovalState } from "@/components/projects/ProjectApprovalState";
 import { ApprovalDecisionDiscussion } from "@/components/projects/approval-decision-discussion";
 
 type LiveTask={id:string;title:string;status:string;priority:number;assigned_agent_id:string|null;waiting_on_approval_id:string|null;started_at?:string|null;completed_at?:string|null;updated_at?:string|null;agents?:{agent_code?:string;display_name?:string;name?:string}|null};
@@ -27,6 +28,8 @@ export function ProjectLiveOperations({projectId,initialStatus,mode="full"}:Prop
   const [busyApproval,setBusyApproval]=useState<string|null>(null);
   const [busyResolution,setBusyResolution]=useState<"approved"|"rejected"|null>(null);
   const [notes,setNotes]=useState<Record<string,string>>({});
+  const updateApprovalSummary=useProjectApprovalState()?.setApprovals;
+  useEffect(()=>{if(data)updateApprovalSummary?.(data.approvals);},[data,updateApprovalSummary]);
   const [,setTick]=useState(0);
 
   const load=useCallback(async(force=false)=>{

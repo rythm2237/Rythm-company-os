@@ -6,6 +6,7 @@ import { JSDOM } from "jsdom";
 import { PGlite } from "@electric-sql/pglite";
 import { ActionLock, ReadEpoch, resolutionReplay } from "../lib/ui/interaction-state";
 import { Button } from "../components/ui/Button";
+import { ProjectApprovalProvider, ProjectApprovalCount, ProjectApprovalList } from "../components/projects/ProjectApprovalState";
 import { ProjectLiveOperations } from "../components/projects/project-live-operations";
 
 async function main() {
@@ -17,6 +18,13 @@ async function main() {
   Object.assign(globalThis,{React,window:dom.window,document:dom.window.document,Element:dom.window.Element,HTMLElement:dom.window.HTMLElement,CustomEvent:dom.window.CustomEvent,IS_REACT_ACT_ENVIRONMENT:true});
   const {createRoot}=await import("react-dom/client");
   const container=document.getElementById("root")!;
+  // Shared defaults must not override a page's responsive visibility.
+  const visibilityStyles=document.createElement("style");
+  visibilityStyles.textContent='.product-nav-close { display:none; }'+readFileSync("app/interactions.css","utf8");
+  document.head.append(visibilityStyles);
+  const hiddenClose=document.createElement("button");hiddenClose.className="product-nav-close ui-button";document.body.append(hiddenClose);
+  assert.equal(dom.window.getComputedStyle(hiddenClose).display,"none","Desktop must keep the mobile close control hidden");
+  hiddenClose.remove();visibilityStyles.remove();
   let root=createRoot(container);let clicks=0;let finish!:()=>void;
   const slow=new Promise<void>(resolve=>{finish=resolve;});
   await act(async()=>root.render(<Button onClick={()=>{clicks++;return slow;}} loadingLabel="Saving…">Save</Button>));
@@ -32,7 +40,7 @@ async function main() {
   globalThis.fetch=((_url:unknown,init?:RequestInit)=>new Promise<Response>(resolve=>queue.push({method:init?.method??"GET",finish:resolve}))) as typeof fetch;
   const payload={ok:true,project:{id:"p",name:"Regression",status:"active"},progressSnapshot:{progressPercent:0},execution:null,counts:{},tasks:[],agents:[],activity:[],serverTime:"now",approvals:[{id:"a",title:"Airolepath test decision",summary:"Scoped test",risk_level:"high",status:"pending",created_at:new Date().toISOString(),subject_type:"action_item",subject_id:"s",expires_at:null}]};
   root=createRoot(container);
-  await act(async()=>root.render(<ProjectLiveOperations projectId="p" initialStatus="active" mode="approvals"/>));
+  await act(async()=>root.render(<ProjectApprovalProvider initialApprovals={payload.approvals}><span data-test="count"><ProjectApprovalCount/></span><section data-test="summary"><ProjectApprovalList/></section><ProjectLiveOperations projectId="p" initialStatus="active" mode="approvals"/></ProjectApprovalProvider>));
   await act(async()=>queue[0].finish(Response.json(payload)));
   // A background read starts before rejection and returns after it.
   await act(async()=>window.dispatchEvent(new CustomEvent("rythm:project-updated")));
@@ -50,9 +58,11 @@ async function main() {
   assert.equal(Array.from(container.querySelectorAll("button")).some(b=>b.textContent==="Reject"),false,"Old read must not resurrect decision");
   await act(async()=>queue.at(-1)!.finish(Response.json({...payload,approvals:[],approvalHistory:[{...payload.approvals[0],status:"rejected",response_note:"Needs a revised proposal",resolved_at:new Date().toISOString()}]})));
   assert.match(container.textContent!,/Decision history/);
+  assert.equal(container.querySelector('[data-test="count"]')!.textContent,"0");
+  assert.doesNotMatch(container.querySelector('[data-test="summary"]')!.textContent!,/Airolepath test decision/);
   await act(async()=>root.unmount());
   queue.length=0;root=createRoot(container);
-  await act(async()=>root.render(<ProjectLiveOperations projectId="p" initialStatus="active" mode="approvals"/>));
+  await act(async()=>root.render(<ProjectApprovalProvider initialApprovals={payload.approvals}><span data-test="count"><ProjectApprovalCount/></span><section data-test="summary"><ProjectApprovalList/></section><ProjectLiveOperations projectId="p" initialStatus="active" mode="approvals"/></ProjectApprovalProvider>));
   await act(async()=>queue[0].finish(Response.json(payload)));
   const approve=Array.from(container.querySelectorAll("button")).find(b=>b.textContent?.includes("Approve & continue"))!;
   await act(async()=>{approve.click();approve.click();});
