@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useMemo, useRef, useState } from "react";
 
 type Scenario = { id: string; title: string; category: string };
@@ -117,7 +119,7 @@ export function BenchmarkConsole({
         <div><strong>External actions</strong><span>Disabled</span></div>
       </div>
       {resumable?<p className="security-note" style={{marginTop:14}}>An incomplete benchmark run was recovered. Completed scenario evidence will be reused and only missing work will execute again.</p>:null}
-      <button onClick={runBenchmark} disabled={status==="running"} style={{marginTop:18}}>{status==="running"?"Benchmark running…":resumable?"Resume benchmark":"Run Senior benchmark"}</button>
+      <Button onClick={runBenchmark} disabled={status==="running"} style={{marginTop:18}}>{status==="running"?"Benchmark running…":resumable?"Resume benchmark":"Run Senior benchmark"}</Button>
       {status==="running"?<p className="security-note" style={{marginTop:12}}>Running {current==="finalizing"?"final evidence validation":scenarios.find((item)=>item.id===current)?.title??"scenario"}. You can keep the page open; brief mobile network interruptions are retried automatically.</p>:null}
       {retryMessage?<p className="security-note" style={{marginTop:12}}>{retryMessage}</p>:null}
       {error?<p className="form-error" style={{marginTop:12}}>{error}</p>:null}

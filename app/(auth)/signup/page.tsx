@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
@@ -46,7 +47,7 @@ export default async function SignupPage({ searchParams }: Props) {
             </Link>
             <form action={signOutForSignup}>
               <input type="hidden" name="returnTo" value={commercialSignupPath(selection)} />
-              <button type="submit">Sign out and create another account</button>
+              <SubmitButton type="submit">Sign out and create another account</SubmitButton>
             </form>
             <Link href="/home">Return to current company</Link>
           </div>
@@ -58,9 +59,9 @@ export default async function SignupPage({ searchParams }: Props) {
                 <input type="hidden" name="source" value="signup" />
                 <input type="hidden" name="productCode" value={selectedProduct} />
                 <input type="hidden" name="templateKey" value={selectedTemplate} />
-                <button className="secondary-button" style={{ width: "100%" }} type="submit">
+                <SubmitButton className="secondary-button" style={{ width: "100%" }} type="submit">
                   Continue with Google
-                </button>
+                </SubmitButton>
               </form>
             </div>
 
@@ -77,7 +78,7 @@ export default async function SignupPage({ searchParams }: Props) {
               <label>Work email<input name="email" type="email" autoComplete="email" required/></label>
               <label>Password<input name="password" type="password" autoComplete="new-password" required minLength={8}/></label>
               <label>Confirm password<input name="confirmPassword" type="password" autoComplete="new-password" required minLength={8}/></label>
-              <button type="submit">Create account</button>
+              <SubmitButton type="submit">Create account</SubmitButton>
             </form>
           </>
         )}

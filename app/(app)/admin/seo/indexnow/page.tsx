@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPlatformAdminContext } from "@/lib/admin/authorization";
@@ -100,13 +101,13 @@ export default async function AdminIndexNowPage({ searchParams }: Props) {
           <form action={submitIndexNowFromAdmin} className="indexnow-submit-card">
             <input type="hidden" name="homepageOnly" value="1" />
             <div><strong>Homepage smoke test</strong><p>Submit the production homepage and confirm provider acceptance.</p></div>
-            <button className="admin-primary-action automation-run" type="submit">Submit homepage</button>
+            <SubmitButton className="admin-primary-action automation-run" type="submit">Submit homepage</SubmitButton>
           </form>
 
           <form action={submitIndexNowFromAdmin} className="indexnow-submit-card indexnow-submit-custom">
             <div><strong>Custom URL batch</strong><p>Enter one URL per line or separate URLs with commas. Only <code>https://rythm-os.com</code> URLs are accepted.</p></div>
             <textarea name="urls" rows={7} placeholder={"https://rythm-os.com/\nhttps://rythm-os.com/ai-company-operating-system"} required />
-            <button className="admin-primary-action automation-run" type="submit">Submit URLs</button>
+            <SubmitButton className="admin-primary-action automation-run" type="submit">Submit URLs</SubmitButton>
           </form>
         </div>
       </section>

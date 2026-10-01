@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { FormEvent, useState } from "react";
 
 type Receipt = {
@@ -88,7 +90,7 @@ export default function ConsumerWithdrawalForm() {
         <label>Order / contract reference<input name="contractReference" required maxLength={200} placeholder="Order ID, invoice number, or meeting purchase reference" /></label>
         <label aria-hidden="true" style={{ position: "absolute", left: "-10000px" }}>Website<input name="companyWebsite" tabIndex={-1} autoComplete="off" /></label>
         <p>By selecting the confirmation button below, you state: “I withdraw from the identified distance contract.”</p>
-        <button className="marketing-button" type="submit" disabled={submitting}>{submitting ? "Recording withdrawal…" : "Confirm withdrawal"}</button>
+        <Button className="marketing-button" type="submit" disabled={submitting}>{submitting ? "Recording withdrawal…" : "Confirm withdrawal"}</Button>
       </form>
       {error ? <p role="alert">{error}</p> : null}
       {receipt ? (
@@ -97,7 +99,7 @@ export default function ConsumerWithdrawalForm() {
           <p>Receipt: <strong>{receipt.id}</strong></p>
           <p>Received: {new Date(receipt.submittedAt).toLocaleString()}</p>
           <p>Your statement has been recorded. Save the acknowledgement below as a durable copy.</p>
-          <button className="marketing-button" type="button" onClick={downloadReceipt}>Download acknowledgement</button>
+          <Button className="marketing-button" type="button" onClick={downloadReceipt}>Download acknowledgement</Button>
         </div>
       ) : null}
     </div>

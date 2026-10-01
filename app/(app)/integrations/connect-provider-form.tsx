@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useMemo, useState } from "react";
 import { createIntegration } from "./actions";
 
@@ -64,9 +66,9 @@ export function ConnectProviderForm({ providers }: { providers: Provider[] }) {
             <span>Read-only event metadata access for Company Auto-Bootstrap.</span>
           </div>
         </div>
-        <button className="primary-button" type="submit">
+        <Button className="primary-button" type="submit">
           Connect with Google
-        </button>
+        </Button>
       </form>
     );
   }
@@ -107,9 +109,9 @@ export function ConnectProviderForm({ providers }: { providers: Provider[] }) {
           placeholder="Stored only in Supabase Vault"
         />
       </label>
-      <button className="primary-button" type="submit">
+      <Button className="primary-button" type="submit">
         Create connection
-      </button>
+      </Button>
     </form>
   );
 }

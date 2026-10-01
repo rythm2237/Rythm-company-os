@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import { switchOrganization } from "@/app/organization-context/actions";
 
 type Props = {
@@ -56,7 +57,7 @@ export default function OrganizationSwitcher({
               ))}
             </select>
           </label>
-          <button className="secondary-button" type="submit">Switch</button>
+          <SubmitButton className="secondary-button" type="submit">Switch</SubmitButton>
         </form>
       ) : null}
     </section>

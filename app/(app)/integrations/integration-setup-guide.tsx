@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useEffect, useMemo, useState } from "react";
 import { getIntegrationGuideDefinition } from "./integration-guide-data";
 
@@ -20,12 +22,12 @@ export function IntegrationSetupGuide(){
   useEffect(()=>{try{window.sessionStorage.setItem(STORAGE_KEY,JSON.stringify({providerKey,open,step}));}catch{/* optional */}},[providerKey,open,step]);
   const guide=useMemo(()=>getIntegrationGuideDefinition(providerKey),[providerKey]);const safeStep=Math.min(Math.max(step,0),guide.steps.length-1);
   function showTarget(){const selector=guide.targets[Math.min(safeStep,guide.targets.length-1)];if(!selector)return;const element=document.querySelector<HTMLElement>(selector);if(!element)return;element.scrollIntoView({behavior:"smooth",block:"center"});element.focus?.({preventScroll:true});element.dataset.guideHighlighted="true";window.setTimeout(()=>delete element.dataset.guideHighlighted,2200);}
-  if(!open)return <aside className="integration-guide" aria-label="Integration connection guide"><button type="button" onClick={()=>setOpen(true)} className="integration-guide-launch">Guide this connection</button></aside>;
+  if(!open)return <aside className="integration-guide" aria-label="Integration connection guide"><Button type="button" onClick={()=>setOpen(true)} className="integration-guide-launch">Guide this connection</Button></aside>;
   return <aside className="integration-guide is-open" aria-label="Integration connection guide" aria-live="polite">
-    <div className="integration-guide-head"><div><p>GUIDED CONNECTION · {safeStep+1}/{guide.steps.length}</p><h3>{guide.title}</h3></div><button type="button" aria-label="Close connection guide" onClick={()=>setOpen(false)}>Close</button></div>
+    <div className="integration-guide-head"><div><p>GUIDED CONNECTION · {safeStep+1}/{guide.steps.length}</p><h3>{guide.title}</h3></div><Button type="button" aria-label="Close connection guide" onClick={()=>setOpen(false)}>Close</Button></div>
     <p className="integration-guide-intro">{guide.intro}</p><div className="integration-guide-progress" role="progressbar" aria-valuemin={1} aria-valuemax={guide.steps.length} aria-valuenow={safeStep+1}><span style={{width:`${((safeStep+1)/guide.steps.length)*100}%`}}/></div>
     <div className="integration-guide-step"><strong>Step {safeStep+1}</strong><span>{guide.steps[safeStep]}</span></div>
-    <div className="integration-guide-actions"><button type="button" onClick={showTarget} className="integration-guide-primary">Show me where</button>{safeStep>0?<button type="button" onClick={()=>setStep(value=>Math.max(0,value-1))}>Back</button>:null}<button type="button" onClick={()=>setStep(value=>Math.min(guide.steps.length-1,value+1))} disabled={safeStep===guide.steps.length-1}>Next</button></div>
+    <div className="integration-guide-actions"><Button type="button" onClick={showTarget} className="integration-guide-primary">Show me where</Button>{safeStep>0?<Button type="button" onClick={()=>setStep(value=>Math.max(0,value-1))}>Back</Button>:null}<Button type="button" onClick={()=>setStep(value=>Math.min(guide.steps.length-1,value+1))} disabled={safeStep===guide.steps.length-1}>Next</Button></div>
     <div className="integration-guide-note"><strong>Security checkpoint</strong><span>{guide.note}</span></div><p className="integration-guide-persistence">Guide me and Do it with AI use the same canonical provider setup plan for supported AI providers.</p>
   </aside>;
 }

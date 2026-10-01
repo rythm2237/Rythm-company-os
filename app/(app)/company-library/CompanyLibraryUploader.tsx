@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createAuthBrowserClient } from "@/lib/supabase/auth-browser";
@@ -86,7 +88,7 @@ export default function CompanyLibraryUploader({ organizationId }: { organizatio
       <p style={{ opacity: .72 }}>Private source files remain in the company&apos;s isolated Supabase Storage. Extracted content is tenant-scoped and never becomes global Agent knowledge.</p>
       {message ? <p className="form-success" role="status">{message}</p> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
-      <button type="submit" disabled={pending}>{pending ? "Uploading and indexing…" : "Add to Company Library"}</button>
+      <Button type="submit" disabled={pending}>{pending ? "Uploading and indexing…" : "Add to Company Library"}</Button>
     </form>
   );
 }

@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import CompanyLogoForm from "@/components/company-branding/CompanyLogoForm";
 import { revalidatePath } from "next/cache";
@@ -109,7 +110,7 @@ export default async function CompanyProfilePage({ searchParams }: Props) {
         <label><span>Address line 2</span><input name="addressLine2" defaultValue={address.line2 ?? ""} /></label>
         <label><span>City</span><input name="city" defaultValue={address.city ?? ""} /></label>
         <label><span>Postal code</span><input name="postalCode" defaultValue={address.postal_code ?? ""} /></label>
-        <div style={{gridColumn:"1 / -1",display:"flex",gap:10,flexWrap:"wrap"}}><button className="primary-button" type="submit">Save company profile</button><Link className="secondary-button" href="/company/launch">Review launch readiness</Link></div>
+        <div style={{gridColumn:"1 / -1",display:"flex",gap:10,flexWrap:"wrap"}}><SubmitButton className="primary-button" type="submit">Save company profile</SubmitButton><Link className="secondary-button" href="/company/launch">Review launch readiness</Link></div>
       </form>
     </section>
 

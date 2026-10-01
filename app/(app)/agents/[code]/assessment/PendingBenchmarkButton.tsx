@@ -1,14 +1,16 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useFormStatus } from "react-dom";
 
 export default function PendingBenchmarkButton({ label = "Run benchmark" }: { label?: string }) {
   const { pending } = useFormStatus();
 
   return <div aria-live="polite">
-    <button type="submit" disabled={pending} aria-disabled={pending} style={{opacity:pending?.72:1,cursor:pending?"wait":"pointer",width:"100%"}}>
+    <Button type="submit" disabled={pending} aria-disabled={pending} style={{opacity:pending?.72:1,cursor:pending?"wait":"pointer",width:"100%"}}>
       {pending ? "Benchmark running…" : label}
-    </button>
+    </Button>
     {pending ? <div style={{marginTop:12}}>
       <div style={{height:7,borderRadius:999,background:"#e7ebf4",overflow:"hidden",position:"relative"}}>
         <div className="assessment-progress-bar" style={{position:"absolute",insetBlock:0,width:"42%",borderRadius:999,background:"#5f6ff2"}} />

@@ -60,7 +60,7 @@ async function ensureApprovalGate(context: AutopilotContext, action: ActionRow) 
     .eq("project_id", action.project_id)
     .eq("subject_type", "action_item")
     .eq("subject_id", action.id)
-    .in("status", ["pending", "approved"])
+    .in("status", ["pending", "approved", "rejected"])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -94,7 +94,7 @@ export async function runNextInternalProjectAction(context: AutopilotContext, pr
   const approval = await ensureApprovalGate(context, action);
   if (approval) {
     if (action.status !== "blocked") await context.supabase.from("action_items").update({ status: "blocked" }).eq("id", action.id);
-    return { status: "approval_required" as const, actionCode: action.action_code, approvalId: approval.id };
+    return { status: approval.status === "rejected" ? "approval_rejected" as const : "approval_required" as const, actionCode: action.action_code, approvalId: approval.id };
   }
 
   if (!action.assigned_agent_id) throw new Error("Ready action has no assigned Agent.");

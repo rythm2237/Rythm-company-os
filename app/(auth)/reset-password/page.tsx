@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { updatePassword } from "./actions";
@@ -31,7 +32,7 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
         <form action={updatePassword} className="auth-form">
           <label>New password<input name="password" type="password" autoComplete="new-password" required minLength={8} /></label>
           <label>Confirm new password<input name="confirmPassword" type="password" autoComplete="new-password" required minLength={8} /></label>
-          <button type="submit">Update password</button>
+          <SubmitButton type="submit">Update password</SubmitButton>
         </form>
 
         <p className="security-note">After the password is updated, this recovery session is signed out and you must sign in again.</p>

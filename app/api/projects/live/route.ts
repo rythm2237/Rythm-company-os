@@ -6,6 +6,8 @@ import { getProjectProgressSnapshot } from "@/lib/projects/project-progress";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+import { resolutionReplay } from "@/lib/ui/interaction-state";
+
 type Resolution = "approved" | "rejected";
 
 async function projectContext(projectId:string){
@@ -21,21 +23,24 @@ export async function GET(request:Request){
   if(!projectId)return NextResponse.json({ok:false,error:"projectId is required."},{status:400});
   const context=await projectContext(projectId);if(!context.ok)return context.response;
   const {auth,project}=context;
-  const [executionResult,tasksResult,approvalsResult,activityResult,agentsResult,progressSnapshot]=await Promise.all([
+  const [executionResult,tasksResult,approvalsResult,activityResult,agentsResult,progressSnapshot,historyResult]=await Promise.all([
     auth.supabase.from("project_executions").select("id,execution_no,status,started_at,last_heartbeat_at,updated_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("execution_no",{ascending:false}).limit(1).maybeSingle(),
     auth.supabase.from("project_task_runs").select("id,execution_id,task_key,title,status,priority,assigned_agent_id,waiting_on_approval_id,outcome_status,implementation_status,verification_status,next_required_action,started_at,completed_at,updated_at,agents(agent_code,display_name,name)").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("priority").order("created_at"),
     auth.supabase.from("approval_requests").select("id,subject_type,subject_id,title,summary,risk_level,status,conditions,created_at,expires_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("status","pending").order("created_at",{ascending:false}),
     auth.supabase.from("project_activity_events").select("id,event_type,headline,detail,importance,agent_id,created_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("created_at",{ascending:false}).limit(12),
     auth.supabase.from("project_agents").select("agent_id,status,assignment_role,agents(agent_code,display_name,name,role_title)").eq("project_id",projectId).eq("organization_id",auth.organizationId),
     getProjectProgressSnapshot(auth.supabase,auth.organizationId,{id:project.id,status:project.status,updated_at:project.updated_at}),
+    auth.supabase.from("approval_requests").select("id,subject_type,subject_id,title,summary,risk_level,status,created_at,expires_at,resolved_at,response_note,approver_user_id,requested_by_agent_id").eq("project_id",projectId).eq("organization_id",auth.organizationId).in("status",["approved","rejected"]).order("resolved_at",{ascending:false}).limit(30),
   ]);
+  const readError=[executionResult,tasksResult,approvalsResult,activityResult,agentsResult,historyResult].find(result=>result.error)?.error;
+  if(readError)return NextResponse.json({ok:false,error:"Project state could not be loaded. Try again."},{status:503});
   const allTasks=tasksResult.data??[];
   const latestExecutionId=executionResult.data?.id;
   const tasks=latestExecutionId?allTasks.filter((task:any)=>task.execution_id===latestExecutionId):allTasks;
   const approvals=approvalsResult.data??[];
   const activity=activityResult.data??[];
   const counts={running:progressSnapshot.runningTasks,queued:progressSnapshot.queuedTasks,waitingApproval:progressSnapshot.awaitingApproval,waitingOther:progressSnapshot.blockedTasks,completed:progressSnapshot.completedTasks,failed:progressSnapshot.failedTasks,total:progressSnapshot.totalTasks};
-  return NextResponse.json({ok:true,project:{...project,progress_percent:progressSnapshot.overallProjectProgress,lifecycle_state:progressSnapshot.lifecycleState??project.lifecycle_state},progressSnapshot,execution:executionResult.data??null,counts,tasks:tasks.slice(0,24),approvals,activity,agents:agentsResult.data??[],serverTime:new Date().toISOString()});
+  return NextResponse.json({ok:true,project:{...project,progress_percent:progressSnapshot.overallProjectProgress,lifecycle_state:progressSnapshot.lifecycleState??project.lifecycle_state},progressSnapshot,execution:executionResult.data??null,counts,tasks:tasks.slice(0,24),approvals,approvalHistory:historyResult.data??[],activity,agents:agentsResult.data??[],serverTime:new Date().toISOString()});
 }
 
 export async function POST(request:Request){
@@ -54,21 +59,22 @@ export async function POST(request:Request){
   const approvalResult=await auth.supabase.from("approval_requests").select("id,subject_type,subject_id,title,risk_level,status,expires_at").eq("id",approvalId).eq("project_id",projectId).eq("organization_id",auth.organizationId).maybeSingle();
   const approval=approvalResult.data;
   if(!approval)return NextResponse.json({ok:false,error:"Approval request not found."},{status:404});
-  if(approval.status!=="pending")return NextResponse.json({ok:false,error:"This approval is no longer pending."},{status:409});
+  const replay=resolutionReplay(approval.status,resolution);
+  if(replay==="replay")return NextResponse.json({ok:true,resolution,replayed:true});
+  if(replay==="conflict")return NextResponse.json({ok:false,error:`This decision is already ${approval.status}. Reload its history before choosing another outcome.`},{status:409});
   const now=new Date();
   if(approval.expires_at&&new Date(approval.expires_at)<=now)return NextResponse.json({ok:false,error:"This approval request has expired."},{status:409});
   const resolvedAt=now.toISOString();
 
   let taskStatus:string|null=null;
-  if(approval.subject_type==="project_task"){
-    const taskResult=await auth.supabase.from("project_task_runs").select("id,status").eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("waiting_on_approval_id",approvalId).maybeSingle();
-    if(taskResult.error)return NextResponse.json({ok:false,error:`Task lookup failed: ${taskResult.error.message}`},{status:409});
-    const task=taskResult.data;
-    if(!task||task.status!=="waiting_for_approval")return NextResponse.json({ok:false,error:"The approval is no longer linked to an active project task. Refresh the page and try again."},{status:409});
-  }
 
   const resolved=await auth.supabase.from("approval_requests").update({status:resolution,response_note:responseNote,resolved_at:resolvedAt,approver_user_id:auth.user.id}).eq("id",approvalId).eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("status","pending").select("id,status").maybeSingle();
-  if(resolved.error||!resolved.data)return NextResponse.json({ok:false,error:resolved.error?.message??"Approval could not be resolved."},{status:409});
+  if(resolved.error||!resolved.data){
+    // A concurrent identical request may have won the compare-and-set.
+    const current=await auth.supabase.from("approval_requests").select("status").eq("id",approvalId).eq("project_id",projectId).eq("organization_id",auth.organizationId).maybeSingle();
+    if(current.data?.status===resolution)return NextResponse.json({ok:true,resolution,replayed:true});
+    return NextResponse.json({ok:false,error:"The decision could not be updated. Check its current status and try again."},{status:409});
+  }
   if(approval.subject_type==="project_task")taskStatus=resolution==="approved"?"queued":"blocked";
 
   await Promise.all([

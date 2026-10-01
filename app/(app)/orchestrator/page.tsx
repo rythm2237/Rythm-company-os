@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -256,7 +257,7 @@ export default async function ExecutiveOrchestratorPage({ searchParams }: PagePr
               Agenda generated from priority queue
               <textarea name="agenda" defaultValue={defaultAgenda} rows={10} required style={{ width: "100%", resize: "vertical", padding: 12, border: "1px solid #cfd6e2", borderRadius: 10, font: "inherit" }} />
             </label>
-            <button type="submit">Create governed executive review</button>
+            <SubmitButton type="submit">Create governed executive review</SubmitButton>
             <p className="security-note">This creates a Draft meeting only. The Human CEO must explicitly start and complete it.</p>
           </form>
         </article>

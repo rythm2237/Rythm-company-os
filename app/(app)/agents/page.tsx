@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { requireOrganizationContext } from "@/lib/auth/organization-context";
 import { AgentPortrait } from "@/app/components/agent-portrait";
@@ -39,7 +40,7 @@ export default async function AgentDirectory({searchParams}:{searchParams:Promis
     <section className={styles.directoryTools} aria-label="Agent directory tools">
       <form className={styles.searchForm} action="/agents" method="get">
         <label htmlFor="agent-search">Search agents</label>
-        <div className={styles.searchRow}><input id="agent-search" name="q" defaultValue={query.q??""} placeholder="Search by name, position, department or code"/><button type="submit">Search</button>{search?<Link href="/agents" className={styles.clearSearch}>Clear</Link>:null}</div>
+        <div className={styles.searchRow}><input id="agent-search" name="q" defaultValue={query.q??""} placeholder="Search by name, position, department or code"/><SubmitButton type="submit">Search</SubmitButton>{search?<Link href="/agents" className={styles.clearSearch}>Clear</Link>:null}</div>
       </form>
       <span className={styles.resultCount}>{agents.length} of {allAgents.length} agents</span>
     </section>

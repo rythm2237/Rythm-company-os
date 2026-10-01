@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useEffect, useState } from "react";
 
 const MEASUREMENT_ID = "G-R0VW9SY7Z9";
@@ -83,7 +85,7 @@ export default function GoogleAnalyticsConsent() {
           RYTHM uses Google Analytics to understand website traffic and improve the product. Analytics runs only after you consent.
         </p>
         <div style={{ display: "flex", gap: 10 }}>
-          <button
+          <Button
             type="button"
             onClick={() => {
               writeConsent("denied");
@@ -92,8 +94,8 @@ export default function GoogleAnalyticsConsent() {
             style={{ border: "1px solid rgba(148,163,184,.45)", borderRadius: 10, padding: "9px 14px", background: "transparent", color: "#f8fafc", cursor: "pointer" }}
           >
             Decline
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => {
               writeConsent("granted");
@@ -103,7 +105,7 @@ export default function GoogleAnalyticsConsent() {
             style={{ border: 0, borderRadius: 10, padding: "9px 14px", background: "#f8fafc", color: "#0f172a", fontWeight: 700, cursor: "pointer" }}
           >
             Accept analytics
-          </button>
+          </Button>
         </div>
       </div>
     </aside>

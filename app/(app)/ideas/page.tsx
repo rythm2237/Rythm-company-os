@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -254,7 +255,7 @@ export default async function IdeaInboxPage({ searchParams }: Props) {
                       ) : !terminal ? (
                         <form action={routeToMeeting}>
                           <input type="hidden" name="intakeId" value={item.id} />
-                          <button type="submit">Route to governed meeting</button>
+                          <SubmitButton type="submit">Route to governed meeting</SubmitButton>
                         </form>
                       ) : null}
 
@@ -263,7 +264,7 @@ export default async function IdeaInboxPage({ searchParams }: Props) {
                           <input type="hidden" name="intakeId" value={item.id} />
                           <label style={{ margin: 0 }}>Status<select name="status" defaultValue={item.status}>{statusOptions.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}</select></label>
                           <label style={{ margin: 0 }}>Revisit trigger<input name="revisitTrigger" defaultValue={item.revisit_trigger ?? ""} placeholder="Required when deferred" /></label>
-                          <button className="secondary-button" type="submit">Update</button>
+                          <SubmitButton className="secondary-button" type="submit">Update</SubmitButton>
                         </form>
                       ) : null}
                     </div>
@@ -292,7 +293,7 @@ export default async function IdeaInboxPage({ searchParams }: Props) {
             <label>Priority<select name="priority" defaultValue="3"><option value="1">1 · Highest</option><option value="2">2</option><option value="3">3 · Normal</option><option value="4">4</option><option value="5">5 · Lowest</option></select></label>
             <label>Risk<select name="riskLevel" defaultValue="low"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
             <label>Revisit trigger<input name="revisitTrigger" placeholder="Optional unless later deferred" /></label>
-            <button type="submit">Capture governed Idea / Issue</button>
+            <SubmitButton type="submit">Capture governed Idea / Issue</SubmitButton>
           </form>
         </article>
       </section>

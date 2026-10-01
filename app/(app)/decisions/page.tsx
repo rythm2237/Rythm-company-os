@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -291,7 +292,7 @@ export default async function DecisionEnginePage({ searchParams }: PageProps) {
             {["draft", "review"].includes(selected.status) ? <form action={resolveDecision} className="auth-form" style={{ marginTop: 20 }}>
               <input type="hidden" name="decisionId" value={selected.id} />
               <label>CEO resolution rationale<textarea name="resolutionRationale" minLength={3} required rows={5} style={{ width: "100%", resize: "vertical", padding: 12, border: "1px solid #cfd6e2", borderRadius: 10, font: "inherit" }} /></label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}><button name="resolution" value="approved">Approve decision</button><button name="resolution" value="rejected" style={{ background: "#8f2335" }}>Reject decision</button></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}><SubmitButton name="resolution" value="approved">Approve decision</SubmitButton><SubmitButton name="resolution" value="rejected" style={{ background: "#8f2335" }}>Reject decision</SubmitButton></div>
             </form> : <div style={{ marginTop: 18, padding: 14, borderRadius: 12, background: "#fff" }}><p className="label">Final rationale</p><p style={{ color: "#596579", lineHeight: 1.6 }}>{selected.rationale ?? "No rationale recorded."}</p></div>}
 
             <div style={{ marginTop: 22 }}><p className="label">Audit trail</p><div className="compact-list">{audit.length ? audit.map((event) => <div key={event.id}><strong>{event.event_type}</strong><span>{event.actor_type} · {event.risk_level} risk · {formatDate(event.created_at)}</span></div>) : <p className="empty-state">No audit events recorded.</p>}</div></div>
@@ -305,7 +306,7 @@ export default async function DecisionEnginePage({ searchParams }: PageProps) {
             <label>Recommendation<input name="recommendation" /></label>
             <label>Initial rationale<textarea name="rationale" rows={3} style={{ width: "100%", resize: "vertical", padding: 12, border: "1px solid #cfd6e2", borderRadius: 10, font: "inherit" }} /></label>
             <label>Risk level<select name="riskLevel" defaultValue="medium"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
-            <button type="submit">Create governed decision</button>
+            <SubmitButton type="submit">Create governed decision</SubmitButton>
           </form>
         </div>
       </section>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -231,8 +233,8 @@ export function ConnectionFlightDeck({
             {currentDomain ? <span className="flight-deck-domain">{currentDomain}</span> : null}
           </div>
           <div className="flight-deck-window-controls">
-            <button type="button" onClick={() => setFull(value => !value)} aria-label={full?"Exit expanded mode":"Expand Flight Deck"}>{full?"↙":"↗"}</button>
-            <button type="button" onClick={terminal ? exitCompletedFlightDeck : minimizeFlightDeck} title={terminal?"Return to Integrations":"The agent continues unless paused or stopped"}>{terminal?"Done":"Minimize"}</button>
+            <Button type="button" onClick={() => setFull(value => !value)} aria-label={full?"Exit expanded mode":"Expand Flight Deck"}>{full?"↙":"↗"}</Button>
+            <Button type="button" onClick={terminal ? exitCompletedFlightDeck : minimizeFlightDeck} title={terminal?"Return to Integrations":"The agent continues unless paused or stopped"}>{terminal?"Done":"Minimize"}</Button>
           </div>
         </header>
 
@@ -253,7 +255,7 @@ export function ConnectionFlightDeck({
                 <span>{completionVerificationText}</span>
                 {discoveryEvidence ? <span>{discoveryEvidence}</span> : null}
                 <span>The secure cloud browser session has been closed. No reconnect or further browser action is required.</span>
-                <button type="button" className="flight-deck-primary" onClick={exitCompletedFlightDeck}>Done · Back to Integrations</button>
+                <Button type="button" className="flight-deck-primary" onClick={exitCompletedFlightDeck}>Done · Back to Integrations</Button>
               </div> : viewer ? <>
                 <iframe src={viewer} title={`${providerName} live secure browser`} referrerPolicy="no-referrer" allow="clipboard-read; clipboard-write" />
                 {!humanInteractive && !terminal ? <div className="flight-deck-observe-shield"><span><i/>Live · Agent operating</span><small>When a Human-only step appears, RYTHM pauses and hands the browser to you automatically.</small></div> : null}
@@ -275,7 +277,7 @@ export function ConnectionFlightDeck({
               {completed ? <div className="flight-deck-agent-intent"><i/>Verification evidence recorded. Secure browser closed.</div> : live.requiresUserAction ? <div className="flight-deck-human-callout"><i/>{autoHuman ? "Control automatically handed to you" : "Human decision boundary reached"}</div> : <div className="flight-deck-agent-intent"><i/>Agent intent: advance only after verifiable provider evidence.</div>}
             </section>
 
-            {noResources ? <section className="flight-deck-provider-error"><div className="flight-deck-section-kicker"><span>RESOURCE RECOVERY</span><b>ACTION</b></div><h3>No accessible provider resource was found</h3><p>The account is authorized, but it does not expose the required resource to RYTHM. Restart the connection and choose an account that owns or has access to the required property.</p><form action={restartCustomerConnectionAgent}><input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<button className="flight-deck-primary" type="submit">Restart & choose another account</button></form></section> : null}
+            {noResources ? <section className="flight-deck-provider-error"><div className="flight-deck-section-kicker"><span>RESOURCE RECOVERY</span><b>ACTION</b></div><h3>No accessible provider resource was found</h3><p>The account is authorized, but it does not expose the required resource to RYTHM. Restart the connection and choose an account that owns or has access to the required property.</p><form action={restartCustomerConnectionAgent}><input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<Button className="flight-deck-primary" type="submit">Restart & choose another account</Button></form></section> : null}
 
             <section className="flight-deck-controls-card">
               <div className="flight-deck-section-kicker"><span>CONTROL PLANE</span><b>{completed?"CLOSED":humanInteractive?"HUMAN":live.controlMode.toUpperCase()}</b></div>
@@ -283,24 +285,24 @@ export function ConnectionFlightDeck({
               <div className="flight-deck-controls">
                 {!terminal && viewer && !humanInteractive && !providerError ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="take_control"/>
-                  <button className="flight-deck-primary" type="submit">Take Control</button>
+                  <Button className="flight-deck-primary" type="submit">Take Control</Button>
                 </form> : null}
                 {!terminal && live.controlMode === "human" ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="return_control"/>
-                  <button className="flight-deck-primary" type="submit">Continue with AI</button>
+                  <Button className="flight-deck-primary" type="submit">Continue with AI</Button>
                 </form> : null}
                 {!terminal && live.sessionStatus !== "paused" ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="pause"/>
-                  <button type="submit">Pause Agent</button>
+                  <Button type="submit">Pause Agent</Button>
                 </form> : null}
                 {!terminal && live.sessionStatus === "paused" ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="resume"/>
-                  <button className="flight-deck-primary" type="submit">Resume Agent</button>
+                  <Button className="flight-deck-primary" type="submit">Resume Agent</Button>
                 </form> : null}
-                {!terminal ? <button type="button" onClick={minimizeFlightDeck}>Continue in Background</button> : null}
+                {!terminal ? <Button type="button" onClick={minimizeFlightDeck}>Continue in Background</Button> : null}
                 {!terminal ? <form action={controlCustomerConnectionAgent}>
                   <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}<input type="hidden" name="command" value="stop"/>
-                  <button className="is-danger" type="submit">Stop</button>
+                  <Button className="is-danger" type="submit">Stop</Button>
                 </form> : null}
               </div>
             </section>
@@ -325,7 +327,7 @@ export function ConnectionFlightDeck({
         <footer className="flight-deck-footer">
           <form action={askCustomerConnectionAgent} className="flight-deck-ask">
             <input type="hidden" name="integrationId" value={integrationId}/><input type="hidden" name="sessionId" value={live.id}/>{projectId?<input type="hidden" name="projectId" value={projectId}/>:null}
-            <span>ASK CONNECTION AGENT</span><input name="question" maxLength={300} placeholder={completed?"Ask about this completed connection…":"What are you doing right now?"}/><button type="submit">Ask</button>
+            <span>ASK CONNECTION AGENT</span><input name="question" maxLength={300} placeholder={completed?"Ask about this completed connection…":"What are you doing right now?"}/><Button type="submit">Ask</Button>
           </form>
           <div className="flight-deck-background-note"><i/>{completed?"Mission complete. Verification evidence has been recorded and the secure browser is closed.":"You can leave this page. Durable execution continues until RYTHM needs you, completes, pauses, or is stopped."}</div>
           {pollError ? <div className="flight-deck-poll-error">{pollError}</div> : null}
@@ -336,11 +338,11 @@ export function ConnectionFlightDeck({
   ) : null;
 
   return <>
-    <button type="button" className="flight-deck-launch" onClick={() => setOpen(true)}>
+    <Button type="button" className="flight-deck-launch" onClick={() => setOpen(true)}>
       <span className="flight-deck-launch-orb" aria-hidden="true"><i/><i/><i/></span>
       <span><strong>Open Connection Flight Deck</strong><small>{statusText(live)}</small></span>
       <b aria-hidden="true">↗</b>
-    </button>
+    </Button>
     {deck}
   </>;
 }

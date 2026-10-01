@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./boardroom.module.css";
@@ -111,7 +113,7 @@ export default function SessionPreparationForm({meetingId,agents,action}:Props){
       <label>AI budget cap (USD)<input name="budgetCapUsd" type="number" min="0" max="10" step="0.1" value={draft.budgetCapUsd} onChange={e=>setDraft(d=>({...d,budgetCapUsd:e.target.value}))}/></label>
     </div>
     {validation?<p className={styles.inlineError} role="alert">{validation}</p>:null}
-    <button disabled={agents.length===0}>Prepare governed Agent session</button>
+    <Button type="submit" disabled={agents.length===0}>Prepare governed Agent session</Button>
     <p className="security-note">Only enabled Agents may be selected. B-001 is required for synthesis. Preparing a session authorizes internal model analysis only; it does not authorize browsing, external actions, deployment, messaging, or transactions.</p>
   </form>;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -44,22 +46,22 @@ export default function ActiveWorkspaceGuide() {
   if (pathname === "/ai" || pathname.startsWith("/ai/")) return null;
   if (pathname === "/integrations" || pathname.startsWith("/integrations/")) return null;
   if (!enabled) {
-    return <button type="button" onClick={toggleGuide} style={{position:"fixed",right:20,bottom:20,zIndex:55,border:0,borderRadius:999,padding:"12px 16px",background:"#111827",color:"white",fontWeight:800,boxShadow:"0 16px 40px rgba(15,23,42,.24)"}}>Guide me</button>;
+    return <Button type="button" onClick={toggleGuide} style={{position:"fixed",right:20,bottom:20,zIndex:55,border:0,borderRadius:999,padding:"12px 16px",background:"#111827",color:"white",fontWeight:800,boxShadow:"0 16px 40px rgba(15,23,42,.24)"}}>Guide me</Button>;
   }
 
   return <aside aria-label="Active company setup guide" style={{position:"fixed",right:20,bottom:20,zIndex:55,width:open?"min(380px,calc(100vw - 40px))":"auto",border:"1px solid #d9e0eb",borderRadius:18,background:"rgba(255,255,255,.98)",color:"#111827",boxShadow:"0 22px 55px rgba(15,23,42,.22)",padding:open?18:0}}>
     {open ? <>
       <div style={{display:"flex",justifyContent:"space-between",gap:14,alignItems:"start"}}>
         <div><p style={{margin:0,color:"#5367ef",fontWeight:900,fontSize:12,letterSpacing:1.2}}>ACTIVE GUIDE · {index+1}/{STEPS.length}</p><h3 style={{margin:"6px 0 8px"}}>{current.title}</h3></div>
-        <button type="button" onClick={()=>setOpen(false)} aria-label="Minimize guide" style={{border:"1px solid #d9e0eb",background:"#f8fafc",borderRadius:10,padding:"8px 10px",color:"#111827"}}>Hide</button>
+        <Button type="button" onClick={()=>setOpen(false)} aria-label="Minimize guide" style={{border:"1px solid #d9e0eb",background:"#f8fafc",borderRadius:10,padding:"8px 10px",color:"#111827"}}>Hide</Button>
       </div>
       <div style={{height:7,borderRadius:999,background:"#e8ecf4",overflow:"hidden",margin:"8px 0 14px"}}><div style={{height:"100%",width:`${((index+1)/STEPS.length)*100}%`,background:"#5367ef"}} /></div>
       <p style={{margin:"0 0 14px",lineHeight:1.55,color:"#4b5563"}}>{current.copy}</p>
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
         <Link href={current.href} style={{textDecoration:"none",borderRadius:10,padding:"10px 12px",background:"#111827",color:"white",fontWeight:800}}>Do this now</Link>
         {next.href !== current.href ? <Link href={next.href} style={{textDecoration:"none",borderRadius:10,padding:"10px 12px",background:"#eef2ff",color:"#29378f",fontWeight:800}}>Next: {next.title}</Link> : null}
-        <button type="button" onClick={toggleGuide} style={{border:"1px solid #d9e0eb",borderRadius:10,padding:"10px 12px",background:"white",color:"#4b5563",fontWeight:700}}>Turn guide off</button>
+        <Button type="button" onClick={toggleGuide} style={{border:"1px solid #d9e0eb",borderRadius:10,padding:"10px 12px",background:"white",color:"#4b5563",fontWeight:700}}>Turn guide off</Button>
       </div>
-    </> : <button type="button" onClick={()=>setOpen(true)} style={{border:0,borderRadius:999,padding:"12px 16px",background:"#111827",color:"white",fontWeight:800}}>Continue guide</button>}
+    </> : <Button type="button" onClick={()=>setOpen(true)} style={{border:0,borderRadius:999,padding:"12px 16px",background:"#111827",color:"white",fontWeight:800}}>Continue guide</Button>}
   </aside>;
 }

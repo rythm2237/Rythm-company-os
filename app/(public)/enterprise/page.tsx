@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicPageStructuredData from "@/components/brand/PublicPageStructuredData";
@@ -89,7 +90,7 @@ export default async function EnterprisePage({ searchParams }: Props) {
               <label>Primary use case<select name="useCase" required defaultValue=""><option value="" disabled>Select use case</option><option value="operations">Operations</option><option value="customer_support">Customer support</option><option value="sales_marketing">Sales &amp; marketing</option><option value="research_analysis">Research &amp; analysis</option><option value="software_delivery">Software delivery</option><option value="other">Other governed AI workforce use case</option></select></label>
               <label style={{ display: "flex", gap: 10, alignItems: "flex-start" }}><input name="consent" type="checkbox" value="yes" required style={{ width: "auto", marginTop: 3 }} /><span>I agree that RYTHM may store these details for Enterprise Beta evaluation and contact me about this inquiry. Referral attribution is reported separately without my identity.</span></label>
               {intakeError ? <p className="form-error" role="alert">The intake could not be submitted. Check all required fields and try again.</p> : null}
-              <button type="submit">Submit Enterprise intake</button>
+              <SubmitButton type="submit">Submit Enterprise intake</SubmitButton>
             </form>
           )}
           <p className="security-note">A qualified attribution outcome is recorded only when server-side criteria indicate an active Enterprise deployment: a non-consumer work email, 50+ employee company, deployment horizon within six months, and decision-maker or executive-sponsor responsibility.</p>

@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
@@ -151,7 +152,7 @@ export default async function CommandCenterPage({ searchParams }: CommandCenterP
           <p className="eyebrow">ACCESS DENIED</p>
           <h1 className="auth-title">Owner authorization required</h1>
           <p className="auth-copy">This account is authenticated but is not registered as an Owner.</p>
-          <form action={logout}><button type="submit">Sign out</button></form>
+          <form action={logout}><SubmitButton type="submit">Sign out</SubmitButton></form>
         </section>
       </main>
     );
@@ -262,7 +263,7 @@ export default async function CommandCenterPage({ searchParams }: CommandCenterP
             <label>Confidence<input name="confidence" type="number" min="0" max="1" step="0.01" defaultValue="1" required /></label>
             <label>Status<select name="status" defaultValue="draft"><option value="draft">Draft</option><option value="review">Review</option><option value="approved">Approved</option></select></label>
             <label>Supersedes record ID (optional)<input name="supersedesId" type="text" /></label>
-            <button type="submit">Create governed memory</button>
+            <SubmitButton type="submit">Create governed memory</SubmitButton>
           </form>
         </div>
       </section>

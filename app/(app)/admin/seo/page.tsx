@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SeoVisualAnalytics } from "@/components/admin/SeoVisualAnalytics";
@@ -32,7 +33,7 @@ export default async function AdminSeoPage({ searchParams }: Props) {
     <section className="admin-hero admin-hero-compact"><div><p className="admin-kicker">ADMIN STUDIO / SEO</p><h1>SEO Intelligence</h1><p>Search performance, indexing evidence, technical health and AI analysis in one operational view.</p></div><div className="admin-actions-row"><Link className="admin-secondary-action" href="/admin/seo/indexnow">IndexNow</Link><Link className="admin-secondary-action" href="/admin">Admin Studio</Link></div></section>
     {query.message ? <p className="form-success" role="status">{query.message}</p> : null}{query.error ? <p className="form-error" role="alert">{query.error}</p> : null}{auditError ? <p className="form-error" role="alert">SEO history could not be loaded: {auditError.message}</p> : null}
 
-    <section className="admin-panel"><div className="admin-panel-heading"><div><p className="admin-kicker">LIVE SNAPSHOT</p><h2>Refresh SEO intelligence</h2></div><span>GSC + Bing + technical checks</span></div><form action={runSeoMonitoringFromAdmin}><button className="admin-primary-action automation-run" type="submit">Run SEO monitoring</button></form></section>
+    <section className="admin-panel"><div className="admin-panel-heading"><div><p className="admin-kicker">LIVE SNAPSHOT</p><h2>Refresh SEO intelligence</h2></div><span>GSC + Bing + technical checks</span></div><form action={runSeoMonitoringFromAdmin}><SubmitButton className="admin-primary-action automation-run" type="submit">Run SEO monitoring</SubmitButton></form></section>
 
     <section className="admin-metrics" aria-label="SEO health"><article><span>Technical health</span><strong>{payload.score ?? "—"}{payload.score != null ? "/100" : ""}</strong><small>{payload.checked_at ? new Date(payload.checked_at).toLocaleString("en-GB", { timeZone: "Europe/Budapest" }) : "No run yet"}</small></article><article><span>Checks passed</span><strong>{payload.counts?.pass ?? "—"}</strong><small>{checks.length ? `${checks.length} total checks` : "Awaiting run"}</small></article><article><span>Open findings</span><strong>{findings.length || 0}</strong><small>{findings.filter(f => ["critical","high"].includes(f.severity)).length} high/critical</small></article><article><span>AI analysis</span><strong>{payload.ai_reasoning ? "Ready" : payload.checked_at ? "Fallback" : "—"}</strong><small>{payload.ai_model ?? "Governed gateway"}</small></article></section>
 

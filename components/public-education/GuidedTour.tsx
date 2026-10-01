@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import RythmBrandMark from "@/components/brand/RythmBrandMark";
@@ -322,7 +324,7 @@ export default function GuidedTour() {
         tabIndex={-1}
         style={dialogPosition}
       >
-        <button className="marketing-guide-close" type="button" onClick={close} aria-label={copy.ui.close}>×</button>
+        <Button className="marketing-guide-close" type="button" onClick={close} aria-label={copy.ui.close}>×</Button>
 
         {tourState === "prompt" ? (
           <>
@@ -331,14 +333,14 @@ export default function GuidedTour() {
             <h2 id="marketing-guide-title">{copy.ui.promptTitle}</h2>
             <p>{copy.ui.promptDescription}</p>
             {suggestedLocale ? (
-              <button className="education-language-suggestion" type="button" onClick={() => void acceptSuggestedLocale()}>
+              <Button className="education-language-suggestion" type="button" onClick={() =>acceptSuggestedLocale()}>
                 {formatTemplate(copy.ui.detectedLanguage, { language: getSuggestedLanguageLabel(suggestedLocale) })}
-              </button>
+              </Button>
             ) : null}
             <LanguageSelector />
             <div className="marketing-guide-actions">
-              <button className="marketing-secondary-button" type="button" onClick={dismissTour}>{copy.ui.notNow}</button>
-              <button className="marketing-button" type="button" onClick={startTour}>{copy.ui.startTour} <span aria-hidden="true">{nextArrow}</span></button>
+              <Button className="marketing-secondary-button" type="button" onClick={dismissTour}>{copy.ui.notNow}</Button>
+              <Button className="marketing-button" type="button" onClick={startTour}>{copy.ui.startTour} <span aria-hidden="true">{nextArrow}</span></Button>
             </div>
           </>
         ) : null}
@@ -367,19 +369,19 @@ export default function GuidedTour() {
             <h2 id="marketing-guide-title">{activeCopy.title}</h2>
             <p>{activeCopy.description}</p>
             <div className="marketing-guide-actions">
-              <button className="marketing-guide-skip" type="button" onClick={dismissTour}>{copy.ui.skipTour}</button>
+              <Button className="marketing-guide-skip" type="button" onClick={dismissTour}>{copy.ui.skipTour}</Button>
               <div>
                 {tourStep > 0 ? (
-                  <button className="marketing-secondary-button" type="button" onClick={() => setTourStep((step) => step - 1)}>
+                  <Button className="marketing-secondary-button" type="button" onClick={() => setTourStep((step) => step - 1)}>
                     <span aria-hidden="true">{backArrow}</span> {copy.ui.back}
-                  </button>
+                  </Button>
                 ) : null}
                 {tourStep < TOUR_STEPS.length - 1 ? (
-                  <button className="marketing-button" type="button" onClick={() => setTourStep((step) => step + 1)}>
+                  <Button className="marketing-button" type="button" onClick={() => setTourStep((step) => step + 1)}>
                     {copy.ui.next} <span aria-hidden="true">{nextArrow}</span>
-                  </button>
+                  </Button>
                 ) : (
-                  <button className="marketing-button" type="button" onClick={completeTour}>{copy.ui.finish} <span aria-hidden="true">✓</span></button>
+                  <Button className="marketing-button" type="button" onClick={completeTour}>{copy.ui.finish} <span aria-hidden="true">✓</span></Button>
                 )}
               </div>
             </div>

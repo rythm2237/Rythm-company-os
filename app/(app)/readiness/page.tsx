@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -170,7 +171,7 @@ export default async function ReadinessPage({ searchParams }: { searchParams: Pr
               <label>Maximum requests per hour<input name="maxHourly" type="number" min="1" max="1000" defaultValue={policy.max_requests_per_hour} required /></label>
               <label>Maximum attempts<input name="maxAttempts" type="number" min="1" max="5" defaultValue={policy.max_attempts} required /></label>
               <label>Timeout seconds<input name="timeoutSeconds" type="number" min="5" max="180" defaultValue={policy.timeout_seconds} required /></label>
-              <button type="submit">Save governed runtime policy</button>
+              <SubmitButton type="submit">Save governed runtime policy</SubmitButton>
             </form>
           ) : <p className="empty-state">Apply the production-hardening migration to create runtime policy controls.</p>}
         </article>

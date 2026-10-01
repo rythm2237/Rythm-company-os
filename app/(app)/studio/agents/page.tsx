@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import AgentLifecycleActions from "@/components/agents/AgentLifecycleActions";
 import Link from "next/link";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
@@ -67,7 +68,7 @@ export default async function AgentStudioPage({ searchParams }: PageProps) {
         <Link href={`/studio/agents/${agent.id}`}>Edit Agent</Link>
       </p>
       <AgentLifecycleActions agentId={agent.id} name={agent.name} status={agent.agent_status} canArchive={entitlement.agent_archive_enabled} organizationId={context.organizationId} />
-      {agent.agent_status !== "archived" && entitlement.agent_clone_enabled ? <form action={cloneAgent}><input type="hidden" name="agentId" value={agent.id}/><button type="submit">Clone</button></form> : null}
+      {agent.agent_status !== "archived" && entitlement.agent_clone_enabled ? <form action={cloneAgent}><input type="hidden" name="agentId" value={agent.id}/><SubmitButton type="submit">Clone</SubmitButton></form> : null}
     </article>
   );
 

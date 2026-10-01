@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import {
@@ -115,7 +116,7 @@ export default async function CompanyBootstrapPage({
                   ))}
               </select>
             </label>
-            <button className="primary-button">Start governed discovery</button>
+            <SubmitButton className="primary-button">Start governed discovery</SubmitButton>
           </form>
           {!(integrations ?? []).some(
             (integration) => integration.status === "connected",
@@ -282,7 +283,7 @@ export default async function CompanyBootstrapPage({
                       Type CONFIRM BOOTSTRAP
                       <input name="confirmation" required autoComplete="off" />
                     </label>
-                    <button className="primary-button">Confirm exact proposal</button>
+                    <SubmitButton className="primary-button">Confirm exact proposal</SubmitButton>
                   </form>
                 ) : null}
               </div>
@@ -312,7 +313,7 @@ export default async function CompanyBootstrapPage({
               <p className="security-note">
                 This creates an approval request only. It does not create departments or Agents.
               </p>
-              <button className="primary-button">Request governed apply approval</button>
+              <SubmitButton className="primary-button">Request governed apply approval</SubmitButton>
             </form>
           ) : null}
 
@@ -340,7 +341,7 @@ export default async function CompanyBootstrapPage({
               <p className="security-note">
                 Approval is complete. This second explicit action executes the exact approved proposal and verifies the resulting state.
               </p>
-              <button className="primary-button">Execute approved bootstrap</button>
+              <SubmitButton className="primary-button">Execute approved bootstrap</SubmitButton>
             </form>
           ) : null}
 
@@ -378,7 +379,7 @@ export default async function CompanyBootstrapPage({
               Type ROLLBACK BOOTSTRAP
               <input name="confirmation" required autoComplete="off" />
             </label>
-            <button className="secondary-button">Execute verified rollback</button>
+            <SubmitButton className="secondary-button">Execute verified rollback</SubmitButton>
           </form>
         </section>
       ) : null}

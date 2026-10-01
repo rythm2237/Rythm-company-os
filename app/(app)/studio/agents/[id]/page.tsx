@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import AgentLifecycleActions from "@/components/agents/AgentLifecycleActions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -83,7 +84,7 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
       <p>Status: <strong>{agent.agent_status}</strong> · Professional provisioning: <strong>{agent.provisioning_status}</strong> · External actions: <strong>{agent.external_actions_allowed ? "Allowed" : "Disabled"}</strong></p>
       <p>Governance rule: external actions remain disabled in Public Beta regardless of profile edits.</p>
       {agent.provisioning_status === "ready" && agent.agent_status !== "archived" ? <p><Link href={`/studio/agents/${agent.id}/run`}><strong>Open Chat / Run Console</strong></Link></p> : null}
-      {agent.provisioning_status === "failed" || agent.mastery_status === "failed" ? <form action={retryMasterAgentProvisioning}><input type="hidden" name="agentId" value={agent.id} /><button type="submit">Retry professional + Master-level provisioning</button></form> : null}
+      {agent.provisioning_status === "failed" || agent.mastery_status === "failed" ? <form action={retryMasterAgentProvisioning}><input type="hidden" name="agentId" value={agent.id} /><SubmitButton type="submit">Retry professional + Master-level provisioning</SubmitButton></form> : null}
     </section>
 
     <section className="panel"><h2>Lifecycle</h2><AgentLifecycleActions agentId={agent.id} name={agent.name} status={agent.agent_status} canArchive={context.entitlement.agent_archive_enabled} organizationId={context.organizationId}/><p>Archiving preserves task, audit and financial history. Restoring returns this Agent to Disabled.</p></section>
@@ -102,7 +103,7 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
         <div><small>Professional Knowledge</small><p><strong>{professionalVerified ? "Verified" : agent.provisioning_status}</strong></p></div>
         <div><small>Professional Competency</small><p><strong>{masteryVerified ? "Master-level verified" : `${agent.professional_competency_level} · ${agent.mastery_status}`}</strong></p></div>
         <div><small>Mastery Benchmark</small><p><strong>{agent.mastery_benchmark_version ? `v${agent.mastery_benchmark_version} · ${formatDate(agent.mastery_verified_at)}` : "Pending"}</strong></p></div>
-        <div><small>Company Knowledge</small><p><strong>{agent.company_knowledge_connected ? (agent.provisioning_status === "ready" ? "Connected · live / role-filtered" : "Pending") : "Detached for transfer"}</strong></p>{!agent.company_knowledge_connected && agent.agent_status !== "archived" ? <form action={reconnectAgentCompanyKnowledge}><input type="hidden" name="agentId" value={agent.id}/><button type="submit">Reconnect Company Knowledge</button></form> : null}</div>
+        <div><small>Company Knowledge</small><p><strong>{agent.company_knowledge_connected ? (agent.provisioning_status === "ready" ? "Connected · live / role-filtered" : "Pending") : "Detached for transfer"}</strong></p>{!agent.company_knowledge_connected && agent.agent_status !== "archived" ? <form action={reconnectAgentCompanyKnowledge}><input type="hidden" name="agentId" value={agent.id}/><SubmitButton type="submit">Reconnect Company Knowledge</SubmitButton></form> : null}</div>
         <div><small>Memory</small><p><strong>Active · transfer scope enforced</strong></p></div>
         <div><small>Last Knowledge Review</small><p><strong>{formatDate(agent.last_knowledge_review_at ?? foundation?.last_verified_at)}</strong></p></div>
         <div><small>Update Available</small><p><strong>{updateAvailable ? "Yes" : "No"}</strong></p></div>
@@ -127,7 +128,7 @@ export default async function AgentEditPage({ params, searchParams }: PageProps)
         <label>KPIs<textarea name="kpis" rows={4} defaultValue={(agent.kpis ?? []).join("\n")} /></label>
         <label>Human approval requirements<textarea name="approvalRequirements" rows={4} defaultValue={(agent.human_approval_requirements ?? []).join("\n")} /></label>
         <label>Allowed internal tools<textarea name="allowedTools" rows={4} defaultValue={(agent.allowed_tools ?? []).join("\n")} /></label>
-        <button type="submit">Save governed Agent profile</button>
+        <SubmitButton type="submit">Save governed Agent profile</SubmitButton>
       </form>}
     </section>
     <p><Link href="/studio/agents">Back to Agent Studio</Link></p>

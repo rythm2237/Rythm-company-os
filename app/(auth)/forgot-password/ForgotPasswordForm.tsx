@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { FormEvent, useMemo, useState } from "react";
 import { createAuthBrowserClient } from "@/lib/supabase/auth-browser";
 
@@ -61,7 +63,7 @@ export function ForgotPasswordForm() {
             disabled={pending}
           />
         </label>
-        <button type="submit" disabled={pending}>{pending ? "Sending…" : "Send reset link"}</button>
+        <Button type="submit" disabled={pending}>{pending ? "Sending…" : "Send reset link"}</Button>
       </form>
     </>
   );

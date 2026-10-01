@@ -241,6 +241,15 @@ async function applyCompletedRecoveryTasks(supabase:SupabaseClient,execution:Exe
     if(!targetId)continue;
     const target=tasks.find(task=>task.id===targetId);
     if(!target||!["failed","blocked","cancelled"].includes(target.status))continue;
+    // A recovery report is knowledge, not new Human CEO authorization.
+    // Keep this branch closed; a materially revised proposal needs its own gate.
+    if(input.original_error_class==="approval_rejected"){
+      if(target.error_class!=="approval_rejected_closed"){
+        await supabase.from("project_task_runs").update({status:"blocked",error_class:"approval_rejected_closed",next_attempt_at:null,updated_at:nowIso()}).eq("id",target.id).eq("status","blocked");
+        await activity(supabase,{organizationId:target.organization_id,projectId:target.project_id,executionId:target.execution_id,agentId:recoveryTask.assigned_agent_id,eventType:"task.rejection_respected",headline:`Rejected branch remains closed: ${target.title}`,detail:"Manager recovery is recorded. The original rejected authorization was not renewed; any revised proposal requires a separate decision.",importance:"attention",metadata:{task_run_id:target.id,recovery_task_run_id:recoveryTask.id}});
+      }
+      continue;
+    }
     const targetInput={...asObject(target.input),supervisor_recovery_count:recoveryCount(target.input)+1,supervisor_last_recovery_at:nowIso(),supervisor_recovery_mode:"manager_replan",supervisor_recovery_evidence:recoveryTask.safe_result??{},supervisor_previous_error:{class:target.error_class,message:target.error_message}};
     const replaceDependencies=Boolean(input.recovery_replace_dependencies);
     const dependencies=replaceDependencies?[recoveryTask.task_key]:asList(target.dependencies);
