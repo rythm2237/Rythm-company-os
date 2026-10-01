@@ -1,0 +1,177 @@
+/* Public mobile UI hardening V2.
+   Loaded last in the public layout so mobile navigation remains usable across pages. */
+
+.marketing-site .ui-button-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Button adds a loading/content wrapper. The guide launcher is a structured grid,
+   so reproduce its intended two-column layout inside that wrapper. */
+.marketing-site .marketing-guide-launcher > .ui-button-content {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  justify-content: stretch;
+  text-align: left;
+}
+
+.marketing-site .marketing-guide-launcher > .ui-button-content > span:first-child {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #cfd5ff;
+  background: rgba(111,124,238,.16);
+  font-weight: 900;
+}
+
+.marketing-site .marketing-guide-launcher > .ui-button-content > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.marketing-site .marketing-guide-launcher > .ui-button-content > span:last-child strong,
+.marketing-site .marketing-guide-launcher > .ui-button-content > span:last-child small {
+  min-width: 0;
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: normal;
+}
+
+.marketing-site .marketing-guide-launcher > .ui-button-progress {
+  position: absolute;
+  inset: 0;
+}
+
+@media (max-width: 1100px) {
+  .marketing-site .marketing-sidebar {
+    height: 100dvh;
+    max-height: 100dvh;
+    padding-top: max(18px, env(safe-area-inset-top));
+    padding-right: max(18px, env(safe-area-inset-right));
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+    padding-left: max(18px, env(safe-area-inset-left));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .marketing-site .marketing-sidebar-navigation {
+    flex: 0 0 auto;
+    width: 100%;
+    margin-bottom: 24px;
+  }
+
+  .marketing-site .marketing-sidebar-footer {
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+    margin-top: auto;
+    padding-bottom: 2px;
+  }
+
+  .marketing-site .marketing-guide-launcher,
+  .marketing-site .marketing-sidebar-actions,
+  .marketing-site .marketing-sidebar-actions > a {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* The mobile header menu Button has semantic children for label + hamburger.
+     Let those children participate in the button grid directly. */
+  .marketing-site .marketing-mobile-header button > .ui-button-content,
+  .marketing-site .marketing-sidebar-close > .ui-button-content {
+    display: contents;
+  }
+
+  .marketing-site .marketing-mobile-header button > .ui-button-progress,
+  .marketing-site .marketing-sidebar-close > .ui-button-progress {
+    display: none;
+  }
+
+  .marketing-site .marketing-mobile-header > div {
+    min-width: 0;
+  }
+
+  .marketing-site .marketing-mobile-header > div > a {
+    white-space: nowrap;
+  }
+
+  .marketing-site .marketing-page-transition,
+  .marketing-site .marketing-stage {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+}
+
+@media (max-width: 760px) {
+  .marketing-site .marketing-sidebar {
+    width: min(320px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+  }
+
+  .marketing-site .marketing-sidebar-navigation {
+    margin-top: 22px;
+  }
+
+  .marketing-site .marketing-nav-group {
+    margin-bottom: 18px;
+  }
+
+  .marketing-site .marketing-nav-group > a {
+    min-height: 44px;
+  }
+
+  .marketing-site .marketing-guide-launcher {
+    min-height: 58px;
+  }
+
+  .marketing-site .marketing-sidebar-actions {
+    grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  }
+
+  .marketing-site .marketing-sidebar-actions > a {
+    padding-inline: 10px;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .marketing-site :where(.marketing-hero, .marketing-section, .public-page-hero, .marketing-cta, .pricing-page, .contact-page) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .marketing-site table {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .marketing-site .marketing-sidebar {
+    width: calc(100vw - 18px);
+    max-width: calc(100vw - 18px);
+    padding-right: max(15px, env(safe-area-inset-right));
+    padding-left: max(15px, env(safe-area-inset-left));
+  }
+
+  .marketing-site .marketing-mobile-header > div {
+    gap: 9px;
+  }
+
+  .marketing-site .marketing-mobile-header .rythm-brand-logo {
+    width: 116px;
+  }
+
+  .marketing-site .marketing-mobile-header button {
+    min-width: 72px;
+    padding-inline: 10px;
+  }
+}
