@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -31,9 +33,9 @@ export function ExecuteValidationButton({ runId, disabled }: { runId: string; di
 
   return (
     <div>
-      <button type="button" onClick={execute} disabled={disabled || state === "running"}>
+      <Button type="button" onClick={execute} disabled={disabled || state === "running"}>
         {state === "running" ? "Executing controlled dry-run…" : "Execute validation dry-run"}
-      </button>
+      </Button>
       {message ? <p className={state === "error" ? "form-error" : "form-success"}>{message}</p> : null}
     </div>
   );

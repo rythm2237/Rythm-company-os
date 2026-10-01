@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import CompanyLogo from "@/components/company-branding/CompanyLogo";
 import { notFound } from "next/navigation";
@@ -36,7 +37,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
         <label>Service start date (UTC)<input name="periodStart" type="date" required/></label>
         <label>Service end date (UTC)<input name="periodEnd" type="date" required/></label>
         <label><input type="checkbox" name="paymentVerified" value="yes" required/>I verified the external invoice and received payment.</label>
-        <button type="submit">Record confirmed payment and activate</button>
+        <SubmitButton type="submit">Record confirmed payment and activate</SubmitButton>
       </form>
     </section> : null}
     <section className="admin-panel"><h2>Access protection</h2><p>Only allowlisted RYTHM platform administrators can access this view. Each read is audited. The database response excludes confidential fields, including for direct API calls. Viewing a company does not switch your workspace or grant company-owner permissions.</p></section>

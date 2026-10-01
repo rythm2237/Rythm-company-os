@@ -1,0 +1,43 @@
+:root { --ui-motion-fast:140ms; --ui-motion-normal:200ms; --ui-motion-ease:cubic-bezier(.2,.7,.2,1); }
+/* Interaction coverage for legacy controls; appearance remains owned by the page. */
+:is(button,input[type=submit],input[type=button],a.primary-button,a.secondary-button,[role=button]) {
+  cursor:pointer;
+  transition:scale var(--ui-motion-fast) var(--ui-motion-ease),background-color var(--ui-motion-normal),border-color var(--ui-motion-normal),box-shadow var(--ui-motion-normal),opacity var(--ui-motion-fast);
+}
+@media(hover:hover) {
+  :is(button,input[type=submit],input[type=button],a.primary-button,a.secondary-button,[role=button]):not(:disabled):not([aria-disabled=true]):hover { scale:1.015; }
+}
+:is(button,input[type=submit],input[type=button],a.primary-button,a.secondary-button,[role=button]):not(:disabled):not([aria-disabled=true]):active { scale:.98; }
+:is(button,a,input,select,textarea,summary,[tabindex]):focus-visible { outline:3px solid #5267d9; outline-offset:3px; }
+:is(button,input[type=submit],input[type=button]):disabled,[aria-disabled=true] { cursor:not-allowed; opacity:.55; scale:1; }
+.ui-button { position:relative; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 16px; border:1px solid var(--ui-border-strong); border-radius:var(--ui-control-radius); font:inherit; font-weight:750; max-width:100%; }
+.ui-button--primary { background:var(--ui-ink); color:white; border-color:var(--ui-ink); }
+.ui-button--secondary,.ui-button--outline { background:var(--ui-surface); color:var(--ui-ink); }
+.ui-button--tertiary,.ui-button--ghost { background:transparent; color:inherit; border-color:transparent; }
+.ui-button--destructive { background:#8f2335; color:white; border-color:#8f2335; }
+.ui-button--success { background:#166534; color:white; border-color:#166534; }
+.ui-button--icon { min-width:44px; padding:10px; }
+.ui-button-content { display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+.ui-button-progress { display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+.ui-button-progress.with-label { position:absolute; inset:0; }
+.ui-spinner { display:inline-block; width:14px; height:14px; border:2px solid currentColor; border-inline-end-color:transparent; border-radius:50%; animation:ui-spin .7s linear infinite; }
+.ui-button[aria-busy=true] { cursor:progress; scale:1; }
+.ui-action-group { display:flex; flex-wrap:wrap; align-items:center; gap:var(--ui-space-3); }
+.ui-action-group>* { min-width:0; max-width:100%; }
+.ui-action-error { display:block; margin-block:8px; color:#8f2335; }
+@keyframes ui-spin { to { transform:rotate(360deg); } }
+@media(pointer:coarse) { :is(button,a.primary-button,a.secondary-button,[role=button]) { min-height:44px; } }
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; scroll-behavior:auto!important; }
+  :is(button,input[type=submit],input[type=button],a.primary-button,a.secondary-button,[role=button]) { scale:1!important; }
+}
+
+:is(.ops-form-actions,.form-actions,.modal-footer,.dialog-actions,.project-header-actions,.agent-lifecycle-actions) { display:flex; flex-wrap:wrap; gap:var(--ui-space-3); align-items:center; }
+:is(.ops-form-actions,.form-actions,.modal-footer,.dialog-actions)>* { max-width:100%; min-width:0; }
+:is([role=tab],[role=menuitem],summary,a[href]) { cursor:pointer; }
+:is([role=tab],[role=menuitem],summary):hover { background-color:rgba(82,103,217,.08); }
+.decisionDiscussion .quickActions .ui-button { font-size:11px; padding:9px 8px; }
+.decisionDiscussion .ui-button.ai { background:rgba(92,70,255,.16); color:#d8d0ff; border-color:rgba(146,116,255,.28); }
+.decisionDiscussion .ui-button.toggle { background:rgba(39,126,174,.09); color:#a9eaff; border-color:rgba(86,204,255,.2); }
+.decisionDiscussion .ui-button.details { background:rgba(255,255,255,.045); color:#aebdca; border-color:rgba(255,255,255,.1); }
+.decisionDiscussion .composer .ui-button { background:#5d65d8; color:white; margin-top:8px; }

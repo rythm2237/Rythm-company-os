@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
@@ -65,7 +67,7 @@ export default function ConnectionAgentDock() {
     </div>
     <div className="connection-agent-dock-actions">
       <Link href={href}>{attention?"Respond":"View Live"}</Link>
-      <button type="button" onClick={() => setDismissed(session.id)} aria-label="Dismiss Connection Agent dock">×</button>
+      <Button type="button" onClick={() => setDismissed(session.id)} aria-label="Dismiss Connection Agent dock">×</Button>
     </div>
   </aside>;
 }

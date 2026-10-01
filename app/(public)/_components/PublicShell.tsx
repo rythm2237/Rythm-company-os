@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -118,7 +120,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
       <aside className="marketing-sidebar" id="public-navigation">
         <div className="marketing-sidebar-topline">
           <Link className="marketing-brand" href="/" aria-label="RYTHM home"><RythmBrandLogo priority variant="inverse" /></Link>
-          <button className="marketing-sidebar-close" type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation">×</button>
+          <Button className="marketing-sidebar-close" type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation">×</Button>
         </div>
         <nav className="marketing-sidebar-navigation" aria-label="Public navigation">
           {NAVIGATION_GROUPS.map((group) => (
@@ -132,7 +134,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
           ))}
         </nav>
         <div className="marketing-sidebar-footer">
-          <button className="marketing-guide-launcher" type="button" onClick={handleOpenTour} dir={copy.direction} lang={locale}><span aria-hidden="true">?</span><span><strong>{copy.ui.guideLauncherTitle}</strong><small>{copy.ui.guideLauncherDetail}</small></span></button>
+          <Button className="marketing-guide-launcher" type="button" onClick={handleOpenTour} dir={copy.direction} lang={locale}><span aria-hidden="true">?</span><span><strong>{copy.ui.guideLauncherTitle}</strong><small>{copy.ui.guideLauncherDetail}</small></span></Button>
           <div className="marketing-system-state"><i aria-hidden="true" /><span>Public experience</span><strong>Safe to explore</strong></div>
           <div className="marketing-sidebar-actions">
             <Link href="/login" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_sidebar", locale } })}>Sign in</Link>
@@ -143,7 +145,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
       <div className="marketing-stage">
         <header className="marketing-mobile-header">
           <Link className="marketing-brand" href="/" aria-label="RYTHM home"><RythmBrandLogo variant="primary" /></Link>
-          <div><Link href="/login" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_mobile_header", locale } })}>Sign in</Link><button type="button" aria-expanded={mobileOpen} aria-controls="public-navigation" onClick={() => setMobileOpen(true)}><span>Menu</span><i aria-hidden="true" /><i aria-hidden="true" /></button></div>
+          <div><Link href="/login" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_mobile_header", locale } })}>Sign in</Link><Button type="button" aria-expanded={mobileOpen} aria-controls="public-navigation" onClick={() => setMobileOpen(true)}><span>Menu</span><i aria-hidden="true" /><i aria-hidden="true" /></Button></div>
         </header>
         <div className="marketing-page-transition" key={pathname}>{children}</div>
         <footer className="marketing-footer marketing-footer-structured" aria-label="RYTHM public footer">

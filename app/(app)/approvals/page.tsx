@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -603,17 +604,17 @@ export default async function ApprovalEnginePage({
                       gap: 10,
                     }}
                   >
-                    <button name="resolution" value="approved" type="submit">
+                    <SubmitButton name="resolution" value="approved" type="submit">
                       Approve request
-                    </button>
-                    <button
+                    </SubmitButton>
+                    <SubmitButton
                       name="resolution"
                       value="rejected"
                       type="submit"
                       style={{ background: "#8f2335" }}
                     >
                       Reject request
-                    </button>
+                    </SubmitButton>
                   </div>
                   <p className="security-note">
                     Only the authenticated organization Owner can execute this

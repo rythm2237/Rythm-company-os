@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { DEFAULT_LOCALE, getLocaleDefinition } from "@/lib/i18n/config";
 import { enMessages } from "@/lib/i18n/messages";
-import GlobalActionFeedback from "@/components/ui/GlobalActionFeedback";
 import GoogleAnalyticsConsent from "@/components/analytics/GoogleAnalyticsConsent";
 import {
   DEFAULT_DESCRIPTION,
@@ -14,6 +13,7 @@ import "./globals.css";
 import "./experience.css";
 import "./project-portfolio.css";
 import "./ui-consistency.css";
+import "./interactions.css";
 
 const vazirmatn = localFont({
   src: "./fonts/Vazirmatn[wght].woff2",
@@ -57,7 +57,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <a className="skip-link" href="#main-content">{enMessages.common.skipToMainContent}</a>
         <div id="main-content">{children}</div>
-        <GlobalActionFeedback />
         <GoogleAnalyticsConsent />
       </body>
     </html>

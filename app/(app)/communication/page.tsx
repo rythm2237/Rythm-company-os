@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -614,7 +615,7 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
               <label><span>To</span><input name="recipient" type="email" autoComplete="off" placeholder="customer@example.com" required /></label>
               <label><span>Subject</span><input name="subject" maxLength={300} required /></label>
               <label className="native-compose-body"><span>Message</span><textarea name="body" rows={10} required placeholder="Write the message or prepare it for an agent to refine." /></label>
-              <div className="native-compose-actions"><button type="submit">Save draft</button><span>No external message is sent by this action.</span></div>
+              <div className="native-compose-actions"><SubmitButton type="submit">Save draft</SubmitButton><span>No external message is sent by this action.</span></div>
             </form>
           ) : <p className="communication-readonly">Owner access is required to compose external company email in the current beta.</p>}
         </section>
@@ -644,7 +645,7 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
                       <label><span>Responsible agent</span><select name="assignedAgentId" defaultValue={mailbox.assigned_agent_id ?? ""}><option value="">Unassigned</option>{agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.display_name ?? agent.name} — {agent.role_title}</option>)}</select></label>
                       <label><span>Outbound governance</span><select name="approvalMode" defaultValue={validApprovalModes.has(mailbox.approval_mode) ? mailbox.approval_mode : "approval_required"}><option value="approval_required">Human approval required</option><option value="draft_only">Draft only</option></select></label>
                       <label className="communication-checkbox"><input type="checkbox" name="isActive" defaultChecked={mailbox.is_active} /><span>Mailbox active</span></label>
-                      <button type="submit">Save</button>
+                      <SubmitButton type="submit">Save</SubmitButton>
                     </form>
                   ) : null}
                 </article>
@@ -664,7 +665,7 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
                   <option value="">All company addresses</option>
                   {mailboxes.filter((mailbox) => mailbox.is_active).map((mailbox) => <option key={mailbox.id} value={mailbox.id}>{mailbox.address}</option>)}
                 </select>
-                <button type="submit">Filter</button>
+                <SubmitButton type="submit">Filter</SubmitButton>
               </form>
             </div>
 
@@ -694,7 +695,7 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
                 {selectedThread.requires_manager_attention ? <div className="communication-escalation"><strong>Manager attention required</strong><p>{selectedThread.manager_attention_reason ?? "Escalated by the communication workflow."}</p></div> : null}
 
                 {isOwner ? (
-                  <form action={updateThreadAssignment} className="native-routing-form"><input type="hidden" name="threadId" value={selectedThread.id} /><label><span>Assign to agent</span><select name="assignedAgentId" defaultValue={selectedThread.assigned_agent_id ?? ""}><option value="">Unassigned</option>{agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.display_name ?? agent.name}</option>)}</select></label><label><span>Priority</span><select name="priority" defaultValue={selectedThread.priority}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label><button type="submit">Update routing</button></form>
+                  <form action={updateThreadAssignment} className="native-routing-form"><input type="hidden" name="threadId" value={selectedThread.id} /><label><span>Assign to agent</span><select name="assignedAgentId" defaultValue={selectedThread.assigned_agent_id ?? ""}><option value="">Unassigned</option>{agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.display_name ?? agent.name}</option>)}</select></label><label><span>Priority</span><select name="priority" defaultValue={selectedThread.priority}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label><SubmitButton type="submit">Update routing</SubmitButton></form>
                 ) : null}
 
                 <div className="communication-message-list">
@@ -702,15 +703,15 @@ export default async function CommunicationPage({ searchParams }: CommunicationP
                     <article className={`communication-message is-${message.direction}`} key={message.id}>
                       <header><strong>{message.direction === "draft" ? `Draft to ${recipientLabel(message.recipients)}` : message.sender_name ?? message.sender_email ?? "Company"}</strong><span>{message.direction} · {message.status.replaceAll("_", " ")} · {formatDate(message.created_at)}</span></header>
                       <p>{message.body_text ?? "Message body is not available in plain text."}</p>
-                      {message.status === "draft" && isOwner ? <form action={submitDraftForApproval} className="native-inline-action"><input type="hidden" name="threadId" value={selectedThread.id} /><input type="hidden" name="messageId" value={message.id} /><button type="submit">Request approval</button></form> : null}
-                      {message.status === "pending_approval" && isOwner ? <form action={approveDraftForDelivery} className="native-inline-action is-approval"><input type="hidden" name="threadId" value={selectedThread.id} /><input type="hidden" name="messageId" value={message.id} /><button type="submit">Approve for delivery</button><small>Approval does not mark this as sent until RYTHM transport delivers it.</small></form> : null}
+                      {message.status === "draft" && isOwner ? <form action={submitDraftForApproval} className="native-inline-action"><input type="hidden" name="threadId" value={selectedThread.id} /><input type="hidden" name="messageId" value={message.id} /><SubmitButton type="submit">Request approval</SubmitButton></form> : null}
+                      {message.status === "pending_approval" && isOwner ? <form action={approveDraftForDelivery} className="native-inline-action is-approval"><input type="hidden" name="threadId" value={selectedThread.id} /><input type="hidden" name="messageId" value={message.id} /><SubmitButton type="submit">Approve for delivery</SubmitButton><small>Approval does not mark this as sent until RYTHM transport delivers it.</small></form> : null}
                       {message.status === "ready_for_delivery" ? <div className="communication-approval-note">Approved by Human CEO. Ready for RYTHM delivery; internet transport is currently offline.</div> : null}
                     </article>
                   )) : <p className="communication-empty">No messages are stored for this conversation.</p>}
                 </div>
 
-                {isOwner && selectedThread.status !== "resolved" && selectedThread.status !== "draft" ? <form action={createReplyDraft} className="native-reply-form"><input type="hidden" name="threadId" value={selectedThread.id} /><label><span>Reply draft</span><textarea name="body" rows={5} required placeholder="Write a reply or hand it to the assigned agent for refinement." /></label><button type="submit">Save reply draft</button></form> : null}
-                {isOwner && selectedThread.status !== "resolved" ? <form action={resolveThread} className="communication-detail-actions"><input type="hidden" name="threadId" value={selectedThread.id} /><button type="submit">Mark resolved</button></form> : null}
+                {isOwner && selectedThread.status !== "resolved" && selectedThread.status !== "draft" ? <form action={createReplyDraft} className="native-reply-form"><input type="hidden" name="threadId" value={selectedThread.id} /><label><span>Reply draft</span><textarea name="body" rows={5} required placeholder="Write a reply or hand it to the assigned agent for refinement." /></label><SubmitButton type="submit">Save reply draft</SubmitButton></form> : null}
+                {isOwner && selectedThread.status !== "resolved" ? <form action={resolveThread} className="communication-detail-actions"><input type="hidden" name="threadId" value={selectedThread.id} /><SubmitButton type="submit">Mark resolved</SubmitButton></form> : null}
               </>
             ) : <div className="communication-detail-empty"><span aria-hidden="true">↗</span><strong>Select a conversation</strong><p>Read the thread, assign an agent, prepare a response, and move it through human approval without leaving RYTHM.</p></div>}
           </aside>

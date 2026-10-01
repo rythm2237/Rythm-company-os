@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { signInWithOAuth } from "../oauth-actions";
 import { login } from "./actions";
@@ -29,9 +30,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <input type="hidden" name="provider" value="google" />
             <input type="hidden" name="source" value="login" />
             <input type="hidden" name="next" value={next} />
-            <button className="secondary-button" style={{ width: "100%" }} type="submit">
+            <SubmitButton className="secondary-button" style={{ width: "100%" }} type="submit">
               Continue with Google
-            </button>
+            </SubmitButton>
           </form>
         </div>
 
@@ -66,7 +67,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               required
             />
           </label>
-          <button type="submit">Sign in</button>
+          <SubmitButton type="submit">Sign in</SubmitButton>
         </form>
 
         <p className="security-note"><Link href="/forgot-password">Forgot password?</Link></p>

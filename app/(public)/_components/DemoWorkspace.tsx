@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import Link from "next/link";
 import {
   useCallback,
@@ -398,7 +400,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
         </div>
         <div className="demo-boundary">
           <span data-explain-key="readOnlyDemo" tabIndex={explainMode ? 0 : undefined}><i aria-hidden="true" /> Read only</span>
-          <button type="button" onClick={resetDemo}>{copy.ui.resetDemo}</button>
+          <Button type="button" onClick={resetDemo}>{copy.ui.resetDemo}</Button>
         </div>
       </header>
 
@@ -411,7 +413,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
       >
         <div>
           <span className="demo-experience-control">
-            <button
+            <Button
               className={experienceMode ? "is-active" : undefined}
               type="button"
               aria-pressed={experienceMode}
@@ -422,9 +424,9 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
             >
               <span aria-hidden="true">⌗</span>
               {experienceMode ? copy.ui.exitExperienceMode : copy.ui.experienceMode}
-            </button>
+            </Button>
           </span>
-          <button
+          <Button
             className={explainMode ? "is-active" : undefined}
             type="button"
             aria-pressed={explainMode}
@@ -434,8 +436,8 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
           >
             <span aria-hidden="true">?</span>
             {explainMode ? copy.ui.explainModeActive : copy.ui.explainMode}
-          </button>
-          <button type="button" onClick={openTour}><span aria-hidden="true">✦</span>{copy.ui.restartTour}</button>
+          </Button>
+          <Button type="button" onClick={openTour}><span aria-hidden="true">✦</span>{copy.ui.restartTour}</Button>
         </div>
         <div>
           {explainMode ? <span className="demo-explain-hint">{copy.ui.explainHint}</span> : null}
@@ -444,7 +446,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
         {experienceHintVisible ? (
           <span className="demo-experience-discovery" role="status">
             {copy.ui.experienceDiscoveryHint}
-            <button type="button" onClick={() => setExperienceHintVisible(false)} aria-label={copy.ui.dismiss}>×</button>
+            <Button type="button" onClick={() => setExperienceHintVisible(false)} aria-label={copy.ui.dismiss}>×</Button>
           </span>
         ) : null}
       </div>
@@ -455,7 +457,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
             <div className="demo-navigation-group" key={group}>
               <span>{group}</span>
               {NOVA_COMMERCE_DEMO.surfaces.filter((surface) => surface.group === group).map((surface) => (
-                <button
+                <Button
                   type="button"
                   key={surface.id}
                   className={surface.id === activeSurface.id ? "is-active" : undefined}
@@ -464,7 +466,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
                   onClick={() => selectSurface(surface.id)}
                 >
                   {surface.label}
-                </button>
+                </Button>
               ))}
             </div>
           ))}
@@ -518,12 +520,12 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
           {activeSurface.id === "agents" ? (
             <div className="demo-agent-grid" aria-label="Demo AI workforce">
               {NOVA_COMMERCE_DEMO.agents.map((agent) => (
-                <button type="button" key={agent.id} data-explain-key="aiAgents" onClick={() => selectAgent(agent.id)}>
+                <Button type="button" key={agent.id} data-explain-key="aiAgents" onClick={() => selectAgent(agent.id)}>
                   <span className="demo-agent-avatar" aria-hidden="true">{agent.name.slice(0, 1)}</span>
                   <span className="demo-agent-identity"><strong>{agent.name}</strong><small>{agent.role}</small></span>
                   <span className={statusClass(agent.status)}>{agent.status}</span>
                   <span className="demo-agent-activity">{agent.activity}</span>
-                </button>
+                </Button>
               ))}
             </div>
           ) : (
@@ -541,7 +543,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
 
         {selectedAgent ? (
           <aside className="demo-agent-panel" aria-label={`${selectedAgent.name} Agent profile`}>
-            <button
+            <Button
               className="demo-panel-close"
               type="button"
               onClick={() => {
@@ -549,7 +551,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
                 setSelectedAgentId(null);
               }}
               aria-label="Close Agent profile"
-            >×</button>
+            >×</Button>
             <p className="marketing-kicker">AI ORGANIZATIONAL MEMBER</p>
             <div className="demo-agent-profile-heading" data-explain-key="aiAgents" tabIndex={explainMode ? 0 : undefined}>
               <span className="demo-agent-avatar" aria-hidden="true">{selectedAgent.name.slice(0, 1)}</span>
@@ -581,7 +583,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
           lang={locale}
           style={explanationPosition}
         >
-          <button type="button" onClick={() => closeExplanation({ restoreFocus: true })} aria-label={copy.ui.close}>×</button>
+          <Button type="button" onClick={() => closeExplanation({ restoreFocus: true })} aria-label={copy.ui.close}>×</Button>
           <p className="marketing-kicker">{copy.ui.whatIsThis}</p>
           <h3 id="demo-explanation-title">{explanationCopy.title}</h3>
           <p>{explanationCopy.what}</p>
@@ -595,10 +597,10 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
       {showConversion ? (
         <aside className={`demo-contextual-conversion${conversionDismissed || !conversionExpanded ? " is-minimized" : ""}`}>
           {conversionDismissed || !conversionExpanded ? (
-            <button type="button" onClick={() => { setConversionDismissed(false); setConversionExpanded(true); }}>Build with RYTHM <span aria-hidden="true">✦</span></button>
+            <Button type="button" onClick={() => { setConversionDismissed(false); setConversionExpanded(true); }}>Build with RYTHM <span aria-hidden="true">✦</span></Button>
           ) : (
             <>
-              <button className="demo-conversion-dismiss" type="button" onClick={dismissConversion} aria-label="Dismiss">×</button>
+              <Button className="demo-conversion-dismiss" type="button" onClick={dismissConversion} aria-label="Dismiss">×</Button>
               <p className="marketing-kicker">YOU HAVE SEEN THE OPERATING MODEL</p>
               <h3>Ready to build with RYTHM?</h3>
               <p>Keep exploring, compare company models, or start when you want to make the experience persistent.</p>

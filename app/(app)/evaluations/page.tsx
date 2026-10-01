@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
@@ -99,7 +100,7 @@ export default async function EvaluationsPage({ searchParams }: Props) {
     {params.error ? <p role="alert" style={{color:"crimson"}}>{params.error}</p> : null}
 
     <section style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap",marginTop:20}}>
-      <form action={runEvaluation}><button type="submit" style={{padding:"12px 18px",fontWeight:700}}>Run full 8-Agent baseline evaluation</button></form>
+      <form action={runEvaluation}><SubmitButton type="submit" style={{padding:"12px 18px",fontWeight:700}}>Run full 8-Agent baseline evaluation</SubmitButton></form>
       <small>Baseline establishes domain evidence. Senior requires independent holdout + adversarial passes + validated real-world experience.</small>
     </section>
 
@@ -115,7 +116,7 @@ export default async function EvaluationsPage({ searchParams }: Props) {
           <div><small>Holdout</small><br/><strong>{r.holdout_pass_count??0}/1</strong></div>
           <div><small>Adversarial</small><br/><strong>{r.adversarial_pass_count??0}/1</strong></div>
           <div><small>Experience</small><br/><strong>{r.validated_experience_count??0}/{r.minimum_validated_experience??3}</strong></div>
-          <form action={runSeniorAssessment}><input type="hidden" name="agentCode" value={row.agent_code}/><button type="submit" disabled={row.asset?.current_level!=="specialist"} style={{padding:"10px 12px",fontWeight:700}}>{r.eligible?"Re-assess Senior":"Run Senior assessment"}</button></form>
+          <form action={runSeniorAssessment}><input type="hidden" name="agentCode" value={row.agent_code}/><SubmitButton type="submit" disabled={row.asset?.current_level!=="specialist"} style={{padding:"10px 12px",fontWeight:700}}>{r.eligible?"Re-assess Senior":"Run Senior assessment"}</SubmitButton></form>
         </article>;
       })}</div>
     </section>

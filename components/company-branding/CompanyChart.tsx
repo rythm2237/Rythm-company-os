@@ -1,17 +1,19 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useMemo, useState, type ReactNode } from "react";
 import { buildCompanyChart, type ChartAgent, type ChartDepartment, type ChartMember, type ChartPerson } from "@/lib/company-chart";
 
 type ActionSummary = { id: string; title: string; status: string; assigned_agent_id: string | null };
 
 function Person({ person, selected, onSelect }: { person: ChartPerson; selected: boolean; onSelect: () => void }) {
-  return <button type="button" className={`company-pyramid-person ${person.isManager ? "is-manager" : ""} ${person.issue ? "has-issue" : ""}`}
+  return <Button type="button" className={`company-pyramid-person ${person.isManager ? "is-manager" : ""} ${person.issue ? "has-issue" : ""}`}
     aria-pressed={selected} onClick={onSelect}>
     <span className="company-pyramid-avatar" aria-hidden="true">{person.name.slice(0, 2).toUpperCase()}</span>
     <span className="company-pyramid-person-label"><strong>{person.name}</strong><small>{person.role}</small></span>
     <span className="company-pyramid-type">{person.kind === "ai" ? "AI" : "Human"}</span>
-  </button>;
+  </Button>;
 }
 
 export default function CompanyChart({ departments, agents, members, actions = [], canTrack = false, children }: { departments: ChartDepartment[]; agents: ChartAgent[]; members: ChartMember[]; actions?: ActionSummary[]; canTrack?: boolean; children: ReactNode }) {
@@ -23,7 +25,7 @@ export default function CompanyChart({ departments, agents, members, actions = [
   const matches = (name: string) => name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
 
   return <div className="company-chart">
-    <div className="company-chart-toolbar"><div className="company-view-switch" role="group" aria-label="Organization chart view"><button type="button" aria-pressed={view === "chart"} onClick={() => setView("chart")}>Organization chart</button><button type="button" aria-pressed={view === "cards"} onClick={() => setView("cards")}>Cards &amp; edit</button></div><p>Department placement and reporting lines are shown separately.</p></div>
+    <div className="company-chart-toolbar"><div className="company-view-switch" role="group" aria-label="Organization chart view"><Button type="button" aria-pressed={view === "chart"} onClick={() => setView("chart")}>Organization chart</Button><Button type="button" aria-pressed={view === "cards"} onClick={() => setView("cards")}>Cards &amp; edit</Button></div><p>Department placement and reporting lines are shown separately.</p></div>
     <div hidden={view !== "chart"} className="company-chart-view">
       <div className="company-pyramid-intro"><div><span className="company-org-eyebrow">ORGANIZATION / AUTHORITY</span><h3>Who leads whom</h3><p>Human authority at the top; departments, their appointed managers and the people inside each department below.</p></div><label className="company-org-search"><span>Find a department or position</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search the organization" /></label></div>
       <div className="company-pyramid-root" aria-label="Human CEO / Owner"><span className="company-pyramid-root-kicker">HUMAN AUTHORITY</span><strong>{graph.ceo?.name ?? "No active owner recorded"}</strong><span>{graph.ceo?.role ?? "Human CEO / Owner"}</span></div>
@@ -44,7 +46,7 @@ export default function CompanyChart({ departments, agents, members, actions = [
       </div>}
       <p className="company-chart-hint">Department containment shows where a person works; it does not invent a reporting line. Select a position to inspect its recorded manager. Scroll horizontally for more departments.</p>
       {graph.issues ? <p className="company-chart-warning" role="status">{graph.issues} reporting relationship(s) need attention: a missing manager or a cycle. Check Cards &amp; edit.</p> : null}
-      {person ? <aside className="company-position-detail" aria-label="Selected position"><div><span>{person.isManager ? "Department manager" : `${person.kind === "ai" ? "AI" : "Human"} position`}</span><h3>{person.name}</h3><p>{person.role}</p></div><dl><div><dt>Recorded reports to</dt><dd>{person.reportsTo}</dd></div><div><dt>Status</dt><dd>{person.status}</dd></div></dl><button type="button" onClick={() => setSelected(null)}>Close</button></aside> : null}
+      {person ? <aside className="company-position-detail" aria-label="Selected position"><div><span>{person.isManager ? "Department manager" : `${person.kind === "ai" ? "AI" : "Human"} position`}</span><h3>{person.name}</h3><p>{person.role}</p></div><dl><div><dt>Recorded reports to</dt><dd>{person.reportsTo}</dd></div><div><dt>Status</dt><dd>{person.status}</dd></div></dl><Button type="button" onClick={() => setSelected(null)}>Close</Button></aside> : null}
       <section className="company-pyramid-workflow" aria-label="Intended operating flow"><div><span className="company-org-eyebrow">OPERATING MODEL</span><h3>How a request should move</h3><p>This is the intended route. The action register currently tracks status; manager review, revision loops, cross-department handoff and resource escalation are not yet enforced automatically.</p></div><ol><li><strong>CEO brief</strong><span>Choose a department and define the outcome.</span></li><li><strong>Manager triage</strong><span>Assign the right agent and clarify the work.</span></li><li><strong>Agent execution</strong><span>Complete the task and return evidence.</span></li><li><strong>Manager review</strong><span>Accept it or request a revision from the agent.</span></li><li><strong>Handoff or escalation</strong><span>Refer to another department, request a meeting or resources when needed.</span></li><li><strong>CEO visibility</strong><span>Track progress and receive the reviewed result.</span></li></ol><div className="company-pyramid-links">{canTrack ? <a href="/actions">Track existing action items →</a> : null}<a href="/meetings/room">Open meetings →</a></div></section>
     </div>
     <div hidden={view !== "cards"} className="company-chart-cards-view">{children}</div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { ProviderOption } from "@/lib/agent-builder";
@@ -76,7 +78,7 @@ function GenerateButton({ disabled }: { disabled: boolean }) {
     const timer = window.setInterval(() => setStage((current) => Math.min(current + 1, provisioningStages.length - 1)), 1100);
     return () => window.clearInterval(timer);
   }, [pending]);
-  return <button type="submit" disabled={disabled || pending}>{pending ? provisioningStages[stage] : "Generate Master-level AI Agent"}</button>;
+  return <Button type="submit" disabled={disabled || pending}>{pending ? provisioningStages[stage] : "Generate Master-level AI Agent"}</Button>;
 }
 
 function split(value: string) {
@@ -132,9 +134,9 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
 
         <div className={styles.progress} aria-label="Agent Builder progress">
           {steps.map((label, index) => (
-            <button key={label} type="button" onClick={() => setStep(index)} aria-current={step === index ? "step" : undefined} style={{ opacity: step === index ? 1 : .58 }}>
+            <Button key={label} type="button" onClick={() => setStep(index)} aria-current={step === index ? "step" : undefined} style={{ opacity: step === index ? 1 : .58 }}>
               {index + 1}. {label}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -154,7 +156,7 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
           <h3>Mission and output</h3>
           <label>Primary mission<textarea rows={4} value={draft.purpose} onChange={(e) => update("purpose", e.target.value)} placeholder="Describe the outcome you expect. RYTHM will turn this into an operational mandate." autoFocus /></label>
           <p>Common responsibilities</p>
-          <div style={chips}>{presets.responsibilities.map((item) => <button key={item} type="button" onClick={() => { if (!split(draft.responsibilities).includes(item)) update("responsibilities", [draft.responsibilities, item].filter(Boolean).join("\n")); }}>{item}</button>)}</div>
+          <div style={chips}>{presets.responsibilities.map((item) => <Button key={item} type="button" onClick={() => { if (!split(draft.responsibilities).includes(item)) update("responsibilities", [draft.responsibilities, item].filter(Boolean).join("\n")); }}>{item}</Button>)}</div>
           <label>Responsibilities<textarea rows={4} value={draft.responsibilities} onChange={(e) => update("responsibilities", e.target.value)} placeholder="One per line — or use the quick options above" /></label>
           <label>Skills / knowledge<textarea rows={3} value={draft.skills} onChange={(e) => update("skills", e.target.value)} placeholder="e.g. competitive analysis, financial modeling, stakeholder interviews" /></label>
           <label>Success measures / KPIs<textarea rows={3} value={draft.kpis} onChange={(e) => update("kpis", e.target.value)} placeholder="Optional — RYTHM will still create a default success standard" /></label>
@@ -164,7 +166,7 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
           <p className="eyebrow">STEP 3 · HOW SHOULD IT WORK?</p>
           <h3>Behavior and communication</h3>
           <p>Work style</p>
-          <div style={chips}>{presets.workStyle.map((item) => <button key={item} type="button" onClick={() => update("workStyle", item)} aria-pressed={draft.workStyle === item}>{item}</button>)}</div>
+          <div style={chips}>{presets.workStyle.map((item) => <Button key={item} type="button" onClick={() => update("workStyle", item)} aria-pressed={draft.workStyle === item}>{item}</Button>)}</div>
           <label>Custom work style<input value={draft.workStyle} onChange={(e) => update("workStyle", e.target.value)} /></label>
           <label>Working language<input value={draft.language} onChange={(e) => update("language", e.target.value)} placeholder="English, Persian, German…" /></label>
           <p>In multi-Agent meetings, RYTHM will instruct this Agent to contribute independently, challenge weak assumptions, stay inside its professional lens, and respect Human CEO authority.</p>
@@ -200,8 +202,8 @@ export default function AgentBuilderWizard({ action, departments, existingAgents
         </div> : null}
 
         <div className={styles.footer}>
-          <button type="button" onClick={() => setStep((value) => Math.max(0, value - 1))} disabled={step === 0}>Back</button>
-          {step < steps.length - 1 ? <button type="button" onClick={() => setStep((value) => Math.min(steps.length - 1, value + 1))} disabled={(step === 0 && !roleReady) || (step === 1 && !missionReady)}>Continue</button> : null}
+          <Button type="button" onClick={() => setStep((value) => Math.max(0, value - 1))} disabled={step === 0}>Back</Button>
+          {step < steps.length - 1 ? <Button type="button" onClick={() => setStep((value) => Math.min(steps.length - 1, value + 1))} disabled={(step === 0 && !roleReady) || (step === 1 && !missionReady)}>Continue</Button> : null}
         </div>
       </form>
 

@@ -50,7 +50,8 @@
     "test:company-chart": "node --import tsx scripts/validate-company-chart.tsx",
     "test:commercial-payment": "node --import tsx scripts/validate-commercial-payment.ts",
     "test:integration-availability": "node --import tsx scripts/validate-integration-availability.ts",
-    "smoke:commercial-public": "node scripts/smoke-commercial-public.mjs"
+    "smoke:commercial-public": "node scripts/smoke-commercial-public.mjs",
+    "test:interactions": "node --import tsx scripts/validate-interactions.tsx"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -65,11 +66,13 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^24.1.0",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
     "eslint": "^9.32.0",
     "eslint-config-next": "^15.4.6",
+    "jsdom": "^30.1.1",
     "tsx": "4.20.5",
     "typescript": "^5.9.2"
   }

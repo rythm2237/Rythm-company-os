@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useState } from "react";
 import styles from "./preview.module.css";
 
@@ -43,22 +45,22 @@ export default function BoardroomPreviewPage() {
           <div className={styles.speakerMetric}><small>Current speaker</small><strong>Market Analyst (Ava)</strong><span className={styles.wave}>▮▮▮▮▮</span></div>
         </div>
         <div className={styles.headerActions}>
-          <button onClick={toggleFocus} title="Focus room">{focusRoom ? "Exit Focus" : "Focus Room"}</button>
-          <button onClick={enterFullscreen} title="Fullscreen">⛶</button>
-          <button className={styles.managerChip}><span className={styles.avatarMini}>YO</span><span><small>Meeting manager</small><strong>You</strong></span></button>
+          <Button onClick={toggleFocus} title="Focus room">{focusRoom ? "Exit Focus" : "Focus Room"}</Button>
+          <Button onClick={enterFullscreen} title="Fullscreen">⛶</Button>
+          <Button className={styles.managerChip}><span className={styles.avatarMini}>YO</span><span><small>Meeting manager</small><strong>You</strong></span></Button>
         </div>
       </header>
 
       <aside className={styles.leftPanel}>
-        <button className={styles.collapseButton} onClick={() => setLeftOpen((v) => !v)} title={leftOpen ? "Collapse left panel" : "Expand left panel"}>{leftOpen ? "‹" : "›"}</button>
+        <Button className={styles.collapseButton} onClick={() => setLeftOpen((v) => !v)} title={leftOpen ? "Collapse left panel" : "Expand left panel"}>{leftOpen ? "‹" : "›"}</Button>
         <nav className={styles.nav}>
-          <button className={styles.navActive}>⌂ <span>Meeting Room</span></button>
-          <button>☷ <span>Agenda</span></button>
-          <button>⌘ <span>Key Decisions</span></button>
-          <button>□ <span>Files & Docs</span></button>
-          <button>◔ <span>Reports</span></button>
-          <button>⚙ <span>Settings</span></button>
-          <button>↶ <span>Meeting History</span></button>
+          <Button className={styles.navActive}>⌂ <span>Meeting Room</span></Button>
+          <Button>☷ <span>Agenda</span></Button>
+          <Button>⌘ <span>Key Decisions</span></Button>
+          <Button>□ <span>Files & Docs</span></Button>
+          <Button>◔ <span>Reports</span></Button>
+          <Button>⚙ <span>Settings</span></Button>
+          <Button>↶ <span>Meeting History</span></Button>
         </nav>
         <section className={styles.panelCard}>
           <div className={styles.cardHeader}><strong>Agenda</strong><span>60%</span></div>
@@ -99,16 +101,16 @@ export default function BoardroomPreviewPage() {
         <div className={styles.ceoTag}><b>Meeting Manager</b><span>You · Human CEO</span></div>
 
         <div className={styles.roomToolbar}>
-          <button onClick={() => setLeftOpen((v) => !v)} title="Toggle left panel">☰</button>
-          <button onClick={toggleFocus} title="Focus room">◫</button>
-          <button onClick={enterFullscreen} title="Fullscreen">⛶</button>
-          <button onClick={() => setRightOpen((v) => !v)} title="Toggle participants">👥</button>
+          <Button onClick={() => setLeftOpen((v) => !v)} title="Toggle left panel">☰</Button>
+          <Button onClick={toggleFocus} title="Focus room">◫</Button>
+          <Button onClick={enterFullscreen} title="Fullscreen">⛶</Button>
+          <Button onClick={() => setRightOpen((v) => !v)} title="Toggle participants">👥</Button>
         </div>
       </section>
 
       <aside className={styles.rightPanel}>
-        <button className={styles.collapseButtonRight} onClick={() => setRightOpen((v) => !v)} title={rightOpen ? "Collapse participants" : "Expand participants"}>{rightOpen ? "›" : "‹"}</button>
-        <div className={styles.participantHeader}><strong>Participants (6)</strong><button onClick={() => run("Invite participant")}>＋</button></div>
+        <Button className={styles.collapseButtonRight} onClick={() => setRightOpen((v) => !v)} title={rightOpen ? "Collapse participants" : "Expand participants"}>{rightOpen ? "›" : "‹"}</Button>
+        <div className={styles.participantHeader}><strong>Participants (6)</strong><Button onClick={() => run("Invite participant")}>＋</Button></div>
         <div className={styles.humanRow}><span className={styles.avatar}>YO</span><div><strong>Meeting Manager</strong><small>Human · Final authority</small></div></div>
         <div className={styles.sectionLabel}>AI Agents</div>
         {agents.map(([name, role, speaking]) => (
@@ -118,17 +120,17 @@ export default function BoardroomPreviewPage() {
             {speaking ? <b>Speaking</b> : <span className={styles.onlineDot} />}
           </div>
         ))}
-        <button className={styles.invite} onClick={() => run("Invite participant")}>＋ Invite participant</button>
+        <Button className={styles.invite} onClick={() => run("Invite participant")}>＋ Invite participant</Button>
       </aside>
 
       <footer className={styles.controls}>
-        <button className={styles.approve} onClick={() => run("Approve")}>✓ Approve</button>
-        <button className={styles.pause} onClick={() => run("Pause")}>Ⅱ Pause</button>
-        <button className={styles.intervene} onClick={() => run("Manager Intervention")}>♙ Manager Intervention</button>
-        <button onClick={() => run("Request Summary")}>▤ Request Summary</button>
-        <button className={styles.nextAction} onClick={() => run("Next Action")}>↗ Next Action</button>
-        <button className={styles.nextSlide} onClick={() => run("Next Slide")}>→ Next Slide</button>
-        <button className={styles.end} onClick={() => run("End Meeting")}>⌁ End Meeting</button>
+        <Button className={styles.approve} onClick={() => run("Approve")}>✓ Approve</Button>
+        <Button className={styles.pause} onClick={() => run("Pause")}>Ⅱ Pause</Button>
+        <Button className={styles.intervene} onClick={() => run("Manager Intervention")}>♙ Manager Intervention</Button>
+        <Button onClick={() => run("Request Summary")}>▤ Request Summary</Button>
+        <Button className={styles.nextAction} onClick={() => run("Next Action")}>↗ Next Action</Button>
+        <Button className={styles.nextSlide} onClick={() => run("Next Slide")}>→ Next Slide</Button>
+        <Button className={styles.end} onClick={() => run("End Meeting")}>⌁ End Meeting</Button>
         <div className={styles.status}>✦ {notice}</div>
       </footer>
     </main>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -203,11 +205,11 @@ export default function BoardroomFocusBridge() {
     {meetingStatus === "completed" ? <div className="boardroom-post-actions" role="region" aria-label="Post-meeting actions">
       <div className="boardroom-post-copy"><strong>Meeting ended</strong><span>Review notes, generate the meeting summary, or complete governance without starting another meeting.</span></div>
       <div className="boardroom-post-buttons">
-        <button type="button" onClick={() => openPanel("Live")}>Notes</button>
-        <button type="button" onClick={() => openPanel("Summary")}>Summary</button>
-        <button type="button" onClick={() => openPanel("Governance")}>Governance</button>
+        <Button type="button" onClick={() => openPanel("Live")}>Notes</Button>
+        <Button type="button" onClick={() => openPanel("Summary")}>Summary</Button>
+        <Button type="button" onClick={() => openPanel("Governance")}>Governance</Button>
       </div>
-    </div> : <button className="boardroom-leave-room" type="button" onClick={() => void leaveRoom()} disabled={leaving} title="Leave this room while the governed session continues">{leaving ? "Leaving…" : "Leave room"}</button>}
+    </div> : <Button className="boardroom-leave-room" type="button" onClick={() =>leaveRoom()} disabled={leaving} title="Leave this room while the governed session continues">{leaving ? "Leaving…" : "Leave room"}</Button>}
     {leaveError ? <div className="boardroom-leave-error" role="alert">{leaveError}</div> : null}
   </>;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useMemo, useState, useTransition } from "react";
 import { deleteCompanyLibraryDocument, getCompanyLibraryDocumentDetail, getCompanyLibraryDocumentUrl, updateCompanyLibraryDocumentMetadata } from "./actions";
 import styles from "./CompanyLibraryWorkspace.module.css";
@@ -116,14 +118,14 @@ export default function CompanyLibraryWorkspace({ documents }: { documents: Comp
         </div>
         <div className={styles.docList}>
           {filtered.length === 0 ? <div className={styles.empty}>No documents match these filters.</div> : filtered.map((document) => (
-            <button type="button" key={document.id} onClick={() => openDocument(document.id)} className={`${styles.row} ${selectedId === document.id ? styles.rowActive : ""}`}>
+            <Button type="button" key={document.id} onClick={() => openDocument(document.id)} className={`${styles.row} ${selectedId === document.id ? styles.rowActive : ""}`}>
               <div className={styles.rowTop}>
                 <span className={styles.rowTitle}>{document.title}</span>
                 <span className={`${styles.status} ${document.ingestion_status === "ready" ? styles.ready : document.ingestion_status === "failed" ? styles.failed : ""}`}>{document.ingestion_status}</span>
               </div>
               <p className={styles.meta}>{document.source_filename ?? "Uploaded document"} · {sizeLabel(document.file_size_bytes)}</p>
               <p className={styles.meta}>{document.category} · {document.confidentiality} · {document.chunk_count || 0} chunks</p>
-            </button>
+            </Button>
           ))}
         </div>
       </section>
@@ -138,12 +140,12 @@ export default function CompanyLibraryWorkspace({ documents }: { documents: Comp
                 <p className={styles.meta}>{selectedListItem?.source_filename ?? "Uploaded document"} · {sizeLabel(selectedListItem?.file_size_bytes ?? null)}</p>
               </div>
               <div className={styles.actions}>
-                <button type="button" className={`${styles.action} ${styles.mobileClose}`} onClick={() => setSelectedId(null)}>Close</button>
-                <button type="button" className={styles.action} onClick={openOriginal}>Open original</button>
+                <Button type="button" className={`${styles.action} ${styles.mobileClose}`} onClick={() => setSelectedId(null)}>Close</Button>
+                <Button type="button" className={styles.action} onClick={openOriginal}>Open original</Button>
               </div>
             </header>
             <nav className={styles.tabs} aria-label="Document views">
-              {(["preview","details","edit"] as const).map((name) => <button key={name} type="button" className={`${styles.tab} ${tab === name ? styles.tabActive : ""}`} onClick={() => setTab(name)}>{name === "preview" ? "Read" : name === "details" ? "Details" : "Edit"}</button>)}
+              {(["preview","details","edit"] as const).map((name) => <Button key={name} type="button" className={`${styles.tab} ${tab === name ? styles.tabActive : ""}`} onClick={() => setTab(name)}>{name === "preview" ? "Read" : name === "details" ? "Details" : "Edit"}</Button>)}
             </nav>
             <div className={styles.detailBody}>
               {error ? <p className={styles.error}>{error}</p> : null}
@@ -178,10 +180,10 @@ export default function CompanyLibraryWorkspace({ documents }: { documents: Comp
                     <div className={`${styles.field} ${styles.full}`}><label htmlFor="library-roles">Allowed role keywords</label><input id="library-roles" className={styles.input} name="allowedRoleKeywords" defaultValue={detail.allowedRoleKeywords.join(", ")} placeholder="owner, legal, finance" /></div>
                   </div>
                   <p className={styles.helper}>Changing metadata does not rewrite the source file or the extracted text. Confidential/restricted documents require at least one allowed department or role keyword.</p>
-                  <div className={styles.saveRow}><button className={styles.action} type="submit">Save changes</button></div>
+                  <div className={styles.saveRow}><Button className={styles.action} type="submit">Save changes</Button></div>
                 </form>
               ) : null}
-              {detail ? <form action={deleteCompanyLibraryDocument} style={{marginTop:"1.5rem"}}><input type="hidden" name="knowledgeId" value={detail.id} /><button className={styles.danger} type="submit">Delete document</button></form> : null}
+              {detail ? <form action={deleteCompanyLibraryDocument} style={{marginTop:"1.5rem"}}><input type="hidden" name="knowledgeId" value={detail.id} /><Button className={styles.danger} type="submit">Delete document</Button></form> : null}
             </div>
           </>
         )}

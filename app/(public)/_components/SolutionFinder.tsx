@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { trackPublicExperienceEvent } from "@/lib/analytics/public-events";
@@ -348,11 +350,11 @@ export default function SolutionFinder() {
               <h3>See how RYTHM could work for you</h3>
               <p>Answer six short questions. We will recommend the simplest RYTHM setup that fits your situation—and show why.</p>
             </div>
-            <button className={styles.closeButton} type="button" onClick={dismiss} aria-label="Dismiss Solution Finder">×</button>
+            <Button className={styles.closeButton} type="button" onClick={dismiss} aria-label="Dismiss Solution Finder">×</Button>
           </div>
           <div className={styles.launcherActions}>
-            <button className={styles.primary} type="button" onClick={begin}>Find my solution</button>
-            <button className={styles.secondary} type="button" onClick={dismiss}>Not now</button>
+            <Button className={styles.primary} type="button" onClick={begin}>Find my solution</Button>
+            <Button className={styles.secondary} type="button" onClick={dismiss}>Not now</Button>
           </div>
         </aside>
       ) : null}
@@ -366,7 +368,7 @@ export default function SolutionFinder() {
                 <h2 id="solution-finder-title">{result ? "A RYTHM setup shaped around your situation" : "What are you actually trying to improve?"}</h2>
                 <p>{result ? "This is a product recommendation, not an upsell rule. We choose the simplest path that matches the answers you gave." : "No company name, email or personal data is required. Your answers stay in this browser and can later help avoid repeating onboarding questions."}</p>
               </div>
-              <button className={styles.closeButton} type="button" onClick={() => setOpen(false)} aria-label="Close Solution Finder">×</button>
+              <Button className={styles.closeButton} type="button" onClick={() => setOpen(false)} aria-label="Close Solution Finder">×</Button>
             </div>
             <div className={styles.progress} aria-label={`Solution Finder progress ${Math.round(progress)} percent`}><span style={{ width: `${progress}%` }} /></div>
 
@@ -376,13 +378,13 @@ export default function SolutionFinder() {
                 <p>{currentQuestion.help}</p>
                 <div className={styles.options}>
                   {currentQuestion.options.map((option) => (
-                    <button className={styles.option} key={option.value} type="button" onClick={() => answer(option.value)}>
+                    <Button className={styles.option} key={option.value} type="button" onClick={() => answer(option.value)}>
                       <strong>{option.label}</strong><span>{option.detail}</span>
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 <div className={styles.navigation}>
-                  <div>{step > 0 ? <button className={styles.back} type="button" onClick={() => setStep((current) => current - 1)}>← Back</button> : null}</div>
+                  <div>{step > 0 ? <Button className={styles.back} type="button" onClick={() => setStep((current) => current - 1)}>← Back</Button> : null}</div>
                   <span className={styles.stepLabel}>Question {step + 1} of {QUESTIONS.length}</span>
                 </div>
               </div>
@@ -420,7 +422,7 @@ export default function SolutionFinder() {
                   <Link className={styles.primary} href={result.primaryHref} onClick={() => trackPublicExperienceEvent({ name: "solution_finder_primary_clicked", properties: { recommendation: result.key } })}>{result.primaryLabel}</Link>
                   <Link className={styles.secondary} href="/live-ai-meeting?source=solution-finder" onClick={() => trackPublicExperienceEvent({ name: "solution_finder_meeting_clicked", properties: { recommendation: result.key } })}>Try it with a Live AI Meeting</Link>
                   <Link className={styles.secondary} href="/pricing?source=solution-finder">Compare all paths</Link>
-                  <button className={styles.startOver} type="button" onClick={startOver}>Start over</button>
+                  <Button className={styles.startOver} type="button" onClick={startOver}>Start over</Button>
                 </div>
                 <p className={styles.privacy}>RYTHM does not claim this is the only valid setup. The recommendation is a transparent rule-based fit assessment using only the six answers above.</p>
               </div>

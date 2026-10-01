@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
@@ -189,7 +190,7 @@ export default async function AgentTaskPage({
             <label>Task type<input name="taskType" defaultValue="general" required /></label>
             <label>Risk level<select name="riskLevel" defaultValue="low"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="restricted">Restricted</option></select></label>
             <label style={{display:"flex",gap:10,alignItems:"center"}}><input name="externalSideEffect" type="checkbox" style={{width:"auto"}} />This task is expected to change an external system or communicate externally</label>
-            <button type="submit">Create governed work assignment</button>
+            <SubmitButton type="submit">Create governed work assignment</SubmitButton>
           </form>
         ) : (
           <p className="empty-state">
@@ -204,7 +205,7 @@ export default async function AgentTaskPage({
         <div className="panel-heading"><div><p className="label">Evidence ledger</p><h2>Recent assignments</h2></div></div>
         {assignments.length ? (
           <div className="data-list">{assignments.map((assignment: any) => (
-            <div className="data-row" key={assignment.id} style={{alignItems:"flex-start"}}><div><strong>{assignment.title}</strong><span>{assignment.task_type} · {assignment.risk_level} risk · {assignment.approval_mode}</span>{assignment.verification_status==="pending_review"&&role==="owner"?<form action={reviewWorkOutcome} className="auth-form" style={{marginTop:12}}><input type="hidden" name="assignmentId" value={assignment.id}/><input type="hidden" name="agentId" value={agent.id}/><input type="hidden" name="agentCode" value={agent.agent_code}/><label>Quality score<input name="qualityScore" type="number" min="0" max="100" required/></label><label>Evidence review note<textarea name="reviewNote" rows={3} minLength={5} required/></label><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button name="decision" value="accept" type="submit">Verify outcome</button><button name="decision" value="reject" type="submit" className="secondary-button">Reject evidence</button></div></form>:null}</div><b>{assignment.status} · {assignment.verification_status}</b></div>
+            <div className="data-row" key={assignment.id} style={{alignItems:"flex-start"}}><div><strong>{assignment.title}</strong><span>{assignment.task_type} · {assignment.risk_level} risk · {assignment.approval_mode}</span>{assignment.verification_status==="pending_review"&&role==="owner"?<form action={reviewWorkOutcome} className="auth-form" style={{marginTop:12}}><input type="hidden" name="assignmentId" value={assignment.id}/><input type="hidden" name="agentId" value={agent.id}/><input type="hidden" name="agentCode" value={agent.agent_code}/><label>Quality score<input name="qualityScore" type="number" min="0" max="100" required/></label><label>Evidence review note<textarea name="reviewNote" rows={3} minLength={5} required/></label><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><SubmitButton name="decision" value="accept" type="submit">Verify outcome</SubmitButton><SubmitButton name="decision" value="reject" type="submit" className="secondary-button">Reject evidence</SubmitButton></div></form>:null}</div><b>{assignment.status} · {assignment.verification_status}</b></div>
           ))}</div>
         ) : <p className="empty-state">No governed work assignments exist for this Agent.</p>}
       </section>

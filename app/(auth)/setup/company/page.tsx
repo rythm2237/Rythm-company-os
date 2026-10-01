@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { provisionCompany } from "./actions";
@@ -67,7 +68,7 @@ export default async function CompanySetupPage({ searchParams }: Props) {
             </select>
           </label>}
           {selectedTemplate ? <input type="hidden" name="productCode" value={selectedProduct} /> : null}
-          <button type="submit">Continue to commercial activation</button>
+          <SubmitButton type="submit">Continue to commercial activation</SubmitButton>
         </form>
         <p className="security-note">
           No Agent, template, Company Builder capability, autonomous external action, publishing,

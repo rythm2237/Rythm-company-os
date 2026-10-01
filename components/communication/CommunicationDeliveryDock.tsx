@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -171,9 +173,9 @@ export default function CommunicationDeliveryDock() {
             {title}
           </strong>
         </div>
-        <button
+        <Button
           type="button"
-          onClick={() => void loadQueue()}
+          onClick={() =>loadQueue()}
           disabled={loading}
           style={{
             border: "1px solid rgba(15,31,61,.15)",
@@ -184,7 +186,7 @@ export default function CommunicationDeliveryDock() {
           }}
         >
           {loading ? "Checking…" : "Refresh"}
-        </button>
+        </Button>
       </div>
 
       {configured === false ? (
@@ -227,12 +229,12 @@ export default function CommunicationDeliveryDock() {
                 {item.sender_email || "Company mailbox"} →{" "}
                 {recipientText(item.recipients)}
               </span>
-              <button
+              <Button
                 type="button"
                 disabled={
                   !configured || Boolean(sendingId) || proposedIds.has(item.id)
                 }
-                onClick={() => void send(item.id)}
+                onClick={() =>send(item.id)}
                 style={{
                   marginTop: 9,
                   width: "100%",
@@ -255,7 +257,7 @@ export default function CommunicationDeliveryDock() {
                     : configured
                       ? "Propose governed delivery"
                       : "Resend not configured"}
-              </button>
+              </Button>
             </div>
           ))}
         </div>
@@ -280,7 +282,7 @@ export default function CommunicationDeliveryDock() {
           <strong>Pending Gateway step</strong>
           <span style={{ display: "block" }}>{notice.message}</span>
           {notice.approvalId ? (
-            <button
+            <Button
               type="button"
               className="secondary-button"
               style={{ marginTop: 8 }}
@@ -289,7 +291,7 @@ export default function CommunicationDeliveryDock() {
               }
             >
               Review exact approval
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : null}

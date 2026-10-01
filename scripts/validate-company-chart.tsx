@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import React from "react";
+import { JSDOM } from "jsdom";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { buildCompanyChart, type ChartAgent } from "../lib/company-chart";
@@ -26,7 +27,8 @@ assert.equal(buildCompanyChart([],[],[{...members[0],membership_status:"removed"
 const invalid = buildCompanyChart(departments,agents.map((agent,index)=>({...agent,reports_to_agent_id:index===0?"b":index===1?"a":"missing"})),members);
 assert.equal(invalid.issues,3);
 const html = renderToStaticMarkup(<CompanyChart departments={departments} agents={agents} members={members} actions={[{id:"task",title:"Campaign",status:"in_progress",assigned_agent_id:"b"}]} canTrack><form><input defaultValue="preserved form" /></form></CompanyChart>);
-assert.match(html,/aria-pressed="true">Organization chart/);
+const chartTab=new JSDOM(html).window.document.querySelector('button[aria-pressed="true"]');
+assert.ok(chartTab);assert.match(chartTab.textContent??"",/^Organization chart/);
 assert.match(html,/HUMAN AUTHORITY/); assert.match(html,/DEPARTMENT MANAGER/); assert.match(html,/DEPARTMENT MEMBERS/);
 assert.match(html,/No manager assigned/); assert.match(html,/Campaign/); assert.match(html,/actions\?action=task/);
 assert.match(html,/preserved form/); assert.match(html,/hidden=""/);

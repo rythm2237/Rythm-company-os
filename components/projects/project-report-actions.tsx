@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 export function ProjectReportActions(){
-  return <button type="button" onClick={()=>window.print()}>Print / Save PDF</button>;
+  return <Button type="button" onClick={()=>window.print()}>Print / Save PDF</Button>;
 }

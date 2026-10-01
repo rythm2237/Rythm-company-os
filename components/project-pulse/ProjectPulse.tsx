@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useSearchParams } from "next/navigation";
 import styles from "./ProjectPulse.module.css";
@@ -69,7 +71,7 @@ export default function ProjectPulse({event,nodes,project}:Props){
 
   if(!activeEvent||!activeProject||!ordered.length)return null;
   const close=()=>{window.localStorage.setItem(`rythm-project-pulse:${activeEvent.id}`,"seen");setOpen(false);};
-  if(!open) return <button className={styles.launcher} onClick={animate} aria-label={`Open Project Pulse for ${activeProject.name}`}><span>Project Pulse</span><strong>{activeEvent.new_progress}%</strong></button>;
+  if(!open) return <Button className={styles.launcher} onClick={animate} aria-label={`Open Project Pulse for ${activeProject.name}`}><span>Project Pulse</span><strong>{activeEvent.new_progress}%</strong></Button>;
 
   const segmentCount=Math.max(1,ordered.length-1); const tokenStart=(prevIndex/segmentCount)*100; const tokenEnd=(newIndex/segmentCount)*100;
   const tokenPosition=tokenStart+(tokenEnd-tokenStart)*tokenProgress; const tokenStyle={"--pulse-position":`${tokenPosition}%`} as CSSProperties;
@@ -77,9 +79,9 @@ export default function ProjectPulse({event,nodes,project}:Props){
   const stateClass=(state:string)=>state==="completed"?styles.completed:state==="current"?styles.currentNode:state==="blocked"?styles.blocked:state==="waiting_approval"?styles.waiting:styles.upcoming;
 
   return <div className={styles.backdrop} role="presentation"><section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="pulse-title">
-    <div className={styles.header}><div><p className="eyebrow">RYTHM PROJECT PULSE</p><h2 id="pulse-title">{activeEvent.event_label}</h2><p>{activeProject.project_code} · {activeProject.name}</p></div><button className={styles.close} onClick={close} aria-label="Close Project Pulse">×</button></div>
+    <div className={styles.header}><div><p className="eyebrow">RYTHM PROJECT PULSE</p><h2 id="pulse-title">{activeEvent.event_label}</h2><p>{activeProject.project_code} · {activeProject.name}</p></div><Button className={styles.close} onClick={close} aria-label="Close Project Pulse">×</Button></div>
     <div className={styles.summary}><div><span>Previous</span><strong>{activeEvent.previous_progress}%</strong></div><div className={styles.current}><span>Project progress</span><strong aria-live="polite">{progress}%</strong></div><div><span>Destination</span><strong>{activeEvent.new_progress}%</strong></div></div>
     <div className={styles.roadmapWrap} aria-label="Project roadmap"><div className={styles.track} aria-hidden="true"><span className={styles.token} style={tokenStyle} /></div><ol className={styles.roadmap}>{ordered.map(node=>{const state=nodeState(node);return <li key={node.stage_code} className={`${styles.node} ${stateClass(state)}`}><div className={styles.marker} aria-hidden="true">{iconFor(state)}</div><div className={styles.copy}><strong>{node.label}</strong><span>{labelFor(state)}</span><small>{node.weight_percent}% weight</small></div></li>;})}</ol></div>
-    <div className={styles.footer}><div><span className={styles.kicker}>Transition</span><strong>{ordered[prevIndex]?.label??activeEvent.previous_node} → {ordered[newIndex]?.label??activeEvent.new_node}</strong></div><div><span className={styles.kicker}>Next governed step</span><strong>{activeEvent.next_step??"Continue under project governance."}</strong></div><button className={`primary-link ${styles.continue}`} onClick={close}>{done?"Continue":"View progress"}</button></div>
+    <div className={styles.footer}><div><span className={styles.kicker}>Transition</span><strong>{ordered[prevIndex]?.label??activeEvent.previous_node} → {ordered[newIndex]?.label??activeEvent.new_node}</strong></div><div><span className={styles.kicker}>Next governed step</span><strong>{activeEvent.next_step??"Continue under project governance."}</strong></div><Button className={`primary-link ${styles.continue}`} onClick={close}>{done?"Continue":"View progress"}</Button></div>
   </section></div>;
 }

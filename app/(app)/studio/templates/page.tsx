@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import {
@@ -480,13 +481,13 @@ export default async function CompanyTemplateLibraryPage({
                           name="templateVersion"
                           value={template.version}
                         />
-                        <button
+                        <SubmitButton
                           className="primary-button"
                           type="submit"
                           disabled={!supported || !hasCapacity}
                         >
                           Provision {template.name}
-                        </button>
+                        </SubmitButton>
                       </form>
                     ) : canStartLegacyBlueprint ? (
                       <form
@@ -504,9 +505,9 @@ export default async function CompanyTemplateLibraryPage({
                             required
                           />
                         </label>
-                        <button className="primary-button" type="submit">
+                        <SubmitButton className="primary-button" type="submit">
                           Create workflow and first brief action
-                        </button>
+                        </SubmitButton>
                       </form>
                     ) : (
                       <>
@@ -575,9 +576,9 @@ export default async function CompanyTemplateLibraryPage({
                       name="templateVersion"
                       value={agent.version}
                     />
-                    <button className="secondary-button" disabled={alreadyPresent}>
+                    <SubmitButton className="secondary-button" disabled={alreadyPresent}>
                       {alreadyPresent ? "Provisioned" : "Add Agent"}
-                    </button>
+                    </SubmitButton>
                   </form>
                 </div>
               );
