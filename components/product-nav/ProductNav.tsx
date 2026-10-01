@@ -123,8 +123,8 @@ export default function ProductNav({ access, organization }: Props) {
             <RythmBrandLogo className="product-brand-full" priority variant="inverse" />
             <Image className="product-brand-compact" src="/brand/mark-inverse.svg" width={38} height={38} alt="RYTHM" priority />
           </Link>
-          <Button className="product-nav-collapse" type="button" aria-label={desktopCollapsed ? "Expand workspace navigation" : "Collapse workspace navigation"} aria-pressed={desktopCollapsed} title={desktopCollapsed ? "Expand navigation" : "Collapse navigation"} onClick={() => setDesktopCollapsed(value => !value)}>{desktopCollapsed ? "›" : "‹"}</Button>
-          <Button className="product-nav-close" type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation">×</Button>
+          <Button iconOnly className="product-nav-collapse" type="button" aria-label={desktopCollapsed ? "Expand workspace navigation" : "Collapse workspace navigation"} aria-pressed={desktopCollapsed} title={desktopCollapsed ? "Expand navigation" : "Collapse navigation"} onClick={() => setDesktopCollapsed(value => !value)}>{desktopCollapsed ? "›" : "‹"}</Button>
+          <Button iconOnly className="product-nav-close" type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation">×</Button>
         </div>
         <div className="product-nav-groups">{visibleGroups.map((group) => <div className="product-nav-group" key={group.label}>{group.label ? <span className="product-nav-label">{group.label}</span> : null}<div className="product-nav-links">{group.items.map((item) => { const active = isRouteActive(pathname, item.href); return <Link key={item.href} href={item.href} title={desktopCollapsed ? item.label : undefined} className={active ? "product-nav-link is-active" : "product-nav-link"} aria-current={active ? "page" : undefined}><span className="product-nav-icon" aria-hidden="true">{item.icon}</span><span className="product-nav-text">{item.label}</span><i aria-hidden="true" /></Link>; })}</div></div>)}</div>
         <div className="product-nav-footer">

@@ -33,7 +33,7 @@ export function Button({ children, variant, loading = false, loadingLabel, iconO
   };
   return <>
     <button {...props} type={type} className={`ui-button ${variant ? `ui-button--${variant}` : ""} ${iconOnly ? "ui-button--icon" : ""} ${className}`} disabled={disabled || busy} aria-busy={busy || undefined} onClick={onClick ? click : undefined}>
-      <span className="ui-button-content" style={{ visibility: busy && loadingLabel ? "hidden" : undefined }}>{children}</span>
+      <span className="ui-button-content" style={{ visibility: busy && (loadingLabel || iconOnly) ? "hidden" : undefined }}>{children}</span>
       <span aria-hidden={!busy || undefined} className={`ui-button-progress ${busy && loadingLabel ? "with-label" : ""}`} style={{visibility:busy?"visible":"hidden"}}><span className="ui-spinner" aria-hidden="true" />{busy?loadingLabel:null}</span>
     </button>
     {error ? <span className="ui-action-error" role="alert">{error}</span> : null}

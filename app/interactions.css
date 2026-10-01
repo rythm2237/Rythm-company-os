@@ -10,7 +10,7 @@
 :is(button,input[type=submit],input[type=button],a.primary-button,a.secondary-button,[role=button]):not(:disabled):not([aria-disabled=true]):active { scale:.98; }
 :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible { outline:3px solid #5267d9; outline-offset:3px; }
 :is(button,input[type=submit],input[type=button]):disabled,[aria-disabled=true] { cursor:not-allowed; opacity:.55; scale:1; }
-.ui-button { position:relative; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 16px; border:1px solid var(--ui-border-strong); border-radius:var(--ui-control-radius); font:inherit; font-weight:750; max-width:100%; }
+:where(.ui-button) { position:relative; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 16px; border:1px solid var(--ui-border-strong); border-radius:var(--ui-control-radius); font:inherit; font-weight:750; max-width:100%; }
 .ui-button--primary { background:var(--ui-ink); color:white; border-color:var(--ui-ink); }
 .ui-button--secondary,.ui-button--outline { background:var(--ui-surface); color:var(--ui-ink); }
 .ui-button--tertiary,.ui-button--ghost { background:transparent; color:inherit; border-color:transparent; }
@@ -41,3 +41,8 @@
 .decisionDiscussion .ui-button.toggle { background:rgba(39,126,174,.09); color:#a9eaff; border-color:rgba(86,204,255,.2); }
 .decisionDiscussion .ui-button.details { background:rgba(255,255,255,.045); color:#aebdca; border-color:rgba(255,255,255,.1); }
 .decisionDiscussion .composer .ui-button { background:#5d65d8; color:white; margin-top:8px; }
+
+/* Keep page-owned responsive visibility and structured menu layout. */
+.ui-button--icon .ui-button-progress { position:absolute; inset:0; }
+.app-mobile-header .ui-button-content { display:contents; }
+.app-mobile-header .ui-button-progress { display:none; }
