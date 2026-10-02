@@ -1,13 +1,13 @@
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE nail_2nya_admin_users (
+CREATE TABLE IF NOT EXISTS nail_2nya_admin_users (
   auth_user_id TEXT PRIMARY KEY,
   display_name TEXT,
   active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0,1)),
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_services (
+CREATE TABLE IF NOT EXISTS nail_2nya_services (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT,
@@ -25,7 +25,7 @@ CREATE TABLE nail_2nya_services (
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_customers (
+CREATE TABLE IF NOT EXISTS nail_2nya_customers (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE nail_2nya_customers (
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_appointments (
+CREATE TABLE IF NOT EXISTS nail_2nya_appointments (
   id TEXT PRIMARY KEY,
   booking_reference TEXT NOT NULL UNIQUE,
   service_id TEXT NOT NULL REFERENCES nail_2nya_services(id),
@@ -55,14 +55,14 @@ CREATE TABLE nail_2nya_appointments (
   CHECK (reserved_end_at > reserved_start_at)
 );
 
-CREATE TABLE nail_2nya_booking_tokens (
+CREATE TABLE IF NOT EXISTS nail_2nya_booking_tokens (
   appointment_id TEXT PRIMARY KEY REFERENCES nail_2nya_appointments(id) ON DELETE CASCADE,
   token_hash BLOB NOT NULL,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   expires_at TEXT
 );
 
-CREATE TABLE nail_2nya_business_hours (
+CREATE TABLE IF NOT EXISTS nail_2nya_business_hours (
   id TEXT PRIMARY KEY,
   weekday INTEGER NOT NULL CHECK (weekday BETWEEN 0 AND 6),
   start_time TEXT NOT NULL,
@@ -73,7 +73,7 @@ CREATE TABLE nail_2nya_business_hours (
   CHECK (end_time > start_time)
 );
 
-CREATE TABLE nail_2nya_business_profile (
+CREATE TABLE IF NOT EXISTS nail_2nya_business_profile (
   id TEXT PRIMARY KEY,
   business_name TEXT NOT NULL DEFAULT '2nya Nail Art',
   instagram_url TEXT NOT NULL DEFAULT 'https://www.instagram.com/2nya._nailart/',
@@ -89,7 +89,7 @@ CREATE TABLE nail_2nya_business_profile (
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_availability_exceptions (
+CREATE TABLE IF NOT EXISTS nail_2nya_availability_exceptions (
   id TEXT PRIMARY KEY,
   exception_date TEXT NOT NULL UNIQUE,
   is_closed INTEGER NOT NULL DEFAULT 0 CHECK (is_closed IN (0,1)),
@@ -98,7 +98,7 @@ CREATE TABLE nail_2nya_availability_exceptions (
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_special_availability (
+CREATE TABLE IF NOT EXISTS nail_2nya_special_availability (
   id TEXT PRIMARY KEY,
   availability_date TEXT NOT NULL,
   start_time TEXT NOT NULL,
@@ -109,7 +109,7 @@ CREATE TABLE nail_2nya_special_availability (
   CHECK (end_time > start_time)
 );
 
-CREATE TABLE nail_2nya_blocked_periods (
+CREATE TABLE IF NOT EXISTS nail_2nya_blocked_periods (
   id TEXT PRIMARY KEY,
   start_at TEXT NOT NULL,
   end_at TEXT NOT NULL,
@@ -120,7 +120,7 @@ CREATE TABLE nail_2nya_blocked_periods (
   CHECK (end_at > start_at)
 );
 
-CREATE TABLE nail_2nya_portfolio_items (
+CREATE TABLE IF NOT EXISTS nail_2nya_portfolio_items (
   id TEXT PRIMARY KEY,
   image_path TEXT NOT NULL,
   alt_text TEXT,
@@ -131,7 +131,7 @@ CREATE TABLE nail_2nya_portfolio_items (
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_site_settings (
+CREATE TABLE IF NOT EXISTS nail_2nya_site_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
   is_public INTEGER NOT NULL DEFAULT 0 CHECK (is_public IN (0,1)),
@@ -139,7 +139,7 @@ CREATE TABLE nail_2nya_site_settings (
   CHECK (json_valid(value))
 );
 
-CREATE TABLE nail_2nya_contact_messages (
+CREATE TABLE IF NOT EXISTS nail_2nya_contact_messages (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 80),
   phone TEXT,
@@ -152,7 +152,7 @@ CREATE TABLE nail_2nya_contact_messages (
   push_notified_at TEXT
 );
 
-CREATE TABLE nail_2nya_customer_push_subscriptions (
+CREATE TABLE IF NOT EXISTS nail_2nya_customer_push_subscriptions (
   id TEXT PRIMARY KEY,
   appointment_id TEXT NOT NULL REFERENCES nail_2nya_appointments(id) ON DELETE CASCADE,
   endpoint TEXT NOT NULL UNIQUE,
@@ -163,7 +163,7 @@ CREATE TABLE nail_2nya_customer_push_subscriptions (
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_notification_deliveries (
+CREATE TABLE IF NOT EXISTS nail_2nya_notification_deliveries (
   id TEXT PRIMARY KEY,
   appointment_id TEXT NOT NULL REFERENCES nail_2nya_appointments(id) ON DELETE CASCADE,
   event_type TEXT NOT NULL,
@@ -172,12 +172,12 @@ CREATE TABLE nail_2nya_notification_deliveries (
   UNIQUE (appointment_id,event_type,target)
 );
 
-CREATE TABLE nail_2nya_push_deliveries (
+CREATE TABLE IF NOT EXISTS nail_2nya_push_deliveries (
   appointment_id TEXT PRIMARY KEY REFERENCES nail_2nya_appointments(id) ON DELETE CASCADE,
   notified_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_push_keys (
+CREATE TABLE IF NOT EXISTS nail_2nya_push_keys (
   singleton INTEGER PRIMARY KEY DEFAULT 1 CHECK (singleton = 1),
   public_key TEXT NOT NULL,
   private_key TEXT NOT NULL,
@@ -185,7 +185,7 @@ CREATE TABLE nail_2nya_push_keys (
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_push_subscriptions (
+CREATE TABLE IF NOT EXISTS nail_2nya_push_subscriptions (
   id TEXT PRIMARY KEY,
   auth_user_id TEXT NOT NULL REFERENCES nail_2nya_admin_users(auth_user_id) ON DELETE CASCADE,
   endpoint TEXT NOT NULL UNIQUE,
@@ -196,14 +196,14 @@ CREATE TABLE nail_2nya_push_subscriptions (
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_realtime_events (
+CREATE TABLE IF NOT EXISTS nail_2nya_realtime_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   appointment_id TEXT,
   event_type TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_audit_log (
+CREATE TABLE IF NOT EXISTS nail_2nya_audit_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   entity_table TEXT NOT NULL,
   entity_id TEXT,
@@ -214,7 +214,7 @@ CREATE TABLE nail_2nya_audit_log (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
-CREATE TABLE nail_2nya_public_media_chunks_v4 (
+CREATE TABLE IF NOT EXISTS nail_2nya_public_media_chunks_v4 (
   asset_key TEXT NOT NULL,
   chunk_index INTEGER NOT NULL CHECK (chunk_index >= 0),
   base64_data TEXT NOT NULL,
@@ -222,17 +222,17 @@ CREATE TABLE nail_2nya_public_media_chunks_v4 (
   PRIMARY KEY (asset_key,chunk_index)
 );
 
-CREATE INDEX nail_2nya_appt_customer_idx ON nail_2nya_appointments(customer_id);
-CREATE INDEX nail_2nya_appt_service_idx ON nail_2nya_appointments(service_id);
-CREATE INDEX nail_2nya_appt_start_idx ON nail_2nya_appointments(start_at);
-CREATE INDEX nail_2nya_appt_status_idx ON nail_2nya_appointments(status,start_at);
-CREATE INDEX nail_2nya_appt_created_by_idx ON nail_2nya_appointments(created_by) WHERE created_by IS NOT NULL;
-CREATE INDEX nail_2nya_appt_overlap_idx ON nail_2nya_appointments(status,reserved_start_at,reserved_end_at);
-CREATE INDEX nail_2nya_block_created_by_idx ON nail_2nya_blocked_periods(created_by) WHERE created_by IS NOT NULL;
-CREATE INDEX nail_2nya_block_range_idx ON nail_2nya_blocked_periods(start_at,end_at);
-CREATE INDEX nail_2nya_hours_weekday_idx ON nail_2nya_business_hours(weekday) WHERE active = 1;
-CREATE INDEX nail_2nya_customer_push_appointment_idx ON nail_2nya_customer_push_subscriptions(appointment_id) WHERE active = 1;
-CREATE INDEX nail_2nya_special_date_idx ON nail_2nya_special_availability(availability_date);
+CREATE INDEX IF NOT EXISTS nail_2nya_appt_customer_idx ON nail_2nya_appointments(customer_id);
+CREATE INDEX IF NOT EXISTS nail_2nya_appt_service_idx ON nail_2nya_appointments(service_id);
+CREATE INDEX IF NOT EXISTS nail_2nya_appt_start_idx ON nail_2nya_appointments(start_at);
+CREATE INDEX IF NOT EXISTS nail_2nya_appt_status_idx ON nail_2nya_appointments(status,start_at);
+CREATE INDEX IF NOT EXISTS nail_2nya_appt_created_by_idx ON nail_2nya_appointments(created_by) WHERE created_by IS NOT NULL;
+CREATE INDEX IF NOT EXISTS nail_2nya_appt_overlap_idx ON nail_2nya_appointments(status,reserved_start_at,reserved_end_at);
+CREATE INDEX IF NOT EXISTS nail_2nya_block_created_by_idx ON nail_2nya_blocked_periods(created_by) WHERE created_by IS NOT NULL;
+CREATE INDEX IF NOT EXISTS nail_2nya_block_range_idx ON nail_2nya_blocked_periods(start_at,end_at);
+CREATE INDEX IF NOT EXISTS nail_2nya_hours_weekday_idx ON nail_2nya_business_hours(weekday) WHERE active = 1;
+CREATE INDEX IF NOT EXISTS nail_2nya_customer_push_appointment_idx ON nail_2nya_customer_push_subscriptions(appointment_id) WHERE active = 1;
+CREATE INDEX IF NOT EXISTS nail_2nya_special_date_idx ON nail_2nya_special_availability(availability_date);
 
 -- Appointment overlap protection is enforced in Worker service logic during the backend migration phase.
 -- PostgreSQL used a GiST exclusion constraint. D1 does not provide an equivalent native range constraint.
