@@ -234,27 +234,6 @@ CREATE INDEX nail_2nya_hours_weekday_idx ON nail_2nya_business_hours(weekday) WH
 CREATE INDEX nail_2nya_customer_push_appointment_idx ON nail_2nya_customer_push_subscriptions(appointment_id) WHERE active = 1;
 CREATE INDEX nail_2nya_special_date_idx ON nail_2nya_special_availability(availability_date);
 
-CREATE TRIGGER nail_2nya_appointments_no_overlap_insert
-BEFORE INSERT ON nail_2nya_appointments
-WHEN NEW.status IN ('pending','confirmed')
-BEGIN
-  SELECT CASE WHEN EXISTS (
-    SELECT 1 FROM nail_2nya_appointments a
-    WHERE a.status IN ('pending','confirmed')
-      AND NEW.reserved_start_at < a.reserved_end_at
-      AND NEW.reserved_end_at > a.reserved_start_at
-  ) THEN RAISE(ABORT,'appointment_conflict') END;
-END;
-
-CREATE TRIGGER nail_2nya_appointments_no_overlap_update
-BEFORE UPDATE OF reserved_start_at,reserved_end_at,status ON nail_2nya_appointments
-WHEN NEW.status IN ('pending','confirmed')
-BEGIN
-  SELECT CASE WHEN EXISTS (
-    SELECT 1 FROM nail_2nya_appointments a
-    WHERE a.id <> NEW.id
-      AND a.status IN ('pending','confirmed')
-      AND NEW.reserved_start_at < a.reserved_end_at
-      AND NEW.reserved_end_at > a.reserved_start_at
-  ) THEN RAISE(ABORT,'appointment_conflict') END;
+-- Appointment overlap protection is enforced in Worker service logic during the backend migration phase.
+-- PostgreSQL used a GiST exclusion constraint. D1 does not provide an equivalent native range constraint.
 END;
