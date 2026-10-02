@@ -1,1 +1,2 @@
 Trigger direct D1 schema bootstrap build.
+Trigger split D1 schema build.
