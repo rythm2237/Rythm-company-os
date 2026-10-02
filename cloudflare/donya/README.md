@@ -25,3 +25,6 @@ Preview command:
 `npx wrangler preview`
 
 Production traffic must not be routed here until later migration phases pass validation.
+
+
+Build trigger: Cloudflare production branch configured for the migration branch.
