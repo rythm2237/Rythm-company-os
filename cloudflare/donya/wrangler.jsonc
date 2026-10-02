@@ -13,5 +13,11 @@
       "database_name": "donya-nail-art-db",
       "database_id": "91cb5aa6-ce69-49a5-9356-3c2047e18fb4"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "donya-nail-art-media"
+    }
   ]
 }
