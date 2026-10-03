@@ -104,7 +104,7 @@ requireText(proposalWorker,"project_connection_bindings","proposal execution mus
 requireText(proposalWorker,"permission_match_confidence","proposal-to-capability mapping must fail closed on ambiguity");
 requireText(proposalWorker,"decided_by_user_id","proposal execution must retain accountable Human CEO identity");
 requireText(proposalWorker,"idempotencyKey","proposal execution must be idempotent");
-requireText(proposalWorker,'bridge_status:"retrying"',"proposal execution retry visibility");
+requireText(proposalWorker,'bridge_next_attempt_at',"proposal execution retry visibility");
 requireText(toolWorker,"syncToolExecutionApproval","canonical tool approval sync");
 requireText(toolWorker,"executeApprovedToolRequest","canonical Integration & Execution Gateway execution");
 requireText(toolWorker,'["waiting_approval","approved","authorized"]',"approval-to-execution queue");
