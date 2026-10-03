@@ -25,6 +25,8 @@ jobs:
       - run: npm run test:commercial-funnel
       - run: npm run test:commercial-payment
       - run: npm run test:interactions
+      - run: npm run test:company-core
+      - run: npm run test:company-core-ui
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:i18n

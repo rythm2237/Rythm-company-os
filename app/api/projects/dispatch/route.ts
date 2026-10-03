@@ -1,3 +1,4 @@
+import {dispatchCompanyPlanning} from "@/lib/company-core/continuation";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -58,6 +59,9 @@ export async function GET(request:Request){
     if(health.error){console.error("project_health_refresh_failed",health.error.message);errors.push({step:"health",error:health.error.message});}
     if(meetingRecovery.error){console.error("project_meeting_recovery_failed",meetingRecovery.error.message);errors.push({step:"meeting_recovery",error:meetingRecovery.error.message});}
 
+    const companyPlanning=await isolated("company_planning",()=>dispatchCompanyPlanning(service),errors,[]);
+    await isolated("company_obligations",async()=>{const r=await service.rpc("reconcile_company_obligations_v1");if(r.error)throw new Error(r.error.message);return r.data;},errors,null);
+
     const supervisorBefore=await isolated("supervisor_pre",()=>superviseProjectExecutions(service),errors,[]);
 
     const [knowledgeResults,connectionSetupResults]=await Promise.all([
@@ -92,6 +96,7 @@ export async function GET(request:Request){
       processed:knowledgeResults.length+connectionSetupResults.length+taskResults.length+meetingResults.length+proposalResults.length+proposalConvergence.length+toolResults.length+supervisorResults.length+lifecycleContinuation.length,
       healthEvents:Number(health.data??0),completionHealthEvents:Number(completionHealth.data??0),recoveredMeetings:Number(meetingRecovery.data??0),terminalExecutions:Number(terminal.data??0),
       completion:{...completion,criteriaSynced:Number(runtimeCriteria.data??0),observationsStarted:Number(startedObservations.data??0)},
+      companyPlanning,
       lifecycleContinuation,
       knowledge:knowledgeResults,
       connectionSetup:connectionSetupResults,

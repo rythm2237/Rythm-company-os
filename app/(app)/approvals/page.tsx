@@ -215,6 +215,7 @@ async function resolveApproval(formData: FormData) {
     .update({
       status: resolution,
       response_note: responseNote,
+      decision_kind: String(formData.get("decisionKind")??"revision"),
       resolved_at: resolvedAt,
       approver_user_id: user.id,
     })
@@ -581,7 +582,7 @@ export default async function ApprovalEnginePage({
                   />
                   <label>
                     CEO response note
-                    <textarea
+                    <select name="decisionKind" defaultValue="revision"><option value="revision">Revision required</option><option value="cost">Cost constraint</option><option value="approach">Approach rejected</option><option value="evidence">Insufficient evidence</option><option value="definitive">Definitive branch rejection</option><option value="conditional">Conditional approval — hold execution</option></select><textarea
                       name="responseNote"
                       minLength={3}
                       required

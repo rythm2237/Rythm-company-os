@@ -3,6 +3,8 @@
 import { Button } from "@/components/ui/Button";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { isSensitiveAnalyticsPath } from "@/lib/analytics/sensitive-paths";
 
 const MEASUREMENT_ID = "G-R0VW9SY7Z9";
 const CONSENT_COOKIE = "rythm_analytics_consent";
@@ -28,7 +30,7 @@ function writeConsent(value: "granted" | "denied") {
 }
 
 function loadGoogleAnalytics() {
-  if (!ALLOWED_HOSTS.has(window.location.hostname)) return;
+  if (!ALLOWED_HOSTS.has(window.location.hostname) || isSensitiveAnalyticsPath(window.location.pathname)) return;
   if (document.querySelector(`script[data-rythm-ga4="${MEASUREMENT_ID}"]`)) return;
 
   const analyticsWindow = window as AnalyticsWindow;
@@ -37,8 +39,11 @@ function loadGoogleAnalytics() {
   analyticsWindow.gtag("js", new Date());
   analyticsWindow.gtag("config", MEASUREMENT_ID, {
     anonymize_ip: true,
-    send_page_view: true,
+    send_page_view: false,
+    page_location: `${window.location.origin}${window.location.pathname}`,
   });
+
+  analyticsWindow.gtag("event", "page_view", { page_location: `${window.location.origin}${window.location.pathname}` });
 
   const script = document.createElement("script");
   script.async = true;
@@ -49,16 +54,20 @@ function loadGoogleAnalytics() {
 
 export default function GoogleAnalyticsConsent() {
   const [visible, setVisible] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (!ALLOWED_HOSTS.has(window.location.hostname)) return;
+    const sensitive = isSensitiveAnalyticsPath(pathname);
+    (window as unknown as Record<string, unknown>)[`ga-disable-${MEASUREMENT_ID}`] = sensitive;
+    if (sensitive) { setVisible(false); return; }
+    if (!ALLOWED_HOSTS.has(window.location.hostname) || isSensitiveAnalyticsPath(window.location.pathname)) return;
     const consent = readConsent();
     if (consent === "granted") {
       loadGoogleAnalytics();
       return;
     }
     if (consent !== "denied") setVisible(true);
-  }, []);
+  }, [pathname]);
 
   if (!visible) return null;
 

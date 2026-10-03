@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment && npm run test:integration-availability",
+    "prebuild": "npm run test:company-core && npm run test:company-core-ui && node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment && npm run test:integration-availability",
     "build": "next build",
     "postbuild": "npm run test:project-completion",
     "start": "next start",
@@ -51,7 +51,9 @@
     "test:commercial-payment": "node --import tsx scripts/validate-commercial-payment.ts",
     "test:integration-availability": "node --import tsx scripts/validate-integration-availability.ts",
     "smoke:commercial-public": "node scripts/smoke-commercial-public.mjs",
-    "test:interactions": "node --import tsx scripts/validate-interactions.tsx"
+    "test:interactions": "node --import tsx scripts/validate-interactions.tsx",
+    "test:company-core": "node --import tsx scripts/validate-shared-company-core.ts",
+    "test:company-core-ui": "node --import tsx scripts/validate-company-core-ui.tsx"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

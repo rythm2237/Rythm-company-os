@@ -1,3 +1,4 @@
+import {recordObligation} from "@/lib/company-core/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const terminalProjectStates=new Set(["COMPLETED","CANCELLED","FAILED","ON_HOLD","PAUSED"]);
@@ -14,8 +15,11 @@ function dimensionForProject(project:any,criterion:any){
 }
 
 async function chooseManager(supabase:SupabaseClient,projectId:string){
+  const project=await supabase.from("projects").select("organization_id,accountable_agent_id").eq("id",projectId).single();
+  if(project.data?.accountable_agent_id){const owner=await supabase.from("agents").select("id").eq("id",project.data.accountable_agent_id).eq("organization_id",project.data.organization_id).eq("enabled",true).eq("agent_status","enabled").maybeSingle();if(owner.data)return owner.data.id;}
+
   const team=await supabase.from("project_agents")
-    .select("agent_id,assignment_role,status,agents(id,agent_code,role_title,enabled)")
+    .select("agent_id,assignment_role,status,agents(id,agent_code,role_title,enabled,agent_status)")
     .eq("project_id",projectId).in("status",["assigned","active"]);
   const rows=team.data??[];
   const ranked=[...rows].sort((left:any,right:any)=>{
@@ -30,7 +34,7 @@ async function chooseManager(supabase:SupabaseClient,projectId:string){
   });
   const selected=ranked.find((row:any)=>{
     const agent=Array.isArray(row.agents)?row.agents[0]:row.agents;
-    return agent?.enabled!==false;
+    return agent?.enabled===true&&agent.agent_status==="enabled";
   });
   return selected?.agent_id??null;
 }
@@ -44,7 +48,7 @@ export async function ensureProjectLifecycleContinuation(supabase:SupabaseClient
   const results:Array<{projectId:string;status:string;dimension?:string;criterionId?:string}>=[];
 
   for(const project of candidates.data??[]){
-    if(terminalProjectStates.has(project.lifecycle_state))continue;
+    if(terminalProjectStates.has(project.lifecycle_state)||["on_hold","cancelled","completed"].includes(project.status))continue;
     const activeExecution=await supabase.from("project_executions").select("id").eq("project_id",project.id).in("status",["queued","running","paused"]).limit(1).maybeSingle();
     if(activeExecution.data)continue;
 
@@ -64,6 +68,7 @@ export async function ensureProjectLifecycleContinuation(supabase:SupabaseClient
     if(existing.data){results.push({projectId:project.id,status:"already_reserved",dimension:inferredDimension,criterionId:criterion.id});continue;}
 
     const managerId=await chooseManager(supabase,project.id);
+    if(!managerId){await recordObligation(supabase,{organizationId:project.organization_id,projectId:project.id,key:`completion:${criterion.id}`,action:`Assign qualified available ownership for ${inferredDimension} continuation`,resume:"Accountable owner is available with capacity and permissions"});continue;}
     const latest=await supabase.from("project_executions").select("execution_no").eq("project_id",project.id).order("execution_no",{ascending:false}).limit(1).maybeSingle();
     const executionNo=Number(latest.data?.execution_no??0)+1;
     const now=nowIso();
