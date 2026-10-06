@@ -182,3 +182,63 @@
     padding-inline: 10px;
   }
 }
+
+
+/* 2026-10-06: public shell / homepage viewport fixes.
+   Button.tsx wraps launcher children in .ui-button-content. The legacy launcher
+   grid therefore constrained that wrapper to the 32px icon column. Let the
+   wrapper own the internal two-column layout instead. */
+.marketing-site .marketing-guide-launcher {
+  position: relative;
+  display: block;
+}
+
+.marketing-site .marketing-guide-launcher > .ui-button-content {
+  width: 100%;
+}
+
+/* Keep the homepage message strong without allowing the 761–860px breakpoint
+   to turn the headline into the whole first viewport. */
+@media (min-width: 761px) and (max-width: 860px) {
+  .marketing-site .marketing-hero {
+    padding: 38px 28px 52px;
+    gap: 30px;
+  }
+
+  .marketing-site .hero-copy h1 {
+    max-width: 720px;
+    font-size: clamp(3rem, 8.4vw, 4.35rem);
+    line-height: .93;
+  }
+
+  .marketing-site .hero-copy > p:not(.marketing-kicker) {
+    max-width: 680px;
+  }
+
+  .marketing-site .hero-system-card {
+    width: min(100%, 580px);
+  }
+}
+
+/* Short-height desktop windows must keep the sidebar footer readable and
+   independently reachable rather than compressing its structured controls. */
+@media (min-width: 1101px) and (max-height: 680px) {
+  .marketing-site .marketing-sidebar {
+    overflow-y: auto;
+  }
+
+  .marketing-site .marketing-sidebar-navigation {
+    flex: 0 0 auto;
+    margin-bottom: 18px;
+  }
+
+  .marketing-site .marketing-sidebar-footer {
+    flex: 0 0 auto;
+    min-width: 0;
+    margin-top: auto;
+  }
+
+  .marketing-site .marketing-guide-launcher {
+    min-height: 54px;
+  }
+}
