@@ -207,7 +207,7 @@ export async function middleware(request: NextRequest) {
       .limit(1);
 
     const target = request.nextUrl.clone();
-    target.pathname = memberships?.length ? "/home" : "/demo";
+    target.pathname = memberships?.length ? "/home" : "/setup/company";
     target.search = "";
     return NextResponse.redirect(target);
   }
