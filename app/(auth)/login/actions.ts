@@ -29,9 +29,10 @@ export async function login(formData: FormData) {
     redirect(`/login?next=${encodeURIComponent(safeNext)}&error=${encodeURIComponent("Organization access could not be checked. Please try again.")}`);
   }
 
-  // Authenticated users without a company can explore the read-only demo first.
-  // Company creation is an explicit choice, not a login prerequisite.
-  if (!memberships?.length) redirect(safeNext.startsWith("/setup/company") ? safeNext : "/demo");
+  // A successfully authenticated user without an organization should continue
+  // into company setup. Redirecting them to the public demo makes the Sign in
+  // action appear broken because /login is also intercepted by middleware.
+  if (!memberships?.length) redirect(safeNext.startsWith("/setup/company") ? safeNext : "/setup/company");
 
   redirect(safeNext);
 }
