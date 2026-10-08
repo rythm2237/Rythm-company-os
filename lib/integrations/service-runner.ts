@@ -281,8 +281,15 @@ export async function executeApprovedToolRequest(executionRequestId: string) {
       claimError?.message ?? "Execution request could not be claimed.",
     );
   let attempts = 0;
+  let budgetReservationId: string | null = null;
+  let externalAttempted = false;
   try {
     const request = await hydratePayload(supabase, toRequest(row));
+    if(row.approval_request_id){
+      const gate=await supabase.from("approval_requests").select("decision_kind,conditions_satisfied").eq("id",row.approval_request_id).eq("organization_id",request.organizationId).maybeSingle();
+      if(gate.error)throw new IntegrationExecutionError("Approval conditions could not be verified.","authorization_error");
+      if(gate.data?.decision_kind==="conditional"&&!gate.data.conditions_satisfied)throw new IntegrationExecutionError("Conditional approval requires manager validation before execution.","authorization_error");
+    }
     const registered = getToolMetadata(request.tool, request.operation);
     if (!registered)
       throw new IntegrationExecutionError(
@@ -323,6 +330,22 @@ export async function executeApprovedToolRequest(executionRequestId: string) {
     };
     await adapter.validate(context);
     const prepared = await adapter.prepare(context);
+    if(request.projectId && request.financialImpact){
+      if(!row.project_budget_account_id || !Number.isFinite(Number(row.cost_limit)) || row.cost_limit==null)
+        throw new IntegrationExecutionError("Project spending account and explicit maximum cost are required.","policy_denied");
+      const account=await supabase.from("project_budget_accounts").select("project_id,organization_id,approval_threshold").eq("id",row.project_budget_account_id).eq("organization_id",request.organizationId).eq("project_id",request.projectId).maybeSingle();
+      if(!account.data)throw new IntegrationExecutionError("Project budget account does not match execution scope.","policy_denied");
+      if(account.data.approval_threshold!=null && Number(row.cost_limit)>Number(account.data.approval_threshold)){
+        if(!row.approval_request_id)throw new IntegrationExecutionError("Budget threshold requires explicit action approval.","authorization_error");
+        const gate=await supabase.from("approval_requests").select("status,decision_kind,conditions_satisfied").eq("id",row.approval_request_id).eq("organization_id",request.organizationId).maybeSingle();
+        if(gate.data?.status!=="approved" || (gate.data.decision_kind==="conditional"&&!gate.data.conditions_satisfied))throw new IntegrationExecutionError("Budget threshold approval missing or conditional.","authorization_error");
+      }
+      const reserved=await supabase.rpc("reserve_project_budget_v1",{target_org:request.organizationId,target_account:row.project_budget_account_id,reservation_key:`tool:${row.id}`,reserve_amount:Number(row.cost_limit)});
+      if(reserved.error)throw new IntegrationExecutionError(reserved.error.message,"policy_denied");
+      budgetReservationId=String(reserved.data);
+      const saved=await supabase.from("tool_execution_requests").update({project_budget_reservation_id:budgetReservationId}).eq("id",row.id).eq("status","executing");
+      if(saved.error)throw new Error("Budget reservation could not be linked to execution.");
+    }
     await lifecycle(supabase, row, "started", "executing", {
       tool: request.tool,
       operation: request.operation,
@@ -335,6 +358,7 @@ export async function executeApprovedToolRequest(executionRequestId: string) {
         attempts = attempt;
         const started = Date.now();
         try {
+          externalAttempted = true;
           const outcome = await adapter.execute(context, prepared);
           const accepted = safe(outcome.rawResult);
           const { error: acceptanceError } = await supabase
@@ -405,6 +429,11 @@ export async function executeApprovedToolRequest(executionRequestId: string) {
         false,
         true,
       );
+    if(budgetReservationId){
+      // Provider-specific receipts are needed to settle actual charges. An estimate is not a receipt.
+      const settlement=await supabase.rpc("reconcile_project_budget_v1",{target_org:request.organizationId,target_reservation:budgetReservationId,new_status:"uncertain",actual_cost:null,cost_evidence:{execution_id:row.id,external_reference:run.value.externalReferenceId??null,reason:"Awaiting provider cost receipt"}});
+      if(settlement.error)throw new Error("Cost reconciliation requires operator review.");
+    }
     await finalizeApplicationState(supabase, request, run.value);
     const completed = new Date().toISOString();
     const result = safe(run.value.rawResult);
@@ -459,6 +488,10 @@ export async function executeApprovedToolRequest(executionRequestId: string) {
     };
   } catch (error) {
     const normalized = normalizeExecutionError(error);
+    if(budgetReservationId){
+      const settlement=await supabase.rpc("reconcile_project_budget_v1",{target_org:row.organization_id,target_reservation:budgetReservationId,new_status:externalAttempted?"uncertain":"released",actual_cost:null,cost_evidence:{execution_id:row.id,error_class:normalized.errorClass,external_attempted:externalAttempted}});
+      if(settlement.error)throw new Error("Execution and cost reconciliation require operator review.");
+    }
     const completed = new Date().toISOString();
     const { error: updateError } = await supabase
       .from("tool_execution_requests")

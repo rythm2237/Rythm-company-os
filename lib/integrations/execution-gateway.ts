@@ -42,6 +42,7 @@ export type ToolExecutionIntent = {
   correlationId?: string;
   originatingRequestId?: string | null;
   projectId?: string | null;
+  budgetAccountId?: string | null;
   meetingId?: string | null;
   sessionId?: string | null;
   intent?: string;
@@ -485,6 +486,7 @@ export async function requestToolExecution(
       requested_by_user_id: intent.userId,
       originating_request_id: intent.originatingRequestId ?? null,
       project_id: intent.projectId ?? null,
+      project_budget_account_id: intent.budgetAccountId ?? null,
       meeting_id: intent.meetingId ?? null,
       session_id: intent.sessionId ?? null,
       integration_id: intent.integrationId,
