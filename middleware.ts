@@ -108,6 +108,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isProtected = isProtectedRoute(pathname);
   const isLogin = pathname === "/login";
+  const forceLogin = isLogin && request.nextUrl.searchParams.get("force") === "1";
   const meetingApiLimit = request.method === "POST" ? MEETING_API_LIMITS[pathname] : undefined;
 
   // These pages already enforce authenticated owner/tenant context inside their server components/actions.
@@ -199,17 +200,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isLogin && user) {
-    const { data: memberships } = await supabase
-      .from("organization_members")
-      .select("organization_id")
-      .eq("user_id", user.id)
-      .limit(1);
+  if (isLogin && user && !forceLogin) {
+    // Sign-in is an access flow, not a commercial onboarding flow.
+    // Use the SECURITY DEFINER organization list RPC because direct reads from
+    // organization_members are intentionally restricted to the active context.
+    const { data: organizations, error: organizationsError } = await supabase.rpc("list_my_organizations");
+    if (organizationsError) {
+      console.error("login_organization_lookup_failed", { code: organizationsError.code });
+      return response;
+    }
 
-    const target = request.nextUrl.clone();
-    target.pathname = memberships?.length ? "/home" : "/setup/company";
-    target.search = "";
-    return NextResponse.redirect(target);
+    if (organizations?.length) {
+      const target = request.nextUrl.clone();
+      target.pathname = "/home";
+      target.search = "";
+      return NextResponse.redirect(target);
+    }
+
+    // An authenticated identity with no company access stays on Sign in.
+    // Company creation is reached only through the explicit Get Started/signup flow.
+    return response;
   }
 
   return response;

@@ -20,19 +20,14 @@ export async function login(formData: FormData) {
     redirect(`/login?next=${encodeURIComponent(safeNext)}&error=${encodeURIComponent("Invalid email or password.")}`);
   }
 
-  const { data: memberships, error: membershipError } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", data.user.id)
-    .limit(1);
-  if (membershipError) {
-    redirect(`/login?next=${encodeURIComponent(safeNext)}&error=${encodeURIComponent("Organization access could not be checked. Please try again.")}`);
+  const { data: organizations, error: organizationError } = await supabase.rpc("list_my_organizations");
+  if (organizationError) {
+    redirect(`/login?force=1&next=${encodeURIComponent(safeNext)}&error=${encodeURIComponent("Organization access could not be checked. Please try again.")}`);
   }
 
-  // A successfully authenticated user without an organization should continue
-  // into company setup. Redirecting them to the public demo makes the Sign in
-  // action appear broken because /login is also intercepted by middleware.
-  if (!memberships?.length) redirect(safeNext.startsWith("/setup/company") ? safeNext : "/setup/company");
+  if (!organizations?.length) {
+    redirect(`/login?force=1&next=${encodeURIComponent(safeNext)}&error=${encodeURIComponent("This account is signed in, but it is not connected to a RYTHM company. Sign in with the account that owns or belongs to your company. New customers should use Get Started.")}`);
+  }
 
   redirect(safeNext);
 }

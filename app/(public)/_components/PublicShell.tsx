@@ -76,7 +76,7 @@ const FOOTER_GROUPS = [
       ["Press", "/press"],
       ["Support", "/support"],
       ["Contact", "/contact"],
-      ["Customer sign in", "/login"],
+      ["Customer sign in", "/login?force=1"],
     ],
   },
 ] as const;
@@ -137,7 +137,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
           <Button className="marketing-guide-launcher" type="button" onClick={handleOpenTour} dir={copy.direction} lang={locale}><span aria-hidden="true">?</span><span><strong>{copy.ui.guideLauncherTitle}</strong><small>{copy.ui.guideLauncherDetail}</small></span></Button>
           <div className="marketing-system-state"><i aria-hidden="true" /><span>Public experience</span><strong>Safe to explore</strong></div>
           <div className="marketing-sidebar-actions">
-            <Link href="/login" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_sidebar", locale } })}>Sign in</Link>
+            <Link href="/login?force=1" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_sidebar", locale } })}>Sign in</Link>
             <Link className="marketing-button" href="/pricing" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { source: "public_sidebar", locale } })}>Get Started <span aria-hidden="true">→</span></Link>
           </div>
         </div>
@@ -145,7 +145,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
       <div className="marketing-stage">
         <header className="marketing-mobile-header">
           <Link className="marketing-brand" href="/" aria-label="RYTHM home"><RythmBrandLogo variant="primary" /></Link>
-          <div><Link href="/login" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_mobile_header", locale } })}>Sign in</Link><Button type="button" aria-expanded={mobileOpen} aria-controls="public-navigation" onClick={() => setMobileOpen(true)}><span>Menu</span><i aria-hidden="true" /><i aria-hidden="true" /></Button></div>
+          <div><Link href="/login?force=1" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_mobile_header", locale } })}>Sign in</Link><Button type="button" aria-expanded={mobileOpen} aria-controls="public-navigation" onClick={() => setMobileOpen(true)}><span>Menu</span><i aria-hidden="true" /><i aria-hidden="true" /></Button></div>
         </header>
         <div className="marketing-page-transition" key={pathname}>{children}</div>
         <footer className="marketing-footer marketing-footer-structured" aria-label="RYTHM public footer">
