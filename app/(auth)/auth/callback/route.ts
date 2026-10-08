@@ -2,11 +2,144 @@ import { NextResponse, type NextRequest } from "next/server";
 import { recordConfirmedPublicConversion } from "@/lib/analytics/server-conversions";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-function safeInternalPath(value:string|null){if(!value||!value.startsWith("/")||value.startsWith("//"))return"/home";return value;}
-function authFailureUrl(origin:string,next:string,flow:string|null){const message=flow==="oauth"||flow==="oauth_signup"?"Social sign-in could not be completed. Try again or use email and password.":"This email link is invalid, expired, or has already been used. Request a fresh link and use the newest email.";if(next.startsWith("/reset-password"))return`${origin}/forgot-password?error=${encodeURIComponent(message)}`;return`${origin}/login?next=${encodeURIComponent(next)}&error=${encodeURIComponent(message)}`;}
-function existingMemberDestination(next:string){return next==="/demo"?"/home":next;}
-function oauthDisplayName(user:{email?:string|null;user_metadata?:Record<string,unknown>}){const metadata=user.user_metadata??{};const candidate=metadata.full_name??metadata.name??metadata.preferred_username;const name=typeof candidate==="string"?candidate.trim():"";if(name)return name.slice(0,120);const localPart=user.email?.split("@")[0]?.trim();return(localPart||"Human CEO").slice(0,120);}
-function isFreshlyCreatedUser(createdAt:string|undefined){if(!createdAt)return false;const timestamp=Date.parse(createdAt);if(!Number.isFinite(timestamp))return false;const ageMs=Date.now()-timestamp;return ageMs>=0&&ageMs<=10*60*1000;}
-export async function GET(request:NextRequest){const code=request.nextUrl.searchParams.get("code");const next=safeInternalPath(request.nextUrl.searchParams.get("next"));const flow=request.nextUrl.searchParams.get("flow");const provider=request.nextUrl.searchParams.get("provider")??"unknown";const origin=request.nextUrl.origin;if(!code)return NextResponse.redirect(authFailureUrl(origin,next,flow));const supabase=await createAuthServerClient();const{error}=await supabase.auth.exchangeCodeForSession(code);if(error){console.error("auth_callback_exchange_failed",{status:error.status,code:error.code,message:error.message,flow});return NextResponse.redirect(authFailureUrl(origin,next,flow));}
-  if(flow==="invite"){const{data:{user},error:userError}=await supabase.auth.getUser();if(userError||!user?.email)return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Invitation identity could not be verified.")}`);const invitationId=typeof user.user_metadata?.rythm_org_invitation_id==="string"?user.user_metadata.rythm_org_invitation_id:"";const service=createServerSupabaseClient();if(!service||!invitationId)return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Invitation details are missing or expired.")}`);const accepted=await service.rpc("aiw_accept_company_invitation",{p_invitation:invitationId,p_user:user.id,p_email:user.email});if(accepted.error){console.error("company_invitation_accept_failed",{message:accepted.error.message});return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("This company invitation is invalid, expired, or does not match this email.")}`);}return NextResponse.redirect(`${origin}${next}`);}
-  if(flow==="signup"){await recordConfirmedPublicConversion("confirmed_signup_conversion","/signup",{method:"email_confirmation"});return NextResponse.redirect(`${origin}${next}`);}if(flow==="oauth"||flow==="oauth_signup"){const{data:{user},error:userError}=await supabase.auth.getUser();if(userError||!user){console.error("oauth_callback_user_missing",{status:userError?.status??null,code:userError?.code??null,message:userError?.message??"No authenticated user after OAuth exchange."});return NextResponse.redirect(authFailureUrl(origin,next,flow));}const{data:memberships,error:membershipError}=await supabase.from("organization_members").select("organization_id").eq("user_id",user.id).limit(1);if(membershipError){console.error("oauth_membership_lookup_failed",{code:membershipError.code,message:membershipError.message});return NextResponse.redirect(`${origin}/login?next=${encodeURIComponent(next)}&error=${encodeURIComponent("Your account was authenticated, but organization access could not be verified. Try again.")}`);}if(memberships?.length)return NextResponse.redirect(`${origin}${existingMemberDestination(next)}`);const{error:profileError}=await supabase.from("customer_profiles").upsert({user_id:user.id,full_name:oauthDisplayName(user),onboarding_status:"company_pending",updated_at:new Date().toISOString()});if(profileError)console.error("oauth_profile_upsert_failed",{code:profileError.code,message:profileError.message});if(flow==="oauth_signup"&&isFreshlyCreatedUser(user.created_at))await recordConfirmedPublicConversion("confirmed_signup_conversion","/signup",{method:"oauth",provider});const destination=flow==="oauth"&&!memberships?.length&&!next.startsWith("/setup/company")?"/setup/company":next;return NextResponse.redirect(`${origin}${destination}`);}return NextResponse.redirect(`${origin}${next}`);}
+
+function safeInternalPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/home";
+  return value;
+}
+
+function authFailureUrl(origin: string, next: string, flow: string | null) {
+  const message = flow === "oauth" || flow === "oauth_signup"
+    ? "Social sign-in could not be completed. Try again or use email and password."
+    : "This email link is invalid, expired, or has already been used. Request a fresh link and use the newest email.";
+  if (next.startsWith("/reset-password")) return `${origin}/forgot-password?error=${encodeURIComponent(message)}`;
+  return `${origin}/login?next=${encodeURIComponent(next)}&error=${encodeURIComponent(message)}`;
+}
+
+function existingMemberDestination(next: string) {
+  return next === "/demo" ? "/home" : next;
+}
+
+function oauthDisplayName(user: { email?: string | null; user_metadata?: Record<string, unknown> }) {
+  const metadata = user.user_metadata ?? {};
+  const candidate = metadata.full_name ?? metadata.name ?? metadata.preferred_username;
+  const name = typeof candidate === "string" ? candidate.trim() : "";
+  if (name) return name.slice(0, 120);
+  const localPart = user.email?.split("@")[0]?.trim();
+  return (localPart || "Human CEO").slice(0, 120);
+}
+
+function isFreshlyCreatedUser(createdAt: string | undefined) {
+  if (!createdAt) return false;
+  const timestamp = Date.parse(createdAt);
+  if (!Number.isFinite(timestamp)) return false;
+  const ageMs = Date.now() - timestamp;
+  return ageMs >= 0 && ageMs <= 10 * 60 * 1000;
+}
+
+function noCompanyAccessUrl(origin: string, next: string) {
+  const message = "This account is signed in, but it is not connected to a RYTHM company. Sign in with the account that owns or belongs to your company. New customers should use Get Started.";
+  return `${origin}/login?force=1&next=${encodeURIComponent(next)}&error=${encodeURIComponent(message)}`;
+}
+
+export async function GET(request: NextRequest) {
+  const code = request.nextUrl.searchParams.get("code");
+  const next = safeInternalPath(request.nextUrl.searchParams.get("next"));
+  const flow = request.nextUrl.searchParams.get("flow");
+  const provider = request.nextUrl.searchParams.get("provider") ?? "unknown";
+  const origin = request.nextUrl.origin;
+
+  if (!code) return NextResponse.redirect(authFailureUrl(origin, next, flow));
+
+  const supabase = await createAuthServerClient();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    console.error("auth_callback_exchange_failed", {
+      status: error.status,
+      code: error.code,
+      message: error.message,
+      flow,
+    });
+    return NextResponse.redirect(authFailureUrl(origin, next, flow));
+  }
+
+  if (flow === "invite") {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user?.email) {
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Invitation identity could not be verified.")}`);
+    }
+
+    const invitationId = typeof user.user_metadata?.rythm_org_invitation_id === "string"
+      ? user.user_metadata.rythm_org_invitation_id
+      : "";
+    const service = createServerSupabaseClient();
+    if (!service || !invitationId) {
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Invitation details are missing or expired.")}`);
+    }
+
+    const accepted = await service.rpc("aiw_accept_company_invitation", {
+      p_invitation: invitationId,
+      p_user: user.id,
+      p_email: user.email,
+    });
+    if (accepted.error) {
+      console.error("company_invitation_accept_failed", { message: accepted.error.message });
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("This company invitation is invalid, expired, or does not match this email.")}`);
+    }
+
+    return NextResponse.redirect(`${origin}${next}`);
+  }
+
+  if (flow === "signup") {
+    await recordConfirmedPublicConversion("confirmed_signup_conversion", "/signup", { method: "email_confirmation" });
+    return NextResponse.redirect(`${origin}${next}`);
+  }
+
+  if (flow === "oauth" || flow === "oauth_signup") {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("oauth_callback_user_missing", {
+        status: userError?.status ?? null,
+        code: userError?.code ?? null,
+        message: userError?.message ?? "No authenticated user after OAuth exchange.",
+      });
+      return NextResponse.redirect(authFailureUrl(origin, next, flow));
+    }
+
+    const { data: organizations, error: organizationError } = await supabase.rpc("list_my_organizations");
+    if (organizationError) {
+      console.error("oauth_organization_lookup_failed", {
+        code: organizationError.code,
+        message: organizationError.message,
+      });
+      return NextResponse.redirect(
+        `${origin}/login?force=1&next=${encodeURIComponent(next)}&error=${encodeURIComponent("Your account was authenticated, but organization access could not be verified. Try again.")}`,
+      );
+    }
+
+    if (organizations?.length) {
+      return NextResponse.redirect(`${origin}${existingMemberDestination(next)}`);
+    }
+
+    const { error: profileError } = await supabase.from("customer_profiles").upsert({
+      user_id: user.id,
+      full_name: oauthDisplayName(user),
+      onboarding_status: "company_pending",
+      updated_at: new Date().toISOString(),
+    });
+    if (profileError) {
+      console.error("oauth_profile_upsert_failed", { code: profileError.code, message: profileError.message });
+    }
+
+    if (flow === "oauth_signup") {
+      if (isFreshlyCreatedUser(user.created_at)) {
+        await recordConfirmedPublicConversion("confirmed_signup_conversion", "/signup", { method: "oauth", provider });
+      }
+      return NextResponse.redirect(`${origin}${next}`);
+    }
+
+    return NextResponse.redirect(noCompanyAccessUrl(origin, next));
+  }
+
+  return NextResponse.redirect(`${origin}${next}`);
+}
