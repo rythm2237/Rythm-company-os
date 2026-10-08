@@ -24,4 +24,19 @@ assert.match(migration, /v_offer\.entitlement_product_code is distinct from v_pr
 assert.match(migration, /max_active_agents = case v_product_code when 'ready_company' then 12 else 50 end/);
 assert.match(migration, /revoke execute on function public\.provision_customer_organization.*from authenticated/);
 
-console.log("Commercial funnel selection and provisioning contract passed.");
+
+const middleware = readFileSync("middleware.ts", "utf8");
+const loginAction = readFileSync("app/(auth)/login/actions.ts", "utf8");
+const oauthCallback = readFileSync("app/(auth)/auth/callback/route.ts", "utf8");
+const publicShell = readFileSync("app/(public)/_components/PublicShell.tsx", "utf8");
+
+assert.ok(middleware.includes("forceLogin"));
+assert.ok(middleware.includes('rpc("list_my_organizations")'));
+assert.ok(!middleware.includes('memberships?.length ? "/home" : "/setup/company"'));
+assert.ok(loginAction.includes('rpc("list_my_organizations")'));
+assert.ok(oauthCallback.includes('flow === "oauth_signup"'));
+assert.ok(oauthCallback.includes("noCompanyAccessUrl"));
+assert.ok(publicShell.includes('href="/login?force=1"'));
+
+console.log("Commercial funnel selection, provisioning, and sign-in separation contract passed.");
+
