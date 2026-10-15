@@ -53,7 +53,7 @@
     "smoke:commercial-public": "node scripts/smoke-commercial-public.mjs",
     "test:interactions": "node --import tsx scripts/validate-interactions.tsx",
     "test:project-lifecycle": "node --import tsx scripts/validate-project-lifecycle.ts",
-    "test:project-experience": "node --import tsx scripts/validate-project-experience.tsx"
+    "test:project-experience": "node --import tsx scripts/validate-project-experience.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
