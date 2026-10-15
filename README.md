@@ -76,3 +76,5 @@ npm run dev
 ## Ownership
 
 Human CEO and product owner: Yas
+
+Project lifecycle and workspace implementation, evidence and rollout gates: [Project lifecycle v3](docs/project-lifecycle-experience-v3.md).

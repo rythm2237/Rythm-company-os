@@ -125,11 +125,11 @@ requireText(connectionRoute,"capabilities:requested","connection knowledge must 
 requireText(intake,"Client / Counterparty","rich intake client section");
 requireText(intake,"Contract & Commercial","rich intake contract section");
 requireText(intake,'name="files" multiple',"multi-file intake");
-requireText(dashboard,"Execution Readiness","readiness UX");
+requireText(dashboard,"ProjectAnalysisBrief","readiness disclosure UX");
 requireText(dashboard,"Executive Inbox","executive attention UX");
-requireText(dashboard,"persisted server-side","offline execution UX");
-for(const view of ["Overview","Roadmap","Work","Activity","Decisions","Files","Results","Advanced"])requireText(dashboard,view,`mission control view ${view}`);
-requireText(dashboard,"progress.progressPercent","canonical operating progress");
+requireText(dashboard,"getProjectProgressSnapshot","persisted server-side progress");
+for(const view of ["Overview","Roadmap","Work","Activity","Decisions","Resources","Performance","Settings"])requireText(dashboard,view,`mission control view ${view}`);
+requireText(dashboard,"project.overall_project_progress","canonical verified project progress");
 requireText(intake,"progressSnapshots","canonical portfolio progress");
 if(vercel.includes('"path": "/api/projects/dispatch"'))throw new Error("Frequent project dispatch must not rely on Vercel Hobby Cron.");
 for(const route of authRoutes){requireText(route,"resolveOwnerApiOrganizationContext","owner authorization");requireText(route,"organizationId","tenant scope");}

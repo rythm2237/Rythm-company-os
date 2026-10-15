@@ -7,7 +7,7 @@ import { useProjectApprovalState } from "@/components/projects/ProjectApprovalSt
 import { ApprovalDecisionDiscussion } from "@/components/projects/approval-decision-discussion";
 
 type LiveTask={id:string;title:string;status:string;priority:number;assigned_agent_id:string|null;waiting_on_approval_id:string|null;started_at?:string|null;completed_at?:string|null;updated_at?:string|null;agents?:{agent_code?:string;display_name?:string;name?:string}|null};
-type LiveApproval={id:string;subject_type:string;subject_id:string;title:string;summary:string;risk_level:string;status:string;created_at:string;expires_at:string|null;resolved_at?:string|null;response_note?:string|null;approver_user_id?:string|null;requested_by_agent_id?:string|null};
+type LiveApproval={id:string;subject_type:string;subject_id:string;title:string;summary:string;risk_level:string;status:string;created_at:string;expires_at:string|null;revision_of?:string|null;revision_number?:number;resolved_at?:string|null;response_note?:string|null;approver_user_id?:string|null;requested_by_agent_id?:string|null};
 type LiveActivity={id:string;event_type:string;headline:string;detail:string|null;importance:string;created_at:string};
 type LiveAgent={agent_id:string;status:string;assignment_role:string;agents?:{agent_code?:string;display_name?:string;name?:string;role_title?:string}|null};
 type ProgressSnapshot={progressPercent:number;completedTasks:number;totalTasks:number;runningTasks:number;queuedTasks:number;awaitingApproval:number;blockedTasks:number;failedTasks:number;lastActivityAt:string|null};
@@ -26,7 +26,7 @@ export function ProjectLiveOperations({projectId,initialStatus,mode="full"}:Prop
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
   const [busyApproval,setBusyApproval]=useState<string|null>(null);
-  const [busyResolution,setBusyResolution]=useState<"approved"|"rejected"|null>(null);
+  const [busyResolution,setBusyResolution]=useState<"approved"|"rejected"|"changes"|null>(null);
   const [notes,setNotes]=useState<Record<string,string>>({});
   const updateApprovalSummary=useProjectApprovalState()?.setApprovals;
   useEffect(()=>{if(data)updateApprovalSummary?.(data.approvals);},[data,updateApprovalSummary]);
@@ -50,13 +50,13 @@ export function ProjectLiveOperations({projectId,initialStatus,mode="full"}:Prop
   useEffect(()=>{const reads=readEpoch.current;void load(true);const refresh=(event:Event)=>{if((event as CustomEvent).detail?.source!=="approval")void load(true);};const timer=window.setInterval(()=>void load(),15000);window.addEventListener("rythm:project-updated",refresh);return()=>{reading.current=false;reads.invalidate();window.clearInterval(timer);window.removeEventListener("rythm:project-updated",refresh);};},[load]);
   useEffect(()=>{const timer=window.setInterval(()=>setTick(v=>v+1),1000);return()=>window.clearInterval(timer);},[]);
 
-  const resolve=async(approval:LiveApproval,resolution:"approved"|"rejected")=>{
+  const resolve=async(approval:LiveApproval,resolution:"approved"|"rejected",requestChanges=false)=>{
     const typed=(notes[approval.id]??"").trim();
     if(resolution==="rejected"&&typed.length<3){setError("Add a short reason before rejecting this request.");return;}
-    const responseNote=typed||(resolution==="approved"?"Approved by CEO from Project Operating System.":"");
+    const responseNote=(requestChanges?`Changes requested: ${typed}`:typed)||(resolution==="approved"?"Approved by CEO from Project Operating System.":"");
     if(!mutationLock.current.acquire())return;
     readEpoch.current.invalidate();reading.current=false;
-    setBusyApproval(approval.id);setBusyResolution(resolution);setError("");setNotice(resolution==="approved"?"Authorizing workstream…":"Rejecting workstream…");
+    setBusyApproval(approval.id);setBusyResolution(requestChanges?"changes":resolution);setError("");setNotice(resolution==="approved"?"Authorizing workstream…":"Rejecting workstream…");
     try{
       const response=await fetch("/api/projects/live",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId,approvalId:approval.id,resolution,responseNote})});
       const result=await response.json() as {ok?:boolean;error?:string;taskStatus?:string};
@@ -64,7 +64,7 @@ export function ProjectLiveOperations({projectId,initialStatus,mode="full"}:Prop
       readEpoch.current.invalidate();reading.current=false;
       setData(current=>current?{...current,approvals:current.approvals.filter(item=>item.id!==approval.id)}:current);
       setNotes(current=>{const next={...current};delete next[approval.id];return next;});
-      setNotice(resolution==="approved"?"Approved. The affected workstream is queued to continue.":"Rejected. The affected workstream is blocked; unrelated work continues.");
+      setNotice(requestChanges?"Changes requested. A revised proposal must reference this decision.":resolution==="approved"?"Approved. The affected workstream is queued to continue.":"Rejected. The affected workstream is blocked; unrelated work continues.");
       await load(true);
       window.dispatchEvent(new CustomEvent("rythm:project-updated",{detail:{projectId,source:"approval"}}));
 
@@ -117,6 +117,6 @@ export function ProjectLiveOperations({projectId,initialStatus,mode="full"}:Prop
     <div className="tasks"><div className="tasksHead"><h3>Agent workstreams</h3><span className="micro">LIVE EXECUTION GRAPH</span></div><div className="taskRail">{visibleTasks.length?visibleTasks.map(task=><div className={`task ${task.status}`} key={task.id}><b>{task.title}</b><span>{statusLabel(task.status)} · {task.agents?.agent_code||"unassigned"}</span></div>):<div className="empty">No active or queued workstreams.</div>}</div></div>
     </>:null}
     {data?.approvalHistory?.length?<details className="approvals"><summary>Decision history ({data.approvalHistory.length} recent)</summary>{data.approvalHistory.map(item=><article key={item.id} style={{paddingBlock:12}}><strong>{item.title}</strong><p>{statusLabel(item.status)} · {item.resolved_at?new Date(item.resolved_at).toLocaleString():""}</p><p>{item.response_note}</p><small>Requested {new Date(item.created_at).toLocaleString()} · Requested by {item.requested_by_agent_id??"system"} · Manager {item.approver_user_id??"policy"}</small></article>)}</details>:null}
-    <div className="approvals"><div className="approvalHead"><h3>Human authority gates</h3><span className="micro">{data?.approvals?.length??0} CEO DECISIONS PENDING</span></div>{data?.approvals?.length?<div className="approvalGrid">{data.approvals.map(approval=><div className={`approval ${busyApproval===approval.id?"processing":""}`} key={approval.id}><div className="approvalTop"><b>{approval.title}</b><span className="risk">{approval.risk_level}</span></div><p>{approval.summary}</p><ApprovalDecisionDiscussion projectId={projectId} approvalId={approval.id} disabled={busyApproval!==null}/><textarea aria-label={`Decision reason for ${approval.title}`} className="note" value={notes[approval.id]??""} onChange={e=>setNotes(current=>({...current,[approval.id]:e.target.value}))} placeholder="Optional approval note · rejection requires a reason" disabled={busyApproval===approval.id}/><ButtonGroup label="Decision actions" className="buttons"><Button loading={busyApproval===approval.id&&busyResolution==="approved"} loadingLabel="Approving…" className="approve" data-processing-label="Authorizing workstream" disabled={busyApproval!==null} onClick={()=>resolve(approval,"approved")}>Approve & continue</Button><Button variant="destructive" loading={busyApproval===approval.id&&busyResolution==="rejected"} loadingLabel="Rejecting…" className="reject" data-processing-label="Rejecting workstream" disabled={busyApproval!==null} onClick={()=>resolve(approval,"rejected")}>Reject</Button></ButtonGroup></div>)}</div>:<div className="empty">No human decision is blocking a workstream. Independent agents continue autonomously.</div>}</div>
+    <div className="approvals"><div className="approvalHead"><h3>Human authority gates</h3><span className="micro">{data?.approvals?.length??0} CEO DECISIONS PENDING</span></div>{data?.approvals?.length?<div className="approvalGrid">{data.approvals.map(approval=><div className={`approval ${busyApproval===approval.id?"processing":""}`} key={approval.id}><div className="approvalTop"><b>{approval.title}</b><span className="risk">{approval.risk_level}</span></div><details><summary>Context and evidence</summary><p>{approval.summary}</p>{approval.revision_of?<p>Revision {approval.revision_number} · Previous decision: {approval.revision_of}</p>:null}</details><details><summary>Discuss this decision</summary><ApprovalDecisionDiscussion projectId={projectId} approvalId={approval.id} disabled={busyApproval!==null}/></details><textarea aria-label={`Decision reason for ${approval.title}`} className="note" value={notes[approval.id]??""} onChange={e=>setNotes(current=>({...current,[approval.id]:e.target.value}))} placeholder="Optional approval note · rejection requires a reason" disabled={busyApproval===approval.id}/><ButtonGroup label="Decision actions" className="buttons"><Button loading={busyApproval===approval.id&&busyResolution==="approved"} loadingLabel="Approving…" className="approve" data-processing-label="Authorizing workstream" disabled={busyApproval!==null} onClick={()=>resolve(approval,"approved")}>Approve & continue</Button><Button variant="destructive" loading={busyApproval===approval.id&&busyResolution==="rejected"} loadingLabel="Rejecting…" className="reject" data-processing-label="Rejecting workstream" disabled={busyApproval!==null} onClick={()=>resolve(approval,"rejected")}>Reject</Button><Button variant="secondary" loading={busyApproval===approval.id&&busyResolution==="changes"} loadingLabel="Requesting changes…" disabled={busyApproval!==null} onClick={()=>resolve(approval,"rejected",true)}>Request changes</Button></ButtonGroup></div>)}</div>:<div className="empty">No human decision is blocking a workstream. Independent agents continue autonomously.</div>}</div>
   </section>;
 }

@@ -1,0 +1,27 @@
+.project-workspace{--project-border:var(--border,#e2e8f0);--project-muted:var(--muted-foreground,#64748b)}
+.project-workspace .command-header h1{font-size:clamp(1.4rem,3vw,1.9rem)}
+.project-workspace .command-header .subtitle{max-width:72ch;font-size:.9rem;line-height:1.5}
+.project-workspace .project-subnav{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--project-border);padding:8px 0;margin-bottom:18px}
+.project-workspace .project-subnav a{flex-shrink:0;padding:9px 12px;border-radius:8px;font-size:.875rem}
+.project-workspace .project-subnav a.active{background:var(--text-primary,#172033);color:var(--surface,#fff)}
+.project-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+.project-summary-grid>div{padding:14px;border:1px solid var(--project-border,#e2e8f0);border-radius:10px;min-width:0}
+.project-summary-grid span,.project-summary-grid small{display:block;color:var(--project-muted,#64748b);font-size:.8rem;line-height:1.5}
+.project-summary-grid strong{display:block;font-size:1rem;margin:5px 0;overflow-wrap:anywhere;text-transform:capitalize}
+.project-workspace .panel{box-shadow:none;border-radius:12px}
+.project-workspace h2{font-size:1.1rem}.project-workspace .project-view-panel{margin-top:16px}
+.project-workspace details>summary{cursor:pointer;font-weight:600;padding:10px 0;line-height:1.5}
+.project-workspace details[open]>summary{margin-bottom:12px}
+.project-work-row{display:flex;width:100%;align-items:center;justify-content:space-between;text-align:start;gap:16px;padding:14px 8px;background:transparent;color:inherit;border:0;border-bottom:1px solid var(--project-border,#e2e8f0);border-radius:4px;cursor:pointer}
+.project-work-row strong,.project-work-row small{display:block}.project-work-row strong{font-size:.9rem}.project-work-row small{margin-top:6px;color:var(--project-muted,#64748b);font-size:.8rem}.project-work-row:hover{background:rgba(100,116,139,.08)}
+.project-inline-filter{display:flex;align-items:center;gap:10px;margin:12px 0}.project-inline-filter select{max-width:260px}
+.project-context-panel{position:fixed;inset:0 0 0 auto;margin:0;width:min(620px,100vw);height:100dvh;max-height:100dvh;max-width:100vw;padding:0;border:0;border-left:1px solid var(--border,#cbd5e1);background:var(--surface,#fff);color:var(--text-primary,#172033);box-shadow:-12px 0 48px #0002;animation:project-panel-enter .16s ease-out}
+.project-context-panel::backdrop{background:#10182866}.project-context-panel>header{position:sticky;top:0;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px;background:inherit;border-bottom:1px solid var(--border,#e2e8f0);z-index:1}
+.project-context-panel h2{margin:0;font-size:1.15rem;overflow-wrap:anywhere}.project-context-panel button{cursor:pointer}.project-context-content{padding:20px}.project-context-content pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.8rem;line-height:1.6}.project-context-content details{border-top:1px solid #94a3b844;padding:12px 0}.project-full-text{white-space:pre-wrap;line-height:1.7;overflow-wrap:anywhere}
+.project-workspace :is(button,a,input,select,summary):focus-visible,.project-context-panel :is(button,a,input,select,summary):focus-visible{outline:3px solid #6366f1;outline-offset:3px}
+.project-workspace button:active{transform:translateY(1px)}.project-workspace button:disabled{cursor:wait;opacity:.6}
+.project-workspace .action-workspace-grid{display:block}.project-workspace .action-list-link{display:block;padding:14px 8px}.project-workspace .action-list-link span{display:block;font-size:.8rem;margin-top:5px}.project-workspace .action-create-card{max-width:700px}
+.project-workspace .project-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@keyframes project-panel-enter{from{transform:translateX(24px);opacity:.6}to{transform:translateX(0);opacity:1}}
+@media(max-width:760px){.project-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.project-workspace .command-header{display:block}.project-workspace .project-header-actions{margin-top:12px}.project-work-row{align-items:flex-start}.project-context-panel{width:100vw}.project-context-content{padding:16px}}
+@media(prefers-reduced-motion:reduce){.project-context-panel{animation:none}.project-workspace *{transition:none!important;scroll-behavior:auto!important}}
