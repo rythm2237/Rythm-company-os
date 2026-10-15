@@ -82,6 +82,10 @@ export async function GET(request:Request){
     if(startedObservations.error){console.error("project_observation_start_failed",startedObservations.error.message);errors.push({step:"observation_start",error:startedObservations.error.message});}
 
     const completion=await isolated("completion",()=>reconcileProjectCompletionRuntime(service),errors,{observationWindows:0,projectsEvaluated:0,normalizedTasks:0,generatedReports:0});
+    const validatedReviews=await service.rpc("reconcile_program_reviews_v1",{p_limit:20});
+    if(validatedReviews.error)errors.push({step:"program_review_validation",error:validatedReviews.error.message});
+    const programReviews=await service.rpc("schedule_program_reviews_v1",{p_limit:20});
+    if(programReviews.error)errors.push({step:"program_reviews",error:programReviews.error.message});
     const lifecycleContinuation=await isolated("completion_continuation",()=>ensureProjectLifecycleContinuation(service),errors,[]);
     const completionHealth=await service.rpc("refresh_project_completion_health_v1");
     if(completionHealth.error){console.error("project_completion_health_refresh_failed",completionHealth.error.message);errors.push({step:"completion_health",error:completionHealth.error.message});}
@@ -93,6 +97,8 @@ export async function GET(request:Request){
       healthEvents:Number(health.data??0),completionHealthEvents:Number(completionHealth.data??0),recoveredMeetings:Number(meetingRecovery.data??0),terminalExecutions:Number(terminal.data??0),
       completion:{...completion,criteriaSynced:Number(runtimeCriteria.data??0),observationsStarted:Number(startedObservations.data??0)},
       lifecycleContinuation,
+      programReviews:Number(programReviews.data??0),
+      validatedReviews:Number(validatedReviews.data??0),
       knowledge:knowledgeResults,
       connectionSetup:connectionSetupResults,
       supervisor:supervisorResults,

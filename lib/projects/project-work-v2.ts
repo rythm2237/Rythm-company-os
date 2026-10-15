@@ -1,3 +1,4 @@
+import {compareProgramMeasurements, type ProgramMeasurement} from "@/lib/projects/program-measurements";
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { executeAiRequest } from "@/lib/ai/request-gateway";
@@ -18,12 +19,21 @@ const cleanJson=(value:string)=>{
 
 async function executeStructuredTask(supabase:SupabaseClient,task:any){
   const [project,agent,context,decisions]=await Promise.all([
-    supabase.from("projects").select("id,name,description,objective,scope,success_criteria,constraints,autonomy_mode,budget_cap_usd,lifecycle_state,next_required_action").eq("id",task.project_id).single(),
+    supabase.from("projects").select("id,name,description,objective,scope,success_criteria,constraints,autonomy_mode,budget_cap_usd,lifecycle_state,next_required_action,status,operational_status").eq("organization_id",task.organization_id).eq("id",task.project_id).single(),
     task.assigned_agent_id?supabase.from("agents").select("id,agent_code,name,display_name,role_title,purpose,authority_level,risk_ceiling,permissions").eq("id",task.assigned_agent_id).maybeSingle():Promise.resolve({data:null}),
     supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
     supabase.from("project_decision_memory").select("decision,rationale,constraints,outcome,created_at").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
   ]);
   if(!project.data)throw new Error("Project context unavailable.");
+  if(["paused","cancelled","on_hold"].includes(project.data.status)||["PAUSED","CANCELLED","ON_HOLD"].includes(project.data.lifecycle_state)||["paused","cancelled","archived"].includes(project.data.operational_status))throw new Error("Project governance prevents execution.");
+  const reviewId=text(object(task.input).review_cycle_id);
+  let reviewMeasurements:ReturnType<typeof compareProgramMeasurements>|null=null;
+  if(reviewId){
+    const ids=list(object(task.input).measurement_ids).filter((id):id is string=>typeof id==="string").slice(0,100);
+    const result=await supabase.from("project_metric_measurements").select("id,metric_name,measurement_kind,source,value,unit,measurement_start,measurement_end,segmentation,project_completion_evidence!inner(authoritative_source)").eq("organization_id",task.organization_id).eq("project_id",task.project_id).in("id",ids).eq("project_completion_evidence.authoritative_source",true);
+    if(result.error)throw new Error("Authorized review measurements could not be loaded.");
+    reviewMeasurements=compareProgramMeasurements((result.data??[]) as unknown as ProgramMeasurement[]);
+  }
   const config=getRuntimeConfig();
   if(!config.openAIConfigured||!config.dryRunModel)throw new Error("Project intelligence provider is unavailable.");
   const agentRow=(agent as any).data;
@@ -55,7 +65,9 @@ Rules: work_completed means only that you finished this assignment. Keep impleme
 Task=${JSON.stringify({title:task.title,input:task.input})}
 Project=${JSON.stringify(project.data)}
 Knowledge=${JSON.stringify(context.data??[]).slice(0,18000)}
-Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
+Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}
+Review measurement evidence=${JSON.stringify(reviewMeasurements).slice(0,22000)}
+${reviewId?"Review-specific rules: use only the supplied authorized measurements. Return proposal=null unless sufficientForTrendProposal is true and a substantive observed anomaly or opportunity supports it. Include evidence IDs, confidence, effort, urgency, risk, dependencies and expected benefit in expected_impact. Distinguish estimated AI visibility from direct referrals. Do not invent causality, implementation or user behavior.":""}`,
     attachmentFailurePolicy:"fail",
     mode:"task",
     maxOutputTokens:5500,
@@ -64,6 +76,7 @@ Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
     telemetryPolicy:"required",
   });
   const data=object(JSON.parse(cleanJson(response.outputText)));
+  if(reviewId&&!reviewMeasurements?.sufficientForTrendProposal)data.proposal=null;
   const blockers=list(data.blockers).map(object);
   const evidence=list(data.evidence).map(object);
   const verification=text(data.verification_result,"not_verified").toLowerCase();

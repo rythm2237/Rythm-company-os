@@ -21,14 +21,14 @@ export async function POST(request:Request){
     await auth.supabase.from("projects").update({stage:"execution_readiness",updated_at:now}).eq("id",projectId).eq("organization_id",auth.organizationId);
   }else if(action==="pause"){
     await auth.supabase.from("project_executions").update({status:"paused",paused_at:now,updated_at:now}).eq("project_id",projectId).eq("organization_id",auth.organizationId).in("status",["queued","running"]);
-    await auth.supabase.from("projects").update({status:"on_hold",stage:"paused",updated_at:now}).eq("id",projectId).eq("organization_id",auth.organizationId);
+    await auth.supabase.from("projects").update({status:"paused",lifecycle_state:"PAUSED",operational_status:"paused",stage:"paused",updated_at:now}).eq("id",projectId).eq("organization_id",auth.organizationId);
   }else if(action==="resume"){
     await auth.supabase.from("project_executions").update({status:"running",paused_at:null,updated_at:now}).eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("status","paused");
-    await auth.supabase.from("projects").update({status:"active",stage:"execution",updated_at:now}).eq("id",projectId).eq("organization_id",auth.organizationId);
+    await auth.supabase.from("projects").update({status:"active",lifecycle_state:"EXECUTION",operational_status:"validation",stage:"execution",updated_at:now}).eq("id",projectId).eq("organization_id",auth.organizationId);
   }else if(action==="cancel"){
     await auth.supabase.from("project_executions").update({status:"cancelled",cancelled_at:now,updated_at:now}).eq("project_id",projectId).eq("organization_id",auth.organizationId).in("status",["queued","running","paused"]);
     await auth.supabase.from("project_task_runs").update({status:"cancelled",updated_at:now}).eq("project_id",projectId).eq("organization_id",auth.organizationId).not("status","in",'(completed,cancelled)');
-    await auth.supabase.from("projects").update({status:"cancelled",stage:"cancelled",updated_at:now}).eq("id",projectId).eq("organization_id",auth.organizationId);
+    await auth.supabase.from("projects").update({status:"cancelled",lifecycle_state:"CANCELLED",operational_status:"cancelled",stage:"cancelled",updated_at:now}).eq("id",projectId).eq("organization_id",auth.organizationId);
   }else return NextResponse.json({ok:false,error:"Unsupported project control action."},{status:400});
   await auth.supabase.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:`project.control.${action}`,object_type:"project",object_id:projectId,risk_level:action==="cancel"?"high":"low",payload:{clarification_id:body.clarificationId??null,scope_id:body.scopeId??null}});
   return NextResponse.json({ok:true});

@@ -23,7 +23,7 @@ assert.match(read(`${app}/attention/page.tsx`), /redirect\("\/inbox"\)/);
 const project = read(`${app}/projects/operating/page.tsx`);
 for (const oldView of ["live", "agents", "tasks", "approvals", "actions"]) assert.match(project, new RegExp(`${oldView}:`));
 assert.match(project, /getLatestProjectRoadmap/);
-assert.match(project, /progress\.hasApprovedRoadmap/);
+assert.match(project, /project\.overall_project_progress/);
 const home = read(`${app}/home/actions.ts`);
 assert.ok(home.indexOf("analyzeProjectOS") < home.indexOf("createProjectRoadmapDraft"), "Analyze before roadmap draft");
 assert.match(home, /progress_percent: 0/);

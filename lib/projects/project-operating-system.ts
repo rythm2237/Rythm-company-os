@@ -258,7 +258,7 @@ export async function dispatchProjectWork(supabase:SupabaseClient,workerId=`proj
     if(states.length && states.every((s:string)=>s==="completed")){
       const now=new Date().toISOString();
       await supabase.from("project_executions").update({status:"completed",completed_at:now,last_heartbeat_at:now,updated_at:now}).eq("id",execution.id);
-      await supabase.from("projects").update({status:"completed",stage:"outcome_review",progress_percent:100,last_heartbeat_at:now,updated_at:now}).eq("id",execution.project_id);
+      await supabase.rpc("evaluate_project_completion_v1",{p_project_id:execution.project_id,p_trigger_event:"legacy_execution_work_completed"});
       await supabase.from("project_activity_events").insert({organization_id:execution.organization_id,project_id:execution.project_id,execution_id:execution.id,event_type:"project.execution.completed",headline:"Project execution completed",importance:"major"});
     }else{
       const now=new Date().toISOString();
