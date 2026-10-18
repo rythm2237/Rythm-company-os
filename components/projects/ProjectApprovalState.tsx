@@ -26,5 +26,5 @@ export function ProjectAttentionHeading({ proposalCount }: { proposalCount: numb
 
 export function ProjectApprovalList() {
   const state = useProjectApprovalState();
-  return <div className="data-list">{state?.approvals.map(row => <div className="data-row" key={row.id}><div><strong>{row.title}</strong><span>{row.summary}</span></div><span className="pill">Approval required</span></div>)}{!state?.approvals.length ? <p className="empty-state">No pending decisions for this project.</p> : null}</div>;
+  return <div className="data-list" aria-label="Pending project approvals">{state?.approvals.map(row => <div className="data-row" key={row.id}><div style={{minWidth:0}}><strong>{row.title}</strong><details style={{marginTop:6}}><summary style={{cursor:"pointer",fontSize:13}}>Review context</summary><p style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{row.summary||"No additional context provided."}</p></details></div><span className="pill">Approval required</span></div>)}{!state?.approvals.length ? <p className="empty-state">No pending decisions for this project.</p> : null}</div>;
 }
