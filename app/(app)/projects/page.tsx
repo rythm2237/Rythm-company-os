@@ -1,4 +1,5 @@
 import { SubmitButton } from "@/components/ui/Button";
+import { ProjectsPortfolio } from "@/components/projects/projects-portfolio";
 import { createHash, randomUUID } from "node:crypto";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
@@ -98,6 +99,19 @@ export default async function ProjectsPortfolioPage({searchParams}:{searchParams
       <SubmitButton>Create Project</SubmitButton><p className="security-note">Creation does not start autonomous execution. RYTHM first analyzes readiness, scope, team and required connections. Human CEO authority remains intact.</p>
     </form></details></section>
 
-    <section className="panel panel-wide" style={{marginTop:18}}><div className="panel-heading"><div><p className="label">Portfolio</p><h2>All projects</h2></div><span className="pill">{projects.length}</span></div>{projects.length===0?<p className="empty-state">No active projects. Ask RYTHM to start something.</p>:<div className="data-list">{projects.map(project=>{const assignedAgents=agentsFor(project.id);const progress=progressSnapshots.get(project.id)??calculateProjectProgressSnapshot([],0,project.status,project.updated_at);const next=project.next_required_action||progress.nextMilestone||"Project analysis and roadmap";return <Link className="data-row simple-project-row" href={`/projects/operating?project=${project.id}`} key={project.id}><div><strong>{project.name}</strong><span>{project.responsible_department||"RYTHM is forming the team"} · {assignedAgents.find(agent=>agent.assignment_role?.toLowerCase().includes("manager"))?.agents?.display_name||"Manager pending"} · Updated {formatDate(project.updated_at)}</span><small>Next: {next}{progress.awaitingApproval?` · ${progress.awaitingApproval} approval(s) need attention`:""}</small></div><div className="simple-project-status"><span className="pill">{label(project.lifecycle_state||project.status)}</span><strong>{project.lifecycle_state==="COMPLETED"?"Complete":`${project.overall_project_progress}%`}</strong></div></Link>})}</div>}</section>
+    <ProjectsPortfolio projects={projects.map(project=>{
+      const assignedAgents=agentsFor(project.id);
+      const progress=progressSnapshots.get(project.id)??calculateProjectProgressSnapshot([],0,project.status,project.updated_at);
+      const next=project.next_required_action||progress.nextMilestone||"Project analysis and roadmap";
+      const manager=assignedAgents.find(agent=>agent.assignment_role?.toLowerCase().includes("manager"))?.agents?.display_name||"Manager pending";
+      const continuousScope=/(^|[^a-z])(seo|geo|aeo)([^a-z]|$)/i.test([project.name,project.description||"",project.project_code].join(" "));
+      return {
+        id:project.id,name:project.name,projectCode:project.project_code,
+        department:project.responsible_department||"Team assignment pending",
+        manager,updated:project.updated_at,lifecycleState:project.lifecycle_state||project.status.toUpperCase(),
+        progress:project.overall_project_progress,nextAction:next,approvalCount:progress.awaitingApproval||0,
+        continuousScope,
+      };
+    })}/>
   </main>;
 }
