@@ -96,4 +96,43 @@ create policy continuous_cycle_member_read on public.continuous_program_review_c
  (exists(select 1 from public.organization_members m
  where m.organization_id=continuous_program_review_cycles.organization_id and m.user_id=(select auth.uid())));
 
+-- Claims review intents only: no AI result, success claim, or external action is generated.
+-- Service-side caller must hold privileged DB access. Concurrency is serialized per program.
+create or replace function public.claim_due_continuous_program_reviews_v1(p_limit integer default 10)
+returns table(cycle_id uuid, program_id uuid, project_id uuid, scheduled_for timestamptz)
+language plpgsql security invoker set search_path=public as $
+declare rec record; new_cycle uuid; next_at timestamptz;
+begin
+ if p_limit not between 1 and 50 then raise exception 'Invalid claim limit'; end if;
+ for rec in
+  select c.id,c.organization_id,c.project_id,c.cadence,c.next_review_at
+  from public.continuous_programs c
+  join public.projects p on p.id=c.project_id and p.organization_id=c.organization_id
+  where c.enabled=true and c.next_review_at<=now()
+   and c.state not in ('BLOCKED','PAUSED','CANCELLED','ARCHIVED')
+   and p.lifecycle_kind='continuous'
+  order by c.next_review_at,c.id
+  for update of c skip locked limit p_limit
+ loop
+  insert into public.continuous_program_review_cycles(organization_id,program_id,scheduled_for)
+  values(rec.organization_id,rec.id,rec.next_review_at)
+  on conflict(program_id,scheduled_for) do nothing
+  returning id into new_cycle;
+
+  next_at := case rec.cadence
+   when 'daily' then rec.next_review_at+interval '1 day'
+   when 'weekly' then rec.next_review_at+interval '7 days'
+   when 'monthly' then rec.next_review_at+interval '1 month'
+   else rec.next_review_at+interval '3 months' end;
+  update public.continuous_programs
+    set next_review_at=next_at,updated_at=now() where id=rec.id;
+  if new_cycle is not null then
+    cycle_id:=new_cycle;program_id:=rec.id;project_id:=rec.project_id;
+    scheduled_for:=rec.next_review_at;return next;
+  end if;
+  new_cycle:=null;
+ end loop;
+end $;
+revoke all on function public.claim_due_continuous_program_reviews_v1(integer) from public,anon,authenticated;
+
 commit;
