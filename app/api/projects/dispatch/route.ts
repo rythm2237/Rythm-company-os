@@ -83,6 +83,17 @@ export async function GET(request:Request){
 
     const completion=await isolated("completion",()=>reconcileProjectCompletionRuntime(service),errors,{observationWindows:0,projectsEvaluated:0,normalizedTasks:0,generatedReports:0});
     const lifecycleContinuation=await isolated("completion_continuation",()=>ensureProjectLifecycleContinuation(service),errors,[]);
+    // Feature gated until the database migration and lifecycle reconciliation are approved.
+    // Creates durable review intents only; actual evidence gathering and proposals remain governed.
+    let continuousReviewsQueued=0;
+    if(process.env.CONTINUOUS_PROGRAM_ENGINE_ENABLED==="true"){
+      const claimed=await service.rpc("claim_due_continuous_program_reviews_v1",{p_limit:10});
+      if(claimed.error){
+        console.error("continuous_review_claim_failed",claimed.error.message);
+        errors.push({step:"continuous_reviews",error:claimed.error.message});
+      }else continuousReviewsQueued=Array.isArray(claimed.data)?claimed.data.length:0;
+    }
+
     const completionHealth=await service.rpc("refresh_project_completion_health_v1");
     if(completionHealth.error){console.error("project_completion_health_refresh_failed",completionHealth.error.message);errors.push({step:"completion_health",error:completionHealth.error.message});}
 
@@ -93,6 +104,7 @@ export async function GET(request:Request){
       healthEvents:Number(health.data??0),completionHealthEvents:Number(completionHealth.data??0),recoveredMeetings:Number(meetingRecovery.data??0),terminalExecutions:Number(terminal.data??0),
       completion:{...completion,criteriaSynced:Number(runtimeCriteria.data??0),observationsStarted:Number(startedObservations.data??0)},
       lifecycleContinuation,
+      continuousReviewsQueued,
       knowledge:knowledgeResults,
       connectionSetup:connectionSetupResults,
       supervisor:supervisorResults,
