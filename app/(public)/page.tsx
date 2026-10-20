@@ -4,6 +4,8 @@ import OrganizationStructuredData from "@/components/brand/OrganizationStructure
 import { getCommercialCatalog } from "@/lib/commercial/catalog";
 import { createPublicMetadata } from "@/lib/seo/site";
 import ProductTourShelf from "./_components/ProductTourShelf";
+import BoardroomHeroMotion from "./_components/BoardroomHeroMotion";
+import "./boardroom-home.css";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = createPublicMetadata("/");
@@ -22,53 +24,51 @@ export default async function HomePage() {
   return (
     <>
       <OrganizationStructuredData />
-      <main>
-      <section className="marketing-hero">
-        <div className="hero-copy">
-          <p className="marketing-kicker">GOVERNED AI WORKFORCE PLATFORM</p>
-          <h1>Build and operate an AI workforce—with human authority built in.</h1>
-          <p>
-            RYTHM Company OS is a governed AI workforce platform and AI company operating system for
-            building and running specialized AI Agent teams, Company Memory, meetings, approvals,
-            and traceable execution under a Human CEO.
+      <main className="boardroom-home">
+      <section className="boardroom-hero" aria-labelledby="boardroom-hero-title">
+        <BoardroomHeroMotion />
+        <p className="boardroom-scene-caption">Illustrative AI team · Human CEO authority</p>
+        <div className="boardroom-hero-copy">
+          <p className="boardroom-eyebrow">AI COMPANY OPERATING SYSTEM</p>
+          <h1 id="boardroom-hero-title">Build your<br />AI company.<br /><span>Lead the way.</span></h1>
+          <p className="boardroom-hero-description">
+            Bring specialized AI agents together as one team. Set the direction,
+            review the decisions, and stay in control.
           </p>
-          <div className="hero-actions">
-            <Link className="marketing-button marketing-button-large" href="/product">Explore the Company OS</Link>
-            <Link className="marketing-text-link" href="/demo">Open the interactive Demo</Link>
+          <div className="boardroom-hero-actions">
+            <Link className="boardroom-primary" href="/demo">Explore the demo <span aria-hidden="true">↗</span></Link>
+            <Link className="boardroom-secondary" href="/product">See how it works</Link>
           </div>
-          <div className="trust-row" aria-label="RYTHM governance principles">
-            <span>Human CEO authority</span><span>No AI expertise required to operate</span><span>External actions locked by default</span>
-          </div>
+          <p className="boardroom-trust">Human-led. Connected teams. Governed execution.</p>
         </div>
-        <aside className="hero-system-card" aria-label="RYTHM company operating loop">
-          <header><p>YOUR AI COMPANY</p><span className="hero-system-live"><i aria-hidden="true" /> Operating</span></header>
-          <div className="hero-system-node is-human"><span className="hero-node-index">H</span><span><strong>Human CEO</strong><small>Final authority</small></span><i aria-hidden="true">Final review</i></div>
-          <div className="hero-system-connector" aria-hidden="true"><span /><i /><span /></div>
-          <div className="hero-system-node"><span className="hero-node-index">B</span><span><strong>B-001 Executive Orchestrator</strong><small>Coordinates specialized Agents</small></span><i aria-hidden="true">Active</i></div>
-          <div className="agent-mini-grid"><span>Strategy</span><span>Operations</span><span>Analytics</span><span>Delivery</span></div>
-          <footer><span>Intent</span><i aria-hidden="true" /><span>Meeting</span><i aria-hidden="true" /><span>Approval</span><i aria-hidden="true" /><span>Action</span></footer>
-        </aside>
       </section>
 
-      <section className="experience-entry-section" aria-label="Ways to experience RYTHM">
+      <section className="boardroom-principles" aria-label="Your company operating foundation">
+        <div><span>01 / WORKFORCE</span><strong>Specialized AI roles</strong></div>
+        <div><span>02 / CONTEXT</span><strong>Shared company memory</strong></div>
+        <div><span>03 / AUTHORITY</span><strong>Human approval</strong></div>
+        <div><span>04 / DELIVERY</span><strong>Traceable execution</strong></div>
+      </section>
+
+      <section className="experience-entry-section boardroom-entries" aria-label="Ways to experience RYTHM">
         <Link href="/demo"><span>INTERACTIVE DEMO</span><strong>Enter Nova Commerce</strong><small>Explore a synthetic Company OS workspace <i aria-hidden="true">→</i></small></Link>
         <Link href="/product"><span>PRODUCT EXPLAINER</span><strong>Understand the operating loop</strong><small>Workforce, memory, meetings, governance <i aria-hidden="true">→</i></small></Link>
         <Link href="/live-ai-meeting"><span>LIVE AI MEETING</span><strong>Try RYTHM with your problem</strong><small>Preview the governed Boardroom experience <i aria-hidden="true">→</i></small></Link>
       </section>
 
-      <section className="marketing-section how-section" aria-labelledby="business-native-title">
+      <section className="marketing-section how-section boardroom-team-section" aria-labelledby="business-native-title">
         <div className="marketing-section-heading">
           <p className="marketing-kicker">BUSINESS-NATIVE AI</p>
-          <h2 id="business-native-title">Run an AI workforce like you run a company—not like you build an AI system.</h2>
+          <h2 id="business-native-title">One company. Connected intelligence.</h2>
           <p>
             RYTHM is designed for business users, not only AI specialists. You work with familiar concepts—roles, departments, managers, meetings, decisions, approvals, and responsibilities—while model routing, orchestration, permissions, and execution infrastructure stay behind the product experience.
           </p>
         </div>
         <div className="how-grid">
-          <article><span>01</span><h3>Roles, not prompt engineering</h3><p>Assign work to specialized business roles instead of learning how to construct agent prompts and chains.</p></article>
-          <article><span>02</span><h3>Departments, not orchestration graphs</h3><p>Organize the workforce with reporting relationships and responsibilities instead of designing technical agent networks.</p></article>
-          <article><span>03</span><h3>Meetings, not model coordination</h3><p>Bring the right AI and human roles together around an objective while RYTHM handles the underlying coordination.</p></article>
-          <article><span>04</span><h3>Approvals, not execution plumbing</h3><p>Review and authorize consequential work through normal decision boundaries without managing the technical execution path.</p></article>
+          <article><span>01</span><h3>Specialized AI roles</h3><p>Give each AI agent a clear business responsibility, company context, and a defined scope of work.</p></article>
+          <article><span>02</span><h3>Connected departments</h3><p>Organize your workforce into teams with managers, reporting relationships, and shared objectives.</p></article>
+          <article><span>03</span><h3>Collaborative decisions</h3><p>Bring the relevant AI and human roles together around an objective, with evidence and shared company memory.</p></article>
+          <article><span>04</span><h3>Human approval</h3><p>Review consequential decisions and authorize the work. Your company keeps a trace from intent to outcome.</p></article>
         </div>
         <div className="hero-actions"><Link href="/product">See the business-native operating model</Link><Link href="/demo">Try the public demo</Link></div>
       </section>
