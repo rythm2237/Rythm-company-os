@@ -105,9 +105,15 @@ function PublicShellFrame({ children }: PublicShellProps) {
   useEffect(() => { if (experienceMode && !demoRoute) setExperienceMode(false); }, [demoRoute, experienceMode, setExperienceMode]);
   useEffect(() => { if (immersive) setMobileOpen(false); }, [immersive]);
   useEffect(() => {
+    // The cinematic homepage should remain visible until the visitor asks for help.
+    // Its persistent Learn RYTHM launcher still opens the same guided experience.
+    if (pathname === "/") {
+      setShowGuide(false);
+      return;
+    }
     const timer = window.setTimeout(() => setShowGuide(true), GUIDE_ENTRY_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [pathname]);
 
   function handleOpenTour() {
     setShowGuide(true);
