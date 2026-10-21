@@ -12,7 +12,7 @@ import ProjectExecutiveSignalEnhancer from "@/components/projects/ProjectExecuti
 import { ProjectOsControls } from "@/components/projects/project-os-controls";
 import { ProjectGovernanceControls } from "@/components/projects/project-governance-controls";
 import ProjectAnalysisBrief from "@/components/projects/ProjectAnalysisBrief";
-import { ContinuousProgramPanel, type ProgramReadModel, type ReviewReadModel } from "@/components/projects/continuous-program-panel";
+import { ContinuousProgramPanel, type ProgramReadModel, type ReviewReadModel, type ProgramProposalReadModel } from "@/components/projects/continuous-program-panel";
 
 export const dynamic="force-dynamic";
 type View="overview"|"roadmap"|"work"|"activity"|"decisions"|"files"|"results"|"advanced";
@@ -24,6 +24,27 @@ const formatDate=(value:string|null|undefined)=>value?new Intl.DateTimeFormat("e
 function payloadSummary(item:WorkflowTimelineItem){const p=item.payload??{};const explicit=[p.event_label,p.label,p.reason,p.next_step,p.after_state].find(v=>typeof v==="string"&&v.trim());return typeof explicit==="string"?explicit:label(item.event_type);}
 function destinationForRelationship(edge:EntityRelationship,projectId:string){const c=[edge.source_type,edge.target_type];if(c.includes("meeting")||c.includes("meeting_session")||c.includes("decision")||c.includes("legal_review"))return "/meetings/room";if(c.includes("action_item"))return `/actions?project=${projectId}`;if(c.includes("memory_record"))return "/memory";return `/projects/operating?project=${projectId}&view=overview`;}
 async function ownerContext(){const supabase=await createAuthServerClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login");const {data:membership}=await supabase.from("organization_members").select("organization_id,role").eq("user_id",user.id).eq("role","owner").maybeSingle();if(!membership)redirect("/login?error=Owner%20authorization%20required.");return{supabase,organizationId:membership.organization_id as string};}
+
+async function submitContinuousProposalForApproval(formData:FormData) {
+  "use server";
+  const {organizationId,user}=await ownerContext();
+  const projectId=String(formData.get("projectId")??"");
+  const proposalId=String(formData.get("proposalId")??"");
+  if(!/^[a-f0-9-]{36}$/i.test(projectId)||!/^[a-f0-9-]{36}$/i.test(proposalId))redirect("/projects");
+  const target=`/projects/operating?project=${encodeURIComponent(projectId)}&view=overview`;
+  const service=createServerSupabaseClient();
+  if(!service)redirect(target);
+  const {error}=await service.rpc("submit_continuous_proposal_for_approval_v1",{
+    p_proposal_id:proposalId,p_organization_id:organizationId,p_project_id:projectId,
+    p_requested_by_user_id:user.id
+  });
+  if(error){
+    console.error("continuous_program_approval_submission_failed",{projectId,proposalId,error:error.message});
+    redirect(target+"&programError=Approval+submission+failed.+Review+governance+and+try+again");
+  }
+  revalidatePath("/projects/operating");
+  redirect(target+"&programSaved=approval");
+}
 
 async function saveContinuousProgram(formData:FormData) {
   "use server";
@@ -54,6 +75,7 @@ export default async function ProjectOperatingPage({searchParams}:Props){
   if(!project)return <main className="command-shell"><section className="panel"><h1>Project operating view unavailable</h1><Link className="secondary-button" href="/projects">Back to Projects</Link></section></main>;
   let program:ProgramReadModel|null=null;
   let programReviews:ReviewReadModel[]=[];
+  let programProposals:ProgramProposalReadModel[]=[];
   let seoSiteOptions:Array<{id:string;name:string;site_url:string}>=[];
   if("lifecycle_kind" in project && activeView==="advanced"){
     const seoSites=await supabase.from("agency_seo_sites").select("id,name,site_url").eq("organization_id",organizationId).eq("active",true);
@@ -70,6 +92,14 @@ export default async function ProjectOperatingPage({searchParams}:Props){
         .eq("organization_id",organizationId).eq("program_id",program.id)
         .order("scheduled_for",{ascending:false}).limit(8);
       programReviews=(reviewsResult.data??[]) as ReviewReadModel[];
+      const proposalIds=programReviews.map(row=>row.proposal_id).filter((id):id is string=>Boolean(id));
+      if(proposalIds.length){
+        const proposalsResult=await supabase.from("project_proposals")
+          .select("id,title,executive_summary,status")
+          .eq("organization_id",organizationId).eq("project_id",project.id)
+          .in("id",proposalIds);
+        programProposals=(proposalsResult.data??[]) as ProgramProposalReadModel[];
+      }
     }
   }
   let workflowState=project.workflow_state??"INTAKE";try{workflowState=await refreshProjectWorkflowState(supabase,project.id,{entityType:"ui",reason:"Project Operating System convergence"});}catch{}
@@ -118,7 +148,8 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     {(activeView==="overview"||activeView==="decisions")?<section className="panel executive-inbox-compact"><div className="panel-heading"><div><p className="label">Executive Inbox</p><h2><ProjectAttentionHeading proposalCount={attention.length}/></h2></div><Link className="secondary-button" href="/inbox?category=approvals">Review approvals</Link></div>{attention.slice(0,3).map((p:any)=><div className="data-row" key={p.id}><div><strong>{p.title}</strong><span>{p.executive_summary}</span></div><span className="pill">{p.risk_level}</span></div>)}</section>:null}
 
     {activeView==="overview"?<>
-      {project.lifecycle_kind==="continuous"?<ContinuousProgramPanel projectId={project.id} program={program} reviews={programReviews}/>:null}
+      {params.programError?<p role="alert" className="form-error">{params.programError}</p>:null}
+      {project.lifecycle_kind==="continuous"?<ContinuousProgramPanel projectId={project.id} program={program} reviews={programReviews} proposals={programProposals} submitProposalAction={submitContinuousProposalForApproval} notice={params.programSaved}/>:null}
       {latestReadiness?<ProjectAnalysisBrief projectId={project.id} objective={project.objective} readiness={latestReadiness} team={agents as any} clarifications={openClarifications as any} assumptions={latestScope?.assumptions}/>:null}
       <ProjectGovernanceControls projectId={project.id} projectStatus={project.status} clarifications={openClarifications as any} connections={(integrations.data??[]) as any} capabilities={(capabilities.data??[]) as any} latestScope={latestScope?{id:latestScope.id,status:latestScope.status}:null}/>
       <section className="executive-grid project-view-panel"><article className="panel"><div className="panel-heading"><div><p className="label">Execution Readiness</p><h2>{latestReadiness?.execution_readiness??project.readiness_score??0}% ready</h2></div><span className="pill">Inputs and dependencies</span></div><p className="subtitle">Readiness measures context, scope, integrations, team, clarifications and evidence. It does not represent completed work.</p>{latestReadiness?<div className="data-list"><div className="data-row"><div><strong>Project understanding</strong><span>{latestReadiness.project_understanding}%</span></div></div><div className="data-row"><div><strong>Contract understanding</strong><span>{latestReadiness.contract_understanding}%</span></div></div><div className="data-row"><div><strong>Connections</strong><span>{latestReadiness.connections_available}/{latestReadiness.connections_total}</span></div></div><div className="data-row"><div><strong>Team readiness</strong><span>{latestReadiness.team_readiness}%</span></div></div></div>:<p className="subtitle">Run Project Analysis to create readiness, scope, team and connection recommendations.</p>}</article><article className="panel"><div className="panel-heading"><div><p className="label">Roadmap Progress</p><h2>{progress.hasApprovedRoadmap?`${progress.progressPercent}% complete`:"Not baselined"}</h2></div><span className="pill">{progress.hasApprovedRoadmap?`roadmap v${progress.roadmapVersion}`:"manager approval required"}</span></div><div className="project-progress-track"><span style={{width:`${progress.hasApprovedRoadmap?progress.progressPercent:0}%`}}/></div><div className="project-card-metrics"><div><span>Task count</span><strong>{progress.completedTasks}/{progress.totalTasks}</strong></div><div><span>Task completion</span><strong>{progress.taskCompletionPercent}%</strong></div><div><span>Current phase</span><strong>{progress.currentPhase??"—"}</strong></div><div><span>Outcome progress</span><strong>{progress.outcomeProgressPercent==null?"Pending evidence":`${progress.outcomeProgressPercent}%`}</strong></div><div><span>Awaiting approval</span><strong><ProjectApprovalCount/></strong></div><div><span>Blocked / failed</span><strong>{progress.blockedTasks+progress.failedTasks}</strong></div></div><p className="security-note">Roadmap progress is weighted against the manager-approved baseline. Raw task count is informational only. Execution is persisted server-side.</p></article></section>
