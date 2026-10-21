@@ -11,13 +11,14 @@ Updated: 2026-10-21
 5. **Evidence worker** — rechecks project governance, uses existing agency_seo_snapshots, requires two fresh observations separated by at least six hours, handles missing/stale data as waiting_for_data.
 6. **Deterministic optimization signals** — 10-point technical SEO regression OR persistent medium/high/critical finding on two snapshots. Creates *draft* project_proposals only; never self-approves or changes websites. Deduplicates against unresolved proposals of the same type.
 7. **Project UI** — readable review schedule, technical evidence, concise history. Owner-controlled source selection and activation in Advanced settings.
-8. **CI regression contract** — prebuild runs domain, repeated-finding, SQL guard, and integration boundary assertions.
+8. **Completion evaluator adapter** — mirrors the current Production evaluator, preserving existing evidence dimensions while ensuring opt-in continuous projects never enter CLOSEOUT/COMPLETED after initial delivery.
+9. **CI regression contract** — prebuild runs domain, repeated-finding, SQL guard, and integration boundary assertions.
 
 ## Real-world evidence verified (read-only Production)
 
 - aiRolePath.com SEO monitor exists with 28 snapshots (latest checked Oct 21, 2026).
 - Latest technical SEO score was 87; the previous snapshot also scored 87.
-- Two medium-severity findings persisted: homepage canonical and meta-description review.
+- Two medium-severity findings persisted: homepage canonical and meta-description review. Routine reviews must flag persistent findings even when the score is unchanged.
 - project_metric_measurements currently contains zero records; no verified organic CTR, GSC click trends, Google ranking changes, AI referral or conversion outcomes can be inferred.
 - Airolepath SEO is still blocked / ON_HOLD / completion_eligible=false.
 - There is no continuous_programs table or lifecycle_kind column in Production yet.
@@ -52,3 +53,17 @@ Updated: 2026-10-21
 ## Review location
 
 GitHub PR #421, `feature/continuous-program-engine-phase1`.
+
+## Required staging verification matrix
+
+- Migration applies cleanly in dependency order (foundation before evaluator adapter) and is repeatable.
+- SECURITY INVOKER scheduler RPCs are inaccessible to authenticated/anon roles; tenant RLS reads are isolated.
+- Mismatched organization/project/SEO site combinations are rejected by database integrity rules.
+- Closed projects cannot be converted to continuous without evidence-preserving reconciliation.
+- Paused/blocked programs cannot claim cycles; an already-claimed cycle is cancelled if governance changes before execution.
+- Two concurrent schedulers cannot create duplicate (program_id,scheduled_for) records.
+- 0 or 1 recent snapshots creates waiting_for_data; 2 old or too-close snapshots also wait.
+- Two valid snapshots with unchanged score and repeated medium-severity findings create only one non-executable draft proposal.
+- Approved Project proposal processing still requires a separately authorized approval gate; continuous review cannot approve actions.
+- Standard finite project closeout remains unchanged after the evaluator adapter.
+- Existing ON_HOLD AI RolePath SEO project remains on hold until an explicit governance decision changes it.
