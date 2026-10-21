@@ -18,7 +18,7 @@
 }
 
 .boardroom-hero-art { position: absolute; inset: 0; z-index: -2; background: #0b1220; }
-.boardroom-hero-poster { object-fit: contain; }
+.boardroom-hero-poster { object-fit: cover; object-position: center; }
 .boardroom-hero-canvas { position: absolute; inset: 0; }
 .boardroom-hero-canvas canvas { display: block; width: 100%; height: 100%; }
 .boardroom-hero-art[data-motion-ready="false"] .boardroom-hero-canvas { opacity: 0; }
@@ -73,8 +73,6 @@
 .boardroom-hero-actions .boardroom-secondary:hover { transform: translateY(-2px); color: #fff; background: #1c2d49; border-color: #7185b1; }
 .boardroom-hero-actions a:active { transform: scale(.98); }
 .boardroom-home .boardroom-trust { margin: 22px 0 0; color: #8e9fba; font-size: .66rem; line-height: 1.65; }
-.boardroom-motion-toggle { position: absolute; right: 24px; bottom: 25px; z-index: 3; display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 9px 12px; border: 1px solid #44526d; border-radius: 8px; background: #0c1627db; color: #c9d6ee; font-size: .66rem; }
-.boardroom-motion-toggle:hover { background: #1a2a44; border-color: #7586ad; }
 .boardroom-scene-caption { position: absolute; right: 28px; top: 26px; margin: 0; color: #93a4c2; font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; pointer-events: none; }
 
 .boardroom-home .boardroom-principles { position: relative; padding: 25px clamp(32px, 4vw, 66px); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; color: #d0d9ec; background: #0d1728; border-top: 1px solid #24324a; border-bottom: 1px solid #24324a; }
@@ -104,9 +102,9 @@
   .marketing-site .boardroom-home .boardroom-hero h1 { font-size: clamp(3rem, 6.4vw, 4.5rem); text-wrap: wrap; }
   .boardroom-home .boardroom-hero-description { max-width: 540px; }
   .boardroom-hero-art { order: 1; position: relative; flex: none; width: 100%; aspect-ratio: 1672 / 941; z-index: 0; }
+  .boardroom-hero-poster { object-fit: contain; }
   .boardroom-hero::after { display: none; }
   .boardroom-scene-caption { display: none; }
-  .boardroom-motion-toggle { order: 2; position: relative; right: auto; bottom: auto; align-self: flex-end; margin: 0 24px 18px; min-height: 44px; font-size: .75rem; }
   .boardroom-home .boardroom-principles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .marketing-site .boardroom-home .boardroom-entries { grid-template-columns: minmax(0, 1fr); }
 }
@@ -120,7 +118,6 @@
   .boardroom-hero-actions { width: 100%; margin-top: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .boardroom-hero-actions a { min-width: 0; min-height: 48px; padding: 12px 10px; font-size: .8rem; gap: 8px; }
   .boardroom-home .boardroom-trust { margin-top: 17px; }
-  .boardroom-motion-toggle { margin: 0 24px 16px; padding: 10px 14px; }
   .boardroom-home .boardroom-principles { padding: 23px 25px; gap: 23px 14px; }
   .marketing-site .boardroom-home .boardroom-entries { padding: 25px; gap: 12px; }
   .marketing-site .boardroom-home .boardroom-entries > a { min-height: 148px; padding: 21px; }
