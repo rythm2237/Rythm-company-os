@@ -23,3 +23,96 @@
 @media (max-width: 1100px) {
   .marketing-guide-dialog { max-height: min(75svh, 660px); }
 }
+
+/* A compact tour rail: on desktop reserve its own column instead of obscuring
+   the navigation or the highlighted workspace content. */
+.marketing-site .marketing-guide-floating {
+  position: fixed;
+  z-index: 310;
+  top: 18px;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: auto;
+  width: auto;
+  min-width: 46px;
+  max-width: 220px;
+  padding: 9px 12px;
+  border: 1px solid rgba(128, 146, 184, .32);
+  border-radius: 14px;
+  color: #e8edff;
+  background: #131f34;
+  box-shadow: 0 12px 32px rgba(5, 12, 26, .22);
+}
+.marketing-site .marketing-guide-floating > .ui-button-content {
+  grid-template-columns: 27px minmax(0, 1fr);
+  gap: 8px;
+}
+.marketing-site .marketing-guide-floating > .ui-button-content > span:first-child {
+  width: 27px;
+  height: 27px;
+}
+.marketing-site .marketing-guide-floating small { display: none; }
+.marketing-site .marketing-guide-floating strong { white-space: nowrap; }
+.marketing-site .marketing-guide-floating:hover { background: #1d2b49; }
+@media (min-width: 1200px) {
+  .marketing-site .marketing-shell.is-guide-open .demo-page {
+    box-sizing: border-box;
+    padding-right: 360px;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog {
+    inset: 86px 18px auto auto !important;
+    width: 324px;
+    max-height: calc(100svh - 106px);
+    padding: 20px;
+    border-radius: 18px;
+    animation: none;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog h2 {
+    font-size: clamp(1.4rem, 1.9vw, 1.75rem);
+    line-height: 1.2;
+    letter-spacing: -.025em;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog > p:not(.marketing-kicker) {
+    font-size: .78rem;
+    line-height: 1.6;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog .marketing-guide-actions {
+    margin-top: 16px;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog .marketing-guide-progress {
+    margin-bottom: 16px;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-spotlight-mask,
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-scrim {
+    pointer-events: none;
+  }
+}
+@media (max-width: 1199px) {
+  .marketing-site .marketing-guide-floating {
+    top: max(12px, env(safe-area-inset-top));
+    right: 14px;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog {
+    width: min(340px, calc(100vw - 28px));
+    max-height: min(65svh, 500px);
+    padding: 20px;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog h2 {
+    font-size: clamp(1.35rem, 3vw, 1.8rem);
+    line-height: 1.2;
+  }
+}
+@media (max-width: 760px) {
+  .marketing-site .marketing-guide-floating {
+    z-index: 215;
+    top: max(76px, calc(env(safe-area-inset-top) + 76px));
+    right: 12px;
+    min-width: 42px;
+    padding: 8px;
+  }
+  .marketing-site .marketing-guide-floating > .ui-button-content {
+    grid-template-columns: 27px;
+  }
+  .marketing-site .marketing-guide-floating > .ui-button-content > span:last-child {
+    display: none;
+  }
+}
