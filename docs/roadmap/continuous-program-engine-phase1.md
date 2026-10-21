@@ -13,7 +13,7 @@ Updated: 2026-10-21
 7. **Governed proposal submission** — project owner explicitly submits an evidence-backed draft to the existing approval_requests system using an atomic SQL transaction; it does not authorize implementation.
 8. **Project UI** — readable review schedule, technical evidence, concise history. Owner-controlled source selection and activation in Advanced settings; draft findings appear in Overview with an explicit button to submit for approval.
 9. **Completion evaluator adapter** — mirrors the current Production evaluator, preserving existing evidence dimensions while ensuring opt-in continuous projects never enter CLOSEOUT/COMPLETED after initial delivery.
-10. **CI regression contract** — prebuild runs domain, repeated-finding, SQL guard, and integration boundary assertions.
+10. **Zero-cloud-cost database regression suite** — prebuild executes the actual foundation migration twice against PGlite, validates tenant RLS, privileges, scheduler claiming, cross-tenant guards, lifecycle and approval idempotency, plus TypeScript/domain checks. An evaluator-adapter compile check was added and awaits its final CI result.
 
 ## Real-world evidence verified (read-only Production)
 
@@ -26,17 +26,19 @@ Updated: 2026-10-21
 
 ## Validation status
 
-- Static and deterministic tests added and attached to prebuild.
-- Vercel Preview builds used to validate application integration; latest commit state needs checking before release.
-- A Supabase development database branch was requested for integration testing. Supabase required explicit **paid compute confirmation**; therefore no development database was created and SQL migration was NOT executed.
-- PostgreSQL migration runtime, RLS isolation, concurrent claim behavior, and governance reconciliation remain **unverified against a live staging database**.
-- No Production migrations, new project statuses, feature flags or external actions were changed.
+- PGlite is already an installed project development dependency (`@electric-sql/pglite`): no Docker daemon or extra Supabase paid branch is required.
+- Run `npm ci && npm run test:continuous-program` in a repository checkout. The same tests run automatically inside Vercel `prebuild`.
+- Real PostgreSQL **foundation** migration passed in an isolated in-memory database twice (verified from Vercel build log); tenant RLS, RPC execute restrictions, same-org site constraints, completion guards, review idempotency and governed proposal submission also passed.
+- A blocking ambiguous `ON CONFLICT(program_id,...)` SQL issue was discovered by this test and corrected with a named unique constraint.
+- Evaluator adapter compilation was added as a subsequent independent PGlite check. Verify latest build before treating it as passed.
+- PGlite cannot demonstrate managed Supabase Auth / PostgREST behavior or a full live tenant and end-to-end worker; these remain separate pre-release validation gates. Concurrent independent database sessions are not simulated by the single in-memory connection.
+- No Production migrations, project state, flags, external integrations or billing records were changed; no paid development branch was created.
 
 ## Staged rollout checklist
 
-1. Obtain approved isolated Supabase development environment and run full migration/rollback verification.
-2. Test real database RLS (owner, unrelated tenant, anon), cross-org FKs, migration repeatability, opt-in/hold/closeout guards, review claim concurrency and retry behavior.
-3. Run typecheck, existing project completion tests, full Next.js build, and smoke test Project Details and Actions.
+1. Run the PGlite integration suite locally or in Vercel CI, including foundation migration, evaluator adapter compilation and rollback expectations. No paid Supabase branch is needed.
+2. Verify grants and RLS through PGlite role simulation, cross-org FKs, idempotency, opt-in/hold/closeout guards; validate actual concurrent independent sessions separately before first production enablement.
+3. Run TypeScript checks, project completion tests, full Next.js build, and Preview smoke test Project Details and Actions. Confirm signed-in account can reach tenant-specific UI.
 4. Merge reviewed branch only after all gates pass, with environment feature flag disabled.
 5. Apply migration in proper version order; verify schema, grants, policies, and health.
 6. In project Advanced settings, explicitly associate the approved SEO site and configure monitoring. Keep Airolepath's ON_HOLD until governance requirements are resolved.
@@ -57,7 +59,7 @@ GitHub PR #421, `feature/continuous-program-engine-phase1`.
 
 ## Required staging verification matrix
 
-- Migration applies cleanly in dependency order (foundation before evaluator adapter) and is repeatable.
+- Foundation migration applies cleanly twice in PGlite (passed). Evaluator adapter compilation and full operational behavior require separate checks.
 - SECURITY INVOKER scheduler RPCs are inaccessible to authenticated/anon roles; tenant RLS reads are isolated.
 - Mismatched organization/project/SEO site combinations are rejected by database integrity rules.
 - Closed projects cannot be converted to continuous without evidence-preserving reconciliation.
@@ -68,3 +70,7 @@ GitHub PR #421, `feature/continuous-program-engine-phase1`.
 - Approved Project proposal processing still requires a separately authorized approval gate; continuous review cannot approve actions.
 - Standard finite project closeout remains unchanged after the evaluator adapter.
 - Existing ON_HOLD AI RolePath SEO project remains on hold until an explicit governance decision changes it.
+
+## Cost decision
+
+The paid Supabase cloud development branch is **not required** for database migration regression checks. Use the existing, ephemeral, in-memory PGlite suite and current Vercel CI. Do not create chargeable infrastructure without explicit user approval.
