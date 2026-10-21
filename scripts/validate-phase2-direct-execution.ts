@@ -12,7 +12,7 @@ const sourceFiles=[...files("app"),...files("lib"),...files("components")].filte
 const connectionPlatformPaths=CONNECTION_PLATFORM_DIRECT_BOUNDARIES.map(item=>item.path);
 assert.deepEqual(connectionPlatformPaths.sort(),["lib/integrations/connections/github-app.ts","lib/integrations/connections/github-customer-oauth.ts","lib/integrations/connections/platform-oauth.ts","lib/integrations/connections/provider-credentials.ts"].sort(),"Core connection control-plane fetch boundaries must remain explicitly inventoried.");
 
-const sameOriginUiBoundaries=["components/ai-workspace/AIWorkspaceClient.tsx","components/ai-workspace/GuestAIClient.tsx","components/ai-workspace/FilesPanel.tsx","components/ai-workspace/WorkspaceResourcePanel.tsx","components/ai-workspace/CompanyMemberInviteForm.tsx","components/admin/AIWorkspaceGuestCodeForm.tsx","components/projects/project-completion-panel.tsx"];
+const sameOriginUiBoundaries=["app/customer-forms/[token]/customer-form.tsx","components/projects/company-operating-panel.tsx","components/ai-workspace/AIWorkspaceClient.tsx","components/ai-workspace/GuestAIClient.tsx","components/ai-workspace/FilesPanel.tsx","components/ai-workspace/WorkspaceResourcePanel.tsx","components/ai-workspace/CompanyMemberInviteForm.tsx","components/admin/AIWorkspaceGuestCodeForm.tsx","components/projects/project-completion-panel.tsx"];
 const nailArtPushBoundaries=[
   "app/api/2nya-nailart/admin/route.ts",
   "app/api/2nya-nailart/book/route.ts",

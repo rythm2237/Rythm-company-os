@@ -1,3 +1,6 @@
+import {customerAnswerMatches} from "@/lib/company-core/customer-forms";
+import {createServerSupabaseClient} from "@/lib/supabase/server";
+import {validateAnswers} from "@/lib/company-core/contract";
 import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 
@@ -13,6 +16,10 @@ export async function POST(request:Request){
   const now=new Date().toISOString();
   if(action==="answer_clarification"){
     const id=String(body.clarificationId??"").trim();if(!id)return NextResponse.json({ok:false,error:"Clarification is required."},{status:400});
+    const gap=await auth.supabase.from("project_clarification_requests").select("*").eq("id",id).eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("status","open").single();
+    if(!gap.data||validateAnswers([gap.data],{[id]:body.answer},true).length)return NextResponse.json({ok:false,error:"A valid required answer is needed."},{status:409});
+    const evidenceDb=createServerSupabaseClient();
+    if(gap.data.consent_required&&(!evidenceDb||!await customerAnswerMatches(evidenceDb,auth.organizationId,projectId,id,body.answer)))return NextResponse.json({ok:false,error:"Customer consent evidence required."},{status:409});
     const result=await auth.supabase.from("project_clarification_requests").update({status:"answered",answer:{value:body.answer},answered_by_user_id:auth.user.id,answered_at:now}).eq("id",id).eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("status","open").select("id").maybeSingle();
     if(!result.data)return NextResponse.json({ok:false,error:"Clarification could not be updated."},{status:409});
   }else if(action==="approve_scope"){

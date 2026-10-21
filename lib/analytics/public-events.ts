@@ -1,3 +1,4 @@
+import { isSensitiveAnalyticsPath } from "./sensitive-paths";
 export type PublicExperienceEventName =
   | "tour_prompt_seen"
   | "tour_started"
@@ -65,7 +66,7 @@ export function readPublicAttribution(): PublicAttribution | null {
 }
 
 export function writePublicAttribution(attribution: PublicAttribution) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || isSensitiveAnalyticsPath(window.location.pathname)) return;
   try {
     const serialized = JSON.stringify(attribution);
     window.sessionStorage.setItem(PUBLIC_ATTRIBUTION_SESSION_KEY, serialized);
@@ -84,7 +85,7 @@ export function writePublicAttribution(attribution: PublicAttribution) {
  * email, raw referrer URL, user-agent, IP address, or free-text content.
  */
 export function trackPublicExperienceEvent(event: PublicExperienceEvent) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || isSensitiveAnalyticsPath(window.location.pathname)) return;
 
   window.dispatchEvent(new CustomEvent<PublicExperienceEvent>("rythm:public-experience", { detail: event }));
 

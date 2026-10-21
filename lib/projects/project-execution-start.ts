@@ -1,3 +1,5 @@
+import { validateDelegation } from "@/lib/company-core/contract";
+import { planningContext } from "@/lib/company-core/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getApprovedProjectRoadmap, type RoadmapTask } from "@/lib/projects/project-roadmap";
 
@@ -13,6 +15,7 @@ export async function startProjectExecutionWithoutGlobalGate(
   projectId: string,
   userId: string,
 ) {
+  const operating = await planningContext(supabase,organizationId,projectId);
   const project = await supabase
     .from("projects")
     .select("id,name,project_code,readiness_score,status,autonomy_mode,budget_cap_usd")
@@ -90,6 +93,7 @@ export async function startProjectExecutionWithoutGlobalGate(
     }),
   }));
 
+  validateDelegation(tasks,new Set(operating.available_agents.map(a=>a.id)));
   const executionNo = Number(latest.data?.execution_no ?? 0) + 1;
   const now = new Date().toISOString();
 

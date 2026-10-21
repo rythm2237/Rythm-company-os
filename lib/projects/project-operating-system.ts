@@ -1,3 +1,6 @@
+import { persistFollowups } from "@/lib/company-core/followups";
+import { ensureCompanyCore } from "@/lib/company-core/service";
+import { runtimeInstructions, isAgentAvailable } from "@/lib/company-core/contract";
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { executeAiRequest } from "@/lib/ai/request-gateway";
@@ -61,6 +64,7 @@ async function gatewayJson(input:{organizationId:string;projectId:string;feature
 }
 
 export async function analyzeProjectOS(supabase:SupabaseClient,organizationId:string,projectId:string) {
+  await ensureCompanyCore(supabase,organizationId);
   const [projectResult,clientResult,contractResult,documentsResult,resourcesResult,connectionsResult,integrationsResult,agentsResult]=await Promise.all([
     supabase.from("projects").select("*").eq("organization_id",organizationId).eq("id",projectId).single(),
     supabase.from("project_clients").select("*").eq("organization_id",organizationId).eq("project_id",projectId).maybeSingle(),
@@ -69,7 +73,7 @@ export async function analyzeProjectOS(supabase:SupabaseClient,organizationId:st
     supabase.from("project_resources").select("id,resource_type,name,url,external_reference,status,description,source,access_status,metadata").eq("organization_id",organizationId).eq("project_id",projectId),
     supabase.from("project_connection_bindings").select("id,integration_id,resource_type,resource_ref,display_name,permission_scope,access_status,recommendation_level").eq("organization_id",organizationId).eq("project_id",projectId),
     supabase.from("organization_integrations").select("id,provider_key,display_name,status,account_ref,base_url,metadata").eq("organization_id",organizationId),
-    supabase.from("agents").select("id,agent_code,name,display_name,role_title,purpose,authority_level,risk_ceiling,enabled,permissions").eq("organization_id",organizationId).eq("enabled",true),
+    supabase.from("agents").select("id,agent_code,name,display_name,role_title,purpose,authority_level,risk_ceiling,enabled,permissions,agent_status").eq("organization_id",organizationId).eq("enabled",true).eq("agent_status","enabled"),
   ]);
   if(projectResult.error || !projectResult.data) throw new Error("Project not found or unavailable.");
   const project=projectResult.data;
@@ -97,7 +101,10 @@ export async function analyzeProjectOS(supabase:SupabaseClient,organizationId:st
     }
   }
 
+  const clarificationAnswers=await supabase.from("project_clarification_requests").select("question_key,question,status,answer,required_stage").eq("organization_id",organizationId).eq("project_id",projectId).in("status",["answered","waived"]);
+  if(clarificationAnswers.error)throw new Error(clarificationAnswers.error.message);
   const analysisInput={
+    prior_validated_answers:clarificationAnswers.data??[],
     project:{name:project.name,description:project.description,project_type:project.project_type,objective:project.objective,priority:project.priority,target_date:project.target_date,start_date:project.start_date,scope:project.scope,success_criteria:project.success_criteria,constraints:project.constraints,notes:project.notes,autonomy_mode:project.autonomy_mode},
     client:clientResult.data??null,
     contract:contractResult.data??null,
@@ -111,7 +118,7 @@ export async function analyzeProjectOS(supabase:SupabaseClient,organizationId:st
 
   const intelligence=await gatewayJson({organizationId,projectId,maxOutputTokens:7000,
     system:"You are the RYTHM Project Operating System analyst. Understand business outcomes, not workflow jargon. Use only supplied evidence. Ask only material unanswered questions. Recommend connections and team members; never silently attach ambiguous resources. Respect Human CEO authority, entitlements and existing company agents. Return JSON only.",
-    prompt:`Analyze this project intake and return JSON with exactly these keys: understanding_summary (string), project_understanding (0-100), contract_understanding (0-100), execution_readiness (0-100), risks (array), missing_inputs (array of {key,question,reason,input_type,options,materiality}), required_connections (array of {provider,resource_type,reason,capabilities}), recommended_connections (same shape), team_recommendation (array of {agent_id,reason,allocation_percent}), scope ({included,excluded,assumptions,dependencies,deliverables,success_criteria}), plan_outline (array of phases), success_definition (array). Evidence: ${JSON.stringify(analysisInput).slice(0,42000)}`});
+    prompt:`Analyze this project intake and return JSON with exactly these keys: understanding_summary (string), project_understanding (0-100), contract_understanding (0-100), execution_readiness (0-100), risks (array), missing_inputs (array of {key,question,reason,input_type,options,materiality,likely_source,required_stage,omission_permitted,consent_required,supporting_evidence,assumptions}), required_connections (array of {provider,resource_type,reason,capabilities}), recommended_connections (same shape), team_recommendation (array of {agent_id,reason,allocation_percent}), scope ({included,excluded,assumptions,dependencies,deliverables,success_criteria}), plan_outline (array of phases), success_definition (array). Evidence: ${JSON.stringify(analysisInput).slice(0,42000)}`});
   const data=intelligence.data;
   const missing=list(data.missing_inputs);
   const requiredConnections=list(data.required_connections);
@@ -131,11 +138,13 @@ export async function analyzeProjectOS(supabase:SupabaseClient,organizationId:st
     evidence:{understanding_summary:data.understanding_summary,success_definition:data.success_definition,plan_outline:data.plan_outline,ai_correlation_id:intelligence.correlationId,legal_correlation_id:legalCorrelationId}
   });
 
+  const knownAnswers=await supabase.from("project_clarification_requests").select("question_key,status,answer").eq("organization_id",organizationId).eq("project_id",projectId).in("status",["answered","waived"]);
   for(const item of missing){
     if(!item || typeof item!=="object") continue;
     const row=item as Record<string,unknown>; const key=str(row.key); const question=str(row.question); if(!key||!question) continue;
+    if((knownAnswers.data??[]).some(a=>a.question_key===key))continue;
     const existing=await supabase.from("project_clarification_requests").select("id").eq("project_id",projectId).eq("question_key",key).eq("status","open").maybeSingle();
-    if(!existing.data) await supabase.from("project_clarification_requests").insert({organization_id:organizationId,project_id:projectId,question_key:key,question,reason:str(row.reason,"Required for reliable execution."),input_type:str(row.input_type,"text"),options:list(row.options),materiality:str(row.materiality,"required")});
+    if(!existing.data) await supabase.from("project_clarification_requests").insert({organization_id:organizationId,project_id:projectId,question_key:key,question,reason:str(row.reason,"Required for reliable execution."),input_type:str(row.input_type,"text"),options:list(row.options),materiality:str(row.materiality,"required"),likely_source:row.likely_source==="customer"?"customer":"manager",required_stage:str(row.required_stage,"planning"),omission_permitted:row.omission_permitted===true&&row.materiality!=="required",consent_required:row.consent_required===true,supporting_evidence:list(row.supporting_evidence),assumptions:list(row.assumptions)});
   }
 
   const previousScope=await supabase.from("project_scope_versions").select("version").eq("project_id",projectId).order("version",{ascending:false}).limit(1).maybeSingle();
@@ -207,15 +216,21 @@ export async function startProjectExecution(supabase:SupabaseClient,organization
 async function executeClaimedTask(supabase:SupabaseClient,task:any) {
   const [project,agent,context,decisions]=await Promise.all([
     supabase.from("projects").select("id,name,description,objective,scope,success_criteria,constraints,autonomy_mode,budget_cap_usd").eq("id",task.project_id).single(),
-    task.assigned_agent_id?supabase.from("agents").select("id,agent_code,name,display_name,role_title,purpose,authority_level,risk_ceiling,permissions").eq("id",task.assigned_agent_id).maybeSingle():Promise.resolve({data:null}),
+    task.assigned_agent_id?supabase.from("agents").select("id,agent_code,name,display_name,role_title,purpose,authority_level,risk_ceiling,permissions,enabled,agent_status,system_instructions,skills,allowed_tools").eq("organization_id",task.organization_id).eq("id",task.assigned_agent_id).maybeSingle():Promise.resolve({data:null}),
     supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
     supabase.from("project_decision_memory").select("decision,rationale,constraints,outcome,created_at").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
   ]);
   if(!project.data) throw new Error("Project context unavailable.");
   const agentRow=(agent as any).data;
+  if(!agentRow||!isAgentAvailable(agentRow))throw new Error("Assigned agent is unavailable; manager reassignment required.");
+  const predecessors=await supabase.from("project_task_runs").select("id,task_key,safe_result,completed_at").eq("organization_id",task.organization_id).eq("execution_id",task.execution_id).in("task_key",Array.isArray(task.dependencies)?task.dependencies:[]).eq("status","completed");
+  if(predecessors.error)throw new Error(predecessors.error.message);
+  if((predecessors.data??[]).length!==(Array.isArray(task.dependencies)?task.dependencies.length:0))throw new Error("Predecessor handoff missing.");
+  const handoff=await supabase.from("project_task_runs").update({input:{...task.input,predecessor_outputs:predecessors.data??[]}}).eq("id",task.id).eq("lease_owner",task.lease_owner).select("id").maybeSingle();
+  if(handoff.error||!handoff.data)throw new Error("Task lease lost before handoff.");
   const result=await gatewayJson({organizationId:task.organization_id,projectId:task.project_id,maxOutputTokens:5000,
-    system:`You are ${agentRow?.display_name||agentRow?.name||"a RYTHM project agent"}, ${agentRow?.role_title||"Project Specialist"}. Execute internal knowledge work proactively within your professional authority. Do not claim external actions you did not perform. Do not spend money, send external communications, deploy production, delete data, sign contracts, or expand material scope without authorization. If such action is the best next step, create a proposal. Return JSON only.`,
-    prompt:`Execute this project task using the supplied shared Project Knowledge. Return {summary,findings,deliverables,decisions,proposal:null|{proposal_type,title,executive_summary,rationale,expected_impact,estimated_cost,cost_currency,risk_level,required_permissions,alternatives_considered},meeting_request:null|{title,purpose,participant_roles},follow_up_tasks:[]}. Task=${JSON.stringify({title:task.title,input:task.input})} Project=${JSON.stringify(project.data)} Knowledge=${JSON.stringify(context.data??[]).slice(0,18000)} Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`});
+    system:`${runtimeInstructions(agentRow.role_title)} Agent role instructions: ${String(agentRow.system_instructions??"").slice(0,12000)} Skills: ${JSON.stringify(agentRow.skills)} Allowed tools: ${JSON.stringify(agentRow.allowed_tools)} You are ${agentRow?.display_name||agentRow?.name||"a RYTHM project agent"}, ${agentRow?.role_title||"Project Specialist"}. Execute internal knowledge work proactively within your professional authority. Do not claim external actions you did not perform. Do not spend money, send external communications, deploy production, delete data, sign contracts, or expand material scope without authorization. If such action is the best next step, create a proposal. Return JSON only.`,
+    prompt:`Execute this project task using the supplied shared Project Knowledge. Return {summary,findings,deliverables,decisions,proposal:null|{proposal_type,title,executive_summary,rationale,expected_impact,estimated_cost,cost_currency,risk_level,required_permissions,alternatives_considered},meeting_request:null|{title,purpose,participant_roles},follow_up_tasks:[{key,title,description,agent_id,within_approved_scope,requires_approval}]}. Task=${JSON.stringify({title:task.title,input:{...task.input,predecessor_outputs:predecessors.data??[]}})} Project=${JSON.stringify(project.data)} Knowledge=${JSON.stringify(context.data??[]).slice(0,18000)} Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`});
   const data=result.data;
   if(data.proposal && typeof data.proposal==="object"){
     const p=data.proposal as Record<string,unknown>;
@@ -230,6 +245,7 @@ async function executeClaimedTask(supabase:SupabaseClient,task:any) {
     const meeting=await supabase.from("meetings").insert({organization_id:task.organization_id,project_id:task.project_id,title:str(m.title,`Working session: ${task.title}`),purpose:str(m.purpose,"Resolve project task collaboratively."),status:"draft",human_join_allowed:true,agenda:list(m.participant_roles),chair_agent_id:task.assigned_agent_id}).select("id").single();
     if(meeting.data) await supabase.from("project_activity_events").insert({organization_id:task.organization_id,project_id:task.project_id,execution_id:task.execution_id,agent_id:task.assigned_agent_id,event_type:"meeting.requested",headline:"Agent requested a working session",detail:str(m.purpose),metadata:{meeting_id:meeting.data.id}});
   }
+  await persistFollowups(supabase,task,data.follow_up_tasks);
   const completedAt=new Date().toISOString();
   await supabase.from("project_task_runs").update({status:"completed",safe_result:data,completed_at:completedAt,lease_owner:null,lease_expires_at:null,updated_at:completedAt}).eq("id",task.id).eq("lease_owner",task.lease_owner);
   if(task.action_item_id) await supabase.from("action_items").update({status:"completed",completed_at:completedAt}).eq("id",task.action_item_id).in("status",["open","in_progress","blocked"]);
@@ -242,6 +258,7 @@ export async function dispatchProjectWork(supabase:SupabaseClient,workerId=`proj
   if(claimed.error) throw new Error(claimed.error.message);
   const results:Array<{id:string;status:string;error?:string}>=[];
   for(const task of claimed.data??[]){
+    if(task.status!=="running")continue;
     try{await executeClaimedTask(supabase,task);results.push({id:task.id,status:"completed"});}
     catch(error){
       const exhausted=Number(task.attempt_count??1)>=Number(task.max_attempts??5);

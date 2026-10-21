@@ -40,6 +40,7 @@ type AgentRow={
   role_title:string;
   reports_to_agent_id:string|null;
   enabled:boolean;
+  agent_status:string;
 };
 
 type SupervisorResult={kind:string;projectId:string;taskId?:string;jobId?:string;detail?:string};
@@ -71,14 +72,14 @@ async function activity(supabase:SupabaseClient,input:{organizationId:string;pro
 async function loadProjectAgents(supabase:SupabaseClient,execution:ExecutionRow){
   const result=await supabase
     .from("project_agents")
-    .select("agent_id,status,agents(id,agent_code,role_title,reports_to_agent_id,enabled)")
+    .select("agent_id,status,agents(id,agent_code,role_title,reports_to_agent_id,enabled,agent_status)")
     .eq("organization_id",execution.organization_id)
     .eq("project_id",execution.project_id)
     .in("status",["assigned","active"]);
   const agents:AgentRow[]=[];
   for(const row of result.data??[]){
     const raw=Array.isArray((row as any).agents)?(row as any).agents[0]:(row as any).agents;
-    if(raw?.id&&raw.enabled!==false)agents.push(raw as AgentRow);
+    if(raw?.id&&raw.enabled===true&&raw.agent_status==="enabled")agents.push(raw as AgentRow);
   }
   return agents;
 }
@@ -115,8 +116,8 @@ async function chooseRecoveryManager(supabase:SupabaseClient,execution:Execution
   const assigned=task.assigned_agent_id?await supabase.from("agents").select("id,reports_to_agent_id").eq("id",task.assigned_agent_id).maybeSingle():{data:null};
   const directManagerId=(assigned.data as any)?.reports_to_agent_id as string|undefined;
   if(directManagerId){
-    const manager=await supabase.from("agents").select("id,agent_code,role_title,reports_to_agent_id,enabled").eq("id",directManagerId).maybeSingle();
-    if(manager.data?.enabled&&await ensureManagerCapacity(supabase,execution,manager.data.id))return manager.data.id as string;
+    const manager=await supabase.from("agents").select("id,agent_code,role_title,reports_to_agent_id,enabled,agent_status").eq("id",directManagerId).eq("organization_id",execution.organization_id).maybeSingle();
+    if(manager.data?.enabled&&manager.data.agent_status==="enabled"&&await ensureManagerCapacity(supabase,execution,manager.data.id))return manager.data.id as string;
   }
 
   const ranked=[...projectAgents].sort((a,b)=>{
