@@ -1,6 +1,9 @@
 import { ProjectApprovalProvider, ProjectApprovalCount, ProjectAttentionHeading, ProjectApprovalList } from "@/components/projects/ProjectApprovalState";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { SubmitButton } from "@/components/ui/Button";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { getProjectOperatingTimeline, getProjectRelationships, refreshProjectWorkflowState, type EntityRelationship, type WorkflowTimelineItem } from "@/lib/workflow/server";
 import { getProjectProgressSnapshot } from "@/lib/projects/project-progress";
@@ -13,7 +16,7 @@ import { ContinuousProgramPanel, type ProgramReadModel, type ReviewReadModel } f
 
 export const dynamic="force-dynamic";
 type View="overview"|"roadmap"|"work"|"activity"|"decisions"|"files"|"results"|"advanced";
-type Props={searchParams:Promise<{project?:string;view?:string;taskStatus?:string;taskAgent?:string;planning?:string;activityFilter?:string}>};
+type Props={searchParams:Promise<{project?:string;view?:string;taskStatus?:string;taskAgent?:string;planning?:string;activityFilter?:string;programSaved?:string;programError?:string}>};
 const views:Array<{key:View;label:string}>=[{key:"overview",label:"Overview"},{key:"roadmap",label:"Roadmap"},{key:"work",label:"Work"},{key:"activity",label:"Activity"},{key:"decisions",label:"Decisions"},{key:"files",label:"Files"},{key:"results",label:"Results"},{key:"advanced",label:"Advanced"}];
 const legacyViews:Record<string,View>={live:"advanced",agents:"advanced",tasks:"work",approvals:"decisions",actions:"work"};
 const label=(value:string)=>value.replaceAll("_"," ").replaceAll("."," · ");
@@ -22,12 +25,40 @@ function payloadSummary(item:WorkflowTimelineItem){const p=item.payload??{};cons
 function destinationForRelationship(edge:EntityRelationship,projectId:string){const c=[edge.source_type,edge.target_type];if(c.includes("meeting")||c.includes("meeting_session")||c.includes("decision")||c.includes("legal_review"))return "/meetings/room";if(c.includes("action_item"))return `/actions?project=${projectId}`;if(c.includes("memory_record"))return "/memory";return `/projects/operating?project=${projectId}&view=overview`;}
 async function ownerContext(){const supabase=await createAuthServerClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login");const {data:membership}=await supabase.from("organization_members").select("organization_id,role").eq("user_id",user.id).eq("role","owner").maybeSingle();if(!membership)redirect("/login?error=Owner%20authorization%20required.");return{supabase,organizationId:membership.organization_id as string};}
 
+async function saveContinuousProgram(formData:FormData) {
+  "use server";
+  const {organizationId}=await ownerContext();
+  const projectId=String(formData.get("projectId")??"");
+  if(!/^[a-f0-9-]{36}$/i.test(projectId))redirect("/projects");
+  const cadence=String(formData.get("cadence")??"weekly");
+  const seoSiteId=String(formData.get("seoSiteId")??"");
+  const enabled=formData.get("enabled")==="on";
+  const service=createServerSupabaseClient();
+  const destination=`/projects/operating?project=${encodeURIComponent(projectId)}&view=advanced`;
+  if(!service)redirect(destination+"&programError=Service+configuration+unavailable");
+  const {error}=await service.rpc("configure_continuous_program_v1",{
+    p_project_id:projectId,p_organization_id:organizationId,
+    p_seo_site_id:seoSiteId||null,p_cadence:cadence,p_enabled:enabled
+  });
+  if(error){
+    console.error("continuous_program_configuration_failed",{projectId,message:error.message});
+    redirect(destination+"&programError=Configuration+could+not+be+saved.+Check+the+project+governance+and+data+source");
+  }
+  revalidatePath("/projects/operating");
+  redirect(destination+"&programSaved=1");
+}
+
 export default async function ProjectOperatingPage({searchParams}:Props){
   const params=await searchParams;const activeView=views.some(v=>v.key===params.view)?params.view as View:legacyViews[params.view??""]??"overview";const {supabase,organizationId}=await ownerContext();
   let query=supabase.from("projects").select("*").eq("organization_id",organizationId);query=params.project?query.eq("id",params.project):query.order("priority").limit(1);const {data:project}=await query.maybeSingle();
   if(!project)return <main className="command-shell"><section className="panel"><h1>Project operating view unavailable</h1><Link className="secondary-button" href="/projects">Back to Projects</Link></section></main>;
   let program:ProgramReadModel|null=null;
   let programReviews:ReviewReadModel[]=[];
+  let seoSiteOptions:Array<{id:string;name:string;site_url:string}>=[];
+  if("lifecycle_kind" in project && activeView==="advanced"){
+    const seoSites=await supabase.from("agency_seo_sites").select("id,name,site_url").eq("organization_id",organizationId).eq("active",true);
+    seoSiteOptions=seoSites.data??[];
+  }
   if(project.lifecycle_kind==="continuous"){
     const programResult=await supabase.from("continuous_programs")
       .select("id,state,cadence,enabled,last_review_at,next_review_at,seo_site_id")
@@ -109,6 +140,33 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     {activeView==="files"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project Knowledge</p><h2>Files, resources and scoped connections</h2></div><span className="pill">{(documents.data??[]).length+(resources.data??[]).length+(bindings.data??[]).length} items</span></div><div className="project-card-metrics"><div><span>Files</span><strong>{documents.data?.length??0}</strong></div><div><span>Resources</span><strong>{resources.data?.length??0}</strong></div><div><span>Connections</span><strong>{bindings.data?.length??0}</strong></div></div><div className="data-list">{(documents.data??[]).map((document:any)=><div className="data-row" key={document.id}><div><strong>{document.file_name}</strong><span>{label(document.category)} · {document.extraction_status} · {formatDate(document.created_at)}</span></div>{document.legal_document?<span className="pill">Legal</span>:null}</div>)}{(resources.data??[]).map((resource:any)=><div className="data-row" key={resource.id}><div><strong>{resource.name}</strong><span>{resource.resource_type} · {resource.access_status}</span></div></div>)}{(bindings.data??[]).map((binding:any)=><div className="data-row" key={binding.id}><div><strong>{binding.display_name}</strong><span>{binding.resource_type} · {binding.resource_ref}</span></div><span className="pill">{binding.access_status}</span></div>)}</div></section>:null}
 
     {activeView==="activity"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project history</p><h2>Activity</h2></div><span className="pill">{visibleActivity.length} updates</span></div><nav className="simple-inbox-filters" aria-label="Activity filters">{["important","all","agent","system"].map(filter=><Link key={filter} aria-current={activityFilter===filter?"page":undefined} href={`/projects/operating?project=${project.id}&view=activity&activityFilter=${filter}`}>{filter==="all"?"All activity":filter==="important"?"Important":filter==="agent"?"Agent activity":"System activity"}</Link>)}</nav><div className="data-list">{visibleActivity.map((event:any)=><div className="data-row" key={event.id}><div><strong>{event.headline}</strong><span>{event.detail||label(event.event_type)} · {formatDate(event.created_at)}</span></div></div>)}{!visibleActivity.length?<p className="empty-state">No activity in this view yet.</p>:null}</div></section>:null}
+    {activeView==="advanced"&&("lifecycle_kind" in project)?<section className="panel project-view-panel">
+      <div className="panel-heading"><div><p className="label">Governed configuration</p><h2>Continuous monitoring</h2></div><span className="pill">{project.lifecycle_kind==="continuous"?"Continuous program":"Optional"}</span></div>
+      <p className="security-note">Explicitly convert this project into an ongoing program. Existing status and Human CEO approvals remain in force; a blocked project cannot automatically resume monitoring.</p>
+      {params.programSaved?<p role="status" className="form-success">Continuous program configuration saved.</p>:null}
+      {params.programError?<p role="alert" className="form-error">{params.programError}</p>:null}
+      <details><summary style={{cursor:"pointer",fontWeight:700}}>Configure monitoring and review schedule</summary>
+        <form action={saveContinuousProgram} className="auth-form" style={{marginTop:16}}>
+          <input type="hidden" name="projectId" value={project.id}/>
+          <label>Verified SEO site
+            <select name="seoSiteId" defaultValue={program?.seo_site_id??""}>
+              <option value="">Not connected</option>
+              {seoSiteOptions.map(site=><option key={site.id} value={site.id}>{site.name} · {site.site_url}</option>)}
+            </select>
+          </label>
+          <label>Review frequency<select name="cadence" defaultValue={program?.cadence??"weekly"}>
+            <option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option>
+          </select></label>
+          <label style={{display:"flex",gap:10,alignItems:"center"}}>
+            <input type="checkbox" name="enabled" defaultChecked={program?.enabled??false}/>
+            Enable scheduled, read-only evidence reviews (requires active project and SEO site)
+          </label>
+          <p className="security-note">Enabling monitoring does not authorize external actions, publish content, or approve proposals. The backend feature flag and migration must also be enabled.</p>
+          <SubmitButton>Save continuous program</SubmitButton>
+        </form>
+      </details>
+    </section>:null}
+    {activeView==="advanced"&&!("lifecycle_kind" in project)?<p className="security-note">Continuous program configuration is unavailable until its database migration is installed.</p>:null}
     {activeView==="advanced"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Traceability</p><h2>Connected records</h2></div><span className="pill">{relationships.length}</span></div><div className="data-list">{timeline.slice(0,12).map(item=><div className="data-row" key={`${item.timeline_source}-${item.id}`}><div><strong>{payloadSummary(item)}</strong><span>{formatDate(item.occurred_at)}</span></div></div>)}{relationships.slice(0,8).map(edge=><Link className="data-row" href={destinationForRelationship(edge,project.id)} key={edge.id}><div><strong>{label(edge.relationship_type)}</strong><span>{label(edge.source_type)} → {label(edge.target_type)}</span></div></Link>)}</div></section>:null}
   </main></ProjectApprovalProvider>;
 }
