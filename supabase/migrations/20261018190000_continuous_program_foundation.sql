@@ -80,6 +80,11 @@ begin
  if not exists (select 1 from public.continuous_programs p
                  where p.id=new.program_id and p.organization_id=new.organization_id)
  then raise exception 'Review cycle must belong to its program organization'; end if;
+ if new.proposal_id is not null and not exists (
+  select 1 from public.project_proposals pp join public.continuous_programs cp on cp.id=new.program_id
+   where pp.id=new.proposal_id and pp.organization_id=new.organization_id
+    and pp.project_id=cp.project_id)
+ then raise exception 'Review proposal must belong to the same organization and project'; end if;
  return new;
 end $cp$;
 drop trigger if exists guard_continuous_review_org on public.continuous_program_review_cycles;
@@ -93,10 +98,15 @@ begin
  if new.lifecycle_kind='continuous'
  and (new.lifecycle_state='COMPLETED' or new.status='completed')
  then raise exception 'Continuous program cannot be completed; pause or archive explicitly'; end if;
- -- No reclassification of a previously completed project without a managed reconciliation.
- if TG_OP='UPDATE' and new.lifecycle_kind='continuous' and old.lifecycle_kind is distinct from 'continuous'
- and (old.lifecycle_state='COMPLETED' or old.status='completed')
- then raise exception 'Reconcile historical completion before converting project to continuous'; end if;
+ -- Historical project state must be reconciled explicitly before reclassification.
+ if TG_OP='UPDATE' then
+  if new.lifecycle_kind='continuous' and old.lifecycle_kind is distinct from 'continuous'
+     and (old.lifecycle_state='COMPLETED' or old.status='completed')
+  then raise exception 'Reconcile historical completion before converting project to continuous'; end if;
+  if old.lifecycle_kind='continuous' and new.lifecycle_kind<>'continuous'
+     and exists(select 1 from public.continuous_programs where project_id=new.id)
+  then raise exception 'Deactivate and retire the continuous program before changing its lifecycle kind'; end if;
+ end if;
  return new;
 end $cp$;
 drop trigger if exists guard_continuous_project_close on public.projects;
