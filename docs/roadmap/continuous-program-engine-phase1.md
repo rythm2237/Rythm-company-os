@@ -10,9 +10,10 @@ Updated: 2026-10-21
 4. **Review scheduler** — privileged SKIP LOCKED queue claim, unique cycle key, bounded batched processing, stale-running recovery, no background browser polling.
 5. **Evidence worker** — rechecks project governance, uses existing agency_seo_snapshots, requires two fresh observations separated by at least six hours, handles missing/stale data as waiting_for_data.
 6. **Deterministic optimization signals** — 10-point technical SEO regression OR persistent medium/high/critical finding on two snapshots. Creates *draft* project_proposals only; never self-approves or changes websites. Deduplicates against unresolved proposals of the same type.
-7. **Project UI** — readable review schedule, technical evidence, concise history. Owner-controlled source selection and activation in Advanced settings.
-8. **Completion evaluator adapter** — mirrors the current Production evaluator, preserving existing evidence dimensions while ensuring opt-in continuous projects never enter CLOSEOUT/COMPLETED after initial delivery.
-9. **CI regression contract** — prebuild runs domain, repeated-finding, SQL guard, and integration boundary assertions.
+7. **Governed proposal submission** — project owner explicitly submits an evidence-backed draft to the existing approval_requests system using an atomic SQL transaction; it does not authorize implementation.
+8. **Project UI** — readable review schedule, technical evidence, concise history. Owner-controlled source selection and activation in Advanced settings; draft findings appear in Overview with an explicit button to submit for approval.
+9. **Completion evaluator adapter** — mirrors the current Production evaluator, preserving existing evidence dimensions while ensuring opt-in continuous projects never enter CLOSEOUT/COMPLETED after initial delivery.
+10. **CI regression contract** — prebuild runs domain, repeated-finding, SQL guard, and integration boundary assertions.
 
 ## Real-world evidence verified (read-only Production)
 
@@ -47,7 +48,7 @@ Updated: 2026-10-21
 
 - This phase does not create valid GSC/GA4 metrics where connections are missing.
 - A completed review is not evidence of implementation or business outcome success.
-- Draft proposals are not CEO approvals. Existing human decision and execution gateway remain authoritative.
+- Draft proposals are not CEO approvals. Owner submission creates a separate pending approval request. The existing Human CEO decision and execution gateway remain authoritative.
 - This code has not been merged to main or deployed to Production.
 
 ## Review location
