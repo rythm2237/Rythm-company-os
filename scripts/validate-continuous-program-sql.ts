@@ -36,7 +36,7 @@ try{
     create table public.organizations (id uuid primary key);
     create table public.organization_members (
       organization_id uuid not null references public.organizations(id),
-      user_id uuid not null, role text not null
+      user_id uuid not null, role text not null, membership_status text not null default 'active'
     );
     create table public.projects (
       id uuid primary key,organization_id uuid not null references public.organizations(id),
@@ -138,6 +138,12 @@ try{
   await db.exec(`set request.jwt.claim.sub='${ownerB}'`);
   assert.equal(await value("select count(*)::integer from continuous_programs"),0,"Unrelated tenant cannot read program");
   assert.equal(await value("select count(*)::integer from continuous_program_review_cycles"),0,"Unrelated tenant cannot read review cycles");
+  await db.exec("reset role; set role service_role");
+  await db.exec(`update organization_members set membership_status='suspended' where organization_id='${orgA}' and user_id='${ownerA}'`);
+  await db.exec(`set role authenticated; set request.jwt.claim.sub='${ownerA}'`);
+  assert.equal(await value("select count(*)::integer from continuous_programs"),0,"Suspended member must not read its former organization's program");
+  await db.exec("reset role; set role service_role");
+  await expectError(()=>query(`select public.submit_continuous_proposal_for_approval_v1('${proposalA}','${orgA}','${projectA}','${ownerA}')`),/Owner authorization required/);
   await db.exec("reset role; set role anon");
   await expectError(()=>query("select count(*) from continuous_programs"),/permission denied/);
   await db.exec("reset role");
