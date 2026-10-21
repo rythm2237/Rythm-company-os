@@ -37,6 +37,7 @@ const evaluatorAdapter=read("supabase/migrations/20261021120000_continuous_progr
 const dispatcher=read("app/api/projects/dispatch/route.ts");
 const worker=read("lib/projects/continuous-program-review-worker.ts");
 const projectPage=read("app/(app)/projects/operating/page.tsx");
+const executionBridge=read("lib/projects/project-proposal-execution.ts");
 for(const required of [
   "alter table public.continuous_programs enable row level security",
   "alter table public.continuous_program_review_cycles enable row level security",
@@ -69,4 +70,12 @@ assert.ok(!worker.includes("requestToolExecution"),"Reviews must not execute ext
 assert.ok(projectPage.includes("saveContinuousProgram"),"Owner-controlled opt-in missing");
 assert.ok(projectPage.includes("submitContinuousProposalForApproval"),"Owner-initiated review submission missing");
 assert.ok(migration.includes("requested_by_user_id")&&migration.includes("subject_type"),"Proposal approval must use existing governance records");
+assert.ok(executionBridge.includes('proposal.proposal_type.startsWith("continuous_program_")'),
+  "Approved investigation proposals must not enter external planner");
+assert.ok(executionBridge.includes('bridge_reason:"continuous_program_investigation_only"'),
+  "Read-only investigation status must be recorded");
+const scopeGuard=executionBridge.indexOf('proposal.proposal_type.startsWith("continuous_program_")');
+const executionPlan=executionBridge.indexOf("planApprovedProposalActions(proposal,bindings");
+assert.ok(scopeGuard>=0&&executionPlan>scopeGuard,
+  "Read-only proposal guard must execute before AI tool planning");
 console.log("Continuous Program database/API safety contract tests passed");
