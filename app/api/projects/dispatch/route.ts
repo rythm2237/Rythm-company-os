@@ -11,6 +11,7 @@ import { reconcileProjectCompletionRuntime } from "@/lib/projects/project-comple
 import { ensureProjectLifecycleContinuation } from "@/lib/projects/project-completion-continuation";
 import { processContinuousProgramReviews } from "@/lib/projects/continuous-program-review-worker";
 import { dispatchConnectionSetupSessions } from "@/lib/integrations/connection-setup-agent";
+import { reconcileGoogleConnections } from "@/lib/integrations/connections/google-connection-reconciliation";
 
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
@@ -97,6 +98,14 @@ export async function GET(request:Request){
       continuousReviewResults=await isolated("continuous_review_worker",()=>processContinuousProgramReviews(service,5),errors,[]);
     }
 
+    // One-tenant operator-controlled read-only recheck. Reuses the authorized scheduler;
+    // no new cron, OAuth scopes or credential exposure.
+    const googleRepairOrganizationId = process.env.GOOGLE_CONNECTION_REPAIR_ORG_ID?.trim() ?? "";
+    const googleRepairResults = process.env.GOOGLE_CONNECTION_REPAIR_ENABLED === "true" && googleRepairOrganizationId
+      ? await isolated("google_connection_recheck",
+          () => reconcileGoogleConnections(service, googleRepairOrganizationId), errors, [])
+      : [];
+
     const completionHealth=await service.rpc("refresh_project_completion_health_v1");
     if(completionHealth.error){console.error("project_completion_health_refresh_failed",completionHealth.error.message);errors.push({step:"completion_health",error:completionHealth.error.message});}
 
@@ -109,6 +118,7 @@ export async function GET(request:Request){
       lifecycleContinuation,
       continuousReviewsQueued,
       continuousReviewResults,
+      googleRepairResults,
       knowledge:knowledgeResults,
       connectionSetup:connectionSetupResults,
       supervisor:supervisorResults,
