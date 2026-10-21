@@ -84,3 +84,20 @@ The paid Supabase cloud development branch is **not required** for database migr
 - Review Worker deterministic integration suite is now included in `npm run test:continuous-program`, and the full build must pass before merging.
 - Approved continuous investigation execution isolation: implemented and protected by static safety assertions.
 - No claim of a full Supabase integration or a verified authenticated UI session is made; these remain pre-rollout gates.
+
+## Follow-on implementation and QA — 2026-10-21
+
+- Added `scripts/validate-continuous-program-worker.ts`: exercises the **real worker** through a controlled isolated service adapter with persistent technical findings, significant score regressions, missing/stale evidence, blocked projects, no SEO source, repeated review/proposal reuse and overlapping claims.
+- Integrated worker tests into existing `npm run test:continuous-program` (and Vercel prebuild). Vercel reported **PASS real review worker** for the initial scenario suite.
+- Introduced a partial unique index for unresolved Continuous Program proposals. Concurrent workers now recover from PostgreSQL unique-index race by re-reading the winning proposal.
+- Added an explicit guard in the existing `dispatchApprovedProjectProposalActions()`: `continuous_program_*` investigations are recorded as `no_external_action` and cannot be translated by AI into tool execution intents.
+- Review-cycle outcome updates now confirm the targeted running row was changed, instead of interpreting an empty Supabase update as success.
+- Changed Project Details to the shared `requireOwnerOrganizationContext()` provider, avoiding ambiguous owner lookup for users managing multiple organizations.
+- All changes are in Draft PR #421, feature flag remains off, and no Production records were migrated or reclassified.
+
+### Remaining release gates
+
+- Final Vercel Preview build for latest commit.
+- Test overlapping independent PostgreSQL sessions, and managed Supabase Auth/PostgREST integration against a controlled authorized tenant prior to activation.
+- Verify visual and keyboard behavior in the authenticated Project Details and Approvals UI.
+- Existing `Airolepath SEO` holds and unmet observation evidence remain authoritative; no auto-resume.
