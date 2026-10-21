@@ -12,3 +12,14 @@
 .marketing-guide-dialog > p:not(.marketing-kicker) {
   color: #c6cfde;
 }
+
+/* Keep the guided explanation beside the workspace, never over desktop navigation. */
+@media (min-width: 1101px) {
+  .marketing-guide-dialog {
+    width: min(440px, calc(100vw - var(--mk-sidebar-width) - 48px));
+    max-height: min(76svh, 690px);
+  }
+}
+@media (max-width: 1100px) {
+  .marketing-guide-dialog { max-height: min(75svh, 660px); }
+}
