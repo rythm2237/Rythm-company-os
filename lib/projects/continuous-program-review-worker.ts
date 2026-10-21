@@ -135,8 +135,19 @@ async function processOneReview(service:SupabaseClient,cycle:ClaimedCycle):Promi
             snapshot_ids:[previous.id,latest.id],delta_points:delta,persistent_findings:persistent}],
           required_permissions:["manager_review","human_ceo_approval"]
         }).select("id").single();
-        if(proposal.error||!proposal.data)throw new Error(`Proposal draft failed: ${proposal.error?.message||"no id"}`);
-        proposalId=proposal.data.id;
+        if(proposal.error?.code==="23505"){
+          // Another worker won the concurrent unique constraint race. Reuse its draft.
+          const winner=await service.from("project_proposals").select("id")
+            .eq("organization_id",cycle.organization_id).eq("project_id",projectId)
+            .eq("proposal_type",proposalType)
+            .in("status",["draft","internal_review","ready_for_executive","approved","executing"])
+            .limit(1).maybeSingle();
+          if(winner.error||!winner.data)throw new Error("Conflicting investigation proposal could not be located");
+          proposalId=winner.data.id;
+        }else{
+          if(proposal.error||!proposal.data)throw new Error(`Proposal draft failed: ${proposal.error?.message||"no id"}`);
+          proposalId=proposal.data.id;
+        }
       }
     }
     const summary=proposalId
