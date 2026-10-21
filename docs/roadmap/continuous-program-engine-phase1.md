@@ -13,7 +13,7 @@ Updated: 2026-10-21
 7. **Governed proposal submission** — project owner explicitly submits an evidence-backed draft to the existing approval_requests system using an atomic SQL transaction; it does not authorize implementation.
 8. **Project UI** — readable review schedule, technical evidence, concise history. Owner-controlled source selection and activation in Advanced settings; draft findings appear in Overview with an explicit button to submit for approval.
 9. **Completion evaluator adapter** — mirrors the current Production evaluator, preserving existing evidence dimensions while ensuring opt-in continuous projects never enter CLOSEOUT/COMPLETED after initial delivery.
-10. **Zero-cloud-cost database regression suite** — prebuild executes the actual foundation migration twice against PGlite, validates tenant RLS, privileges, scheduler claiming, cross-tenant guards, lifecycle and approval idempotency, plus TypeScript/domain checks. An evaluator-adapter compile check was added and awaits its final CI result.
+10. **Zero-cloud-cost database regression suite** — prebuild executes the actual foundation migration twice against PGlite, validates tenant RLS, privileges, scheduler claiming, cross-tenant guards, lifecycle and approval idempotency, plus TypeScript/domain checks. The authoritative completion-evaluator adapter is also compiled against the isolated PGlite schema (passed in Vercel build logs).
 
 ## Real-world evidence verified (read-only Production)
 
@@ -29,8 +29,8 @@ Updated: 2026-10-21
 - PGlite is already an installed project development dependency (`@electric-sql/pglite`): no Docker daemon or extra Supabase paid branch is required.
 - Run `npm ci && npm run test:continuous-program` in a repository checkout. The same tests run automatically inside Vercel `prebuild`.
 - Real PostgreSQL **foundation** migration passed in an isolated in-memory database twice (verified from Vercel build log); tenant RLS, RPC execute restrictions, same-org site constraints, completion guards, review idempotency and governed proposal submission also passed.
-- A blocking ambiguous `ON CONFLICT(program_id,...)` SQL issue was discovered by this test and corrected with a named unique constraint.
-- Evaluator adapter compilation was added as a subsequent independent PGlite check. Verify latest build before treating it as passed.
+- A blocking ambiguous `ON CONFLICT(program_id,...)` SQL issue was discovered by this test and corrected with a named unique constraint. Both foundation and adapter compile checks now pass in PGlite.
+- Evaluator adapter compilation passed in the in-memory database; full evaluator runtime needs the authoritative schema and controlled end-to-end checks.
 - PGlite cannot demonstrate managed Supabase Auth / PostgREST behavior or a full live tenant and end-to-end worker; these remain separate pre-release validation gates. Concurrent independent database sessions are not simulated by the single in-memory connection.
 - No Production migrations, project state, flags, external integrations or billing records were changed; no paid development branch was created.
 
