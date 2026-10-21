@@ -70,6 +70,74 @@ export async function bindCustomerProjectResource(formData:FormData){
   revalidatePath(`/projects/operating`);redirect(setupUrl(integrationId,projectId,"message","Verified resource bound to the project. Roadmap dependencies can now use this connection."));
 }
 
+
+/** Manual recovery after Google has granted or replenished GBP API quota.
+ *  Reuses Vault OAuth and never signs in or broadens scopes on behalf of an owner.
+ */
+export async function recheckGoogleBusinessProfileAfterQuota(formData:FormData){
+  const context=await requireActiveOwnerOrganizationContext();
+  const integrationId=text(formData.get("integrationId")),projectId=text(formData.get("projectId"));
+  const {data:connection}=await context.supabase.from("organization_integrations")
+    .select("id,provider_key,metadata").eq("id",integrationId)
+    .eq("organization_id",context.organizationId).maybeSingle();
+  if(!connection||connection.provider_key!=="google_business_profile")
+    redirect("/integrations?error=Google%20Business%20Profile%20connection%20not%20found.");
+  const service=createExecutionServiceClient();
+  let errorMessage="";
+  let verifiedResourceCount=0;
+  try{
+    const {data:secret,error:secretError}=await service.rpc(
+      "get_organization_integration_secret_service_v1",{target_integration_id:integrationId});
+    if(secretError||typeof secret!=="string"||!secret)
+      throw new Error("No stored OAuth credential for this connection. After obtaining API quota, reconnect with Google once.");
+    const credential=await resolveProviderCredential({service,integrationId,
+      providerKey:"google_business_profile",storedSecret:secret});
+    const adapter=getTokenConnectionAdapter("google_business_profile");
+    if(!adapter)throw new Error("Google Business Profile verifier is unavailable.");
+    const verification=await adapter.verifyCredential(credential);
+    if(!verification.resources.length)
+      throw new Error("Google Business Profile API returned no accessible accounts or locations.");
+    const now=new Date().toISOString();
+    const {error:saveError}=await context.supabase.from("integration_resources")
+      .upsert(verification.resources.map(resource=>({
+        organization_id:context.organizationId,integration_id:integrationId,
+        provider_key:"google_business_profile",resource_type:resource.resourceType,
+        resource_id:resource.resourceId,resource_name:resource.resourceName,
+        resource_metadata:resource.metadata??{},available:true,last_verified_at:now,
+      })),{onConflict:"integration_id,resource_type,resource_id"});
+    if(saveError)throw new Error("Google Business Profile resources could not be synchronized.");
+    const {error:updateError}=await context.supabase.from("organization_integrations").update({
+      status:"connected",enabled:true,last_verified_at:now,last_health_check_at:now,
+      last_error_at:null,last_error_code:null,last_error_message:null,updated_at:now,
+      metadata:{...(typeof connection.metadata==="object"&&connection.metadata?connection.metadata:{}),
+        verification_result:"verified",setup_state:"verified",
+        resource_count:verification.resources.length,
+        verification_endpoint:"mybusinessaccountmanagement.googleapis.com/v1/accounts"},
+    }).eq("id",integrationId).eq("organization_id",context.organizationId);
+    if(updateError)throw new Error("Verified Google Business Profile connection could not be updated.");
+    verifiedResourceCount=verification.resources.length;
+  }catch(error){
+    const diagnostic=error instanceof Error?error.message:"Google Business Profile API verification failed.";
+    const quotaExceeded=/\b429\b|RESOURCE_EXHAUSTED|Requests per minute/i.test(diagnostic);
+    errorMessage=quotaExceeded
+      ?"Google Business Profile API quota remains exhausted. Check My Business Account Management API Requests per minute in Google Cloud; if it is 0, request Basic API Access."
+      :diagnostic;
+    const now=new Date().toISOString();
+    await context.supabase.from("organization_integrations").update({
+      status:"needs_attention",last_error_at:now,last_health_check_at:now,
+      last_error_code:quotaExceeded?"google_business_profile_quota_exhausted":"verification_failed",
+      last_error_message:errorMessage.slice(0,500),updated_at:now,
+    }).eq("id",integrationId).eq("organization_id",context.organizationId);
+  }
+  if(verifiedResourceCount){
+    revalidatePath("/integrations");
+    revalidatePath(`/integrations/${integrationId}/setup`);
+    redirect(setupUrl(integrationId,projectId,"message",
+      `Google Business Profile API access verified. ${verifiedResourceCount} resource(s) available.`));
+  }
+  redirect(setupUrl(integrationId,projectId,"error",errorMessage));
+}
+
 export async function checkCustomerConnectionHealth(formData:FormData){
   const context=await requireActiveOwnerOrganizationContext();const integrationId=text(formData.get("integrationId"));const projectId=text(formData.get("projectId"));const connection=await context.supabase.from("organization_integrations").select("provider_key,status").eq("id",integrationId).eq("organization_id",context.organizationId).maybeSingle();const adapter=connection.data?getTokenConnectionAdapter(connection.data.provider_key):null;
   if(!connection.data)redirect(setupUrl(integrationId,projectId,"error","Connection not found."));

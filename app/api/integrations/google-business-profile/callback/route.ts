@@ -33,12 +33,12 @@ export async function GET(request: Request) {
     const redirectUri = `${canonicalOrigin(request)}/api/integrations/google-business-profile/callback`;
     const tokens = await exchangeGoogleOAuthCode({ code, clientId, clientSecret, redirectUri, codeVerifier: String(jar.get("rythm_gbp_pkce")) });
     if (!(tokens.scope ?? "").split(/\s+/).includes(SCOPE)) throw new Error("Google did not grant Business Profile management access.");
-    const [resources, profile] = await Promise.all([discoverGoogleResources("google_business_profile", tokens.access_token!), googleProfile(tokens.access_token!)]);
-    if (!resources.length) throw new Error("Google Business Profile authorization succeeded, but no accessible account or location was returned.");
-
     const envelope = JSON.stringify({ version: 1, provider: "google_business_profile", auth_mode: "oauth", access_token: tokens.access_token, refresh_token: tokens.refresh_token, token_type: tokens.token_type || "Bearer", scope: tokens.scope || SCOPE, expires_at: new Date(Date.now() + Math.max(60, Number(tokens.expires_in ?? 3600)) * 1000).toISOString() });
     const stored = await createExecutionServiceClient().rpc("store_organization_integration_secret_unverified_v1", { target_integration_id: id, secret_value: envelope });
     if (stored.error) throw new Error(`Google Business Profile credential could not be stored securely: ${stored.error.message}`);
+
+    const [resources, profile] = await Promise.all([discoverGoogleResources("google_business_profile", tokens.access_token!), googleProfile(tokens.access_token!)]);
+    if (!resources.length) throw new Error("Google Business Profile authorization succeeded, but no accessible account or location was returned.");
 
     const now = new Date().toISOString();
     await context.supabase.from("integration_resources").update({ available: false }).eq("integration_id", id).eq("organization_id", context.organizationId);
@@ -50,9 +50,21 @@ export async function GET(request: Request) {
     await context.supabase.from("audit_events").insert({ organization_id: context.organizationId, actor_type: "user", actor_user_id: context.user.id, event_type: "integration.google_business_profile_connected", object_type: "organization_integration", object_id: id, risk_level: "low", payload: { resource_count: resources.length, scope: "business.manage", project_id: payload.projectId ?? null } });
     return finish(request, id, payload.projectId, "message", `Google Business Profile connected and verified. ${resources.length} resource(s) discovered.`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Google Business Profile authorization could not be completed.";
+    const diagnostic = error instanceof Error ? error.message : "Google Business Profile authorization could not be completed.";
+    // Google OAuth can succeed while the *separately approved* GBP API quota is zero.
+    // Do not mislabel this as a failed OAuth authorization or encourage rapid retries.
+    const quotaBlocked = /\b429\b|RESOURCE_EXHAUSTED|Requests per minute/i.test(diagnostic);
+    const message = quotaBlocked
+      ? "Google Business Profile OAuth was authorized, but the Account Management API returned quota exhausted (429). Check My Business Account Management API > Requests per minute in Google Cloud. If quota is 0, request Basic API Access; otherwise wait for quota reset before retrying. Repeated Google sign-ins will not increase API quota."
+      : diagnostic;
     const now = new Date().toISOString();
-    await context.supabase.from("organization_integrations").update({ status: "needs_attention", last_error_at: now, last_error_code: "oauth_callback_failed", last_error_message: message.slice(0, 500), updated_at: now }).eq("id", id).eq("organization_id", context.organizationId);
+    await context.supabase.from("organization_integrations").update({
+      status: "needs_attention",
+      last_error_at: now,
+      last_error_code: quotaBlocked ? "google_business_profile_quota_exhausted" : "oauth_callback_failed",
+      last_error_message: message.slice(0, 500),
+      updated_at: now,
+    }).eq("id", id).eq("organization_id", context.organizationId);
     return finish(request, id, payload.projectId, "error", message);
   }
 }
