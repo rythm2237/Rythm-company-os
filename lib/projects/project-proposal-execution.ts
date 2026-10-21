@@ -142,6 +142,18 @@ export async function dispatchApprovedProjectProposalActions(){
   for(const proposal of (proposals??[]) as ProposalRow[]){
     const current=record(proposal.execution_result);
     if(["dispatched","completed","no_external_action"].includes(String(current.bridge_status??"")))continue;
+    // Approved Continuous Program proposals authorize investigation, not external changes.
+    // Never send them to the AI proposal-to-tool-execution planner.
+    if(proposal.proposal_type.startsWith("continuous_program_")){
+      const {error:readOnlyError}=await supabase.from("project_proposals").update({
+        execution_result:mergeExecutionResult(current,{bridge_status:"no_external_action",
+          bridge_reason:"continuous_program_investigation_only",bridge_checked_at:new Date().toISOString()}),
+        updated_at:new Date().toISOString(),
+      }).eq("id",proposal.id).eq("organization_id",proposal.organization_id).eq("status","approved");
+      if(readOnlyError)throw new Error("Read-only proposal bridge failed: "+readOnlyError.message);
+      results.push({proposalId:proposal.id,status:"investigation_only"});
+      continue;
+    }
     if(!proposal.decided_by_user_id){
       results.push({proposalId:proposal.id,status:"waiting_for_human_identity"});
       continue;
