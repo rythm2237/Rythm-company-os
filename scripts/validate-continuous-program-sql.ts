@@ -93,6 +93,12 @@ try{
       values ('${proposalA}','${orgA}','${projectA}','continuous_program_persistent_seo_findings',
         'Review canonical evidence','Two independent SEO audits have recurring findings','medium');
   `);
+  // DB uniqueness is the authoritative backstop against concurrent proposal creation.
+  await expectError(()=>db.exec(`insert into project_proposals
+    (id,organization_id,project_id,proposal_type,title,executive_summary,risk_level)
+    values ('00000000-0000-4000-8000-000000000015','${orgA}','${projectA}',
+    'continuous_program_persistent_seo_findings','Duplicate','Should be rejected','medium')`),
+    /duplicate key|unique constraint/i);
   await db.exec("set role service_role");
   await expectError(()=>query(`select public.configure_continuous_program_v1('${projectA}','${orgA}','${siteB}','weekly',true)`),/same organization|active site|SEO source/i);
   const configured=await value(`select public.configure_continuous_program_v1('${projectA}','${orgA}','${siteA}','weekly',true)`);
