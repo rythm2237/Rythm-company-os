@@ -52,7 +52,7 @@
     "test:integration-availability": "node --import tsx scripts/validate-integration-availability.ts",
     "smoke:commercial-public": "node scripts/smoke-commercial-public.mjs",
     "test:interactions": "node --import tsx scripts/validate-interactions.tsx",
-    "test:continuous-program": "node --import tsx scripts/validate-continuous-program.ts"
+    "test:continuous-program": "node --import tsx scripts/validate-continuous-program.ts && node --import tsx scripts/validate-continuous-program-sql.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
