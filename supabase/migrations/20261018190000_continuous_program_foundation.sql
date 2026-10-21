@@ -50,7 +50,7 @@ create table if not exists public.continuous_program_review_cycles (
  proposal_id uuid references public.project_proposals(id) on delete set null,
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now(),
- unique(program_id,scheduled_for)
+ constraint cp_review_unique_slot unique(program_id,scheduled_for)
 );
 
 create index if not exists continuous_program_review_due_idx
@@ -158,7 +158,7 @@ begin
   new_cycle:=null;
   insert into public.continuous_program_review_cycles(organization_id,program_id,scheduled_for)
   values(rec.organization_id,rec.id,rec.next_review_at)
-  on conflict(program_id,scheduled_for) do nothing returning id into new_cycle;
+  on conflict on constraint cp_review_unique_slot do nothing returning id into new_cycle;
 
   -- Advance the calendar one interval; catch-up is bounded by p_limit on each dispatch.
   next_at:=case rec.cadence
