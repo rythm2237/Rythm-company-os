@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { IntegrationGuideButton } from "../../integration-guide-button";
-import { bindCustomerProjectResource, checkCustomerConnectionHealth, disconnectCustomerConnection, verifyCustomerTokenConnection } from "../../customer-actions";
+import { bindCustomerProjectResource, checkCustomerConnectionHealth, disconnectCustomerConnection, recheckGoogleBusinessProfileAfterQuota, verifyCustomerTokenConnection } from "../../customer-actions";
 import { ConnectionSetupAgentPanel } from "../../connection-setup-agent-panel";
 import { getCanonicalSetupPlan } from "@/lib/integrations/connections/setup-plans";
 import { createExecutionServiceClient } from "@/lib/integrations/service-runner";
@@ -70,6 +70,12 @@ export default async function IntegrationSetupPage({params,searchParams}:{params
         <a className="secondary-button" href="https://developers.google.com/my-business/content/limits" target="_blank" rel="noopener noreferrer">Google API access guidance</a>
       </div>
       <p className="security-note">This integration is optional for technical SEO monitoring; it does not block your existing verified Search Console connection.</p>
+      <form action={recheckGoogleBusinessProfileAfterQuota} style={{marginTop:12}}>
+        <input type="hidden" name="integrationId" value={integration.id}/>
+        {query.project?<input type="hidden" name="projectId" value={query.project}/>:null}
+        <SubmitButton type="submit" className="secondary-button">Recheck API access after quota approval</SubmitButton>
+      </form>
+      <p className="security-note">Run this check only after Google confirms an active non-zero API quota. It reuses a previously stored OAuth credential where available, without requesting extra permissions.</p>
     </section>:null}
     <ConnectionSetupAgentPanel integrationId={integration.id} projectId={query.project} providerName={provider?.display_name??integration.provider_key} providerKey={integration.provider_key} plan={plan} aiEnabled={Boolean(provider?.ai_setup_enabled)} rollout={String(provider?.ai_setup_rollout??"off")} session={session} events={events} browser={browser} agentAnswer={query.agentAnswer} openLive={query.live==="1"}/>
     <section className="panel" style={{maxWidth:860,marginTop:18}}><div className="panel-heading"><div><p className="label">MANUAL · GUIDE ME</p><h2>{integration.display_name}</h2></div><span data-guide-target="verify" className={integration.status==="connected"?"state-active":"state-paused"}>{stateLabel(integration.status)}</span></div>
