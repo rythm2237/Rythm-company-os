@@ -89,18 +89,21 @@ export async function reconcileGoogleConnections(
       // A Search Console property must be visible in the live API before
       // re-asserting a verified legacy binding for that site.
       if (key === "google_search_console") {
-        const {data: linked, error: linkedError} = await service
+        const { data: linked, error: linkedError } = await service
           .from("agency_seo_provider_bindings")
-          .select("integration_resource_id,integration_resources!inner(resource_id)")
+          .select("integration_resource_id")
           .eq("organization_id", organizationId)
           .eq("provider_key", key);
         if (linkedError) throw new Error("site_binding_inspection_failed");
+        const linkedIds = (linked ?? []).map(row => row.integration_resource_id as string);
+        const { data: bindings, error: bindingError } = linkedIds.length
+          ? await service.from("integration_resources")
+              .select("id,resource_id").eq("organization_id", organizationId)
+              .eq("integration_id", connection.id).in("id", linkedIds)
+          : { data: [], error: null };
+        if (bindingError) throw new Error("bound_resource_inspection_failed");
         const returned = new Set(rows.map(row => row.resource_id));
-        const missing = (linked ?? []).some(item => {
-          const property = (item as {integration_resources?: { resource_id?: string } | Array<{resource_id?: string}>}).integration_resources;
-          const id = Array.isArray(property) ? property[0]?.resource_id : property?.resource_id;
-          return Boolean(id && !returned.has(id));
-        });
+        const missing = (bindings ?? []).some(item => Boolean(item.resource_id && !returned.has(item.resource_id)));
         if (missing) throw new Error("bound_property_not_accessible");
       }
 
