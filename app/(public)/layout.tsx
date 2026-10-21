@@ -4,9 +4,9 @@ import "./marketing.css";
 import "./public-shell-hardening.css";
 import "./demo-mobile-hardening.css";
 import "./experience-mobile-fix.css";
-import "./guided-tour-hardening.css";
 import "./knowledge.css";
 import "./public-mobile-hardening-v2.css";
+import "./guided-tour-hardening.css";
 
 export default function PublicLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

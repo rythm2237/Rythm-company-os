@@ -401,6 +401,9 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
         <div className="demo-boundary">
           <span data-explain-key="readOnlyDemo" tabIndex={explainMode ? 0 : undefined}><i aria-hidden="true" /> Read only</span>
           <Button type="button" onClick={resetDemo}>{copy.ui.resetDemo}</Button>
+          <Button className="demo-guide-entry" type="button" onClick={openTour} dir={copy.direction} lang={locale} aria-label={copy.ui.guideLauncherTitle}>
+            <span aria-hidden="true">?</span> {copy.ui.guideLauncherTitle}
+          </Button>
         </div>
       </header>
 
@@ -441,7 +444,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
         </div>
         <div>
           {explainMode ? <span className="demo-explain-hint">{copy.ui.explainHint}</span> : null}
-          <LanguageSelector compact />
+          {tourState !== "active" ? <LanguageSelector compact /> : null}
         </div>
         {experienceHintVisible ? (
           <span className="demo-experience-discovery" role="status">

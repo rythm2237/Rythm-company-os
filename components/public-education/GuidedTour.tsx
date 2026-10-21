@@ -41,50 +41,38 @@ function intersectionArea(
   return width * height;
 }
 
+/**
+ * The tour is a compact floating guide, not a third workspace column.
+ * Prefer a viewport corner clear of the highlighted content and toolbar.
+ * Never squeeze DemoWorkspace or render over the public sidebar.
+ */
 function getGuidePosition(target: DOMRect, dialog: DOMRect): CSSProperties {
-  const margin = 16;
-  const gap = 20;
+  const margin = 20;
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
-  const centeredTop = target.top + ((target.height - dialog.height) / 2);
-  const centeredLeft = target.left + ((target.width - dialog.width) / 2);
-  const candidates = [
-    { left: target.right + gap, top: centeredTop },
-    { left: target.left - dialog.width - gap, top: centeredTop },
-    { left: centeredLeft, top: target.bottom + gap },
-    { left: centeredLeft, top: target.top - dialog.height - gap },
-  ];
-
+  const sidebar = viewportWidth > 1100
+    ? document.querySelector<HTMLElement>(".marketing-sidebar")?.getBoundingClientRect()
+    : null;
+  const minimumLeft = (sidebar?.right ?? 0) + margin;
+  const left = clamp(viewportWidth - dialog.width - margin, minimumLeft, viewportWidth - dialog.width - margin);
+  const upperTop = Math.min(96, Math.max(margin, viewportHeight - dialog.height - margin));
+  const lowerTop = Math.max(margin, viewportHeight - dialog.height - margin);
+  const toolbar = document.querySelector<HTMLElement>(".demo-education-toolbar")?.getBoundingClientRect();
   const paddedTarget = {
-    top: target.top - 10,
-    right: target.right + 10,
-    bottom: target.bottom + 10,
-    left: target.left - 10,
+    top: target.top - 14,
+    right: target.right + 14,
+    bottom: target.bottom + 14,
+    left: target.left - 14,
   };
 
-  const ranked = candidates.map((candidate, index) => {
-    const left = clamp(candidate.left, margin, viewportWidth - dialog.width - margin);
-    const top = clamp(candidate.top, margin, viewportHeight - dialog.height - margin);
-    const rectangle = {
-      top,
-      right: left + dialog.width,
-      bottom: top + dialog.height,
-      left,
-    };
-    const displacement = Math.abs(left - candidate.left) + Math.abs(top - candidate.top);
-    return {
-      left,
-      top,
-      score: (intersectionArea(rectangle, paddedTarget) * 100) + displacement + index,
-    };
-  }).sort((first, second) => first.score - second.score);
-
-  return {
-    top: ranked[0].top,
-    left: ranked[0].left,
-    right: "auto",
-    bottom: "auto",
-  };
+  const candidates = [upperTop, lowerTop].map((top, index) => {
+    const rectangle = { top, left, right: left + dialog.width, bottom: top + dialog.height };
+    const targetOverlap = intersectionArea(rectangle, paddedTarget);
+    const toolbarOverlap = toolbar ? intersectionArea(rectangle, toolbar) : 0;
+    return { top, score: targetOverlap * 100 + toolbarOverlap * 20 + index };
+  });
+  candidates.sort((first, second) => first.score - second.score);
+  return { top: candidates[0].top, left, right: "auto", bottom: "auto" };
 }
 
 export default function GuidedTour() {
@@ -249,6 +237,10 @@ export default function GuidedTour() {
     let attempts = 0;
     let target: HTMLElement | null = null;
     const timers: number[] = [];
+    const dialogResizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => window.requestAnimationFrame(syncFloatingElements))
+      : null;
+    if (dialogRef.current) dialogResizeObserver?.observe(dialogRef.current);
 
     function syncFloatingElements() {
       if (!target || !dialogRef.current) return;
@@ -272,7 +264,7 @@ export default function GuidedTour() {
       }
       target?.classList.add("is-guide-target");
       target?.scrollIntoView({
-        block: "center",
+        block: "start",
         inline: "nearest",
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
       });
@@ -287,11 +279,12 @@ export default function GuidedTour() {
     return () => {
       window.cancelAnimationFrame(frame);
       timers.forEach((timer) => window.clearTimeout(timer));
+      dialogResizeObserver?.disconnect();
       window.removeEventListener("resize", syncFloatingElements);
       window.removeEventListener("scroll", syncFloatingElements, true);
       target?.classList.remove("is-guide-target");
     };
-  }, [activeDefinition.target, experienceMode, pathname, tourState]);
+  }, [activeDefinition.target, experienceMode, locale, pathname, tourState]);
 
   if (!ready || tourState === "closed") return null;
 
@@ -314,7 +307,7 @@ export default function GuidedTour() {
         </div>
       ) : null}
       <div
-        className="marketing-guide-dialog"
+        className={`marketing-guide-dialog is-${tourState}`}
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
@@ -364,8 +357,7 @@ export default function GuidedTour() {
               </div>
               <small aria-hidden="true">{numberFormatter.format(TOUR_STEPS.length)}</small>
             </div>
-            <LanguageSelector compact className="marketing-guide-language" />
-            <p className="marketing-kicker">{activeCopy.eyebrow}</p>
+                        <p className="marketing-kicker">{activeCopy.eyebrow}</p>
             <h2 id="marketing-guide-title">{activeCopy.title}</h2>
             <p>{activeCopy.description}</p>
             <div className="marketing-guide-actions">

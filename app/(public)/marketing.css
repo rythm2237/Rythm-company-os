@@ -455,7 +455,7 @@
   padding: 24px 18px 18px;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   color: #f7f9fd;
   background:
     radial-gradient(circle at 48% -8%, rgba(112, 126, 255, .22), transparent 15rem),
@@ -484,7 +484,18 @@
 .marketing-brand-wordmark small { color: var(--mk-sidebar-muted); font-size: .58rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
 .marketing-sidebar-close { display: none; width: 38px; height: 38px; border: 1px solid rgba(255,255,255,.12); border-radius: 11px; color: #e7ebf4; background: rgba(255,255,255,.05); font-size: 1.3rem; }
 
-.marketing-sidebar-navigation { position: relative; flex: 1; margin-top: clamp(28px, 4vh, 46px); }
+.marketing-sidebar-navigation {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: clamp(22px, 3.2vh, 40px);
+  margin-bottom: 12px;
+  padding-right: 3px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #2a3650 transparent;
+}
 .marketing-nav-group { margin-bottom: clamp(20px, 3vh, 32px); display: grid; gap: 4px; }
 .marketing-nav-group > p { margin: 0 12px 9px; color: #65728b; font-size: .61rem; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
 .marketing-nav-group > a {
@@ -515,7 +526,15 @@
 .marketing-nav-group > a > i { width: 5px; height: 5px; border-radius: 50%; background: transparent; transition: background .2s ease, box-shadow .2s ease; }
 .marketing-nav-group > a.is-active > i { background: var(--mk-cyan); box-shadow: 0 0 0 4px rgba(75,198,216,.09), 0 0 12px rgba(75,198,216,.6); }
 
-.marketing-sidebar-footer { position: relative; display: grid; gap: 12px; }
+.marketing-sidebar-footer {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  background: linear-gradient(180deg, rgba(8,14,25,0), rgba(8,14,25,.96) 16px);
+}
 .marketing-guide-launcher { width: 100%; padding: 11px; display: grid; grid-template-columns: 32px 1fr; gap: 10px; align-items: center; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; color: #dfe5f1; background: rgba(255,255,255,.035); text-align: left; transition: border-color .2s ease, background .2s ease, transform .2s ease; }
 .marketing-guide-launcher:hover { border-color: rgba(126,140,255,.3); background: rgba(114,127,238,.1); transform: translateY(-1px); }
 .marketing-guide-launcher:active { transform: scale(.985); }
@@ -523,6 +542,17 @@
 .marketing-guide-launcher > span:last-child { display: grid; gap: 2px; }
 .marketing-guide-launcher strong { font-size: .72rem; }
 .marketing-guide-launcher small { color: #7f8ba2; font-size: .62rem; }
+@media (min-width: 1101px) and (max-height: 820px) {
+  .marketing-sidebar { padding-top: 18px; padding-bottom: 14px; }
+  .marketing-sidebar-navigation { margin-top: 18px; }
+  .marketing-nav-group { margin-bottom: 14px; }
+  .marketing-nav-group > a { min-height: 39px; padding-top: 6px; padding-bottom: 6px; }
+  .marketing-guide-launcher { padding: 8px 10px; grid-template-columns: 28px 1fr; }
+  .marketing-guide-launcher > span:first-child { width: 27px; height: 27px; }
+  .marketing-guide-launcher small { display: none; }
+  .marketing-system-state { display: none; }
+  .marketing-sidebar-actions > a { min-height: 38px; }
+}
 .marketing-system-state { padding: 2px 4px; display: grid; grid-template-columns: 9px 1fr auto; gap: 7px; align-items: center; color: #6f7c94; font-size: .6rem; }
 .marketing-system-state i { width: 7px; height: 7px; border-radius: 50%; background: var(--mk-positive); box-shadow: 0 0 0 4px rgba(66,201,138,.08), 0 0 12px rgba(66,201,138,.28); animation: marketing-status-pulse 2.4s ease-in-out infinite; }
 .marketing-system-state strong { color: #93a0b7; font-size: .6rem; }
