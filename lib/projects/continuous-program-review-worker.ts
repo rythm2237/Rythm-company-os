@@ -27,11 +27,12 @@ const cleanNumber=(v:unknown)=>typeof v==="number"&&Number.isFinite(v)?v:null;
 async function markCycle(service:SupabaseClient,cycleId:string,organizationId:string,
   status:ProgramReviewResult["status"],summary:string,evidence:Record<string,unknown>,
   proposalId:string|null=null) {
-  const {error}=await service.from("continuous_program_review_cycles").update({
+  const {data:updatedCycle,error}=await service.from("continuous_program_review_cycles").update({
     state:status,summary,finished_at:new Date().toISOString(),evidence,proposal_id:proposalId,
     last_error:status==="failed"?summary:null,updated_at:new Date().toISOString()
-  }).eq("id",cycleId).eq("organization_id",organizationId).eq("state","running");
+  }).eq("id",cycleId).eq("organization_id",organizationId).eq("state","running").select("id").maybeSingle();
   if(error)throw new Error(`Review outcome persistence failed: ${error.message}`);
+  if(!updatedCycle)throw new Error("Review cycle is no longer running; refusing to report a stale outcome");
 }
 
 export async function processContinuousProgramReviews(service:SupabaseClient,limit=5):Promise<ProgramReviewResult[]> {
