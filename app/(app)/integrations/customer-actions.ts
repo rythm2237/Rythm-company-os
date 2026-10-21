@@ -84,6 +84,7 @@ export async function recheckGoogleBusinessProfileAfterQuota(formData:FormData){
     redirect("/integrations?error=Google%20Business%20Profile%20connection%20not%20found.");
   const service=createExecutionServiceClient();
   let errorMessage="";
+  let verifiedResourceCount=0;
   try{
     const {data:secret,error:secretError}=await service.rpc(
       "get_organization_integration_secret_service_v1",{target_integration_id:integrationId});
@@ -114,14 +115,8 @@ export async function recheckGoogleBusinessProfileAfterQuota(formData:FormData){
         verification_endpoint:"mybusinessaccountmanagement.googleapis.com/v1/accounts"},
     }).eq("id",integrationId).eq("organization_id",context.organizationId);
     if(updateError)throw new Error("Verified Google Business Profile connection could not be updated.");
-    revalidatePath("/integrations");
-    revalidatePath(`/integrations/${integrationId}/setup`);
-    redirect(setupUrl(integrationId,projectId,"message",
-      `Google Business Profile API access verified. ${verification.resources.length} resource(s) available.`));
+    verifiedResourceCount=verification.resources.length;
   }catch(error){
-    // Next.js redirects throw; do not reinterpret a successful redirect as a failed verification.
-    if(error&&typeof error==="object"&&"digest" in error&&
-      String((error as {digest?:unknown}).digest).startsWith("NEXT_REDIRECT"))throw error;
     const diagnostic=error instanceof Error?error.message:"Google Business Profile API verification failed.";
     const quotaExceeded=/\b429\b|RESOURCE_EXHAUSTED|Requests per minute/i.test(diagnostic);
     errorMessage=quotaExceeded
@@ -133,6 +128,12 @@ export async function recheckGoogleBusinessProfileAfterQuota(formData:FormData){
       last_error_code:quotaExceeded?"google_business_profile_quota_exhausted":"verification_failed",
       last_error_message:errorMessage.slice(0,500),updated_at:now,
     }).eq("id",integrationId).eq("organization_id",context.organizationId);
+  }
+  if(verifiedResourceCount){
+    revalidatePath("/integrations");
+    revalidatePath(`/integrations/${integrationId}/setup`);
+    redirect(setupUrl(integrationId,projectId,"message",
+      `Google Business Profile API access verified. ${verifiedResourceCount} resource(s) available.`));
   }
   redirect(setupUrl(integrationId,projectId,"error",errorMessage));
 }
