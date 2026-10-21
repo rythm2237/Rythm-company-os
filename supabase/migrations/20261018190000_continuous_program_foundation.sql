@@ -134,14 +134,14 @@ drop policy if exists continuous_program_member_read on public.continuous_progra
 create policy continuous_program_member_read on public.continuous_programs
  for select to authenticated using (exists (
   select 1 from public.organization_members m where m.organization_id=continuous_programs.organization_id
-    and m.user_id=(select auth.uid())
+    and m.user_id=(select auth.uid()) and m.membership_status='active'
  ));
 drop policy if exists continuous_cycle_member_read on public.continuous_program_review_cycles;
 create policy continuous_cycle_member_read on public.continuous_program_review_cycles
  for select to authenticated using (exists (
   select 1 from public.organization_members m
   where m.organization_id=continuous_program_review_cycles.organization_id
-    and m.user_id=(select auth.uid())
+    and m.user_id=(select auth.uid()) and m.membership_status='active'
  ));
 
 -- Called solely by the authorized existing service-role scheduler.
@@ -267,7 +267,7 @@ declare p record; existing_request uuid; request_id uuid;
 begin
  if not exists (
    select 1 from public.organization_members om where om.organization_id=p_organization_id
-   and om.user_id=p_requested_by_user_id and om.role='owner'
+   and om.user_id=p_requested_by_user_id and om.role='owner' and om.membership_status='active'
  ) then raise exception 'Owner authorization required'; end if;
  select id,title,executive_summary,risk_level,status,approval_request_id,proposal_type
  into p from public.project_proposals
