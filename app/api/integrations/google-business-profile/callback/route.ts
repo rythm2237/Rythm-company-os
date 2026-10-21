@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     const diagnostic = error instanceof Error ? error.message : "Google Business Profile authorization could not be completed.";
     // Google OAuth can succeed while the *separately approved* GBP API quota is zero.
     // Do not mislabel this as a failed OAuth authorization or encourage rapid retries.
-    const quotaBlocked = /\\b429\\b|RESOURCE_EXHAUSTED|Requests per minute/i.test(diagnostic);
+    const quotaBlocked = /\b429\b|RESOURCE_EXHAUSTED|Requests per minute/i.test(diagnostic);
     const message = quotaBlocked
       ? "Google Business Profile OAuth was authorized, but the Account Management API returned quota exhausted (429). Check My Business Account Management API > Requests per minute in Google Cloud. If quota is 0, request Basic API Access; otherwise wait for quota reset before retrying. Repeated Google sign-ins will not increase API quota."
       : diagnostic;
