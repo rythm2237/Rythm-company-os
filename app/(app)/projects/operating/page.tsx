@@ -1,7 +1,10 @@
 import { ProjectApprovalProvider, ProjectApprovalCount, ProjectAttentionHeading, ProjectApprovalList } from "@/components/projects/ProjectApprovalState";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { revalidatePath } from "next/cache";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { SubmitButton } from "@/components/ui/Button";
+import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { getProjectOperatingTimeline, getProjectRelationships, refreshProjectWorkflowState, type EntityRelationship, type WorkflowTimelineItem } from "@/lib/workflow/server";
 import { getProjectProgressSnapshot } from "@/lib/projects/project-progress";
 import { getLatestProjectRoadmap } from "@/lib/projects/project-roadmap";
@@ -9,22 +12,96 @@ import ProjectExecutiveSignalEnhancer from "@/components/projects/ProjectExecuti
 import { ProjectOsControls } from "@/components/projects/project-os-controls";
 import { ProjectGovernanceControls } from "@/components/projects/project-governance-controls";
 import ProjectAnalysisBrief from "@/components/projects/ProjectAnalysisBrief";
+import { ContinuousProgramPanel, type ProgramReadModel, type ReviewReadModel, type ProgramProposalReadModel } from "@/components/projects/continuous-program-panel";
 
 export const dynamic="force-dynamic";
 type View="overview"|"roadmap"|"work"|"activity"|"decisions"|"files"|"results"|"advanced";
-type Props={searchParams:Promise<{project?:string;view?:string;taskStatus?:string;taskAgent?:string;planning?:string;activityFilter?:string}>};
+type Props={searchParams:Promise<{project?:string;view?:string;taskStatus?:string;taskAgent?:string;planning?:string;activityFilter?:string;programSaved?:string;programError?:string}>};
 const views:Array<{key:View;label:string}>=[{key:"overview",label:"Overview"},{key:"roadmap",label:"Roadmap"},{key:"work",label:"Work"},{key:"activity",label:"Activity"},{key:"decisions",label:"Decisions"},{key:"files",label:"Files"},{key:"results",label:"Results"},{key:"advanced",label:"Advanced"}];
 const legacyViews:Record<string,View>={live:"advanced",agents:"advanced",tasks:"work",approvals:"decisions",actions:"work"};
 const label=(value:string)=>value.replaceAll("_"," ").replaceAll("."," · ");
 const formatDate=(value:string|null|undefined)=>value?new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short"}).format(new Date(value)):"No activity yet";
 function payloadSummary(item:WorkflowTimelineItem){const p=item.payload??{};const explicit=[p.event_label,p.label,p.reason,p.next_step,p.after_state].find(v=>typeof v==="string"&&v.trim());return typeof explicit==="string"?explicit:label(item.event_type);}
 function destinationForRelationship(edge:EntityRelationship,projectId:string){const c=[edge.source_type,edge.target_type];if(c.includes("meeting")||c.includes("meeting_session")||c.includes("decision")||c.includes("legal_review"))return "/meetings/room";if(c.includes("action_item"))return `/actions?project=${projectId}`;if(c.includes("memory_record"))return "/memory";return `/projects/operating?project=${projectId}&view=overview`;}
-async function ownerContext(){const supabase=await createAuthServerClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login");const {data:membership}=await supabase.from("organization_members").select("organization_id,role").eq("user_id",user.id).eq("role","owner").maybeSingle();if(!membership)redirect("/login?error=Owner%20authorization%20required.");return{supabase,organizationId:membership.organization_id as string};}
+async function ownerContext(){const {supabase,user,organizationId}=await requireOwnerOrganizationContext();return {supabase,user,organizationId};}
+
+async function submitContinuousProposalForApproval(formData:FormData) {
+  "use server";
+  const {organizationId,user}=await ownerContext();
+  const projectId=String(formData.get("projectId")??"");
+  const proposalId=String(formData.get("proposalId")??"");
+  if(!/^[a-f0-9-]{36}$/i.test(projectId)||!/^[a-f0-9-]{36}$/i.test(proposalId))redirect("/projects");
+  const target=`/projects/operating?project=${encodeURIComponent(projectId)}&view=overview`;
+  const service=createServerSupabaseClient();
+  if(!service)redirect(target);
+  const {error}=await service.rpc("submit_continuous_proposal_for_approval_v1",{
+    p_proposal_id:proposalId,p_organization_id:organizationId,p_project_id:projectId,
+    p_requested_by_user_id:user.id
+  });
+  if(error){
+    console.error("continuous_program_approval_submission_failed",{projectId,proposalId,error:error.message});
+    redirect(target+"&programError=Approval+submission+failed.+Review+governance+and+try+again");
+  }
+  revalidatePath("/projects/operating");
+  redirect(target+"&programSaved=approval");
+}
+
+async function saveContinuousProgram(formData:FormData) {
+  "use server";
+  const {organizationId}=await ownerContext();
+  const projectId=String(formData.get("projectId")??"");
+  if(!/^[a-f0-9-]{36}$/i.test(projectId))redirect("/projects");
+  const cadence=String(formData.get("cadence")??"weekly");
+  const seoSiteId=String(formData.get("seoSiteId")??"");
+  const enabled=formData.get("enabled")==="on";
+  const service=createServerSupabaseClient();
+  const destination=`/projects/operating?project=${encodeURIComponent(projectId)}&view=advanced`;
+  if(!service)redirect(destination+"&programError=Service+configuration+unavailable");
+  const {error}=await service.rpc("configure_continuous_program_v1",{
+    p_project_id:projectId,p_organization_id:organizationId,
+    p_seo_site_id:seoSiteId||null,p_cadence:cadence,p_enabled:enabled
+  });
+  if(error){
+    console.error("continuous_program_configuration_failed",{projectId,message:error.message});
+    redirect(destination+"&programError=Configuration+could+not+be+saved.+Check+the+project+governance+and+data+source");
+  }
+  revalidatePath("/projects/operating");
+  redirect(destination+"&programSaved=1");
+}
 
 export default async function ProjectOperatingPage({searchParams}:Props){
   const params=await searchParams;const activeView=views.some(v=>v.key===params.view)?params.view as View:legacyViews[params.view??""]??"overview";const {supabase,organizationId}=await ownerContext();
   let query=supabase.from("projects").select("*").eq("organization_id",organizationId);query=params.project?query.eq("id",params.project):query.order("priority").limit(1);const {data:project}=await query.maybeSingle();
   if(!project)return <main className="command-shell"><section className="panel"><h1>Project operating view unavailable</h1><Link className="secondary-button" href="/projects">Back to Projects</Link></section></main>;
+  let program:ProgramReadModel|null=null;
+  let programReviews:ReviewReadModel[]=[];
+  let programProposals:ProgramProposalReadModel[]=[];
+  let seoSiteOptions:Array<{id:string;name:string;site_url:string}>=[];
+  if("lifecycle_kind" in project && activeView==="advanced"){
+    const seoSites=await supabase.from("agency_seo_sites").select("id,name,site_url").eq("organization_id",organizationId).eq("active",true);
+    seoSiteOptions=seoSites.data??[];
+  }
+  if(project.lifecycle_kind==="continuous"){
+    const programResult=await supabase.from("continuous_programs")
+      .select("id,state,cadence,enabled,last_review_at,next_review_at,seo_site_id")
+      .eq("organization_id",organizationId).eq("project_id",project.id).maybeSingle();
+    program=programResult.data as ProgramReadModel|null;
+    if(program){
+      const reviewsResult=await supabase.from("continuous_program_review_cycles")
+        .select("id,scheduled_for,state,summary,evidence,proposal_id")
+        .eq("organization_id",organizationId).eq("program_id",program.id)
+        .order("scheduled_for",{ascending:false}).limit(8);
+      programReviews=(reviewsResult.data??[]) as ReviewReadModel[];
+      const proposalIds=programReviews.map(row=>row.proposal_id).filter((id):id is string=>Boolean(id));
+      if(proposalIds.length){
+        const proposalsResult=await supabase.from("project_proposals")
+          .select("id,title,executive_summary,status")
+          .eq("organization_id",organizationId).eq("project_id",project.id)
+          .in("id",proposalIds);
+        programProposals=(proposalsResult.data??[]) as ProgramProposalReadModel[];
+      }
+    }
+  }
   let workflowState=project.workflow_state??"INTAKE";try{workflowState=await refreshProjectWorkflowState(supabase,project.id,{entityType:"ui",reason:"Project Operating System convergence"});}catch{}
   const [client,contract,documents,resources,bindings,readiness,clarifications,scope,execution,tasks,team,proposals,activity,health,integrations,capabilities,timeline,relationships,meetings,decisions,approvals,projectActions]=await Promise.all([
     supabase.from("project_clients").select("*").eq("project_id",project.id).maybeSingle(),
@@ -71,6 +148,8 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     {(activeView==="overview"||activeView==="decisions")?<section className="panel executive-inbox-compact"><div className="panel-heading"><div><p className="label">Executive Inbox</p><h2><ProjectAttentionHeading proposalCount={attention.length}/></h2></div><Link className="secondary-button" href="/inbox?category=approvals">Review approvals</Link></div>{attention.slice(0,3).map((p:any)=><div className="data-row" key={p.id}><div><strong>{p.title}</strong><span>{p.executive_summary}</span></div><span className="pill">{p.risk_level}</span></div>)}</section>:null}
 
     {activeView==="overview"?<>
+      {params.programError?<p role="alert" className="form-error">{params.programError}</p>:null}
+      {project.lifecycle_kind==="continuous"?<ContinuousProgramPanel projectId={project.id} program={program} reviews={programReviews} proposals={programProposals} submitProposalAction={submitContinuousProposalForApproval} notice={params.programSaved}/>:null}
       {latestReadiness?<ProjectAnalysisBrief projectId={project.id} objective={project.objective} readiness={latestReadiness} team={agents as any} clarifications={openClarifications as any} assumptions={latestScope?.assumptions}/>:null}
       <ProjectGovernanceControls projectId={project.id} projectStatus={project.status} clarifications={openClarifications as any} connections={(integrations.data??[]) as any} capabilities={(capabilities.data??[]) as any} latestScope={latestScope?{id:latestScope.id,status:latestScope.status}:null}/>
       <section className="executive-grid project-view-panel"><article className="panel"><div className="panel-heading"><div><p className="label">Execution Readiness</p><h2>{latestReadiness?.execution_readiness??project.readiness_score??0}% ready</h2></div><span className="pill">Inputs and dependencies</span></div><p className="subtitle">Readiness measures context, scope, integrations, team, clarifications and evidence. It does not represent completed work.</p>{latestReadiness?<div className="data-list"><div className="data-row"><div><strong>Project understanding</strong><span>{latestReadiness.project_understanding}%</span></div></div><div className="data-row"><div><strong>Contract understanding</strong><span>{latestReadiness.contract_understanding}%</span></div></div><div className="data-row"><div><strong>Connections</strong><span>{latestReadiness.connections_available}/{latestReadiness.connections_total}</span></div></div><div className="data-row"><div><strong>Team readiness</strong><span>{latestReadiness.team_readiness}%</span></div></div></div>:<p className="subtitle">Run Project Analysis to create readiness, scope, team and connection recommendations.</p>}</article><article className="panel"><div className="panel-heading"><div><p className="label">Roadmap Progress</p><h2>{progress.hasApprovedRoadmap?`${progress.progressPercent}% complete`:"Not baselined"}</h2></div><span className="pill">{progress.hasApprovedRoadmap?`roadmap v${progress.roadmapVersion}`:"manager approval required"}</span></div><div className="project-progress-track"><span style={{width:`${progress.hasApprovedRoadmap?progress.progressPercent:0}%`}}/></div><div className="project-card-metrics"><div><span>Task count</span><strong>{progress.completedTasks}/{progress.totalTasks}</strong></div><div><span>Task completion</span><strong>{progress.taskCompletionPercent}%</strong></div><div><span>Current phase</span><strong>{progress.currentPhase??"—"}</strong></div><div><span>Outcome progress</span><strong>{progress.outcomeProgressPercent==null?"Pending evidence":`${progress.outcomeProgressPercent}%`}</strong></div><div><span>Awaiting approval</span><strong><ProjectApprovalCount/></strong></div><div><span>Blocked / failed</span><strong>{progress.blockedTasks+progress.failedTasks}</strong></div></div><p className="security-note">Roadmap progress is weighted against the manager-approved baseline. Raw task count is informational only. Execution is persisted server-side.</p></article></section>
@@ -92,6 +171,33 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     {activeView==="files"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project Knowledge</p><h2>Files, resources and scoped connections</h2></div><span className="pill">{(documents.data??[]).length+(resources.data??[]).length+(bindings.data??[]).length} items</span></div><div className="project-card-metrics"><div><span>Files</span><strong>{documents.data?.length??0}</strong></div><div><span>Resources</span><strong>{resources.data?.length??0}</strong></div><div><span>Connections</span><strong>{bindings.data?.length??0}</strong></div></div><div className="data-list">{(documents.data??[]).map((document:any)=><div className="data-row" key={document.id}><div><strong>{document.file_name}</strong><span>{label(document.category)} · {document.extraction_status} · {formatDate(document.created_at)}</span></div>{document.legal_document?<span className="pill">Legal</span>:null}</div>)}{(resources.data??[]).map((resource:any)=><div className="data-row" key={resource.id}><div><strong>{resource.name}</strong><span>{resource.resource_type} · {resource.access_status}</span></div></div>)}{(bindings.data??[]).map((binding:any)=><div className="data-row" key={binding.id}><div><strong>{binding.display_name}</strong><span>{binding.resource_type} · {binding.resource_ref}</span></div><span className="pill">{binding.access_status}</span></div>)}</div></section>:null}
 
     {activeView==="activity"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project history</p><h2>Activity</h2></div><span className="pill">{visibleActivity.length} updates</span></div><nav className="simple-inbox-filters" aria-label="Activity filters">{["important","all","agent","system"].map(filter=><Link key={filter} aria-current={activityFilter===filter?"page":undefined} href={`/projects/operating?project=${project.id}&view=activity&activityFilter=${filter}`}>{filter==="all"?"All activity":filter==="important"?"Important":filter==="agent"?"Agent activity":"System activity"}</Link>)}</nav><div className="data-list">{visibleActivity.map((event:any)=><div className="data-row" key={event.id}><div><strong>{event.headline}</strong><span>{event.detail||label(event.event_type)} · {formatDate(event.created_at)}</span></div></div>)}{!visibleActivity.length?<p className="empty-state">No activity in this view yet.</p>:null}</div></section>:null}
+    {activeView==="advanced"&&("lifecycle_kind" in project)?<section className="panel project-view-panel">
+      <div className="panel-heading"><div><p className="label">Governed configuration</p><h2>Continuous monitoring</h2></div><span className="pill">{project.lifecycle_kind==="continuous"?"Continuous program":"Optional"}</span></div>
+      <p className="security-note">Explicitly convert this project into an ongoing program. Existing status and Human CEO approvals remain in force; a blocked project cannot automatically resume monitoring.</p>
+      {params.programSaved?<p role="status" className="form-success">Continuous program configuration saved.</p>:null}
+      {params.programError?<p role="alert" className="form-error">{params.programError}</p>:null}
+      <details><summary style={{cursor:"pointer",fontWeight:700}}>Configure monitoring and review schedule</summary>
+        <form action={saveContinuousProgram} className="auth-form" style={{marginTop:16}}>
+          <input type="hidden" name="projectId" value={project.id}/>
+          <label>Verified SEO site
+            <select name="seoSiteId" defaultValue={program?.seo_site_id??""}>
+              <option value="">Not connected</option>
+              {seoSiteOptions.map(site=><option key={site.id} value={site.id}>{site.name} · {site.site_url}</option>)}
+            </select>
+          </label>
+          <label>Review frequency<select name="cadence" defaultValue={program?.cadence??"weekly"}>
+            <option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option>
+          </select></label>
+          <label style={{display:"flex",gap:10,alignItems:"center"}}>
+            <input type="checkbox" name="enabled" defaultChecked={program?.enabled??false}/>
+            Enable scheduled, read-only evidence reviews (requires active project and SEO site)
+          </label>
+          <p className="security-note">Enabling monitoring does not authorize external actions, publish content, or approve proposals. The backend feature flag and migration must also be enabled.</p>
+          <SubmitButton>Save continuous program</SubmitButton>
+        </form>
+      </details>
+    </section>:null}
+    {activeView==="advanced"&&!("lifecycle_kind" in project)?<p className="security-note">Continuous program configuration is unavailable until its database migration is installed.</p>:null}
     {activeView==="advanced"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Traceability</p><h2>Connected records</h2></div><span className="pill">{relationships.length}</span></div><div className="data-list">{timeline.slice(0,12).map(item=><div className="data-row" key={`${item.timeline_source}-${item.id}`}><div><strong>{payloadSummary(item)}</strong><span>{formatDate(item.occurred_at)}</span></div></div>)}{relationships.slice(0,8).map(edge=><Link className="data-row" href={destinationForRelationship(edge,project.id)} key={edge.id}><div><strong>{label(edge.relationship_type)}</strong><span>{label(edge.source_type)} → {label(edge.target_type)}</span></div></Link>)}</div></section>:null}
   </main></ProjectApprovalProvider>;
 }
