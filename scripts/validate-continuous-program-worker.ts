@@ -155,6 +155,13 @@ async function main(){
     const [result]=await processContinuousProgramReviews(store.client());
     assert.equal(result.status,"waiting_for_data");
   }
+  {
+    const store=fixture();
+    store.tables.agency_seo_snapshots.push(snapshot("previous",48,87,[recurring]),snapshot("latest",24,87,[recurring]));
+    const parallel=await Promise.all([processContinuousProgramReviews(store.client()),processContinuousProgramReviews(store.client())]);
+    assert.equal(parallel.flat().length,1,"Two simultaneous dispatcher runs cannot claim one cycle twice");
+    assert.equal(store.tables.project_proposals.length,1,"Parallel calls may not duplicate investigation proposals");
+  }
   console.log("PASS real review worker: persistent findings, score regression, proposal deduplication, missing/stale evidence, blocked governance and no execution");
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
