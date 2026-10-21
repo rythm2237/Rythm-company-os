@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { canCloseProject, evaluateReviewDue, finishReview, nextReviewDate, type ContinuousProgram } from "../lib/projects/continuous-program";
+import { persistentFindings } from "../lib/projects/continuous-program-review-worker";
 
 const program:ContinuousProgram={
  id:"program-1",organizationId:"org-1",projectId:"project-1",
@@ -21,7 +22,13 @@ assert.equal(canCloseProject("continuous","COMPLETED"),false);
 assert.equal(canCloseProject("finite","COMPLETED"),true);
 assert.equal(nextReviewDate("2026-01-31T00:00:00Z","monthly"),"2026-02-28T00:00:00.000Z");
 assert.equal(nextReviewDate("2026-11-30T00:00:00Z","quarterly"),"2027-02-28T00:00:00.000Z");
-console.log("Continuous Program domain tests passed");
+const observed={id:"snap2",checked_at:"2026-10-21T08:00:00Z",score:87,counts:{warning:2},
+ findings:[{id:"homepage.canonical",severity:"medium",title:"Canonical"}, {id:"description",severity:"medium",title:"Meta description"}]};
+const prior={...observed,id:"snap1",checked_at:"2026-10-20T08:00:00Z",
+ findings:[{id:"homepage.canonical",severity:"medium",title:"Canonical"},{id:"new.issue",severity:"low",title:"New"}]};
+assert.deepEqual(persistentFindings(observed,prior).map(f=>f.id),["homepage.canonical"]);
+assert.deepEqual(persistentFindings({...observed,findings:[{id:"only.now",severity:"high"}]},prior),[]);
+console.log("Continuous Program domain and persistent findings tests passed");
 
 const root=process.cwd();
 const read=(p:string)=>fs.readFileSync(path.join(root,p),"utf8");
