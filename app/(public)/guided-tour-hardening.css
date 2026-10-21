@@ -55,6 +55,38 @@
 }
 .marketing-site .marketing-stage > .marketing-guide-floating small { display: none; }
 
+/* Contextual entry stays in the Demo top bar, next to Reset; it cannot cover
+   the demo's heading or create another floating toolbar. */
+.marketing-site .demo-boundary .demo-guide-entry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  border-color: #c6cff0;
+  color: #2e3c7d;
+  background: #edf0ff;
+}
+.marketing-site .demo-boundary .demo-guide-entry:hover {
+  color: #172666;
+  background: #e1e6ff;
+  border-color: #96a5e3;
+}
+.marketing-site .demo-boundary .demo-guide-entry > .ui-button-content {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+}
+@media (max-width: 760px) {
+  .marketing-site .demo-boundary .demo-guide-entry {
+    white-space: normal;
+    line-height: 1.15;
+    text-align: center;
+    max-width: 138px;
+  }
+}
+
 /* The cinematic hero has a top-right caption; keep it below the launcher. */
 .marketing-site .boardroom-home .boardroom-scene-caption { top: 76px; }
 
