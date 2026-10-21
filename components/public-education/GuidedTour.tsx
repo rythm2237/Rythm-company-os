@@ -307,7 +307,7 @@ export default function GuidedTour() {
         </div>
       ) : null}
       <div
-        className="marketing-guide-dialog"
+        className={`marketing-guide-dialog is-${tourState}`}
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
@@ -357,8 +357,7 @@ export default function GuidedTour() {
               </div>
               <small aria-hidden="true">{numberFormatter.format(TOUR_STEPS.length)}</small>
             </div>
-            <LanguageSelector compact className="marketing-guide-language" />
-            <p className="marketing-kicker">{activeCopy.eyebrow}</p>
+                        <p className="marketing-kicker">{activeCopy.eyebrow}</p>
             <h2 id="marketing-guide-title">{activeCopy.title}</h2>
             <p>{activeCopy.description}</p>
             <div className="marketing-guide-actions">
