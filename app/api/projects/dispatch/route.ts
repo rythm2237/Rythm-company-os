@@ -9,6 +9,7 @@ import { dispatchApprovedProjectToolExecutions, reconcileDispatchedProjectPropos
 import { superviseProjectExecutions } from "@/lib/projects/project-supervisor";
 import { reconcileProjectCompletionRuntime } from "@/lib/projects/project-completion";
 import { ensureProjectLifecycleContinuation } from "@/lib/projects/project-completion-continuation";
+import { processContinuousProgramReviews } from "@/lib/projects/continuous-program-review-worker";
 import { dispatchConnectionSetupSessions } from "@/lib/integrations/connection-setup-agent";
 
 export const dynamic="force-dynamic";
@@ -86,12 +87,14 @@ export async function GET(request:Request){
     // Feature gated until the database migration and lifecycle reconciliation are approved.
     // Creates durable review intents only; actual evidence gathering and proposals remain governed.
     let continuousReviewsQueued=0;
+    let continuousReviewResults:Awaited<ReturnType<typeof processContinuousProgramReviews>>=[];
     if(process.env.CONTINUOUS_PROGRAM_ENGINE_ENABLED==="true"){
       const claimed=await service.rpc("claim_due_continuous_program_reviews_v1",{p_limit:10});
       if(claimed.error){
         console.error("continuous_review_claim_failed",claimed.error.message);
         errors.push({step:"continuous_reviews",error:claimed.error.message});
       }else continuousReviewsQueued=Array.isArray(claimed.data)?claimed.data.length:0;
+      continuousReviewResults=await isolated("continuous_review_worker",()=>processContinuousProgramReviews(service,5),errors,[]);
     }
 
     const completionHealth=await service.rpc("refresh_project_completion_health_v1");
@@ -105,6 +108,7 @@ export async function GET(request:Request){
       completion:{...completion,criteriaSynced:Number(runtimeCriteria.data??0),observationsStarted:Number(startedObservations.data??0)},
       lifecycleContinuation,
       continuousReviewsQueued,
+      continuousReviewResults,
       knowledge:knowledgeResults,
       connectionSetup:connectionSetupResults,
       supervisor:supervisorResults,
