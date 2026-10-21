@@ -249,4 +249,50 @@ revoke all on function public.configure_continuous_program_v1(uuid,uuid,uuid,tex
  from public,anon,authenticated;
 grant execute on function public.configure_continuous_program_v1(uuid,uuid,uuid,text,boolean) to service_role;
 
+
+-- Human CEO explicitly submits an evidence-backed draft for executive review.
+-- Submission is not approval and never authorizes external execution.
+create or replace function public.submit_continuous_proposal_for_approval_v1(
+ p_proposal_id uuid,p_organization_id uuid,p_project_id uuid,p_requested_by_user_id uuid
+) returns uuid language plpgsql security invoker set search_path=public as $cp$
+declare p record; existing_request uuid; request_id uuid;
+begin
+ if not exists (
+   select 1 from public.organization_members om where om.organization_id=p_organization_id
+   and om.user_id=p_requested_by_user_id and om.role='owner'
+ ) then raise exception 'Owner authorization required'; end if;
+ select id,title,executive_summary,risk_level,status,approval_request_id,proposal_type
+ into p from public.project_proposals
+ where id=p_proposal_id and project_id=p_project_id and organization_id=p_organization_id
+   and proposal_type in ('continuous_program_technical_seo_review','continuous_program_persistent_seo_findings')
+ for update;
+ if not found then raise exception 'Eligible continuous proposal not found'; end if;
+ if p.approval_request_id is not null then return p.approval_request_id; end if;
+ if p.status<>'draft' then raise exception 'Only unsubmitted draft proposals may enter approval'; end if;
+ select ar.id into existing_request from public.approval_requests ar
+ where ar.organization_id=p_organization_id and ar.project_id=p_project_id
+   and ar.subject_type='project_proposal' and ar.subject_id=p_proposal_id
+ order by ar.created_at desc limit 1;
+ if existing_request is not null then
+   update public.project_proposals set approval_request_id=existing_request,
+     status='ready_for_executive',updated_at=now() where id=p_proposal_id;
+   return existing_request;
+ end if;
+ insert into public.approval_requests
+ (organization_id,project_id,subject_type,subject_id,title,summary,risk_level,
+  requested_by_user_id,status,conditions)
+ values (p_organization_id,p_project_id,'project_proposal',p_proposal_id,p.title,
+   p.executive_summary,p.risk_level,p_requested_by_user_id,'pending',
+   '["Approval authorizes investigation of the recorded evidence only. Site or external changes require separate execution authorization."]'::jsonb)
+ returning id into request_id;
+ update public.project_proposals
+ set approval_request_id=request_id,status='ready_for_executive',updated_at=now()
+ where id=p_proposal_id and organization_id=p_organization_id;
+ return request_id;
+end $cp$;
+revoke all on function public.submit_continuous_proposal_for_approval_v1(uuid,uuid,uuid,uuid)
+ from public,anon,authenticated;
+grant execute on function public.submit_continuous_proposal_for_approval_v1(uuid,uuid,uuid,uuid)
+ to service_role;
+
 commit;
