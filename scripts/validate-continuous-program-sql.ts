@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {PGlite} from "@electric-sql/pglite";
 
+async function main(){
 const db=new PGlite();
 const orgA="00000000-0000-4000-8000-000000000010";
 const orgB="00000000-0000-4000-8000-000000000020";
@@ -129,3 +130,6 @@ try{
   await db.exec("reset role");
   console.log("PASS real PGlite migration (twice), tenant RLS, privileged-only RPCs, org-site integrity, closed-state guard, idempotent claims, owner approval submission");
 }finally{await db.close();}
+
+}
+main().catch(error=>{console.error(error);process.exitCode=1;});
