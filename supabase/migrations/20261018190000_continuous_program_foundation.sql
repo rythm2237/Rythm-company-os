@@ -204,4 +204,49 @@ revoke all on function public.claim_continuous_review_work_v1(integer) from publ
 grant execute on function public.claim_due_continuous_program_reviews_v1(integer) to service_role;
 grant execute on function public.claim_continuous_review_work_v1(integer) to service_role;
 
+
+-- Explicit, owner-initiated opt-in; only the privileged server route may invoke this RPC.
+-- Does not lift ON_HOLD/BLOCKED status or bypass project governance.
+create or replace function public.configure_continuous_program_v1(
+ p_project_id uuid,p_organization_id uuid,p_seo_site_id uuid,
+ p_cadence text default 'weekly',p_enabled boolean default false
+) returns uuid language plpgsql security invoker set search_path=public as $cp$
+declare rec record; resulting_id uuid;
+begin
+ if p_cadence not in ('daily','weekly','monthly','quarterly') then
+   raise exception 'Unsupported review cadence'; end if;
+ select id,lifecycle_state,status,lifecycle_kind into rec from public.projects
+  where id=p_project_id and organization_id=p_organization_id for update;
+ if not found then raise exception 'Project not found in organization'; end if;
+ if rec.lifecycle_state in ('COMPLETED','CANCELLED','FAILED')
+    or rec.status in ('completed','cancelled') then
+   raise exception 'A closed project requires governed lifecycle reconciliation before conversion'; end if;
+ if p_seo_site_id is not null and not exists (
+   select 1 from public.agency_seo_sites where id=p_seo_site_id and organization_id=p_organization_id and active=true
+ ) then raise exception 'SEO source does not belong to an active site in this organization'; end if;
+ if p_enabled and p_seo_site_id is null then
+   raise exception 'Connect an authorized SEO site before enabling review dispatch'; end if;
+ if p_enabled and (rec.lifecycle_state in ('ON_HOLD','BLOCKED','PAUSED') or rec.status in ('blocked','on_hold')) then
+   raise exception 'Resolve project governance hold before enabling monitoring'; end if;
+ update public.projects set lifecycle_kind='continuous'
+ where id=p_project_id and organization_id=p_organization_id;
+ insert into public.continuous_programs
+ (organization_id,project_id,seo_site_id,cadence,enabled,state,next_review_at)
+ values (p_organization_id,p_project_id,p_seo_site_id,p_cadence,p_enabled,
+   case when rec.lifecycle_state in ('ON_HOLD','BLOCKED','PAUSED') then 'BLOCKED'
+        when p_enabled then 'MONITORING' else 'SETUP' end,
+   case when p_enabled then now() else null end)
+ on conflict(project_id) do update
+ set seo_site_id=excluded.seo_site_id,cadence=excluded.cadence,enabled=excluded.enabled,
+     state=case when excluded.enabled then 'MONITORING' else public.continuous_programs.state end,
+     next_review_at=case when excluded.enabled
+       then coalesce(public.continuous_programs.next_review_at,now()) else null end,
+     updated_at=now()
+ returning id into resulting_id;
+ return resulting_id;
+end $cp$;
+revoke all on function public.configure_continuous_program_v1(uuid,uuid,uuid,text,boolean)
+ from public,anon,authenticated;
+grant execute on function public.configure_continuous_program_v1(uuid,uuid,uuid,text,boolean) to service_role;
+
 commit;
