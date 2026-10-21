@@ -95,10 +95,9 @@
   position: fixed;
   z-index: 430;
   width: min(348px, calc(100vw - 40px));
-  max-height: min(58svh, 500px);
+  max-height: calc(100dvh - 32px);
   padding: 20px 21px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
   border-radius: 18px;
   animation: none;
 }
@@ -172,12 +171,8 @@
   .marketing-site .demo-main .is-guide-target { scroll-margin-top: 78px; }
 }
 
-/* On tablets, retain the underlying full-width workspace. */
-@media (max-width: 1100px) {
-  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog {
-    max-height: min(52svh, 460px);
-  }
-}
+/* On tablets retain the full-size workspace; never impose a half-screen
+   height cap on the introduction or hide its primary action. */
 
 /* In narrow viewports the guide is a concise bottom sheet, with the spotlight
    scrolled toward the top of the demo. */
@@ -185,7 +180,7 @@
   .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog {
     inset: auto 12px calc(12px + env(safe-area-inset-bottom)) 12px !important;
     width: auto;
-    max-height: min(52svh, 430px);
+    max-height: calc(100dvh - 24px);
     padding: 16px 17px;
     border-radius: 18px;
   }
@@ -210,5 +205,110 @@
   .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog .marketing-guide-skip {
     align-self: flex-start;
     min-height: 30px;
+  }
+}
+
+/* Tour presentation: the introduction owns language selection. Subsequent
+   steps use a compact text-only layout. All buttons remain in view. */
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt {
+  max-height: calc(100dvh - 24px);
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .marketing-guide-orbit {
+  width: 50px;
+  height: 50px;
+  margin-bottom: 12px;
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .marketing-guide-orbit > span {
+  width: 38px;
+  height: 38px;
+  padding: 6px;
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .marketing-kicker {
+  font-size: .68rem;
+  line-height: 1.4;
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt h2 {
+  margin: 8px 32px 10px 0;
+  font-size: clamp(1.25rem, 1.65vw, 1.6rem);
+  line-height: 1.22;
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt[dir="rtl"] h2 {
+  margin-right: 0;
+  margin-left: 32px;
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt > .education-language-selector {
+  margin-top: 12px;
+  gap: 5px;
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .education-language-selector select {
+  height: 38px;
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .education-language-suggestion {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .marketing-guide-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .marketing-guide-actions > button {
+  width: auto;
+  flex: 0 1 auto;
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-active .marketing-guide-progress {
+  margin-bottom: 11px;
+}
+.marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-active .marketing-kicker {
+  line-height: 1.4;
+}
+
+/* Reduce decoration and whitespace first — rather than clipping the buttons
+   or adding a scrollbar — on short laptop/mobile viewports. */
+@media (max-height: 680px) {
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog {
+    padding: 15px 18px;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .marketing-guide-orbit {
+    width: 38px;
+    height: 38px;
+    margin-bottom: 7px;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .marketing-guide-orbit > span {
+    width: 32px;
+    height: 32px;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt h2 {
+    font-size: 1.3rem;
+    margin-top: 6px;
+    margin-bottom: 7px;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt > p:not(.marketing-kicker) {
+    font-size: .76rem;
+    line-height: 1.55;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt > .education-language-selector {
+    margin-top: 9px;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .marketing-guide-actions {
+    margin-top: 10px;
+  }
+}
+@media (max-height: 540px) {
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .marketing-guide-orbit {
+    display: none;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog.is-prompt .education-language-suggestion {
+    font-size: .7rem;
+    padding: 6px 8px;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog h2 {
+    font-size: 1.2rem;
+    line-height: 1.16;
+  }
+  .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog .marketing-guide-actions {
+    margin-top: 9px;
   }
 }
