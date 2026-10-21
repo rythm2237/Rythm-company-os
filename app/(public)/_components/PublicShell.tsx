@@ -128,6 +128,10 @@ function PublicShellFrame({ children }: PublicShellProps) {
           <Link className="marketing-brand" href="/" aria-label="RYTHM home"><RythmBrandLogo priority variant="inverse" /></Link>
           <Button className="marketing-sidebar-close" type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation">×</Button>
         </div>
+          <div className="marketing-sidebar-actions">
+            <Link href="/login?force=1" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_sidebar", locale } })}>Sign in</Link>
+            <Link className="marketing-button" href="/pricing" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { source: "public_sidebar", locale } })}>Get Started <span aria-hidden="true">→</span></Link>
+          </div>
         <nav className="marketing-sidebar-navigation" aria-label="Public navigation">
           {NAVIGATION_GROUPS.map((group) => (
             <div className="marketing-nav-group" key={group.label}>
@@ -142,10 +146,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
         <div className="marketing-sidebar-footer">
           <Button className="marketing-guide-launcher" type="button" onClick={handleOpenTour} dir={copy.direction} lang={locale}><span aria-hidden="true">?</span><span><strong>{copy.ui.guideLauncherTitle}</strong><small>{copy.ui.guideLauncherDetail}</small></span></Button>
           <div className="marketing-system-state"><i aria-hidden="true" /><span>Public experience</span><strong>Safe to explore</strong></div>
-          <div className="marketing-sidebar-actions">
-            <Link href="/login?force=1" onClick={() => trackPublicExperienceEvent({ name: "demo_sign_in_clicked", properties: { source: "public_sidebar", locale } })}>Sign in</Link>
-            <Link className="marketing-button" href="/pricing" onClick={() => trackPublicExperienceEvent({ name: "demo_get_started_clicked", properties: { source: "public_sidebar", locale } })}>Get Started <span aria-hidden="true">→</span></Link>
-          </div>
+
         </div>
       </aside>
       <div className="marketing-stage">
