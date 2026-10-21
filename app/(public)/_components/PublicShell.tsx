@@ -115,6 +115,11 @@ function PublicShellFrame({ children }: PublicShellProps) {
     return () => window.clearTimeout(timer);
   }, [pathname]);
 
+  useEffect(() => {
+    // A tour may also be launched directly from the Demo workspace header.
+    if (tourState !== "closed") setShowGuide(true);
+  }, [tourState]);
+
   function handleOpenTour() {
     setShowGuide(true);
     openTour();
@@ -149,7 +154,7 @@ function PublicShellFrame({ children }: PublicShellProps) {
         </div>
       </aside>
       <div className="marketing-stage">
-        {!immersive ? (
+        {!immersive && !demoRoute && tourState === "closed" ? (
           <Button className="marketing-guide-launcher marketing-guide-floating" type="button" onClick={handleOpenTour} dir={copy.direction} lang={locale}>
             <span aria-hidden="true">?</span>
             <span><strong>{copy.ui.guideLauncherTitle}</strong><small>{copy.ui.guideLauncherDetail}</small></span>
