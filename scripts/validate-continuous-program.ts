@@ -33,6 +33,7 @@ console.log("Continuous Program domain and persistent findings tests passed");
 const root=process.cwd();
 const read=(p:string)=>fs.readFileSync(path.join(root,p),"utf8");
 const migration=read("supabase/migrations/20261018190000_continuous_program_foundation.sql");
+const evaluatorAdapter=read("supabase/migrations/20261021120000_continuous_program_evaluator_adapter.sql");
 const dispatcher=read("app/api/projects/dispatch/route.ts");
 const worker=read("lib/projects/continuous-program-review-worker.ts");
 const projectPage=read("app/(app)/projects/operating/page.tsx");
@@ -51,6 +52,11 @@ for(const required of [
   "to service_role"
 ])assert.ok(migration.includes(required),`Missing migration invariant: ${required}`);
 assert.equal((migration.match(/\$cp\$/g)??[]).length%2,0,"Unbalanced PostgreSQL function delimiter");
+assert.ok(evaluatorAdapter.includes("if p.lifecycle_kind='continuous' and lifecycle in ('CLOSEOUT','COMPLETED')"),
+  "The existing completion evaluator must preserve continuing operations");
+assert.ok(evaluatorAdapter.includes("eligible:=false"),"Program closeout must never become eligible");
+assert.ok(evaluatorAdapter.includes("return jsonb_build_object"),"Completion explanation shape must remain intact");
+
 assert.ok(!migration.includes("set search_path=public as $\n"),"Invalid bare-dollar function delimiter");
 assert.ok(dispatcher.includes('CONTINUOUS_PROGRAM_ENGINE_ENABLED==="true"'),"Scheduler must be feature gated");
 assert.ok(dispatcher.includes("processContinuousProgramReviews"),"Scheduler must actually run review worker");
