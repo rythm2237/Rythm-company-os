@@ -44,6 +44,8 @@ function intersectionArea(
 function getGuidePosition(target: DOMRect, dialog: DOMRect): CSSProperties {
   const margin = 16;
   const gap = 20;
+  const sidebar = window.innerWidth > 1100 ? document.querySelector<HTMLElement>(".marketing-sidebar") : null;
+  const contentLeft = sidebar ? sidebar.getBoundingClientRect().right + margin : margin;
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
   const centeredTop = target.top + ((target.height - dialog.height) / 2);
@@ -63,7 +65,6 @@ function getGuidePosition(target: DOMRect, dialog: DOMRect): CSSProperties {
   };
 
   const protectedSelectors = [
-    ".marketing-sidebar",
     ".demo-navigation",
     ".demo-education-toolbar",
   ];
@@ -74,7 +75,7 @@ function getGuidePosition(target: DOMRect, dialog: DOMRect): CSSProperties {
     .filter((rect) => rect.width > 0 && rect.height > 0);
 
   const ranked = candidates.map((candidate, index) => {
-    const left = clamp(candidate.left, margin, viewportWidth - dialog.width - margin);
+    const left = clamp(candidate.left, contentLeft, viewportWidth - dialog.width - margin);
     const top = clamp(candidate.top, margin, viewportHeight - dialog.height - margin);
     const rectangle = {
       top,
@@ -92,7 +93,7 @@ function getGuidePosition(target: DOMRect, dialog: DOMRect): CSSProperties {
       top,
       score:
         (intersectionArea(rectangle, paddedTarget) * 1000)
-        + (protectedOverlap * 50)
+        + (protectedOverlap * 120)
         + displacement
         + index,
     };
