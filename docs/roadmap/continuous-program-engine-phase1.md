@@ -10,10 +10,10 @@ Updated: 2026-10-21
 4. **Review scheduler** — privileged SKIP LOCKED queue claim, unique cycle key, bounded batched processing, stale-running recovery, no background browser polling.
 5. **Evidence worker** — rechecks project governance, uses existing agency_seo_snapshots, requires two fresh observations separated by at least six hours, handles missing/stale data as waiting_for_data.
 6. **Deterministic optimization signals** — 10-point technical SEO regression OR persistent medium/high/critical finding on two snapshots. Creates *draft* project_proposals only; never self-approves or changes websites. Deduplicates against unresolved proposals of the same type.
-7. **Governed proposal submission** — project owner explicitly submits an evidence-backed draft to the existing approval_requests system using an atomic SQL transaction; it does not authorize implementation.
+7. **Governed proposal submission and execution isolation** — project owner explicitly submits an evidence-backed draft to existing approval_requests using an atomic SQL transaction. The shared approved-proposal execution bridge explicitly excludes all `continuous_program_*` investigation proposals from external action planning, even after approval.
 8. **Project UI** — readable review schedule, technical evidence, concise history. Owner-controlled source selection and activation in Advanced settings; draft findings appear in Overview with an explicit button to submit for approval.
 9. **Completion evaluator adapter** — mirrors the current Production evaluator, preserving existing evidence dimensions while ensuring opt-in continuous projects never enter CLOSEOUT/COMPLETED after initial delivery.
-10. **Zero-cloud-cost database regression suite** — prebuild executes the actual foundation migration twice against PGlite, validates tenant RLS, privileges, scheduler claiming, cross-tenant guards, lifecycle and approval idempotency, plus TypeScript/domain checks. The authoritative completion-evaluator adapter is also compiled against the isolated PGlite schema (passed in Vercel build logs).
+10. **Zero-cloud-cost integration suite** — prebuild executes the actual foundation migration twice against PGlite, validates tenant RLS, privileges, scheduler claiming, cross-tenant guards, lifecycle and approval idempotency; the real Review Worker is exercised against a controlled Supabase-shaped adapter for valid, stale, missing and repeated evidence, ON_HOLD state, proposal deduplication and overlapping dispatch calls. The authoritative completion-evaluator adapter is also compiled against the isolated PGlite schema (passed in Vercel build logs).
 
 ## Real-world evidence verified (read-only Production)
 
@@ -30,6 +30,8 @@ Updated: 2026-10-21
 - Run `npm ci && npm run test:continuous-program` in a repository checkout. The same tests run automatically inside Vercel `prebuild`.
 - Real PostgreSQL **foundation** migration passed in an isolated in-memory database twice (verified from Vercel build log); tenant RLS, RPC execute restrictions, same-org site constraints, completion guards, review idempotency and governed proposal submission also passed.
 - A blocking ambiguous `ON CONFLICT(program_id,...)` SQL issue was discovered by this test and corrected with a named unique constraint. Both foundation and adapter compile checks now pass in PGlite.
+- Added a partial unique index on active Continuous Program proposals, with worker-level recovery from PostgreSQL uniqueness races.
+- Added an execution bridge guard: approving a Continuous Program investigation can NEVER automatically generate external tool execution intents.
 - Evaluator adapter compilation passed in the in-memory database; full evaluator runtime needs the authoritative schema and controlled end-to-end checks.
 - PGlite cannot demonstrate managed Supabase Auth / PostgREST behavior or a full live tenant and end-to-end worker; these remain separate pre-release validation gates. Concurrent independent database sessions are not simulated by the single in-memory connection.
 - No Production migrations, project state, flags, external integrations or billing records were changed; no paid development branch was created.
@@ -66,11 +68,19 @@ GitHub PR #421, `feature/continuous-program-engine-phase1`.
 - Paused/blocked programs cannot claim cycles; an already-claimed cycle is cancelled if governance changes before execution.
 - Two concurrent schedulers cannot create duplicate (program_id,scheduled_for) records.
 - 0 or 1 recent snapshots creates waiting_for_data; 2 old or too-close snapshots also wait.
-- Two valid snapshots with unchanged score and repeated medium-severity findings create only one non-executable draft proposal.
-- Approved Project proposal processing still requires a separately authorized approval gate; continuous review cannot approve actions.
+- Two valid snapshots with unchanged score and repeated medium-severity findings create only one non-executable draft proposal. Review Worker test verifies proposal reuse, blocked governor checks, and overlapping claims.
+- Approved Project proposal processing must bypass external action planning for `continuous_program_*` investigations; only a separately scoped implementation proposal may authorize external actions.
 - Standard finite project closeout remains unchanged after the evaluator adapter.
 - Existing ON_HOLD AI RolePath SEO project remains on hold until an explicit governance decision changes it.
 
 ## Cost decision
 
 The paid Supabase cloud development branch is **not required** for database migration regression checks. Use the existing, ephemeral, in-memory PGlite suite and current Vercel CI. Do not create chargeable infrastructure without explicit user approval.
+
+## Latest feature-branch QA checkpoint (2026-10-21)
+
+- PGlite actual migration tests: PASS in Vercel.
+- Completion evaluator SQL compilation: PASS in Vercel.
+- Review Worker deterministic integration suite is now included in `npm run test:continuous-program`, and the full build must pass before merging.
+- Approved continuous investigation execution isolation: implemented and protected by static safety assertions.
+- No claim of a full Supabase integration or a verified authenticated UI session is made; these remain pre-rollout gates.
