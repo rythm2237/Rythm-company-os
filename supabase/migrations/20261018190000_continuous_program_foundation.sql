@@ -53,6 +53,14 @@ create table if not exists public.continuous_program_review_cycles (
  constraint cp_review_unique_slot unique(program_id,scheduled_for)
 );
 
+
+-- Guarantees one live investigation per project/type even with concurrent worker attempts.
+-- Closed/rejected investigations may be superseded by a later evidence-backed review.
+create unique index if not exists continuous_program_open_proposal_dedup_idx
+  on public.project_proposals(organization_id,project_id,proposal_type)
+  where proposal_type in ('continuous_program_technical_seo_review','continuous_program_persistent_seo_findings')
+    and status in ('draft','internal_review','ready_for_executive','approved','executing');
+
 create index if not exists continuous_program_review_due_idx
   on public.continuous_programs(next_review_at) where enabled=true;
 create index if not exists continuous_program_cycles_claim_idx
