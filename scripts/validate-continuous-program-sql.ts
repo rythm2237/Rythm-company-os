@@ -75,6 +75,13 @@ try{
   await db.exec(foundation);
   // Repeatability matters for deploy retries. CREATE OR REPLACE and trigger updates must remain safe.
   await db.exec(foundation);
+  // Compile the real current completion-evaluator adapter in the same isolated engine.
+  // The full evaluator execution needs the full schema; this verifies SQL definition syntax.
+  await db.exec("create table public.project_completion_policies(id uuid primary key)");
+  const adapter=readFileSync("supabase/migrations/20261021120000_continuous_program_evaluator_adapter.sql","utf8");
+  await db.exec(adapter);
+  assert.equal(await value("select count(*)::integer from pg_proc where proname='evaluate_project_completion_v1'"),1,
+    "Completion evaluator adapter must compile into the database");
   assert.equal(await value("select count(*)::integer from public.continuous_programs"),0);
   await db.exec(`
     insert into organizations(id) values ('${orgA}'),('${orgB}');
@@ -128,7 +135,7 @@ try{
   await db.exec("reset role; set role anon");
   await expectError(()=>query("select count(*) from continuous_programs"),/permission denied/);
   await db.exec("reset role");
-  console.log("PASS real PGlite migration (twice), tenant RLS, privileged-only RPCs, org-site integrity, closed-state guard, idempotent claims, owner approval submission");
+  console.log("PASS real PGlite migrations (foundation twice + evaluator adapter compilation), tenant RLS, privileged-only RPCs, org-site integrity, closed-state guard, idempotent claims, owner approval submission");
 }finally{await db.close();}
 
 }
