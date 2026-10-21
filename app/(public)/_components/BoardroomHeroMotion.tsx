@@ -8,9 +8,7 @@ const ARTWORK = "/brand/boardroom/ai-team.webp";
 
 export default function BoardroomHeroMotion() {
   const hostRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<OriginalMotion | null>(null);
   const [ready, setReady] = useState(false);
-  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -21,22 +19,19 @@ export default function BoardroomHeroMotion() {
     import("./boardroom/motion").then(({ mountOriginalMotion }) => {
       if (cancelled) return;
       try {
-        scene = mountOriginalMotion(host, { imageUrl: ARTWORK, motion: 1, onPlayChange: setPlaying });
-        sceneRef.current = scene;
+        scene = mountOriginalMotion(host, { imageUrl: ARTWORK, motion: 1 });
         host.querySelector("canvas")?.setAttribute("aria-hidden", "true");
-        setPlaying(scene.playing);
         scene.ready.then(() => { if (!cancelled) setReady(true); }).catch(() => {
           scene?.dispose();
-          if (!cancelled) { sceneRef.current = null; setReady(false); }
+          if (!cancelled) setReady(false);
         });
       } catch {
         // The server-rendered artwork remains visible without canvas support.
         scene?.dispose();
-        sceneRef.current = null;
       }
     }).catch(() => { /* A chunk-load failure leaves the static artwork intact. */ });
 
-    return () => { cancelled = true; scene?.dispose(); sceneRef.current = null; };
+    return () => { cancelled = true; scene?.dispose(); };
   }, []);
 
   return (
@@ -51,17 +46,6 @@ export default function BoardroomHeroMotion() {
       />
       <div className="boardroom-hero-canvas" ref={hostRef} />
     </div>
-      {ready ? (
-        <button
-          className="boardroom-motion-toggle"
-          type="button"
-          aria-pressed={!playing}
-          onClick={() => { const current = sceneRef.current; if (current) current.setPlaying(!current.playing); }}
-        >
-          <span aria-hidden="true">{playing ? "Ⅱ" : "▷"}</span>
-          {playing ? "Pause motion" : "Play motion"}
-        </button>
-      ) : null}
     </>
   );
 }
