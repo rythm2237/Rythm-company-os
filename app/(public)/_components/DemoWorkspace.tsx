@@ -444,7 +444,7 @@ export default function DemoWorkspace({ initialSurface = "command" }: Props) {
         </div>
         <div>
           {explainMode ? <span className="demo-explain-hint">{copy.ui.explainHint}</span> : null}
-          <LanguageSelector compact />
+          {tourState !== "active" ? <LanguageSelector compact /> : null}
         </div>
         {experienceHintVisible ? (
           <span className="demo-experience-discovery" role="status">
