@@ -10,7 +10,15 @@ export type ProgramReviewResult={
  cycleId:string;projectId?:string;status:"completed"|"waiting_for_data"|"failed";
  reason:string;proposalId?:string|null;
 };
-type Snapshot={id:string;checked_at:string;score:number;counts:unknown};
+type Finding={id?:string;title?:string;severity?:string;authority?:string};
+type Snapshot={id:string;checked_at:string;score:number;counts:unknown;findings:unknown};
+function persistentFindings(latest:Snapshot,previous:Snapshot):Finding[]{
+  const current=Array.isArray(latest.findings)?latest.findings as Finding[]:[];
+  const earlier=Array.isArray(previous.findings)?previous.findings as Finding[]:[];
+  const priorIds=new Set(earlier.map(f=>f.id).filter(Boolean));
+  return current.filter(f=>typeof f.id==="string"&&priorIds.has(f.id)&&["medium","high","critical"].includes(String(f.severity).toLowerCase()))
+    .slice(0,12).map(f=>({id:f.id,title:f.title,severity:f.severity,authority:f.authority}));
+}
 const maxAgeMs=14*24*60*60*1000;
 const minPeriodMs=6*60*60*1000;
 const anomalyThreshold=10;
@@ -55,7 +63,7 @@ async function processOneReview(service:SupabaseClient,cycle:ClaimedCycle):Promi
       return {cycleId:cycle.cycle_id,projectId,status:"waiting_for_data",reason:"SEO source not configured"};
     }
     const snapshots=await service.from("agency_seo_snapshots")
-      .select("id,checked_at,score,counts")
+      .select("id,checked_at,score,counts,findings")
       .eq("organization_id",cycle.organization_id).eq("site_id",program.data.seo_site_id)
       .order("checked_at",{ascending:false}).limit(2);
     if(snapshots.error)throw new Error(`SEO evidence query failed: ${snapshots.error.message}`);
@@ -79,15 +87,17 @@ async function processOneReview(service:SupabaseClient,cycle:ClaimedCycle):Promi
       return {cycleId:cycle.cycle_id,projectId,status:"waiting_for_data",reason:"Snapshots require a fresh valid interval"};
     }
     const delta=latest.score-previous.score;
+    const persistent=persistentFindings(latest,previous);
     Object.assign(evidence,{
       prior:{id:previous.id,checked_at:previous.checked_at,technical_seo_score:previous.score},
       latest:{id:latest.id,checked_at:latest.checked_at,technical_seo_score:latest.score,counts:latest.counts},
-      delta_points:delta,threshold_points:-anomalyThreshold,
+      delta_points:delta,threshold_points:-anomalyThreshold,persistent_findings:persistent,
       caveat:"Audit snapshot score is not a Google Search Console ranking, organic traffic, or conversion measurement"
     });
     let proposalId:string|null=null;
-    if(delta<=-anomalyThreshold){
-      const proposalType="continuous_program_technical_seo_review";
+    if(delta<=-anomalyThreshold||persistent.length>0){
+      const regression=delta<=-anomalyThreshold;
+      const proposalType=regression?"continuous_program_technical_seo_review":"continuous_program_persistent_seo_findings";
       const existing=await service.from("project_proposals")
         .select("id").eq("organization_id",cycle.organization_id).eq("project_id",projectId)
         .eq("proposal_type",proposalType)
@@ -99,14 +109,16 @@ async function processOneReview(service:SupabaseClient,cycle:ClaimedCycle):Promi
         const proposal=await service.from("project_proposals").insert({
           organization_id:cycle.organization_id,project_id:projectId,
           proposal_type:proposalType,
-          title:"Investigate technical SEO score regression",
-          executive_summary:`Technical SEO audit score decreased by ${Math.abs(delta)} points (${previous.score} → ${latest.score}). Review validated findings before approving any changes.`,
-          rationale:"Two authorized SEO audit snapshots provide a bounded comparison. Diagnose the underlying technical causes; do not infer Google traffic or conversions.",
+          title:regression?"Investigate technical SEO score regression":"Review persistent technical SEO findings",
+          executive_summary:regression
+            ?`Technical SEO audit score decreased by ${Math.abs(delta)} points (${previous.score} → ${latest.score}). Diagnose before making changes.`
+            :`${persistent.length} technical SEO findings persist across two independent snapshots. Inspect the findings and obtain approval before modifying site configuration or content.`,
+          rationale:"Two authorized SEO audit snapshots provide a bounded comparison. Findings are potential issues, not proof of Google ranking or conversion loss.",
           status:"draft",decision_required_from:"human_ceo",risk_level:"medium",
-          expected_impact:{type:"unquantified",confidence:"limited",purpose:"Investigate verified audit-score regression"},
+          expected_impact:{type:"unquantified",confidence:"limited",purpose:regression?"Investigate audit-score regression":"Assess persistent technical findings"},
           estimated_effort:"Requires investigation",
           supporting_evidence:[{source:"agency_seo_snapshots",site_id:program.data.seo_site_id,
-            snapshot_ids:[previous.id,latest.id],delta_points:delta}],
+            snapshot_ids:[previous.id,latest.id],delta_points:delta,persistent_findings:persistent}],
           required_permissions:["manager_review","human_ceo_approval"]
         }).select("id").single();
         if(proposal.error||!proposal.data)throw new Error(`Proposal draft failed: ${proposal.error?.message||"no id"}`);
@@ -114,8 +126,8 @@ async function processOneReview(service:SupabaseClient,cycle:ClaimedCycle):Promi
       }
     }
     const summary=proposalId
-      ? `Technical SEO changed by ${delta} points. An internal-review draft proposal is available; nothing was authorized or executed.`
-      : `Technical SEO score ${latest.score} (${delta>=0?"+":""}${delta} points since previous snapshot); no threshold-level regression detected.`;
+      ? `Technical SEO changed by ${delta} points; ${persistent.length} findings persisted. A draft proposal requires review; nothing was authorized or executed.`
+      : `Technical SEO score ${latest.score} (${delta>=0?"+":""}${delta} points since previous snapshot); no verified actionable anomaly detected.`;
     const updated=await service.from("continuous_programs").update({
       last_review_at:new Date().toISOString(),updated_at:new Date().toISOString(),
       ...(program.data.state==="WAITING_FOR_DATA"?{state:"MONITORING"}:{})
