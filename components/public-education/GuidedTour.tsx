@@ -62,6 +62,17 @@ function getGuidePosition(target: DOMRect, dialog: DOMRect): CSSProperties {
     left: target.left - 10,
   };
 
+  const protectedSelectors = [
+    ".marketing-sidebar",
+    ".demo-navigation",
+    ".demo-education-toolbar",
+  ];
+  const protectedRects = protectedSelectors
+    .map((selector) => document.querySelector<HTMLElement>(selector))
+    .filter((element): element is HTMLElement => Boolean(element))
+    .map((element) => element.getBoundingClientRect())
+    .filter((rect) => rect.width > 0 && rect.height > 0);
+
   const ranked = candidates.map((candidate, index) => {
     const left = clamp(candidate.left, margin, viewportWidth - dialog.width - margin);
     const top = clamp(candidate.top, margin, viewportHeight - dialog.height - margin);
@@ -72,10 +83,18 @@ function getGuidePosition(target: DOMRect, dialog: DOMRect): CSSProperties {
       left,
     };
     const displacement = Math.abs(left - candidate.left) + Math.abs(top - candidate.top);
+    const protectedOverlap = protectedRects.reduce(
+      (total, protectedRect) => total + intersectionArea(rectangle, protectedRect),
+      0,
+    );
     return {
       left,
       top,
-      score: (intersectionArea(rectangle, paddedTarget) * 100) + displacement + index,
+      score:
+        (intersectionArea(rectangle, paddedTarget) * 1000)
+        + (protectedOverlap * 50)
+        + displacement
+        + index,
     };
   }).sort((first, second) => first.score - second.score);
 
