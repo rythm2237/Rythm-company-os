@@ -48,6 +48,8 @@ for(const required of [
   "claim_due_continuous_program_reviews_v1",
   "claim_continuous_review_work_v1",
   "configure_continuous_program_v1",
+  "submit_continuous_proposal_for_approval_v1",
+  "p.risk_level::public.rythm_risk_level",
   "grant execute on function public.configure_continuous_program_v1",
   "to service_role"
 ])assert.ok(migration.includes(required),`Missing migration invariant: ${required}`);
@@ -65,4 +67,6 @@ assert.ok(worker.includes('status:"draft"'),"Automation must not auto-approve pr
 assert.ok(worker.includes("agency_seo_snapshots"),"Evidence must come from existing trusted SEO snapshots");
 assert.ok(!worker.includes("requestToolExecution"),"Reviews must not execute external actions");
 assert.ok(projectPage.includes("saveContinuousProgram"),"Owner-controlled opt-in missing");
+assert.ok(projectPage.includes("submitContinuousProposalForApproval"),"Owner-initiated review submission missing");
+assert.ok(migration.includes("requested_by_user_id")&&migration.includes("subject_type"),"Proposal approval must use existing governance records");
 console.log("Continuous Program database/API safety contract tests passed");
