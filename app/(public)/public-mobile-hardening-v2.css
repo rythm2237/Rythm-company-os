@@ -242,3 +242,21 @@
     min-height: 54px;
   }
 }
+
+/* Keep account actions visible independently of long menus at all heights. */
+.marketing-site .marketing-sidebar > .marketing-sidebar-actions {
+  flex: 0 0 auto;
+  margin-top: 18px;
+}
+.marketing-site .marketing-sidebar-navigation { min-height: 0; }
+@media (max-width: 1100px) {
+  .marketing-site .marketing-sidebar > .marketing-sidebar-actions { margin-top: 16px; }
+}
+@media (min-width: 1101px) and (max-height: 680px) {
+  .marketing-site .marketing-sidebar { overflow-y: hidden; }
+  .marketing-site .marketing-sidebar-navigation {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
