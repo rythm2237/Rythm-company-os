@@ -12,7 +12,7 @@ export type ProgramReviewResult={
 };
 type Finding={id?:string;title?:string;severity?:string;authority?:string};
 type Snapshot={id:string;checked_at:string;score:number;counts:unknown;findings:unknown};
-function persistentFindings(latest:Snapshot,previous:Snapshot):Finding[]{
+export function persistentFindings(latest:Snapshot,previous:Snapshot):Finding[]{
   const current=Array.isArray(latest.findings)?latest.findings as Finding[]:[];
   const earlier=Array.isArray(previous.findings)?previous.findings as Finding[]:[];
   const priorIds=new Set(earlier.map(f=>f.id).filter(Boolean));
