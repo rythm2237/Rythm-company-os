@@ -282,7 +282,7 @@ begin
  (organization_id,project_id,subject_type,subject_id,title,summary,risk_level,
   requested_by_user_id,status,conditions)
  values (p_organization_id,p_project_id,'project_proposal',p_proposal_id,p.title,
-   p.executive_summary,p.risk_level,p_requested_by_user_id,'pending',
+   p.executive_summary,p.risk_level::public.rythm_risk_level,p_requested_by_user_id,'pending',
    '["Approval authorizes investigation of the recorded evidence only. Site or external changes require separate execution authorization."]'::jsonb)
  returning id into request_id;
  update public.project_proposals
