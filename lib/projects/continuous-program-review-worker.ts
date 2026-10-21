@@ -7,7 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  */
 type ClaimedCycle={cycle_id:string;program_id:string;organization_id:string};
 export type ProgramReviewResult={
- cycleId:string;projectId?:string;status:"completed"|"waiting_for_data"|"failed";
+ cycleId:string;projectId?:string;status:"completed"|"waiting_for_data"|"failed"|"cancelled";
  reason:string;proposalId?:string|null;
 };
 type Finding={id?:string;title?:string;severity?:string;authority?:string};
@@ -52,6 +52,19 @@ async function processOneReview(service:SupabaseClient,cycle:ClaimedCycle):Promi
       .eq("id",cycle.program_id).eq("organization_id",cycle.organization_id).single();
     if(program.error||!program.data)throw new Error(program.error?.message||"Program missing");
     projectId=program.data.project_id as string;
+    // A project or program may have been paused after the scheduler claimed this cycle.
+    const project=await service.from("projects")
+      .select("lifecycle_kind,lifecycle_state,status")
+      .eq("id",projectId).eq("organization_id",cycle.organization_id).single();
+    if(project.error||!project.data)throw new Error(project.error?.message||"Project missing");
+    if(!program.data.enabled||["BLOCKED","PAUSED","CANCELLED","ARCHIVED"].includes(program.data.state)
+      ||project.data.lifecycle_kind!=="continuous"
+      ||["ON_HOLD","BLOCKED","PAUSED","COMPLETED","CANCELLED","FAILED"].includes(project.data.lifecycle_state)
+      ||["blocked","on_hold","completed","cancelled"].includes(project.data.status)){
+      await markCycle(service,cycle.cycle_id,cycle.organization_id,"cancelled",
+        "Review cancelled because program or project governance changed.",{governance:"halted"});
+      return {cycleId:cycle.cycle_id,projectId,status:"cancelled",reason:"Program or project is not authorized to run"};
+    }
     const evidence:Record<string,unknown>={
       analyzer:"continuous-program-evidence-v1",
       evaluated_at:new Date().toISOString(),
