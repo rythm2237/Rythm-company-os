@@ -94,7 +94,7 @@ begin
  and (new.lifecycle_state='COMPLETED' or new.status='completed')
  then raise exception 'Continuous program cannot be completed; pause or archive explicitly'; end if;
  -- No reclassification of a previously completed project without a managed reconciliation.
- if new.lifecycle_kind='continuous' and old.lifecycle_kind is distinct from 'continuous'
+ if TG_OP='UPDATE' and new.lifecycle_kind='continuous' and old.lifecycle_kind is distinct from 'continuous'
  and (old.lifecycle_state='COMPLETED' or old.status='completed')
  then raise exception 'Reconcile historical completion before converting project to continuous'; end if;
  return new;
