@@ -26,7 +26,7 @@ function glow(ctx,x,y,r,alpha) {
  */
 export function drawBoardroomFrame(ctx,image,time,{width,height,motion=1}={}) {
   width ??= ctx.canvas.width; height ??= ctx.canvas.height;
-  const scale=Math.min(width/DESIGN_W,height/DESIGN_H);
+  const scale=Math.max(width/DESIGN_W,height/DESIGN_H);
   ctx.fillStyle='#0b1220';ctx.fillRect(0,0,width,height);
   ctx.save();
   ctx.translate((width-DESIGN_W*scale)/2,(height-DESIGN_H*scale)/2);
