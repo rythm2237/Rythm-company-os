@@ -166,6 +166,12 @@
   word-break: normal;
 }
 
+/* Keep each highlighted heading below the top edge after tour navigation. */
+.marketing-site .demo-main .is-guide-target { scroll-margin-top: 92px; }
+@media (max-width: 760px) {
+  .marketing-site .demo-main .is-guide-target { scroll-margin-top: 78px; }
+}
+
 /* On tablets, retain the underlying full-width workspace. */
 @media (max-width: 1100px) {
   .marketing-site .marketing-shell.is-guide-open .marketing-guide-dialog {
