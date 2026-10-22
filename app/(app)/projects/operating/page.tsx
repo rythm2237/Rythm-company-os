@@ -163,7 +163,7 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     </header>
     <nav className="project-subnav project-detail-tabs" aria-label="Project workspace">{views.map(view=><Link key={view.key} aria-current={activeView===view.key?"page":undefined} className={activeView===view.key?"active":""} href={`/projects/operating?project=${project.id}&view=${view.key}`}>{view.label}{navCount(view.key)!=null?<span>{view.key==="decisions"?<ProjectApprovalCount/>:navCount(view.key)}</span>:null}</Link>)}</nav>
     <section className="project-detail-summary" aria-label="Project status summary">
-      <div className="project-detail-summary-item"><span>Overall status</span><strong>{projectHealthLabel}</strong></div>
+      <div className="project-detail-summary-item"><span>Overall project progress</span><strong>{typeof project.overall_project_progress==="number"?`${project.overall_project_progress}%`:"Pending assessment"}</strong></div>
       <div className="project-detail-summary-item"><span>Roadmap delivery</span><strong>{progress.hasApprovedRoadmap?`${progress.progressPercent}%`:"No approved baseline"}</strong></div>
       <div className="project-detail-summary-item"><span>Outcome evidence</span><strong>{progress.outcomeProgressPercent==null?"Not yet validated":`${progress.outcomeProgressPercent}%`}</strong></div>
       <div className="project-detail-summary-item"><span>Active work</span><strong>{taskRows.filter((task:any)=>["running","queued","in_progress"].includes(String(task.status).toLowerCase())).length} running</strong></div>
