@@ -12,6 +12,9 @@ assert.ok(page.includes("progress.outcomeProgressPercent"),"Outcome evidence mus
 assert.ok(page.includes('role="status" aria-label="Required next action"'),"Holds must appear accessibly");
 assert.ok(page.includes('className="project-phase-grid"'),"Roadmap must use responsive grid");
 assert.ok(css.includes("grid-template-columns:repeat(auto-fit"),"Phases must not force horizontal scrolling");
+assert.ok(page.includes('className="project-detail-more"'),"Secondary project tabs must be in accessible More menu");
+assert.ok(css.includes(".project-detail-more-links"),"Secondary menu must be styled");
+assert.ok(page.includes("compactRoadmap={activeView===\"roadmap\"}"),"Roadmap phases must not be duplicated by control panel");
 assert.ok(css.includes("@media(max-width:560px)"),"Provide mobile layout");
 assert.ok(guide.includes('pathname === "/projects/operating"'),"Floating onboarding guide must not block Project Details actions");
 console.log("PASS Project Details lifecycle, evidence separation, responsive roadmap and governance safety");
