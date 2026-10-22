@@ -1,0 +1,152 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {PGlite} from "@electric-sql/pglite";
+async function main(){
+const db=new PGlite();
+const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
+const org=id(1),otherOrg=id(2),owner=id(3),member=id(4),outsider=id(5),customer=id(6),project=id(7),contract=id(8),agent=id(9);
+const value=async(sql:string)=>Object.values((await db.query<Record<string,unknown>>(sql)).rows[0])[0];
+async function asUser(user:string,sql:string){await db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${user}',false)`);try{return await value(sql)}finally{await db.exec("reset role")}}
+async function denied(user:string,sql:string){await assert.rejects(()=>asUser(user,sql));}
+function tableFrom(file:string,name:string){const source=readFileSync(file,"utf8");const begin=source.indexOf(`create table if not exists public.${name} (`);if(begin<0)throw new Error(name);return source.slice(begin,source.indexOf('\n);',begin)+3);}
+try{
+ await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create schema storage;
+ create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+ create table auth.users(id uuid primary key);
+ create table public.organizations(id uuid primary key);
+ create table public.organization_members(organization_id uuid,user_id uuid,role text,membership_status text default 'active',primary key(organization_id,user_id));
+ create table public.agents(id uuid primary key,organization_id uuid,enabled boolean default true);
+ create table public.projects(id uuid primary key default gen_random_uuid(),organization_id uuid references organizations(id),name text,created_by_user_id uuid,status text default 'active',budget_cap_usd numeric);
+ create table public.audit_events(id uuid primary key,organization_id uuid,event_type text);alter table public.audit_events enable row level security;
+ create table public.project_context_documents(id uuid primary key,organization_id uuid,project_id uuid,context_type text,evidence jsonb);
+ create table public.project_document_chunks(id uuid primary key,organization_id uuid,document_id uuid);
+ create table storage.buckets(id text primary key,public boolean);
+ create table storage.objects(id uuid default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
+ create function public.is_org_member(org uuid) returns boolean language sql stable security definer set search_path='' as $$select auth.uid() is not null and exists(select 1 from public.organization_members where organization_id=org and user_id=auth.uid() and membership_status='active')$$;
+ create function public.is_org_owner(org uuid) returns boolean language sql stable security definer set search_path='' as $$select auth.uid() is not null and exists(select 1 from public.organization_members where organization_id=org and user_id=auth.uid() and role='owner' and membership_status='active')$$;
+ alter table public.projects enable row level security;
+ create policy member_read on public.projects for select to authenticated using(public.is_org_member(organization_id));
+ create policy owner_write on public.projects for all to authenticated using(public.is_org_owner(organization_id)) with check(public.is_org_owner(organization_id));
+ grant usage on schema public,auth,storage to authenticated,service_role,anon;
+ grant select on public.organization_members,public.agents to authenticated;
+ grant all on public.projects to authenticated;
+ insert into organizations values('${org}'),('${otherOrg}');insert into auth.users values('${owner}'),('${member}'),('${outsider}');
+ insert into organization_members values('${org}','${owner}','owner','active'),('${org}','${member}','member','active'),('${otherOrg}','${outsider}','owner','active');
+ insert into agents values('${agent}','${org}',true);
+ insert into projects(id,organization_id,name) values('${project}','${org}','Legacy');`);
+ await db.exec(readFileSync("supabase/migrations/20260824152000_crm_customer_sales_center.sql","utf8"));
+ await db.exec(readFileSync("supabase/migrations/20260822181000_finance_center_core.sql","utf8"));
+ for(const t of ["project_contracts","project_documents"])await db.exec(tableFrom("supabase/migrations/20260912203000_project_operating_system.sql",t));
+ await db.exec("alter table project_documents add column context_document_id uuid; alter table project_context_documents enable row level security;alter table project_document_chunks enable row level security;alter table project_contracts enable row level security; alter table project_documents enable row level security; create policy documents_member on project_documents for all to authenticated using(public.is_org_member(organization_id)) with check(public.is_org_owner(organization_id)); grant all on project_documents to authenticated;");
+ await db.exec(tableFrom("supabase/migrations/20260822173000_company_structure_workforce_communications.sql","notifications"));
+ await db.exec(readFileSync("supabase/migrations/20261022153241_shared_enterprise_crm.sql","utf8"));
+ assert.equal(await value(`select crm_reconciliation_required from projects where id='${project}'`),true,"Legacy owners must remain unassigned");
+ await asUser(owner,`insert into crm_accounts(id,organization_id,name) values('${customer}','${org}','Customer') returning id`);
+ assert.equal(await asUser(member,"select count(*)::int from crm_accounts"),1);
+ assert.equal(await asUser(outsider,"select count(*)::int from crm_accounts"),0,"Cross-tenant customers denied");
+ await denied(member,`insert into crm_accounts(organization_id,name) values('${org}','Unauthorized') returning id`);
+ await denied(owner,`insert into projects(organization_id,name) values('${org}','Missing manager') returning id`);
+ await denied(owner,`insert into projects(organization_id,name,primary_manager_user_id,engagement_type) values('${org}','External','${member}','external') returning id`);
+ await denied(owner,`insert into projects(organization_id,name,primary_manager_user_id) values('${org}','Foreign manager','${outsider}') returning id`);
+ await asUser(owner,`select crm_assign_project_manager('${project}','${member}','Explicit legacy reconciliation')`);
+ assert.equal(await value(`select primary_manager_user_id from projects where id='${project}'`),member);
+ assert.equal(await value(`select crm_reconciliation_required from projects where id='${project}'`),true,"Manager assignment alone cannot classify a legacy project");
+ await asUser(owner,`select crm_reconcile_project('${project}','${member}','internal',null,'Confirmed internal project')`);
+ assert.equal(await value(`select crm_reconciliation_required from projects where id='${project}'`),false);
+ assert.equal(await value(`select count(*)::int from project_manager_history where project_id='${project}'`),1);
+ await denied(member,`select crm_assign_project_manager('${project}','${owner}','Unauthorized')`);
+ await denied(owner,`update projects set primary_manager_user_id=null where id='${project}' returning id`);
+ await denied(member,`insert into crm_contacts(organization_id,account_id,first_name) values('${otherOrg}','${customer}','Foreign') returning id`);
+ assert.equal(await asUser(owner,"select count(*)::int from project_contracts"),0);
+ await denied(owner,`insert into project_contracts(id,organization_id,customer_id) values('${contract}','${org}','${customer}') returning id`);
+ const grant=async(cap:string,principal=owner,type="user",resourceType="company",resourceId=org)=>asUser(owner,`insert into crm_access_grants(organization_id,principal_type,principal_id,capability,resource_type,resource_id,granted_by) values('${org}','${type}','${principal}','${cap}','${resourceType}','${resourceId}','${owner}') on conflict(organization_id,principal_type,principal_id,capability,resource_type,resource_id) do update set revoked_at=null returning id`);
+ await grant("contract.create");await grant("contract.read");await grant("contract.update");
+ await asUser(owner,`insert into project_contracts(id,organization_id,customer_id,contract_number,contract_value) values('${contract}','${org}','${customer}','C-1',300) returning id`);
+ assert.equal(await asUser(member,"select count(*)::int from project_contracts"),0,"Manager has no implicit contract access");
+ await grant("contract.read",member,"user","contract",contract);
+ assert.equal(await asUser(member,"select count(*)::int from project_contracts"),1);
+ await asUser(owner,`update crm_access_grants set revoked_at=now() where principal_id='${member}' returning id`);
+ assert.equal(await asUser(member,"select count(*)::int from project_contracts"),0,"Revocation takes effect immediately");
+ await denied(owner,`update project_contracts set contract_status='active' where id='${contract}' returning id`);
+ await denied(owner,`insert into crm_access_grants(organization_id,principal_type,principal_id,capability,resource_type,resource_id,granted_by) values('${org}','user','${outsider}','finance.read','company','${org}','${owner}') returning id`);
+ assert.equal(await asUser(owner,"select count(*)::int from finance_invoices"),0);
+ await grant("finance.read");await grant("finance.create");await grant("finance.update");
+ const invoice=id(10);
+ await asUser(owner,`insert into finance_invoices(id,organization_id,customer_id,internal_reference,total) values('${invoice}','${org}','${customer}','I-1',100) returning id`);
+ assert.equal(await asUser(member,"select count(*)::int from finance_invoices"),0);
+ await grant("finance.read",member,"user","customer",customer);
+ assert.equal(await asUser(member,"select count(*)::int from finance_invoices"),1);
+ await assert.rejects(()=>db.exec(`update organization_members set membership_status='inactive' where user_id='${member}'`),/Reassign active projects/);
+ await asUser(owner,`select crm_assign_project_manager('${project}','${owner}','Manager departure')`);
+ await db.exec(`update organization_members set membership_status='inactive' where user_id='${member}'`);
+ assert.equal(await asUser(member,"select count(*)::int from finance_invoices"),0,"Inactive members lose grants");
+ await db.exec(`update organization_members set membership_status='active' where user_id='${member}'`);
+ await denied(owner,`insert into finance_invoices(organization_id,customer_id,project_id,internal_reference,total) values('${org}','${customer}','${project}','Wrong-link',10) returning id`);
+ await asUser(owner,`insert into crm_activities(organization_id,account_id,subject,visibility,activity_type) values('${org}','${customer}','Finance secret','finance','note') returning id`);
+ await asUser(owner,`update crm_access_grants set revoked_at=now() where principal_id='${member}' returning id`);
+ assert.equal(await asUser(member,"select count(*)::int from crm_activities"),0,"Timeline metadata is confidential");
+ await denied(member,`insert into project_documents(organization_id,project_id,category,file_name,storage_path,legal_document) values('${org}','${project}','contract','secret.pdf','x',true) returning id`);
+ assert.equal(await asUser(member,"select count(*)::int from crm_audit_log where visibility='finance'"),0);
+ await denied(member,`insert into crm_audit_log(organization_id,event_type,resource_type,resource_id) values('${org}','fake','project','${project}') returning id`);
+ await denied(member,`select crm_private.has_capability('${org}','finance.read','company','${org}','user','${owner}')`);
+ assert.ok(Number(await value("select count(*)::int from crm_audit_log where visibility='access'"))>=9,"Grant changes audited");
+
+ await asUser(owner,`update finance_invoices set status='issued' where id='${invoice}' returning id`);
+ await asUser(owner,`select crm_record_invoice_payment('${invoice}',40,'receipt-key-1')`);
+ assert.equal(Number(await value(`select amount_paid from finance_invoices where id='${invoice}'`)),40);
+ await asUser(owner,`select crm_record_invoice_payment('${invoice}',40,'receipt-key-1')`);
+ assert.equal(Number(await value(`select amount_paid from finance_invoices where id='${invoice}'`)),40,"Retry cannot double-book cash");
+ await denied(owner,`select crm_record_invoice_payment('${invoice}',61,'receipt-key-2')`);
+ await asUser(owner,`select crm_record_invoice_payment('${invoice}',60,'receipt-key-2')`);
+ assert.equal(await value(`select status from finance_invoices where id='${invoice}'`),'paid');
+ assert.equal(Number(await value(`select sum(amount) from finance_transactions where invoice_id='${invoice}'`)),100);
+ await denied(member,`select crm_record_invoice_payment('${invoice}',1,'receipt-key-3')`);
+ await denied(owner,`select crm_agent_customer_context('${org}','${customer}','${agent}','${owner}',false,false)`);
+ await grant("customer.read",agent,"agent","customer",customer);
+ await db.exec("set role service_role");
+ const agentContext=await value(`select crm_agent_customer_context('${org}','${customer}','${agent}','${member}',false,false)`);
+ assert.equal((agentContext as {name:string}).name,"Customer");
+ await assert.rejects(()=>value(`select crm_agent_customer_context('${org}','${customer}','${agent}','${member}',false,true)`),/Finance authorization/);
+ await db.exec("reset role");
+ await grant("finance.read",agent,"agent","customer",customer);
+ await db.exec("set role service_role");
+ await assert.rejects(()=>value(`select crm_agent_customer_context('${org}','${customer}','${agent}','${member}',false,true)`),/Finance authorization/);
+ await db.exec("reset role");
+ await grant("finance.read",member,"user","customer",customer);
+ await db.exec("set role service_role");
+ const authorizedContext=await value(`select crm_agent_customer_context('${org}','${customer}','${agent}','${member}',false,true)`);
+ assert.equal((authorizedContext as {invoices:unknown[]}).invoices.length,1,"Both user and agent explicitly authorized");
+ await db.exec("reset role");
+ assert.ok(Number(await value("select count(*)::int from notifications"))>=3,"Assignment stakeholders notified");
+ await denied(member,`select budget_cap_usd from projects where id='${project}'`);
+ await denied(member,`select crm_project_budget('${org}','${project}')`);
+ await asUser(owner,`update projects set budget_cap_usd=123 where id='${project}' returning id`);
+ assert.equal(Number(await asUser(owner,`select crm_project_budget('${org}','${project}')`)),123);
+ await denied(member,`update projects set budget_cap_usd=999 where id='${project}' returning id`);
+
+
+ const createdInvoice=await asUser(owner,`select crm_create_invoice_draft('${org}','${customer}',null,null,'Customer',null,'Service',2,50,27,'EUR')`);
+ assert.equal(Number(await value(`select total from finance_invoices where id='${createdInvoice}'`)),127);
+ assert.equal(Number(await value(`select line_total from finance_invoice_lines where invoice_id='${createdInvoice}'`)),127);
+ const beforeInvoiceCount=Number(await value('select count(*) from finance_invoices'));
+ await denied(owner,`select crm_create_invoice_draft('${org}','${customer}',null,null,'Customer',null,'Overflow',2,99999999999999999,27,'EUR')`);
+ assert.equal(Number(await value('select count(*) from finance_invoices')),beforeInvoiceCount,"Failed draft has no partial header");
+
+ const project2=id(12),project3=id(13);
+ for(const pid of [project2,project3]){
+  await asUser(owner,`insert into projects(id,organization_id,name,primary_manager_user_id,engagement_type,customer_id) values('${pid}','${org}','External delivery','${owner}','external','${customer}') returning id`);
+  await asUser(owner,`insert into project_contract_links(organization_id,project_id,contract_id) values('${org}','${pid}','${contract}') returning contract_id`);
+ }
+ assert.equal(Number(await value(`select count(*) from project_contract_links where contract_id='${contract}'`)),2,"One contract covers multiple projects");
+ assert.equal(Number(await value(`select count(*) from projects where primary_manager_user_id='${owner}'`)),3,"One manager can own many projects");
+ const doc=id(14);
+ await db.exec(`insert into project_documents(id,organization_id,contract_id,customer_id,category,file_name,storage_path) values('${doc}','${org}','${contract}','${customer}','contract','secret.pdf','private-path')`);
+ assert.equal(await asUser(member,`select count(*)::int from project_documents where id='${doc}'`),0,"No attachment metadata without contract access");
+ await db.exec(`grant select on project_document_chunks to authenticated;create policy chunks_member on project_document_chunks for select to authenticated using(public.is_org_member(organization_id));insert into project_document_chunks(id,organization_id,document_id) values('${id(15)}','${org}','${doc}')`);
+ assert.equal(await value(`select confidentiality from project_document_chunks where document_id='${doc}'`),'contract');
+ assert.equal(await asUser(owner,"select count(*)::int from project_document_chunks"),0,"Even owner cannot retrieve confidential chunks through shared knowledge");
+ console.log("Enterprise CRM: real PostgreSQL migration, tenant RLS, explicit grants, revocation, membership, project integrity, reconciliation, contract approvals, timeline, attachments and audit tests passed.");
+}finally{await db.close()}
+
+}
+main().catch(error=>{console.error(error);process.exitCode=1});

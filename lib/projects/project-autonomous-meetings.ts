@@ -77,7 +77,7 @@ async function runMeeting(supabase:SupabaseClient,job:any){
     supabase.from("meetings").select("id,title,purpose,agenda,chair_agent_id,involvement_mode,status").eq("id",job.meeting_id).eq("organization_id",job.organization_id).single(),
     supabase.from("projects").select("id,name,objective,constraints,autonomy_mode,budget_cap_usd,responsible_department").eq("id",job.project_id).eq("organization_id",job.organization_id).single(),
     supabase.from("project_agents").select("agent_id,assignment_role,status,agents(id,agent_code,name,display_name,role_title,purpose,work_style,enabled)").eq("project_id",job.project_id).eq("organization_id",job.organization_id).in("status",["assigned","active"]),
-    supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("project_id",job.project_id).eq("organization_id",job.organization_id).order("created_at",{ascending:false}).limit(12),
+    supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("confidentiality","operational").eq("project_id",job.project_id).eq("organization_id",job.organization_id).order("created_at",{ascending:false}).limit(12),
   ]);
   if(!meetingResult.data||!projectResult.data)throw new Error("Meeting or project is unavailable.");
   const meeting=meetingResult.data,project=projectResult.data;
