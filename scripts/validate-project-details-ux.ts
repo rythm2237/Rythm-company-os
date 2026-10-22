@@ -3,6 +3,8 @@ const page=readFileSync("app/(app)/projects/operating/page.tsx","utf8");
 const css=readFileSync("app/globals.css","utf8");
 assert.ok(page.includes('project.lifecycle_kind==="continuous"'),"Continuous status must be recognized");
 assert.ok(page.includes("project.completion_eligible"),"Do not infer project completion from roadmap");
+assert.ok(!page.includes("ProjectExecutiveSignalEnhancer"),"Do not reintroduce injected cockpit or DOM mutation");
+assert.ok(!page.includes("rx-cockpit"),"No duplicate UI cockpit on Project Details");
 assert.ok(page.includes('project.lifecycle_state)==="COMPLETED"'),"Completion requires actual lifecycle state");
 assert.ok(page.includes("next_required_action"),"Expose governed next step");
 assert.ok(page.includes("progress.outcomeProgressPercent"),"Outcome evidence must remain separate");
