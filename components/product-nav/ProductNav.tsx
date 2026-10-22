@@ -14,6 +14,7 @@ const groups = [
   { label: "Workspace", items: [
     { label: "Home", href: "/home", icon: "⌂" },
     { label: "Projects", href: "/projects", icon: "◇" },
+    { label: "Customers", href: "/crm", icon: "♧" },
     { label: "Inbox", href: "/inbox", icon: "✉" },
     { label: "My AI Company", href: "/company", icon: "▣" },
     { label: "Reports", href: "/reports", icon: "▥" },
@@ -135,7 +136,7 @@ export default function ProductNav({ access, organization }: Props) {
         </div>
       </div>
     </nav>
-    <div className="app-mobile-bottom" aria-label="Mobile workspace navigation">{groups[0].items.filter(item => item.href !== "/reports").map(item => <Link key={item.href} href={item.href} aria-current={isRouteActive(pathname, item.href) ? "page" : undefined}><span aria-hidden="true">{item.icon}</span><small>{item.label === "My AI Company" ? "Company" : item.label}</small></Link>)}<Link href="/more" aria-current={["/more", "/settings", "/reports"].includes(pathname) ? "page" : undefined}><span aria-hidden="true">•••</span><small>More</small></Link></div>
+    <div className="app-mobile-bottom" aria-label="Mobile workspace navigation">{groups[0].items.filter(item => item.href !== "/reports" && item.href !== "/crm").map(item => <Link key={item.href} href={item.href} aria-current={isRouteActive(pathname, item.href) ? "page" : undefined}><span aria-hidden="true">{item.icon}</span><small>{item.label === "My AI Company" ? "Company" : item.label}</small></Link>)}<Link href="/more" aria-current={["/more", "/settings", "/reports", "/crm"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? "page" : undefined}><span aria-hidden="true">•••</span><small>More</small></Link></div>
     <header className="app-mobile-header"><Link className="product-brand" href="/home" aria-label="RYTHM Home"><RythmBrandLogo variant="primary" /></Link><Button type="button" aria-expanded={mobileOpen} aria-controls="workspace-navigation" onClick={() => setMobileOpen(true)}><span>Menu</span><i aria-hidden="true" /><i aria-hidden="true" /></Button></header>
   </div>;
 }
