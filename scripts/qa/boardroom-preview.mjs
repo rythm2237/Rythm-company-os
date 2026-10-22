@@ -27,6 +27,7 @@ await writeFile(join(output,'index.html'),`<!doctype html><meta name="viewport" 
 const server=createServer(async(req,res)=>{
  try {
  const pathname = new URL(req.url,'http://localhost').pathname;
+ if(pathname==='/favicon.ico'){res.statusCode=204;res.end();return;}
  const file=pathname==='/'?'index.html':pathname.slice(1);
  const path=resolve(pathname.startsWith('/boardroom/')||pathname.startsWith('/brand/')?join(root,'public'):output,file);
  const data=await readFile(path);

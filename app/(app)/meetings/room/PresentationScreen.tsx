@@ -14,7 +14,9 @@ export default function PresentationScreen({ slides, index, onCount, mobile = fa
     if (!element) return;
     const title = element.querySelector("h2")!;
     const list = element.querySelector("ul")!;
+    let disposed = false;
     const fit = () => {
+      if (disposed) return;
       if (!element.clientWidth || !element.clientHeight) return;
       const source: Slide[] = JSON.parse(contentKey);
       const next = paginateSlides(source, (candidate) => {
@@ -31,11 +33,11 @@ export default function PresentationScreen({ slides, index, onCount, mobile = fa
     fit();
     const observer = new ResizeObserver(fit); observer.observe(element);
     void document.fonts.ready.then(fit);
-    return () => observer.disconnect();
+    return () => { disposed = true; observer.disconnect(); };
   }, [contentKey, onCount]);
   const page = pages[index % Math.max(1, pages.length)] ?? slides[0];
   return <div className={mobile ? styles.mobilePresentation : styles.screenOverlay} data-presentation-screen>
-    <article className={styles.slidePage} aria-live="polite" aria-label={`Presentation slide ${index % pages.length + 1} of ${pages.length}`}>
+    <article key={index} className={styles.slidePage} aria-live="polite" aria-label={`Presentation slide ${index % pages.length + 1} of ${pages.length}`}>
       <div className={styles.screenTop}><span>{page.eyebrow}</span><span>{index % pages.length + 1}/{pages.length}</span></div>
       <h2 dir="auto">{page.title}</h2>
       <ul>{page.bullets.map((bullet, i) => <li dir="auto" key={i}>{bullet}</li>)}</ul>

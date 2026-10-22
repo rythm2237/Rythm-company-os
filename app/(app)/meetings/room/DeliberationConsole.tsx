@@ -295,7 +295,7 @@ export default function DeliberationConsole({
         </div>
         <div className={styles.headerActions}>
           <Button onClick={() => setFocusRoom(true)}>Focus Room</Button>
-          <Button onClick={async () => { try { await document.documentElement.requestFullscreen?.(); } catch { setProgressText("Fullscreen is unavailable in this browser."); } }} aria-label="Enter fullscreen">⛶</Button>
+          <Button onClick={async () => { try { await document.documentElement.requestFullscreen?.(); } catch { setProgressText("Fullscreen is unavailable in this browser."); } }} aria-label="Enter fullscreen">Full screen</Button>
           <Button onClick={() => setRailOpen((v) => !v)}>{railOpen ? "Close Notes" : "Notes"}</Button>
         </div>
       </header>
@@ -312,7 +312,7 @@ export default function DeliberationConsole({
           <Button title="Meeting History" onClick={() => router.push("/meetings")}><span>↶</span><b>Meeting History</b></Button>
         </nav>
         {!leftCollapsed ? <div className={styles.leftPanelContent}>
-          {leftMode === "agenda" ? <div className={styles.panelCard}><div className={styles.panelTitle}><strong>Agenda</strong><span>{progressPct}%</span></div><div className={styles.progressBar}><i style={{ width: `${progressPct}%` }} /></div><ol>{agendaItems.map((item, index) => <li key={`${item}-${index}`} className={index === Math.min(agendaItems.length - 1, Math.floor((progressPct / 100) * agendaItems.length)) ? styles.agendaActive : ""}><span>{index + 1}</span><b>{item}</b></li>)}</ol></div> : <div className={styles.panelCard}><div className={styles.panelTitle}><strong>Key Decisions</strong><span>{completed ? "Ready" : "Open"}</span></div><div className={styles.decisionCard}><b>{completed ? "Synthesis available for Human CEO review" : "No final decision yet"}</b><small>{completed ? "Review governance before recording the Human CEO decision." : "The decision remains open while deliberation is running."}</small></div><Button className={styles.panelAction} onClick={() => { setRailMode("governance"); setRailOpen(true); }}>Open Governance</Button></div>}
+          {leftMode === "agenda" ? <div className={styles.panelCard}><div className={styles.panelTitle}><strong>Agenda</strong><span>{progressPct}%</span></div><div className={styles.progressBar}><i style={{ width: `${progressPct}%` }} /></div><ol>{agendaItems.map((item, index) => <li key={`${item}-${index}`} className={index === Math.min(agendaItems.length - 1, Math.floor((progressPct / 100) * agendaItems.length)) ? styles.agendaActive : ""}><span>{index + 1}</span><b title={item}>{item}</b></li>)}</ol></div> : <div className={styles.panelCard}><div className={styles.panelTitle}><strong>Key Decisions</strong><span>{completed ? "Ready" : "Open"}</span></div><div className={styles.decisionCard}><b>{completed ? "Synthesis available for Human CEO review" : "No final decision yet"}</b><small>{completed ? "Review governance before recording the Human CEO decision." : "The decision remains open while deliberation is running."}</small></div><Button className={styles.panelAction} onClick={() => { setRailMode("governance"); setRailOpen(true); }}>Open Governance</Button></div>}
         </div> : null}
       </aside>
 
@@ -323,7 +323,7 @@ export default function DeliberationConsole({
           const seat = SEATS.find((item) => item.id === seatsRef.current.get(agent.id))!;
           const { x, y } = seat;
           const speaking = activeSpeaker === agent.agentCode;
-          const seatStyle = { "--seat-x": x, "--seat-y": y } as CSSProperties;
+          const seatStyle = { "--seat-x": x, "--seat-y": y, "--seat-scale": seat.id.endsWith("rear") ? .92 : seat.id.endsWith("front") ? 1.04 : 1 } as CSSProperties;
           return <Button key={agent.id} data-seat-id={seat.id} data-speaking={speaking} title={`${agent.name} · ${agent.roleTitle}${speaking ? " · Speaking" : ""}`} aria-label={`Address ${agent.name}, ${agent.roleTitle}`} type="button" className={`${styles.agentSeat} ${speaking ? styles.agentSeatActive : ""}`} style={seatStyle} onClick={() => { setRecipient(agent.agentCode); managerIntervention(); }}>
             <AgentPortrait agentCode={agent.agentCode} avatarUrl={agent.avatarUrl} alt={agent.name} className={styles.seatAvatar} />
             <span><b>{agent.name}</b><small>{agent.roleTitle}</small></span>
@@ -341,7 +341,7 @@ export default function DeliberationConsole({
 
       <aside className={styles.rightSidebar}>
         <Button aria-expanded={!rightCollapsed} className={styles.collapseRight} onClick={() => setRightCollapsed((v) => !v)} aria-label="Toggle participants panel">{rightCollapsed ? "‹" : "›"}</Button>
-        {!rightCollapsed ? <><div className={styles.participantHeader}><strong>Participants ({participants.length + 1})</strong></div><div className={styles.managerRow}>{humanAvatarUrl ? <Image src={humanAvatarUrl} width={42} height={42} alt={managerDisplayName} className={styles.listAvatar} unoptimized /> : <span className={styles.listMonogram}>YOU</span>}<div><b>{managerDisplayName}</b><small>Human CEO · Final authority</small></div></div><div className={styles.sectionLabel}>AI Agents</div><div className={styles.participantList}>{participants.map((agent) => { const speaking = activeSpeaker === agent.agentCode; return <Button key={agent.id} title={`${agent.name} · ${agent.roleTitle}`} aria-label={`Address ${agent.name}, ${agent.roleTitle}`} className={speaking ? styles.participantActive : ""} onClick={() => { setRecipient(agent.agentCode); managerIntervention(); }}><AgentPortrait agentCode={agent.agentCode} avatarUrl={agent.avatarUrl} alt={agent.name} className={styles.listAvatar} /><span><b>{agent.name}</b><small>{agent.roleTitle}</small></span>{speaking ? <em>Speaking</em> : <i />}</Button>; })}</div></> : null}
+        {!rightCollapsed ? <><div className={styles.participantHeader}><strong>Participants ({participants.length + 1})</strong></div><div className={styles.managerRow}>{humanAvatarUrl ? <Image src={humanAvatarUrl} width={42} height={42} alt={managerDisplayName} className={styles.listAvatar} unoptimized /> : <span className={styles.listMonogram}>YOU</span>}<div><b>{managerDisplayName}</b><small>Human CEO · Final authority</small></div></div><div className={styles.sectionLabel}>AI Agents</div><div className={styles.participantList}>{participants.map((agent) => { const speaking = activeSpeaker === agent.agentCode; return <Button key={agent.id} title={`${agent.name} · ${agent.roleTitle}`} aria-label={`Address ${agent.name}, ${agent.roleTitle}`} className={speaking ? styles.participantActive : ""} onClick={() => { setRecipient(agent.agentCode); managerIntervention(); }}><AgentPortrait agentCode={agent.agentCode} avatarUrl={agent.avatarUrl} alt={agent.name} className={styles.listAvatar} /><span><b>{agent.name}</b><small>{agent.roleTitle}</small></span>{speaking ? <em>Speaking</em> : <i title={agent.enabled ? "Present" : "Disabled"} />}</Button>; })}</div></> : null}
       </aside>
 
       <footer className={styles.controlDock}>

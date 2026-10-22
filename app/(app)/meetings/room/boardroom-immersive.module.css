@@ -283,3 +283,10 @@
 .agentSeat :global(.ui-button-content){justify-content:flex-start}
 .participantList button :global(.ui-button-progress),.leftNav button :global(.ui-button-progress){position:absolute}
 .extraParticipants{position:absolute;right:12px;bottom:44px;z-index:10;padding:8px 10px;background:#15263b;border:1px solid #495f7d;border-radius:8px;color:#e9efff;font-size:11px}
+.agentSeat,.agentSeat:hover,.agentSeat:active{transform:translate(-50%,-50%) scale(var(--seat-scale,1));scale:1}
+.slidePage:not(.measureSlide){animation:slideReveal .16s ease-out}
+@keyframes slideReveal{from{opacity:.7}to{opacity:1}}
+/* Hidden drawers must not extend the fixed room's scrollable area. */
+.liveRail{transform:none;visibility:hidden;opacity:0;pointer-events:none;transition:opacity .18s ease}
+.liveRailOpen{visibility:visible;opacity:1;pointer-events:auto}
+.panelCard li b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
