@@ -28,6 +28,7 @@ const SAFE_OPERATIONAL_ERROR =
 const PROTECTED_ROUTE_PREFIXES = [
   "/home",
   "/inbox",
+  "/crm",
   "/reports",
   "/settings",
   "/more",
@@ -230,6 +231,7 @@ export const config = {
     "/login",
     "/home/:path*",
     "/inbox/:path*",
+    "/crm/:path*",
     "/reports/:path*",
     "/settings/:path*",
     "/more/:path*",
