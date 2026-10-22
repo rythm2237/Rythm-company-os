@@ -7,6 +7,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { useRouter } from "next/navigation";
 import { AgentPortrait } from "@/app/components/agent-portrait";
 import styles from "./boardroom-immersive.module.css";
+import PresentationScreen from "./PresentationScreen";
+import { assignSeats, SEATS } from "./presentation-layout";
 
 type TranscriptMessage = { id?: string; turnIndex: number; roundNo: number; messageType: string; content: string; speakerCode: string; speakerName: string; speakerRole?: string };
 type Participant = { id: string; agentCode: string; name: string; roleTitle: string; avatarUrl: string | null; enabled: boolean };
@@ -32,11 +34,7 @@ type LeftMode = "agenda" | "decisions";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const excerpt = (value: string, max = 190) => value.replace(/[#*_`>-]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) + (value.length > max ? "…" : "");
-const seatPositions = [
-  ["18%", "44%"], ["8%", "61%"], ["24%", "73%"],
-  ["69%", "43%"], ["82%", "59%"], ["72%", "72%"],
-  ["32%", "35%"], ["58%", "35%"],
-];
+
 
 async function jsonPost(path: string, body: Record<string, unknown>) {
   const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, credentials: "same-origin", cache: "no-store", body: JSON.stringify(body) });
@@ -104,13 +102,32 @@ export default function DeliberationConsole({
   const [navOpen, setNavOpen] = useState(false);
   const [slideOffset, setSlideOffset] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  const [slideCount, setSlideCount] = useState(4);
+  const [mobileSlideCount, setMobileSlideCount] = useState(4);
+  const [endConfirm, setEndConfirm] = useState(false);
+  const seatsRef = useRef(new Map<string, string>());
+  seatsRef.current = assignSeats(participants.map((p) => p.id), seatsRef.current);
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => {
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setEndConfirm(false); setNavOpen(false); setRailOpen(false); setFocusRoom(false); }
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, []);
 
   useEffect(() => {
+    document.documentElement.classList.add("rythm-boardroom-managed");
+    return () => document.documentElement.classList.remove("rythm-boardroom-managed");
+  }, []);
+  useEffect(() => {
+    if (dismissed) return;
+    if (window.matchMedia("(min-width: 901px) and (max-width: 1100px)").matches) { setLeftCollapsed(true); setRightCollapsed(true); }
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     document.documentElement.classList.add("rythm-boardroom-active");
     return () => { document.body.style.overflow = previousOverflow; document.documentElement.classList.remove("rythm-boardroom-active"); };
-  }, []);
+  }, [dismissed]);
   useEffect(() => { try { const saved = localStorage.getItem(`rythm:boardroom:ceo:${sessionId}`); if (saved) setCeoText(saved); } catch {} }, [sessionId]);
   useEffect(() => { try { if (ceoText) localStorage.setItem(`rythm:boardroom:ceo:${sessionId}`, ceoText); else localStorage.removeItem(`rythm:boardroom:ceo:${sessionId}`); } catch {} }, [ceoText, sessionId]);
   useEffect(() => {
@@ -208,7 +225,7 @@ export default function DeliberationConsole({
     window.setTimeout(() => ceoInputRef.current?.focus(), 80);
   };
   const sendCeoContribution = async () => {
-    const text = ceoText.trim(); if (text.length < 2) return;
+    const text = ceoText.trim(); if (text.length < 2 || ceoSending) return;
     setCeoSending(true); setError("");
     try {
       const target = recipient === "ALL" ? "EVERYONE" : recipient;
@@ -220,12 +237,14 @@ export default function DeliberationConsole({
     finally { setCeoSending(false); }
   };
   const closeMeeting = async () => {
-    setChairClosing(true); setError("");
+    if (!awaitingChairClose || chairClosing) return;
+    setEndConfirm(false); setChairClosing(true); setError("");
     try { await jsonPost("/api/meetings/close", { sessionId }); setMeetingState("completed"); setActiveSpeaker(""); setPaused(true); setProgressText("Meeting closed by Human CEO. Decision governance is available."); router.refresh(); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Meeting could not be closed."); }
     finally { setChairClosing(false); }
   };
   const requestSummary = async () => {
+    if (summarizing) return;
     const requested = summaryLanguage === "__meeting__" ? "" : summaryLanguage === "__other__" ? customSummaryLanguage.trim() : summaryLanguage;
     if (summaryLanguage === "__other__" && requested.length < 2) { setError("Enter the summary language."); return; }
     if (messages.length < 2) { setRailMode("summary"); setRailOpen(true); return; }
@@ -235,6 +254,7 @@ export default function DeliberationConsole({
     finally { setSummarizing(false); }
   };
   const requestLegalReview = async () => {
+    if (legalReviewRunning) return;
     setLegalReviewRunning(true); setError("");
     try { const payload = await jsonPost("/api/meetings/legal-review", { sessionId }); setLegalReview((payload.review ?? null) as LegalReview | null); setRailMode("governance"); setRailOpen(true); router.refresh(); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "AI legal review failed."); }
@@ -252,12 +272,11 @@ export default function DeliberationConsole({
   const recentChallenges = [...messages].filter((m) => m.messageType === "challenge").slice(-3);
   const recentPositions = [...messages].filter((m) => m.messageType === "position").slice(-3);
   const slideDeck = useMemo(() => [
-    { eyebrow: "MEETING OBJECTIVE", title: decisionQuestion, bullets: meetingAgenda.length ? meetingAgenda.slice(0, 4) : ["Clarify the decision to be made.", "Surface strategic and operational constraints.", "Challenge assumptions before recommendation."], footer: "Human CEO retains final authority." },
-    { eyebrow: `ROUND ${currentRound} · POSITIONS`, title: "Current executive positions", bullets: recentPositions.length ? recentPositions.map((m) => `${m.speakerName}: ${excerpt(m.content, 150)}`) : ["Positions will appear as Agents complete governed turns."], footer: "Only authorized meeting participants are represented in this room." },
-    { eyebrow: `ROUND ${currentRound} · CHALLENGE`, title: "Assumptions under challenge", bullets: recentChallenges.length ? recentChallenges.map((m) => `${m.speakerName}: ${excerpt(m.content, 150)}`) : ["Challenge rounds will surface risk, evidence and execution constraints."], footer: "The Human CEO can intervene at any safe turn boundary." },
-    { eyebrow: "DECISION BRIEF", title: synthesis ? "Synthesis ready for Human CEO" : "Decision synthesis", bullets: synthesis ? synthesis.content.split(/\n+/).filter(Boolean).slice(0, 4).map((x) => excerpt(x, 180)) : ["The final synthesis appears here after governed deliberation."], footer: "AI recommendation is advisory and non-binding." },
+    { eyebrow: "MEETING OBJECTIVE", title: decisionQuestion, bullets: meetingAgenda.length ? meetingAgenda : ["Clarify the decision to be made.", "Surface strategic and operational constraints.", "Challenge assumptions before recommendation."], footer: "Human CEO retains final authority." },
+    { eyebrow: `ROUND ${currentRound} · POSITIONS`, title: "Current executive positions", bullets: recentPositions.length ? recentPositions.map((m) => `${m.speakerName}: ${m.content}`) : ["Positions will appear as Agents complete governed turns."], footer: "Only authorized meeting participants are represented in this room." },
+    { eyebrow: `ROUND ${currentRound} · CHALLENGE`, title: "Assumptions under challenge", bullets: recentChallenges.length ? recentChallenges.map((m) => `${m.speakerName}: ${m.content}`) : ["Challenge rounds will surface risk, evidence and execution constraints."], footer: "The Human CEO can intervene at any safe turn boundary." },
+    { eyebrow: "DECISION BRIEF", title: synthesis ? "Synthesis ready for Human CEO" : "Decision synthesis", bullets: synthesis ? synthesis.content.split(/\n+/).filter(Boolean) : ["The final synthesis appears here after governed deliberation."], footer: "AI recommendation is advisory and non-binding." },
   ], [decisionQuestion, meetingAgenda, currentRound, recentPositions, recentChallenges, synthesis]);
-  const meetingSlide = slideDeck[slideOffset % slideDeck.length];
   const progressDenominator = Math.max(1, participants.length * maxRounds + 1);
   const progressPct = Math.min(100, Math.round((agentTurns / progressDenominator) * 100));
   const agendaItems = meetingAgenda.length ? meetingAgenda : ["Meeting objective", "Agent positions", "Challenge round", "Synthesis", "Human CEO decision"];
@@ -265,8 +284,10 @@ export default function DeliberationConsole({
   const roomState = chairHasFloor ? "Chair has floor" : paused ? "Paused" : running ? "Running" : completed ? "Synthesis ready" : "Ready";
   const managerDisplayName = humanName?.trim() || "Human CEO";
 
+  if (dismissed) return null;
+
   return <section className={`${styles.immersiveBoardroom} ${leftCollapsed ? styles.leftCollapsed : ""} ${rightCollapsed ? styles.rightCollapsed : ""} ${focusRoom ? styles.focusRoom : ""}`} aria-label="RYTHM executive boardroom">
-    <div className={styles.desktopExperience}>
+    <div className={styles.desktopExperience} inert={endConfirm}>
       <header className={styles.controlHeader}>
         <div className={styles.brandCluster}>
           <Image src="/brand/logo-navbar-inverse.svg" width={154} height={38} alt="RYTHM Company OS" priority />
@@ -274,45 +295,42 @@ export default function DeliberationConsole({
         <div className={styles.meetingIdentity}><span className={styles.liveDot} /><div><strong>{meetingTitle}</strong><small>Live governed meeting</small></div></div>
         <div className={styles.headerMetrics}>
           <div><small>Meeting time</small><strong>{formatElapsed(elapsed)}</strong></div>
-          <div><small>Participants</small><strong>{participants.length}</strong></div>
+          <div><small>Participants</small><strong>{participants.length + 1}</strong></div>
           <div className={styles.currentSpeaker}><small>Current speaker</small><strong>{active?.name ?? (activeSpeaker === "CEO" ? managerDisplayName : roomState)}</strong><span className={styles.headerWave}>▮▮▮▮▮</span></div>
         </div>
         <div className={styles.headerActions}>
           <Button onClick={() => setFocusRoom(true)}>Focus Room</Button>
-          <Button onClick={() => document.documentElement.requestFullscreen?.()} aria-label="Enter fullscreen">⛶</Button>
+          <Button onClick={() => meetingState === "completed" ? router.push("/meetings") : document.querySelector<HTMLButtonElement>(".boardroom-leave-room")?.click()}>Leave room</Button>
+          <Button onClick={async () => { try { await document.documentElement.requestFullscreen?.(); } catch { setProgressText("Fullscreen is unavailable in this browser."); } }} aria-label="Enter fullscreen">Full screen</Button>
           <Button onClick={() => setRailOpen((v) => !v)}>{railOpen ? "Close Notes" : "Notes"}</Button>
         </div>
       </header>
 
       <aside className={styles.leftSidebar}>
-        <Button className={styles.collapseLeft} onClick={() => setLeftCollapsed((v) => !v)} aria-label="Toggle left menu">{leftCollapsed ? "›" : "‹"}</Button>
+        <Button aria-expanded={!leftCollapsed} className={styles.collapseLeft} onClick={() => setLeftCollapsed((v) => !v)} aria-label="Toggle left menu">{leftCollapsed ? "›" : "‹"}</Button>
         <nav className={styles.leftNav}>
-          <Button className={styles.navActive} onClick={() => setLeftMode("agenda")}><span>◫</span><b>Meeting Room</b></Button>
-          <Button onClick={() => setLeftMode("agenda")}><span>☷</span><b>Agenda</b></Button>
-          <Button onClick={() => { setLeftMode("decisions"); setRailMode("governance"); }}><span>◇</span><b>Key Decisions</b></Button>
-          <Button onClick={() => router.push("/company-library")}><span>▤</span><b>Files & Docs</b></Button>
-          <Button onClick={() => router.push("/command-center")}><span>▥</span><b>Reports</b></Button>
-          <Button onClick={() => router.push("/settings")}><span>⚙</span><b>Settings</b></Button>
-          <Button onClick={() => router.push("/meetings")}><span>↶</span><b>Meeting History</b></Button>
+          <Button title="Meeting Room" className={leftMode === "agenda" ? styles.navActive : ""} onClick={() => setLeftMode("agenda")}><span>◫</span><b>Meeting Room</b></Button>
+          <Button title="Agenda" onClick={() => { setLeftCollapsed(false); setLeftMode("agenda"); }}><span>☷</span><b>Agenda</b></Button>
+          <Button title="Key Decisions" className={leftMode === "decisions" ? styles.navActive : ""} onClick={() => { setLeftMode("decisions"); setRailMode("governance"); setRailOpen(true); }}><span>◇</span><b>Key Decisions</b></Button>
+          <Button title="Files & Docs" onClick={() => router.push("/company-library")}><span>▤</span><b>Files & Docs</b></Button>
+          <Button title="Reports" onClick={() => router.push("/command-center")}><span>▥</span><b>Reports</b></Button>
+          <Button title="Settings" onClick={() => router.push("/settings")}><span>⚙</span><b>Settings</b></Button>
+          <Button title="Meeting History" onClick={() => router.push("/meetings")}><span>↶</span><b>Meeting History</b></Button>
         </nav>
         {!leftCollapsed ? <div className={styles.leftPanelContent}>
-          {leftMode === "agenda" ? <div className={styles.panelCard}><div className={styles.panelTitle}><strong>Agenda</strong><span>{progressPct}%</span></div><div className={styles.progressBar}><i style={{ width: `${progressPct}%` }} /></div><ol>{agendaItems.map((item, index) => <li key={`${item}-${index}`} className={index === Math.min(agendaItems.length - 1, Math.floor((progressPct / 100) * agendaItems.length)) ? styles.agendaActive : ""}><span>{index + 1}</span><b>{item}</b></li>)}</ol></div> : <div className={styles.panelCard}><div className={styles.panelTitle}><strong>Key Decisions</strong><span>{completed ? "Ready" : "Open"}</span></div><div className={styles.decisionCard}><b>{completed ? "Synthesis available for Human CEO review" : "No final decision yet"}</b><small>{completed ? "Review governance before recording the Human CEO decision." : "The decision remains open while deliberation is running."}</small></div><Button className={styles.panelAction} onClick={() => { setRailMode("governance"); setRailOpen(true); }}>Open Governance</Button></div>}
+          {leftMode === "agenda" ? <div className={styles.panelCard}><div className={styles.panelTitle}><strong>Agenda</strong><span>{progressPct}%</span></div><div className={styles.progressBar}><i style={{ width: `${progressPct}%` }} /></div><ol>{agendaItems.map((item, index) => <li key={`${item}-${index}`} className={index === Math.min(agendaItems.length - 1, Math.floor((progressPct / 100) * agendaItems.length)) ? styles.agendaActive : ""}><span>{index + 1}</span><b title={item}>{item}</b></li>)}</ol></div> : <div className={styles.panelCard}><div className={styles.panelTitle}><strong>Key Decisions</strong><span>{completed ? "Ready" : "Open"}</span></div><div className={styles.decisionCard}><b>{completed ? "Synthesis available for Human CEO review" : "No final decision yet"}</b><small>{completed ? "Review governance before recording the Human CEO decision." : "The decision remains open while deliberation is running."}</small></div><Button className={styles.panelAction} onClick={() => { setRailMode("governance"); setRailOpen(true); }}>Open Governance</Button></div>}
         </div> : null}
       </aside>
 
-      <main className={styles.roomStage}>
+      <main className={styles.roomStage}><div className={styles.roomCanvas}>
         <Image src="/boardroom/boardroom-room-8bf0f8f2.png" alt="RYTHM executive boardroom" fill priority unoptimized className={styles.roomScene} />
-        <div className={styles.screenOverlay}>
-          <div className={styles.screenTop}><span>{meetingSlide.eyebrow}</span><span>{slideOffset + 1}/{slideDeck.length}</span></div>
-          <h2>{meetingSlide.title}</h2>
-          <ul>{meetingSlide.bullets.map((bullet, index) => <li key={index}>{bullet}</li>)}</ul>
-          <footer>{meetingSlide.footer}</footer>
-        </div>
-        {participants.map((agent, index) => {
-          const [x, y] = seatPositions[index % seatPositions.length];
+        <PresentationScreen slides={slideDeck} index={slideOffset} onCount={setSlideCount} />
+        {participants.filter((agent) => seatsRef.current.has(agent.id)).map((agent) => {
+          const seat = SEATS.find((item) => item.id === seatsRef.current.get(agent.id))!;
+          const { x, y } = seat;
           const speaking = activeSpeaker === agent.agentCode;
-          const seatStyle = { "--seat-x": x, "--seat-y": y } as CSSProperties;
-          return <Button key={agent.id} type="button" className={`${styles.agentSeat} ${speaking ? styles.agentSeatActive : ""}`} style={seatStyle} onClick={() => { setRecipient(agent.agentCode); managerIntervention(); }}>
+          const seatStyle = { "--seat-x": x, "--seat-y": y, "--seat-scale": seat.id.endsWith("rear") ? .92 : seat.id.endsWith("front") ? 1.04 : 1 } as CSSProperties;
+          return <Button key={agent.id} data-seat-id={seat.id} data-speaking={speaking} title={`${agent.name} · ${agent.roleTitle}${speaking ? " · Speaking" : ""}`} aria-label={`Address ${agent.name}, ${agent.roleTitle}`} type="button" className={`${styles.agentSeat} ${speaking ? styles.agentSeatActive : ""}`} style={seatStyle} onClick={() => { setRecipient(agent.agentCode); managerIntervention(); }}>
             <AgentPortrait agentCode={agent.agentCode} avatarUrl={agent.avatarUrl} alt={agent.name} className={styles.seatAvatar} />
             <span><b>{agent.name}</b><small>{agent.roleTitle}</small></span>
             {speaking ? <em>▮▮▮▮</em> : null}
@@ -322,41 +340,54 @@ export default function DeliberationConsole({
           {humanAvatarUrl ? <Image src={humanAvatarUrl} width={42} height={42} alt={managerDisplayName} className={styles.managerAvatar} unoptimized /> : <span className={styles.managerMonogram}>YOU</span>}
           <span><b>{managerDisplayName}</b><small>Meeting Manager · Final authority</small></span>
         </div>
-        <div className={styles.stageStatus}><b>{active ? `${active.name} is speaking` : activeSpeaker === "CEO" ? `${managerDisplayName} has the floor` : roomState}</b><span>{lastAgentMessage ? excerpt(lastAgentMessage.content, 170) : progressText || "Boardroom ready for governed deliberation."}</span></div>
-        {error ? <div className={styles.stageError}>{error}</div> : null}
+        </div>{participants.length > SEATS.length ? <Button className={styles.extraParticipants} onClick={() => setRightCollapsed(false)}>All {participants.length} AI participants →</Button> : null}<div className={styles.stageStatus} role="status"><b>{active ? `${active.name} is speaking` : activeSpeaker === "CEO" ? `${managerDisplayName} has the floor` : roomState}</b><span>{lastAgentMessage ? excerpt(lastAgentMessage.content, 170) : progressText || "Boardroom ready for governed deliberation."}</span></div>
+        {error ? <div className={styles.stageError} role="alert">{error}</div> : null}
         {focusRoom ? <Button className={styles.exitFocus} onClick={() => setFocusRoom(false)}>Exit Focus Room</Button> : null}
       </main>
 
       <aside className={styles.rightSidebar}>
-        <Button className={styles.collapseRight} onClick={() => setRightCollapsed((v) => !v)} aria-label="Toggle participants panel">{rightCollapsed ? "‹" : "›"}</Button>
-        {!rightCollapsed ? <><div className={styles.participantHeader}><strong>Participants ({participants.length})</strong></div><div className={styles.managerRow}>{humanAvatarUrl ? <Image src={humanAvatarUrl} width={42} height={42} alt={managerDisplayName} className={styles.listAvatar} unoptimized /> : <span className={styles.listMonogram}>YOU</span>}<div><b>{managerDisplayName}</b><small>Human · Meeting Manager</small></div></div><div className={styles.sectionLabel}>AI Agents</div><div className={styles.participantList}>{participants.map((agent) => { const speaking = activeSpeaker === agent.agentCode; return <Button key={agent.id} className={speaking ? styles.participantActive : ""} onClick={() => { setRecipient(agent.agentCode); managerIntervention(); }}><AgentPortrait agentCode={agent.agentCode} avatarUrl={agent.avatarUrl} alt={agent.name} className={styles.listAvatar} /><span><b>{agent.name}</b><small>{agent.agentCode} · {agent.roleTitle}</small></span>{speaking ? <em>Speaking</em> : <i />}</Button>; })}</div></> : null}
+        <Button aria-expanded={!rightCollapsed} className={styles.collapseRight} onClick={() => setRightCollapsed((v) => !v)} aria-label="Toggle participants panel">{rightCollapsed ? "‹" : "›"}</Button>
+        {!rightCollapsed ? <><div className={styles.participantHeader}><strong>Participants ({participants.length + 1})</strong></div><div className={styles.managerRow}>{humanAvatarUrl ? <Image src={humanAvatarUrl} width={42} height={42} alt={managerDisplayName} className={styles.listAvatar} unoptimized /> : <span className={styles.listMonogram}>YOU</span>}<div><b>{managerDisplayName}</b><small>Human CEO · Final authority</small></div></div><div className={styles.sectionLabel}>AI Agents</div><div className={styles.participantList}>{participants.map((agent) => { const speaking = activeSpeaker === agent.agentCode; return <Button key={agent.id} title={`${agent.name} · ${agent.roleTitle}`} aria-label={`Address ${agent.name}, ${agent.roleTitle}`} className={speaking ? styles.participantActive : ""} onClick={() => { setRecipient(agent.agentCode); managerIntervention(); }}><AgentPortrait agentCode={agent.agentCode} avatarUrl={agent.avatarUrl} alt={agent.name} className={styles.listAvatar} /><span><b>{agent.name}</b><small>{agent.roleTitle}</small></span>{speaking ? <em>Speaking</em> : <i title={agent.enabled ? "Present" : "Disabled"} />}</Button>; })}</div></> : null}
       </aside>
 
       <footer className={styles.controlDock}>
-        <Button className={styles.approveAction} onClick={() => { setRailMode("governance"); setRailOpen(true); }}>✓ Approve / Review</Button>
-        <Button className={styles.pauseAction} onClick={pauseAgents} disabled={!running}>Ⅱ Pause</Button>
-        <Button className={styles.interventionAction} onClick={managerIntervention}>◉ Manager Intervention</Button>
-        <Button className={styles.summaryAction} onClick={() =>requestSummary()} disabled={summarizing}>{summarizing ? "Working…" : "▤ Request Summary"}</Button>
-        <Button className={styles.nextAction} onClick={() =>(chairHasFloor ? continueDiscussion() : stepMeeting())} disabled={running || !canRun}>↗ Next Action</Button>
-        <Button className={styles.nextSlideAction} onClick={() => setSlideOffset((v) => (v + 1) % slideDeck.length)}>→ Next Slide</Button>
-        <Button className={styles.endAction} onClick={() =>closeMeeting()} disabled={!awaitingChairClose || chairClosing}>{chairClosing ? "Closing…" : "⌁ End Meeting"}</Button>
-        <div className={styles.listeningStatus}>✦ RYTHM OS is listening and analyzing <span>▮▮▮▮▮</span></div>
+        <div className={styles.primaryControls}>
+          {completed ? <Button className={styles.approveAction} onClick={() => { setRailMode("governance"); setRailOpen(true); }}>Review synthesis</Button> : null}
+          <Button className={styles.nextSlideAction} onClick={() => setSlideOffset((v) => (v + 1) % slideCount)}>Next Slide →</Button>
+          <Button className={styles.nextAction} title={!canRun ? "Available while a governed session is ready or running" : "Run one authorized turn"} onClick={() => (chairHasFloor ? continueDiscussion() : stepMeeting())} disabled={running || !canRun}>{running ? "Agent working…" : "Next Action ↗"}</Button>
+        </div>
+        <div className={styles.secondaryControls}>
+          <Button onClick={() => running ? pauseAgents() : continueDiscussion()} disabled={!canRun || (running && paused)}>{running ? (paused ? "Pausing…" : "Ⅱ Pause") : "▷ Resume"}</Button>
+          <Button onClick={requestSummary} disabled={summarizing} title="Generate a summary from recorded contributions">{summarizing ? "Summarizing…" : "Summary"}</Button>
+          <Button onClick={() => { setRailMode("transcript"); setRailOpen(true); }}>Notes</Button>
+          <Button onClick={managerIntervention}>Intervene</Button>
+        </div>
+        <Button className={styles.endAction} onClick={() => setEndConfirm(true)} title={!awaitingChairClose ? "Complete Agent synthesis before closing the meeting" : "Close this meeting as Human CEO"} disabled={!awaitingChairClose || chairClosing}>{chairClosing ? "Closing…" : "End Meeting"}</Button>
       </footer>
     </div>
 
-    <div className={styles.mobileExperience}>
+    <div className={styles.mobileExperience} inert={endConfirm}>
       <header className={styles.mobileHeader}><Button onClick={() => setNavOpen((v) => !v)}>☰</Button><div><small>RYTHM BOARDROOM</small><strong>{meetingTitle}</strong></div><Button onClick={() => setRailOpen((v) => !v)}>Notes</Button></header>
-      <div className={styles.mobileGrid}>{participants.map((agent) => { const speaking = activeSpeaker === agent.agentCode; return <article key={agent.id} className={`${styles.mobileParticipant} ${speaking ? styles.mobileParticipantActive : ""}`}><AgentPortrait agentCode={agent.agentCode} avatarUrl={agent.avatarUrl} alt={agent.name} className={styles.mobileAvatar} /><div><b>{agent.name}</b><small>{agent.roleTitle}</small></div></article>; })}<article className={styles.mobileManager}>{humanAvatarUrl ? <Image src={humanAvatarUrl} fill alt={managerDisplayName} className={styles.mobileAvatar} unoptimized /> : <span>YOU</span>}<div><b>{managerDisplayName}</b><small>Meeting Manager</small></div></article></div>
-      <div className={styles.mobileControls}><Button onClick={() =>stepMeeting()} disabled={!canRun || running}>Step</Button><Button onClick={() =>(paused ? continueDiscussion() : runMeeting())} disabled={!canRun || running}>{paused ? "Release" : "Play"}</Button><Button onClick={pauseAgents} disabled={!running}>Pause</Button><Button onClick={managerIntervention}>Intervene</Button><Button onClick={() =>closeMeeting()} disabled={!awaitingChairClose || chairClosing}>End</Button></div>
+      <main className={styles.mobileMain}>
+        <div className={styles.mobileRoomImage} aria-hidden="true" />
+        <div className={styles.mobileStatus} role="status">{active?.name ? `${active.name} · Speaking` : roomState} · {formatElapsed(elapsed)}</div>
+        <PresentationScreen mobile slides={slideDeck} index={slideOffset} onCount={setMobileSlideCount} />
+        <div className={styles.mobileSlideNav}><Button onClick={() => setSlideOffset((v) => Math.max(0, v - 1))} disabled={slideOffset === 0}>← Previous</Button><Button onClick={() => setSlideOffset((v) => (v + 1) % mobileSlideCount)}>Next Slide →</Button></div>
+        <details className={styles.mobilePeople}><summary>Participants · {participants.length + 1}</summary><p>{managerDisplayName} · Human CEO</p>{participants.map((agent) => <Button key={agent.id} onClick={() => { setRecipient(agent.agentCode); managerIntervention(); }} title={agent.roleTitle}>{agent.name} · {activeSpeaker === agent.agentCode ? "Speaking" : agent.roleTitle}</Button>)}</details>
+        <details className={styles.mobilePeople}><summary>Agenda · {progressPct}%</summary><ol>{agendaItems.map((item, i) => <li key={i}>{item}</li>)}</ol></details>
+        {error ? <p role="alert" className={styles.mobileError}>{error}</p> : null}
+      </main>
+      <div className={styles.mobileControls}><Button onClick={stepMeeting} disabled={!canRun || running}>{running ? "Working…" : "Next Action"}</Button><Button onClick={() => running ? pauseAgents() : continueDiscussion()} disabled={!canRun || (running && paused)}>{running ? "Pause" : "Resume"}</Button><Button onClick={managerIntervention}>Intervene</Button><Button onClick={() => { setRailMode("summary"); setRailOpen(true); }}>Summary</Button><Button onClick={() => setEndConfirm(true)} disabled={!awaitingChairClose || chairClosing}>End</Button></div>
     </div>
 
-    {navOpen ? <div className={styles.navDrawerBackdrop} onClick={() => setNavOpen(false)}><nav className={styles.navDrawer} onClick={(e) => e.stopPropagation()}><div><strong>RYTHM Workspace</strong><Button onClick={() => setNavOpen(false)}>×</Button></div><Button onClick={() => router.push("/meetings")}>Meetings</Button><Button onClick={() => router.push("/command-center")}>Command Center</Button><Button onClick={() => router.push("/company-library")}>Company Library</Button><Button onClick={() => router.push("/studio/agents")}>Agent Studio</Button><Button onClick={() => router.push("/projects")}>Projects</Button></nav></div> : null}
+    {endConfirm ? <div className={styles.confirmBackdrop}><div role="alertdialog" aria-modal="true" aria-labelledby="end-meeting-title" className={styles.confirmDialog}><h2 id="end-meeting-title">End this meeting?</h2><p>The Agent synthesis is complete. Close the meeting to continue to the Human CEO decision gate.</p><Button autoFocus onClick={() => setEndConfirm(false)}>Keep meeting open</Button><Button className={styles.endAction} onClick={closeMeeting} disabled={chairClosing}>Confirm End Meeting</Button></div></div> : null}
+    {navOpen ? <div className={styles.navDrawerBackdrop} onClick={() => setNavOpen(false)}><nav className={styles.navDrawer} onClick={(e) => e.stopPropagation()}><Button onClick={() => meetingState === "completed" ? router.push("/meetings") : document.querySelector<HTMLButtonElement>(".boardroom-leave-room")?.click()}>Leave room</Button><div><strong>RYTHM Workspace</strong><Button onClick={() => setNavOpen(false)}>×</Button></div><Button title="Meeting History" onClick={() => router.push("/meetings")}>Meetings</Button><Button title="Reports" onClick={() => router.push("/command-center")}>Command Center</Button><Button title="Files & Docs" onClick={() => router.push("/company-library")}>Company Library</Button><Button onClick={() => router.push("/studio/agents")}>Agent Studio</Button><Button onClick={() => router.push("/projects")}>Projects</Button><Button onClick={() => router.push("/settings")}>Settings</Button><Button onClick={() => { setRailMode("governance"); setRailOpen(true); setNavOpen(false); }}>Key Decisions</Button></nav></div> : null}
 
-    <aside className={`${styles.liveRail} ${railOpen ? styles.liveRailOpen : ""}`}>
-      <nav className={styles.railTabs}><Button className={railMode === "transcript" ? styles.railTabActive : ""} onClick={() => setRailMode("transcript")}>Live</Button><Button className={railMode === "summary" ? styles.railTabActive : ""} onClick={() => setRailMode("summary")}>Summary</Button><Button className={railMode === "governance" ? styles.railTabActive : ""} onClick={() => setRailMode("governance")}>Governance</Button><Button onClick={() => setRailOpen(false)}>×</Button></nav>
+    <aside aria-label="Meeting notes and governance" inert={!railOpen || endConfirm} className={`${styles.liveRail} ${railOpen ? styles.liveRailOpen : ""}`}>
+      <nav className={styles.railTabs}><Button className={railMode === "transcript" ? styles.railTabActive : ""} onClick={() => setRailMode("transcript")}>Live</Button><Button className={railMode === "summary" ? styles.railTabActive : ""} onClick={() => setRailMode("summary")}>Summary</Button><Button className={railMode === "governance" ? styles.railTabActive : ""} onClick={() => setRailMode("governance")}>Governance</Button><Button aria-label="Close meeting panel" onClick={() => setRailOpen(false)}>×</Button></nav>
       {railMode === "transcript" ? <div className={styles.railScroll}><div className={styles.railTools}><select value={recipient} onChange={(e) => setRecipient(e.target.value)}><option value="ALL">To: Everyone</option>{participants.map((agent) => <option key={agent.id} value={agent.agentCode}>To: {agent.name}</option>)}</select><input ref={ceoInputRef} value={ceoText} onChange={(e) => setCeoText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendCeoContribution(); } }} placeholder="Message, question, challenge or direction…" /><Button onClick={() =>sendCeoContribution()} disabled={ceoSending || ceoText.trim().length < 2}>{ceoSending ? "Sending…" : "Send"}</Button></div>{latest.length ? latest.map((m, index) => <article key={`${m.turnIndex}-${index}`} className={`${styles.liveMessage} ${m.speakerCode === "CEO" ? styles.liveMessageCeo : ""}`}><div><strong>{m.speakerName}</strong><span>R{m.roundNo}</span></div><p>{m.content}</p></article>) : <p className={styles.railEmpty}>No transcript yet. Use Next Action or Play to begin.</p>}</div> : null}
       {railMode === "summary" ? <div className={styles.railScroll}><div className={styles.railTools}><select value={summaryLanguage} onChange={(e) => setSummaryLanguage(e.target.value)}><option value="__meeting__">Meeting language</option><option value="English">English</option><option value="German">German</option><option value="Hungarian">Hungarian</option><option value="__other__">Other…</option></select>{summaryLanguage === "__other__" ? <input value={customSummaryLanguage} onChange={(e) => setCustomSummaryLanguage(e.target.value)} placeholder="Language" /> : null}<Button onClick={() =>requestSummary()} disabled={summarizing || messages.length < 2}>{summarizing ? "Working…" : "Generate summary"}</Button></div><div className={styles.summaryPane}>{summary || "No summary generated yet."}</div></div> : null}
-      {railMode === "governance" ? <div className={styles.railScroll}><div className={styles.governancePane}><strong>Human CEO authority</strong><p>No Agent can finalize consequential decisions or authorize external actions.</p><strong>Legal triage</strong><p>{legalTriageReason || legalTriage}</p>{legalTriage === "recommended" && !legalReview ? <Button onClick={requestLegalReview} disabled={legalReviewRunning}>{legalReviewRunning ? "Running A-106…" : "Run A-106 review"}</Button> : null}{legalReview ? <><strong>{legalReview.outcome}</strong><p>{legalReview.executive_note}</p><p>{legalReview.risk_summary}</p></> : null}<p>Budget cap: ${budgetCapUsd.toFixed(2)}</p></div></div> : null}
+      {railMode === "governance" ? <div className={styles.railScroll}><div className={styles.governancePane}><strong>Human CEO authority</strong><p>No Agent can finalize consequential decisions or authorize external actions.</p><strong>Legal triage</strong><p>{legalTriageReason || legalTriage}</p>{legalTriage === "recommended" && !legalReview ? <Button onClick={requestLegalReview} disabled={legalReviewRunning}>{legalReviewRunning ? "Running A-106…" : "Run A-106 review"}</Button> : null}{legalReview ? <><strong>{legalReview.outcome}</strong><p>{legalReview.executive_note}</p><p>{legalReview.risk_summary}</p></> : null}<p>Budget cap: ${budgetCapUsd.toFixed(2)}</p>{meetingState === "completed" ? <Button onClick={() => setDismissed(true)}>Open Human CEO decision form</Button> : null}</div></div> : null}
     </aside>
   </section>;
 }
