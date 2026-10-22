@@ -8,7 +8,6 @@ import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context
 import { getProjectOperatingTimeline, getProjectRelationships, refreshProjectWorkflowState, type EntityRelationship, type WorkflowTimelineItem } from "@/lib/workflow/server";
 import { getProjectProgressSnapshot } from "@/lib/projects/project-progress";
 import { getLatestProjectRoadmap } from "@/lib/projects/project-roadmap";
-import ProjectExecutiveSignalEnhancer from "@/components/projects/ProjectExecutiveSignalEnhancer";
 import { ProjectOsControls } from "@/components/projects/project-os-controls";
 import { ProjectGovernanceControls } from "@/components/projects/project-governance-controls";
 import ProjectAnalysisBrief from "@/components/projects/ProjectAnalysisBrief";
@@ -150,7 +149,6 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     :"Review the latest roadmap milestone and outstanding work.";
   const navCount=(view:View)=>view==="work"?taskRows.length+(projectActions.data?.length??0):view==="decisions"?pendingApprovalRows.length:view==="files"?(documents.data?.length??0):view==="activity"?(activity.data?.length??0):null;
   return <ProjectApprovalProvider key={`${project.id}:${activeView}`} initialApprovals={pendingApprovalRows}><main className="command-shell">
-    <ProjectExecutiveSignalEnhancer key={`${project.id}:${activeView}`} projectId={project.id} view={activeView}/>
     <header className="command-header project-detail-hero">
       <div className="project-detail-identity">
         <Link href="/projects" className="project-detail-back">← All projects</Link>
