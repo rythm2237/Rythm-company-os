@@ -159,3 +159,55 @@ footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 2
   .wizard-submit { margin: 18px; }
   .meeting-action-grid { grid-template-columns: 1fr; }
 }
+
+
+/* Project Details — authoritative operating status, responsive phase layout */
+.project-detail-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px}
+.project-detail-identity{min-width:0;flex:1}
+.project-detail-hero h1{margin:7px 0 8px;font-size:clamp(1.75rem,3.2vw,2.65rem);letter-spacing:-.045em;line-height:1.15}
+.project-detail-back{display:inline-block;margin-bottom:12px;color:#475569;font-size:.82rem;font-weight:700;text-decoration:none}
+.project-detail-back:hover{text-decoration:underline;color:#2536ba}
+.project-detail-objective{font-size:.94rem;line-height:1.5;max-width:76ch;color:#667085}
+.project-detail-header-side{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.project-state-label{display:inline-flex;align-items:center;gap:7px;white-space:normal;padding:9px 13px;border-radius:999px;background:#eff6ff;border:1px solid #cbd5e1;color:#1d4ed8;font-size:.82rem;font-weight:800}
+.project-state-label.is-blocked{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
+.project-detail-tabs{position:sticky;top:0;z-index:12;background:#fff;max-width:100%;overflow-x:auto;scrollbar-width:thin;border:1px solid #e2e8f0;border-radius:15px;box-shadow:0 5px 20px rgba(15,23,42,.035)}
+.project-detail-tabs a{white-space:nowrap}
+.project-detail-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:#e6ebf3;border:1px solid #e6ebf3;border-radius:16px;overflow:hidden;margin:17px 0}
+.project-detail-summary-item{padding:18px;background:#fff;min-width:0;display:flex;flex-direction:column;gap:9px}
+.project-detail-summary-item span{font-size:.75rem;font-weight:700;color:#667085}
+.project-detail-summary-item strong{font-size:1.03rem;line-height:1.3;overflow-wrap:anywhere}
+.project-detail-next-action{display:flex;gap:18px;align-items:center;justify-content:space-between;padding:18px 20px;border:1px solid #f4cd95;background:#fffaf2;border-radius:16px;margin-bottom:20px;color:#713f12}
+.project-detail-next-action strong{font-size:.94rem}
+.project-detail-next-action p{margin:6px 0 0;max-width:78ch;color:#854d0e;font-size:.85rem;line-height:1.55}
+.project-detail-next-action .secondary-button{flex-shrink:0;background:#fff}
+.project-phase-grid{list-style:none;padding:0;margin:20px 0 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px;max-width:100%;overflow:visible}
+.project-phase-card{min-width:0;display:flex;flex-direction:column;gap:12px;border:1px solid #e2e8f0;border-radius:15px;background:#fff;padding:19px;box-shadow:0 2px 8px rgba(15,23,42,.025)}
+.project-phase-card.is-complete{border-color:#d6eadf;background:#fbfefc}
+.project-phase-card.is-current{border-color:#bbc7fc;box-shadow:0 0 0 2px rgba(79,70,229,.06)}
+.project-phase-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.project-phase-number{display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;border-radius:50%;font-size:.76rem;font-weight:800;background:#edf2fa;color:#334155}
+.is-complete .project-phase-number{background:#dcfce7;color:#166534}
+.project-phase-state{font-size:.7rem;font-weight:750;text-transform:capitalize;color:#475569}
+.project-phase-card h3{font-size:1rem;line-height:1.4;margin:0;overflow-wrap:anywhere}
+.project-phase-card>p{font-size:.82rem;line-height:1.55;color:#64748b;margin:0;flex:1}
+.project-phase-foot{border-top:1px solid #e8edf2;padding-top:12px;font-size:.73rem;color:#64748b}
+.project-phase-foot details{margin-top:9px}
+.project-phase-foot summary{cursor:pointer;color:#334155;font-weight:750}
+.project-phase-foot details p{line-height:1.5;overflow-wrap:anywhere}
+.project-detail-hero a:focus-visible,.project-detail-tabs a:focus-visible,.project-phase-foot summary:focus-visible{outline:3px solid #4f46e5;outline-offset:3px}
+@media(max-width:950px){.project-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.project-detail-hero{flex-direction:column}.project-detail-header-side{justify-content:flex-start}.project-detail-next-action{align-items:flex-start;flex-direction:column}}
+@media(max-width:560px){.project-detail-summary{grid-template-columns:1fr 1fr}.project-detail-summary-item{padding:13px}.project-detail-summary-item strong{font-size:.87rem}.project-detail-header-side{width:100%}.project-detail-hero h1{font-size:1.65rem}.project-detail-next-action{padding:15px}.project-detail-tabs{position:relative}.project-phase-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.project-detail-tabs a,.project-detail-hero a{transition:none}}
+
+/* Keep secondary project sections discoverable without crowding the primary nav. */
+.project-detail-tabs{display:flex;align-items:center;gap:4px;flex-wrap:wrap;overflow:visible}
+.project-detail-more{position:relative;flex:0 0 auto;align-self:stretch}
+.project-detail-more>summary{display:flex;align-items:center;justify-content:center;min-height:100%;list-style:none;cursor:pointer;border-radius:10px;padding:10px 13px;font-size:.8rem;font-weight:800;color:#475569;white-space:nowrap}
+.project-detail-more>summary::-webkit-details-marker{display:none}
+.project-detail-more>summary::after{content:"⌄";margin-left:8px;color:#64748b}
+.project-detail-more[open]>summary{background:#eff2ff;color:#3730a3}
+.project-detail-more-links{position:absolute;right:0;top:calc(100% + 6px);z-index:25;min-width:175px;display:flex;flex-direction:column;gap:3px;background:#fff;border:1px solid #e2e8f0;border-radius:13px;box-shadow:0 14px 35px rgba(15,23,42,.13);padding:7px}
+.project-detail-more-links a{width:100%;display:flex;align-items:center;justify-content:space-between;text-decoration:none}
+.project-detail-more>summary:focus-visible{outline:3px solid #4f46e5;outline-offset:2px}
+@media(max-width:650px){.project-detail-tabs{position:relative}.project-detail-more-links{right:0;min-width:165px;max-width:calc(100vw - 28px)}}

@@ -43,6 +43,9 @@ export default function ActiveWorkspaceGuide() {
     window.localStorage.setItem("rythm-active-guide", nextEnabled ? "on" : "off");
   }
 
+  // Project Details is a dense operational workspace. Keep its actions unobstructed:
+  // company onboarding remains available elsewhere without a floating overlay here.
+  if (pathname === "/projects/operating") return null;
   if (pathname === "/ai" || pathname.startsWith("/ai/")) return null;
   if (pathname === "/integrations" || pathname.startsWith("/integrations/")) return null;
   if (!enabled) {

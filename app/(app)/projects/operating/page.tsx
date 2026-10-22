@@ -8,7 +8,6 @@ import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context
 import { getProjectOperatingTimeline, getProjectRelationships, refreshProjectWorkflowState, type EntityRelationship, type WorkflowTimelineItem } from "@/lib/workflow/server";
 import { getProjectProgressSnapshot } from "@/lib/projects/project-progress";
 import { getLatestProjectRoadmap } from "@/lib/projects/project-roadmap";
-import ProjectExecutiveSignalEnhancer from "@/components/projects/ProjectExecutiveSignalEnhancer";
 import { ProjectOsControls } from "@/components/projects/project-os-controls";
 import { ProjectGovernanceControls } from "@/components/projects/project-governance-controls";
 import ProjectAnalysisBrief from "@/components/projects/ProjectAnalysisBrief";
@@ -135,15 +134,84 @@ export default async function ProjectOperatingPage({searchParams}:Props){
   const filteredTasks=taskRows.filter((task:any)=>(selectedStatus==="all"||task.status===selectedStatus)&&(selectedAgent==="all"||task.assigned_agent_id===selectedAgent));
   const activityFilter=["important","all","agent","system"].includes(params.activityFilter??"")?params.activityFilter:"important";
   const visibleActivity=(activity.data??[]).filter((event:any)=>activityFilter==="all"?true:activityFilter==="important"?["attention","major"].includes(event.importance):activityFilter==="agent"?String(event.event_type).startsWith("agent.")||Boolean(event.agent_id):!event.agent_id);
+  const isContinuous=project.lifecycle_kind==="continuous";
+  const onHold=["ON_HOLD","BLOCKED","PAUSED"].includes(String(project.lifecycle_state??"")) ||
+    ["blocked","on_hold","paused"].includes(String(project.status??"").toLowerCase());
+  const workComplete=progress.hasApprovedRoadmap && progress.progressPercent>=100;
+  const canDeclareCompleted=Boolean(project.completion_eligible)&&
+    !onHold && !isContinuous && String(project.lifecycle_state)==="COMPLETED";
+  const projectHealthLabel=onHold?"On hold":isContinuous?"Ongoing program":canDeclareCompleted?"Completed":
+    workComplete?"Delivery complete · verification pending":label(String(project.lifecycle_state??project.status));
+  const nextStepText=typeof project.next_required_action==="string"&&project.next_required_action.trim()
+    ?project.next_required_action.trim()
+    :onHold?"Review the open governance holds before resuming execution."
+    :isContinuous?"Monitor verified outcomes and complete scheduled reviews."
+    :"Review the latest roadmap milestone and outstanding work.";
   const navCount=(view:View)=>view==="work"?taskRows.length+(projectActions.data?.length??0):view==="decisions"?pendingApprovalRows.length:view==="files"?(documents.data?.length??0):view==="activity"?(activity.data?.length??0):null;
   return <ProjectApprovalProvider key={`${project.id}:${activeView}`} initialApprovals={pendingApprovalRows}><main className="command-shell">
-    <ProjectExecutiveSignalEnhancer key={`${project.id}:${activeView}`} projectId={project.id} view={activeView}/>
-    <header className="command-header"><div><p className="eyebrow">PROJECT · {project.project_code}</p><h1>{project.name}</h1><p className="subtitle" style={{maxWidth:"72ch",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{project.objective||project.description||"Governed autonomous project."}</p></div><div className="project-header-actions"><Link className="secondary-button" href="/projects">All Projects</Link><Link className="secondary-button" href="/inbox">Inbox</Link><Link className="secondary-button" href={`/projects/operating?project=${project.id}&view=decisions`}>Decisions</Link></div></header>
-    <nav className="project-subnav" aria-label="Project workspace" style={{position:"sticky",top:0,zIndex:10,background:"var(--surface, #fff)",overflowX:"auto",maxWidth:"100%"}}>{views.map(view=><Link key={view.key} aria-current={activeView===view.key?"page":undefined} className={activeView===view.key?"active":""} href={`/projects/operating?project=${project.id}&view=${view.key}`}>{view.label}{navCount(view.key)!=null?<span>{view.key==="decisions"?<ProjectApprovalCount/>:navCount(view.key)}</span>:null}</Link>)}</nav>
-    <section className="organization-banner project-mission-summary" aria-label="Project at a glance"><div><span>Status</span><strong>{label(project.status)}</strong></div><div><span>Roadmap progress</span><strong>{progress.hasApprovedRoadmap?`${progress.progressPercent}%`:"Not baselined"}</strong></div><div><span>Execution Readiness</span><strong>{latestReadiness?.execution_readiness??project.readiness_score??0}%</strong></div><div><span>Tasks</span><strong>{progress.completedTasks}/{progress.totalTasks}</strong></div></section>
-    {activeView==="roadmap"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project plan</p><h2>{roadmap?.title??"Roadmap pending"}</h2></div><span className="pill">{roadmap?.status??"Planning"}</span></div><p className="subtitle">{roadmap?.summary??"RYTHM needs to analyze this project before a manager-reviewable roadmap can be prepared."}</p>{roadmap?.phases?.length?<div className="data-list">{roadmap.phases.map(phase=><article className="data-row" key={phase.key}><div><strong>{phase.order}. {phase.title}</strong><details><summary style={{cursor:"pointer"}}>Milestone and deliverables</summary><p>{phase.milestone||phase.description}</p><small>Deliverables: {phase.deliverables.join(", ")||"To be defined"}</small></details></div><span className="pill">{phase.weight}% weight · {label(phase.status??"not_started")}</span></article>)}</div>:null}<p className="security-note">Progress begins only after the roadmap is approved and follows weighted completion.</p></section>:null}
-    {params.planning==="retry"?<p className="form-error" role="alert">The request was saved, but automatic planning did not finish. Open Roadmap and retry the analysis.</p>:null}
-    {(activeView==="roadmap"||activeView==="advanced"||activeView==="decisions"||activeView==="files")?<ProjectOsControls projectId={project.id} canRun={canRun} status={latestExecution?.status??project.stage} analysisComplete={Boolean(latestReadiness)} showLiveOperations={activeView==="advanced"||activeView==="decisions"} liveMode={activeView==="decisions"?"approvals":"full"} showFileUpload={activeView==="files"}/>:null}
+    <header className="command-header project-detail-hero">
+      <div className="project-detail-identity">
+        <Link href="/projects" className="project-detail-back">← All projects</Link>
+        <p className="eyebrow">PROJECT · {project.project_code}{isContinuous?" · CONTINUOUS PROGRAM":""}</p>
+        <h1>{project.name}</h1>
+        <p className="subtitle project-detail-objective">{project.objective||project.description||"Governed autonomous project."}</p>
+      </div>
+      <div className="project-detail-header-side">
+        <span className={onHold?"project-state-label is-blocked":"project-state-label"}>{projectHealthLabel}</span>
+        <Link className="secondary-button" href={`/projects/operating?project=${project.id}&view=decisions`}>Decisions <ProjectApprovalCount/></Link>
+      </div>
+    </header>
+    <nav className="project-subnav project-detail-tabs" aria-label="Project workspace">
+      {views.filter(view=>["overview","roadmap","work","decisions","results"].includes(view.key)).map(view=>
+        <Link key={view.key} aria-current={activeView===view.key?"page":undefined} className={activeView===view.key?"active":""}
+          href={`/projects/operating?project=${project.id}&view=${view.key}`}>
+          {view.label}{navCount(view.key)!=null?<span>{view.key==="decisions"?<ProjectApprovalCount/>:navCount(view.key)}</span>:null}
+        </Link>)}
+      <details className="project-detail-more">
+        <summary aria-label="More project sections">More{["activity","files","advanced"].includes(activeView)?" · "+label(activeView):""}</summary>
+        <div className="project-detail-more-links">
+          {views.filter(view=>["activity","files","advanced"].includes(view.key)).map(view=>
+            <Link key={view.key} aria-current={activeView===view.key?"page":undefined} className={activeView===view.key?"active":""}
+              href={`/projects/operating?project=${project.id}&view=${view.key}`}>
+              {view.label}{navCount(view.key)!=null?<span>{navCount(view.key)}</span>:null}
+            </Link>)}
+        </div>
+      </details>
+    </nav>
+    <section className="project-detail-summary" aria-label="Project status summary">
+      <div className="project-detail-summary-item"><span>Overall project progress</span><strong>{typeof project.overall_project_progress==="number"?`${project.overall_project_progress}%`:"Pending assessment"}</strong></div>
+      <div className="project-detail-summary-item"><span>Roadmap delivery</span><strong>{progress.hasApprovedRoadmap?`${progress.progressPercent}%`:"No approved baseline"}</strong></div>
+      <div className="project-detail-summary-item"><span>Outcome evidence</span><strong>{progress.outcomeProgressPercent==null?"Not yet validated":`${progress.outcomeProgressPercent}%`}</strong></div>
+      <div className="project-detail-summary-item"><span>Active work</span><strong>{taskRows.filter((task:any)=>["running","queued","in_progress"].includes(String(task.status).toLowerCase())).length} running</strong></div>
+    </section>
+    {(onHold||workComplete&&!canDeclareCompleted)?<section className="project-detail-next-action" role="status" aria-label="Required next action">
+      <div><strong>{onHold?"Project paused by governance":isContinuous?"Delivery milestones finished · monitoring remains open":"Delivery milestones finished · final verification required"}</strong>
+      <p>{nextStepText}</p></div><Link className="secondary-button" href={`/projects/operating?project=${project.id}&view=${onHold?"decisions":"results"}`}>{onHold?"Review governance":"View outcome evidence"} →</Link>
+    </section>:null}
+    {activeView==="roadmap"?<section className="panel project-view-panel project-roadmap-panel">
+      <div className="panel-heading"><div><p className="label">Delivery plan</p><h2>{roadmap?.title??"Roadmap not created"}</h2></div>
+        <span className="pill">{roadmap?.isBaseline?"Approved baseline":roadmap?.status??"Planning"}</span>
+      </div>
+      <p className="subtitle">{roadmap?.summary??"Analyze the project to prepare a reviewable roadmap."}</p>
+      {roadmap?.phases?.length?<ol className="project-phase-grid">
+        {roadmap.phases.map(phase=>{
+          const state=String(phase.status??"not_started").toLowerCase();
+          const completed=["completed","done","validated"].includes(state);
+          const current=["active","running","in_progress"].includes(state);
+          return <li className={`project-phase-card ${completed?"is-complete":current?"is-current":""}`} key={phase.key}>
+            <div className="project-phase-top"><span className="project-phase-number">{completed?"✓":phase.order}</span><span className="project-phase-state">{label(state)}</span></div>
+            <h3>{phase.title}</h3>
+            <p>{phase.milestone||phase.description||"Milestone to be confirmed."}</p>
+            <div className="project-phase-foot"><span>{phase.weight}% of delivery scope</span>
+              <details><summary>Deliverables</summary><p>{phase.deliverables.join(", ")||"To be defined"}</p></details>
+            </div>
+          </li>;
+        })}
+      </ol>:<p className="security-note">No approved roadmap yet. Start with Project Analysis below.</p>}
+      <p className="security-note">Roadmap delivery completion is not overall project completion. Business outcomes, approvals and continuous monitoring are tracked separately.</p>
+    </section>:null}
+        {params.planning==="retry"?<p className="form-error" role="alert">The request was saved, but automatic planning did not finish. Open Roadmap and retry the analysis.</p>:null}
+    {(activeView==="roadmap"||activeView==="advanced"||activeView==="decisions"||activeView==="files")?<ProjectOsControls projectId={project.id} canRun={canRun} status={latestExecution?.status??project.stage} analysisComplete={Boolean(latestReadiness)} showLiveOperations={activeView==="advanced"||activeView==="decisions"} liveMode={activeView==="decisions"?"approvals":"full"} showFileUpload={activeView==="files"} compactRoadmap={activeView==="roadmap"}/>:null}
 
     {(activeView==="overview"||activeView==="decisions")?<section className="panel executive-inbox-compact"><div className="panel-heading"><div><p className="label">Executive Inbox</p><h2><ProjectAttentionHeading proposalCount={attention.length}/></h2></div><Link className="secondary-button" href="/inbox?category=approvals">Review approvals</Link></div>{attention.slice(0,3).map((p:any)=><div className="data-row" key={p.id}><div><strong>{p.title}</strong><span>{p.executive_summary}</span></div><span className="pill">{p.risk_level}</span></div>)}</section>:null}
 

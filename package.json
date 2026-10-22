@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment && npm run test:integration-availability && npm run test:continuous-program && npm run test:google-provider-repair && npm run test:google-business-quota",
+    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment && npm run test:integration-availability && npm run test:continuous-program && npm run test:google-provider-repair && npm run test:google-business-quota && npm run test:project-details-ux",
     "build": "next build",
     "postbuild": "npm run test:project-completion",
     "start": "next start",
@@ -54,7 +54,8 @@
     "test:interactions": "node --import tsx scripts/validate-interactions.tsx",
     "test:continuous-program": "node --import tsx scripts/validate-continuous-program.ts && node --import tsx scripts/validate-continuous-program-sql.ts && node --import tsx scripts/validate-continuous-program-worker.ts",
     "test:google-provider-repair": "node --import tsx scripts/validate-google-provider-repair.ts",
-    "test:google-business-quota": "node --import tsx scripts/validate-google-business-quota-recovery.ts"
+    "test:google-business-quota": "node --import tsx scripts/validate-google-business-quota-recovery.ts",
+    "test:project-details-ux": "node --import tsx scripts/validate-project-details-ux.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
