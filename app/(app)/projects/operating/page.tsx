@@ -167,7 +167,7 @@ export default async function ProjectOperatingPage({searchParams}:Props){
           href={`/projects/operating?project=${project.id}&view=${view.key}`}>
           {view.label}{navCount(view.key)!=null?<span>{view.key==="decisions"?<ProjectApprovalCount/>:navCount(view.key)}</span>:null}
         </Link>)}
-      <details className="project-detail-more" open={["activity","files","advanced"].includes(activeView)}>
+      <details className="project-detail-more">
         <summary aria-label="More project sections">More{["activity","files","advanced"].includes(activeView)?" · "+label(activeView):""}</summary>
         <div className="project-detail-more-links">
           {views.filter(view=>["activity","files","advanced"].includes(view.key)).map(view=>
