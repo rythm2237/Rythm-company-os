@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";import {readFileSync} from "node:fs";
 const page=readFileSync("app/(app)/projects/operating/page.tsx","utf8");
 const css=readFileSync("app/globals.css","utf8");
+const guide=readFileSync("components/onboarding/ActiveWorkspaceGuide.tsx","utf8");
 assert.ok(page.includes('project.lifecycle_kind==="continuous"'),"Continuous status must be recognized");
 assert.ok(page.includes("project.completion_eligible"),"Do not infer project completion from roadmap");
 assert.ok(!page.includes("ProjectExecutiveSignalEnhancer"),"Do not reintroduce injected cockpit or DOM mutation");
@@ -12,4 +13,5 @@ assert.ok(page.includes('role="status" aria-label="Required next action"'),"Hold
 assert.ok(page.includes('className="project-phase-grid"'),"Roadmap must use responsive grid");
 assert.ok(css.includes("grid-template-columns:repeat(auto-fit"),"Phases must not force horizontal scrolling");
 assert.ok(css.includes("@media(max-width:560px)"),"Provide mobile layout");
+assert.ok(guide.includes('pathname === "/projects/operating"'),"Floating onboarding guide must not block Project Details actions");
 console.log("PASS Project Details lifecycle, evidence separation, responsive roadmap and governance safety");
