@@ -161,7 +161,23 @@ export default async function ProjectOperatingPage({searchParams}:Props){
         <Link className="secondary-button" href={`/projects/operating?project=${project.id}&view=decisions`}>Decisions <ProjectApprovalCount/></Link>
       </div>
     </header>
-    <nav className="project-subnav project-detail-tabs" aria-label="Project workspace">{views.map(view=><Link key={view.key} aria-current={activeView===view.key?"page":undefined} className={activeView===view.key?"active":""} href={`/projects/operating?project=${project.id}&view=${view.key}`}>{view.label}{navCount(view.key)!=null?<span>{view.key==="decisions"?<ProjectApprovalCount/>:navCount(view.key)}</span>:null}</Link>)}</nav>
+    <nav className="project-subnav project-detail-tabs" aria-label="Project workspace">
+      {views.filter(view=>["overview","roadmap","work","decisions","results"].includes(view.key)).map(view=>
+        <Link key={view.key} aria-current={activeView===view.key?"page":undefined} className={activeView===view.key?"active":""}
+          href={`/projects/operating?project=${project.id}&view=${view.key}`}>
+          {view.label}{navCount(view.key)!=null?<span>{view.key==="decisions"?<ProjectApprovalCount/>:navCount(view.key)}</span>:null}
+        </Link>)}
+      <details className="project-detail-more" open={["activity","files","advanced"].includes(activeView)}>
+        <summary aria-label="More project sections">More{["activity","files","advanced"].includes(activeView)?" · "+label(activeView):""}</summary>
+        <div className="project-detail-more-links">
+          {views.filter(view=>["activity","files","advanced"].includes(view.key)).map(view=>
+            <Link key={view.key} aria-current={activeView===view.key?"page":undefined} className={activeView===view.key?"active":""}
+              href={`/projects/operating?project=${project.id}&view=${view.key}`}>
+              {view.label}{navCount(view.key)!=null?<span>{navCount(view.key)}</span>:null}
+            </Link>)}
+        </div>
+      </details>
+    </nav>
     <section className="project-detail-summary" aria-label="Project status summary">
       <div className="project-detail-summary-item"><span>Overall project progress</span><strong>{typeof project.overall_project_progress==="number"?`${project.overall_project_progress}%`:"Pending assessment"}</strong></div>
       <div className="project-detail-summary-item"><span>Roadmap delivery</span><strong>{progress.hasApprovedRoadmap?`${progress.progressPercent}%`:"No approved baseline"}</strong></div>
