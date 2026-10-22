@@ -19,6 +19,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:company-logo
+      - run: npm run test:enterprise-crm
       - run: npm run test:customers
       - run: npm run test:company-chart
       - run: npm run test:integration-availability

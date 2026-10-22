@@ -193,6 +193,13 @@ export async function dispatchProjectKnowledge(supabase:SupabaseClient,options:{
   for(const raw of claimed.data??[]){
     const document=raw as ClaimedProjectDocument;
     try{
+      // Check current classification before downloading, extraction, embeddings or logging names.
+      const {data:classification,error:classificationError}=await supabase.from("project_documents").select("confidentiality,legal_document,category").eq("organization_id",document.organization_id).eq("id",document.id).single();
+      if(classificationError||!classification)throw new Error("Document authorization unavailable.");
+      if(classification.confidentiality!=="operational"||classification.legal_document||["contract","amendment","nda","statement_of_work","financial"].includes(classification.category)){
+        await supabase.from("project_documents").update({extraction_status:"failed",last_ingestion_error:"Confidential documents require an explicitly authorized workflow.",ingestion_lease_owner:null,ingestion_lease_expires_at:null,next_ingestion_at:null}).eq("id",document.id).eq("organization_id",document.organization_id);
+        results.push({id:document.id,status:"restricted"});continue;
+      }
       const downloaded=await supabase.storage.from("project-files").download(document.storage_path);
       if(downloaded.error||!downloaded.data)throw new Error(`Private project file could not be read: ${downloaded.error?.message??"missing file"}`);
       const buffer=Buffer.from(await downloaded.data.arrayBuffer());

@@ -18,7 +18,7 @@ export async function submitCompanyRequest(formData: FormData) {
     objective, description: objective, project_type: "business_project", status: "planning",
     stage: "intake", priority: 3, owner_type: "human_ceo", scope: {}, success_criteria: [],
     constraints: ["Human approval is required for consequential external actions"],
-    progress_percent: 0, readiness_score: 0, created_by_user_id: user.id,
+    progress_percent: 0, readiness_score: 0, created_by_user_id: user.id, primary_manager_user_id: user.id, engagement_type: "internal",
     autonomy_mode: "approval_required", tags: [],
   }).select("id").single();
   if (error || !project) redirect("/home?error=RYTHM%20could%20not%20save%20your%20request.");

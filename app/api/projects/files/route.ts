@@ -1,3 +1,4 @@
+import { canCrm } from "@/lib/crm/access";
 import { createHash, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
@@ -27,6 +28,8 @@ export async function POST(request:Request){
   if(files.length>20)return NextResponse.json({ok:false,error:"Upload at most 20 files per request."},{status:400});
   const owned=await auth.supabase.from("projects").select("id").eq("id",projectId).eq("organization_id",auth.organizationId).maybeSingle();
   if(!owned.data)return NextResponse.json({ok:false,error:"Project not found."},{status:404});
+  const domain=legalCategories.has(category)?"contract":category==="financial"?"finance":null;
+  if(domain&&!await canCrm(auth.supabase,auth.organizationId,domain+".update","project",projectId))return NextResponse.json({ok:false,error:"Explicit document authorization required."},{status:403});
   const service=createServerSupabaseClient();
   if(!service)return NextResponse.json({ok:false,error:"Project file service is unavailable."},{status:503});
   const uploaded:Array<{id:string;fileName:string;category:string}>=[];
@@ -42,7 +45,7 @@ export async function POST(request:Request){
     if(row.error){await service.storage.from("project-files").remove([storagePath]);return NextResponse.json({ok:false,error:`${file.name}: metadata could not be persisted.`},{status:500});}
     uploaded.push({id:row.data.id,fileName:file.name,category});
   }
-  await service.from("project_activity_events").insert({organization_id:auth.organizationId,project_id:projectId,event_type:"project.files.added",headline:`${uploaded.length} project file${uploaded.length===1?"":"s"} added`,importance:"normal",metadata:{document_ids:uploaded.map(f=>f.id),category}});
-  await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.files.uploaded",object_type:"project",object_id:projectId,risk_level:"low",payload:{count:uploaded.length,category}});
+  if(!domain)await service.from("project_activity_events").insert({organization_id:auth.organizationId,project_id:projectId,event_type:"project.files.added",headline:`${uploaded.length} project file${uploaded.length===1?"":"s"} added`,importance:"normal",metadata:{document_ids:uploaded.map(f=>f.id),category}});
+  await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.files.uploaded",object_type:"project",object_id:projectId,risk_level:"low",payload:{count:uploaded.length,category:domain?"restricted":category}});
   return NextResponse.json({ok:true,files:uploaded});
 }

@@ -165,7 +165,7 @@ export async function dispatchApprovedProjectProposalActions(){
         supabase.from("project_connection_bindings")
           .select("id,integration_id,resource_type,resource_ref,display_name,permission_scope,access_status,organization_integrations(provider_key,status,enabled)")
           .eq("organization_id",proposal.organization_id).eq("project_id",proposal.project_id).eq("access_status","connected"),
-        supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("organization_id",proposal.organization_id).eq("project_id",proposal.project_id).order("created_at",{ascending:false}).limit(12),
+        supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("confidentiality","operational").eq("organization_id",proposal.organization_id).eq("project_id",proposal.project_id).order("created_at",{ascending:false}).limit(12),
       ]);
       if(bindingsResult.error)throw new Error(`Project connection bindings could not be loaded: ${bindingsResult.error.message}`);
       const bindings=((bindingsResult.data??[]) as unknown as BindingRow[]).filter(binding=>{

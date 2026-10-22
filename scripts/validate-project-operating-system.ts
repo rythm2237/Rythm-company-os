@@ -122,7 +122,7 @@ requireText(analyzeRoute,'from("project_agents").insert',"recommended project te
 requireText(analyzeRoute,'from("project_agent_capacity").insert',"recommended team capacity materialization");
 requireText(connectionRoute,"project_context_documents","confirmed connections feed Project Knowledge");
 requireText(connectionRoute,"capabilities:requested","connection knowledge must expose only confirmed capability keys");
-requireText(intake,"Client / Counterparty","rich intake client section");
+for(const field of ["customerId","primaryManager","engagementType"])requireText(intake,field,"relational customer intake and primary accountability");
 requireText(intake,"Contract & Commercial","rich intake contract section");
 requireText(intake,'name="files" multiple',"multi-file intake");
 requireText(dashboard,"Execution Readiness","readiness UX");

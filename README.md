@@ -76,3 +76,5 @@ npm run dev
 ## Ownership
 
 Human CEO and product owner: Yas
+
+Shared CRM implementation and controlled-release status: [docs/shared-enterprise-crm.md](docs/shared-enterprise-crm.md).

@@ -64,8 +64,8 @@ export async function analyzeProjectOS(supabase:SupabaseClient,organizationId:st
   const [projectResult,clientResult,contractResult,documentsResult,resourcesResult,connectionsResult,integrationsResult,agentsResult]=await Promise.all([
     supabase.from("projects").select("*").eq("organization_id",organizationId).eq("id",projectId).single(),
     supabase.from("project_clients").select("*").eq("organization_id",organizationId).eq("project_id",projectId).maybeSingle(),
-    supabase.from("project_contracts").select("*").eq("organization_id",organizationId).eq("project_id",projectId).maybeSingle(),
-    supabase.from("project_documents").select("id,category,file_name,storage_path,mime_type,byte_size,legal_document,extraction_status,extracted_summary,extracted_data").eq("organization_id",organizationId).eq("project_id",projectId).order("created_at"),
+    Promise.resolve({data:null,error:null}), // Confidential contracts require a separate explicitly authorized principal.
+    supabase.from("project_documents").select("id,category,file_name,storage_path,mime_type,byte_size,legal_document,extraction_status,extracted_summary,extracted_data").eq("organization_id",organizationId).eq("project_id",projectId).eq("confidentiality","operational").order("created_at"),
     supabase.from("project_resources").select("id,resource_type,name,url,external_reference,status,description,source,access_status,metadata").eq("organization_id",organizationId).eq("project_id",projectId),
     supabase.from("project_connection_bindings").select("id,integration_id,resource_type,resource_ref,display_name,permission_scope,access_status,recommendation_level").eq("organization_id",organizationId).eq("project_id",projectId),
     supabase.from("organization_integrations").select("id,provider_key,display_name,status,account_ref,base_url,metadata").eq("organization_id",organizationId),
@@ -74,28 +74,9 @@ export async function analyzeProjectOS(supabase:SupabaseClient,organizationId:st
   if(projectResult.error || !projectResult.data) throw new Error("Project not found or unavailable.");
   const project=projectResult.data;
   const documents=documentsResult.data??[];
-  const legalDocs=documents.filter((d:any)=>d.legal_document || ["contract","amendment","nda","statement_of_work"].includes(String(d.category).toLowerCase()));
-  let legalAnalysis:Record<string,unknown>|null=null;
-  let legalCorrelationId:string|null=null;
-
-  if(legalDocs.length){
-    const attachments:Array<{filename:string;mimeType:string;base64:string}>=[];
-    for(const doc of legalDocs.slice(0,4)){
-      const downloaded=await supabase.storage.from("project-files").download(doc.storage_path);
-      if(downloaded.data){
-        const base64=Buffer.from(await downloaded.data.arrayBuffer()).toString("base64");
-        attachments.push({filename:doc.file_name,mimeType:doc.mime_type||"application/octet-stream",base64});
-      }
-    }
-    if(attachments.length){
-      const legal=await gatewayJson({organizationId,projectId,feature:"company.document_extraction",attachments,maxOutputTokens:6500,
-        system:"You are the RYTHM Legal Advisor performing advisory contract intelligence. Extract facts, obligations, ambiguity and risk. Never make an irreversible legal decision and never sign, accept or modify a contract. Return JSON only.",
-        prompt:`Analyze the attached project legal documents. Return JSON with keys: parties, effective_dates, deliverables, deadlines, payment_obligations, client_responsibilities, provider_responsibilities, approval_requirements, risks, termination, confidentiality, ip_ownership, data_protection, liability, ambiguities, missing_information, recommendation, human_review_required, risk_level. Project context: ${JSON.stringify({name:project.name,objective:project.objective,client:clientResult.data??null,manual_contract:contractResult.data??null}).slice(0,10000)}`});
-      legalAnalysis=legal.data; legalCorrelationId=legal.correlationId;
-      await supabase.from("project_contracts").upsert({organization_id:organizationId,project_id:projectId,legal_analysis:legal.data,legal_risk:str(legal.data.risk_level,"medium"),legal_review_status:"completed",updated_at:new Date().toISOString()},{onConflict:"project_id"});
-      for(const doc of legalDocs) await supabase.from("project_documents").update({extraction_status:"completed",extracted_summary:str(legal.data.recommendation,"Legal review completed."),extracted_data:legal.data}).eq("id",doc.id).eq("organization_id",organizationId);
-    }
-  }
+  // Do not pass legal attachments, commercial terms or their summaries into shared analysis.
+  const legalAnalysis:Record<string,unknown>|null=null;
+  const legalCorrelationId:string|null=null;
 
   const analysisInput={
     project:{name:project.name,description:project.description,project_type:project.project_type,objective:project.objective,priority:project.priority,target_date:project.target_date,start_date:project.start_date,scope:project.scope,success_criteria:project.success_criteria,constraints:project.constraints,notes:project.notes,autonomy_mode:project.autonomy_mode},
@@ -124,7 +105,7 @@ export async function analyzeProjectOS(supabase:SupabaseClient,organizationId:st
 
   await supabase.from("project_readiness_assessments").insert({
     organization_id:organizationId,project_id:projectId,
-    project_understanding:Math.round(num(data.project_understanding,0)),contract_understanding:Math.round(num(data.contract_understanding,legalDocs.length?50:100)),
+    project_understanding:Math.round(num(data.project_understanding,0)),contract_understanding:Math.round(num(data.contract_understanding,0)),
     required_inputs_total:missing.length,required_inputs_available:0,connections_total:requiredConnections.length,connections_available:availableConnections,
     team_readiness:validTeam.length===team.length?100:Math.round((validTeam.length/Math.max(1,team.length))*100),execution_readiness:readiness,
     risks:list(data.risks),missing_inputs:missing,required_connections:requiredConnections,recommended_connections:list(data.recommended_connections),team_recommendation:validTeam,
@@ -149,7 +130,7 @@ export async function analyzeProjectOS(supabase:SupabaseClient,organizationId:st
 
 export async function createDynamicExecutionPlan(supabase:SupabaseClient,organizationId:string,projectId:string):Promise<ProjectPlanTask[]> {
   const [project,readiness,scope,agents,existingActions]=await Promise.all([
-    supabase.from("projects").select("id,name,project_code,project_type,description,objective,priority,target_date,constraints,autonomy_mode,budget_cap_usd,readiness_score").eq("organization_id",organizationId).eq("id",projectId).single(),
+    supabase.from("projects").select("id,name,project_code,project_type,description,objective,priority,target_date,constraints,autonomy_mode,readiness_score").eq("organization_id",organizationId).eq("id",projectId).single(),
     supabase.from("project_readiness_assessments").select("*").eq("organization_id",organizationId).eq("project_id",projectId).order("created_at",{ascending:false}).limit(1).maybeSingle(),
     supabase.from("project_scope_versions").select("*").eq("organization_id",organizationId).eq("project_id",projectId).order("version",{ascending:false}).limit(1).maybeSingle(),
     supabase.from("project_agents").select("agent_id,assignment_role,status,authority_scope,agents(id,agent_code,name,display_name,role_title,purpose,risk_ceiling,enabled)").eq("organization_id",organizationId).eq("project_id",projectId),
@@ -206,9 +187,9 @@ export async function startProjectExecution(supabase:SupabaseClient,organization
 
 async function executeClaimedTask(supabase:SupabaseClient,task:any) {
   const [project,agent,context,decisions]=await Promise.all([
-    supabase.from("projects").select("id,name,description,objective,scope,success_criteria,constraints,autonomy_mode,budget_cap_usd").eq("id",task.project_id).single(),
+    supabase.from("projects").select("id,name,description,objective,scope,success_criteria,constraints,autonomy_mode").eq("id",task.project_id).single(),
     task.assigned_agent_id?supabase.from("agents").select("id,agent_code,name,display_name,role_title,purpose,authority_level,risk_ceiling,permissions").eq("id",task.assigned_agent_id).maybeSingle():Promise.resolve({data:null}),
-    supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
+    supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("confidentiality","operational").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
     supabase.from("project_decision_memory").select("decision,rationale,constraints,outcome,created_at").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
   ]);
   if(!project.data) throw new Error("Project context unavailable.");

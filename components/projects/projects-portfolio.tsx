@@ -9,6 +9,8 @@ export type PortfolioProject = {
   projectCode: string;
   department: string;
   manager: string;
+  customer?: string;
+  engagementType?: string;
   updated: string;
   lifecycleState: string;
   progress: number;
@@ -32,17 +34,22 @@ function readableDate(date: string): string {
 
 export function ProjectsPortfolio({ projects }: { projects: PortfolioProject[] }) {
   const [search, setSearch] = useState("");
+  const [customer,setCustomer]=useState("");
+  const [manager,setManager]=useState("");
+  const [department,setDepartment]=useState("");
+  const [projectType,setProjectType]=useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const visible = useMemo(() => projects.filter(project => {
+    if(customer&&project.customer!==customer||manager&&project.manager!==manager||department&&project.department!==department||projectType&&project.engagementType!==projectType)return false;
     const query = search.trim().toLowerCase();
-    const matches = !query || [project.name, project.projectCode, project.department, project.manager].some(value => value.toLowerCase().includes(query));
+    const matches = !query || [project.name, project.projectCode, project.department, project.manager, project.customer||""].some(value => value.toLowerCase().includes(query));
     if (!matches) return false;
     if (filter === "attention") return project.approvalCount > 0 || blockedStates.has(project.lifecycleState);
     if (filter === "blocked") return blockedStates.has(project.lifecycleState);
     if (filter === "completed") return terminalStates.has(project.lifecycleState);
     if (filter === "active") return !blockedStates.has(project.lifecycleState) && !terminalStates.has(project.lifecycleState);
     return true;
-  }), [projects, search, filter]);
+  }), [projects, search, filter,customer,manager,department,projectType]);
 
   return <section className="panel panel-wide" style={{ marginTop: 18 }} aria-label="Project portfolio">
     <div className="panel-heading"><div><p className="label">Portfolio</p><h2>All projects</h2><p className="security-note">Find a project or focus on what needs attention.</p></div><span className="pill">{visible.length} of {projects.length}</span></div>
@@ -50,6 +57,7 @@ export function ProjectsPortfolio({ projects }: { projects: PortfolioProject[] }
       <label style={{ flex: "1 1 230px", maxWidth: 420 }}>Search projects
         <input type="search" aria-label="Search projects" value={search} onChange={event => setSearch(event.target.value)} placeholder="Project name, code or team…" />
       </label>
+      {[{label:"Customer",value:customer,set:setCustomer,values:projects.map(p=>p.customer||"Internal")},{label:"Manager",value:manager,set:setManager,values:projects.map(p=>p.manager)},{label:"Department",value:department,set:setDepartment,values:projects.map(p=>p.department)},{label:"Project type",value:projectType,set:setProjectType,values:projects.map(p=>p.engagementType||"internal")}].map(f=><label key={f.label}>{f.label}<select value={f.value} onChange={e=>f.set(e.target.value)}><option value="">All</option>{[...new Set(f.values)].sort().map(v=><option key={v}>{v}</option>)}</select></label>)}
       <div role="group" aria-label="Filter projects" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {([["all", "All"], ["attention", "Needs attention"], ["active", "Active"], ["blocked", "Blocked"], ["completed", "Closed"]] as const).map(([value, title]) =>
           <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} className={filter === value ? "primary-button" : "secondary-button"} style={{ padding: "8px 12px", cursor: "pointer" }}>{title}</button>)}
@@ -59,7 +67,7 @@ export function ProjectsPortfolio({ projects }: { projects: PortfolioProject[] }
       <div className="data-list">{visible.map(project => <Link className="data-row simple-project-row" href={`/projects/operating?project=${project.id}`} key={project.id}>
         <div style={{ minWidth: 0 }}>
           <strong>{project.name}</strong>
-          <span>{project.department} · {project.manager} · Updated {readableDate(project.updated)}</span>
+          <span>{project.customer||"Internal"} · {project.department} · {project.manager} · Updated {readableDate(project.updated)}</span>
           {project.continuousScope ? <small>Ongoing optimization scope · delivery progress and operating health are separate</small> : null}
           <small>Next: {project.nextAction}{project.approvalCount ? ` · ${project.approvalCount} approval(s) need attention` : ""}</small>
         </div>

@@ -1,3 +1,4 @@
+import { loadCrmAgentOperationalContext } from "@/lib/crm/agent-context";
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { executeAiRequest } from "@/lib/ai/request-gateway";
@@ -18,12 +19,13 @@ const cleanJson=(value:string)=>{
 
 async function executeStructuredTask(supabase:SupabaseClient,task:any){
   const [project,agent,context,decisions]=await Promise.all([
-    supabase.from("projects").select("id,name,description,objective,scope,success_criteria,constraints,autonomy_mode,budget_cap_usd,lifecycle_state,next_required_action").eq("id",task.project_id).single(),
+    supabase.from("projects").select("id,name,description,objective,scope,success_criteria,constraints,autonomy_mode,lifecycle_state,next_required_action").eq("id",task.project_id).single(),
     task.assigned_agent_id?supabase.from("agents").select("id,agent_code,name,display_name,role_title,purpose,authority_level,risk_ceiling,permissions").eq("id",task.assigned_agent_id).maybeSingle():Promise.resolve({data:null}),
-    supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
+    supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("confidentiality","operational").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
     supabase.from("project_decision_memory").select("decision,rationale,constraints,outcome,created_at").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
   ]);
   if(!project.data)throw new Error("Project context unavailable.");
+  const customerContext=await loadCrmAgentOperationalContext(supabase,{organizationId:task.organization_id,projectId:task.project_id,executionId:task.execution_id,agentId:task.assigned_agent_id||null});
   const config=getRuntimeConfig();
   if(!config.openAIConfigured||!config.dryRunModel)throw new Error("Project intelligence provider is unavailable.");
   const agentRow=(agent as any).data;
@@ -54,6 +56,7 @@ async function executeStructuredTask(supabase:SupabaseClient,task:any){
 Rules: work_completed means only that you finished this assignment. Keep implementation_executed=false unless the authoritative target system changed. Keep verification_result=not_verified unless independent evidence verifies the result. Keep outcome_observed=false unless a defined measured outcome was actually observed. If time/data are insufficient, report a blocker/next action rather than success.
 Task=${JSON.stringify({title:task.title,input:task.input})}
 Project=${JSON.stringify(project.data)}
+Customer=${JSON.stringify(customerContext)}
 Knowledge=${JSON.stringify(context.data??[]).slice(0,18000)}
 Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
     attachmentFailurePolicy:"fail",

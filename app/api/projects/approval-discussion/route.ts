@@ -70,7 +70,7 @@ export async function POST(request:Request){
     auth.supabase.from("project_task_runs").select("id,title,task_key,status,assigned_agent_id,priority,dependencies,error_class,error_message").eq("organization_id",auth.organizationId).eq("project_id",projectId).eq("waiting_on_approval_id",approvalId).maybeSingle(),
     auth.supabase.from("project_agents").select("agent_id,status,assignment_role,agents(id,agent_code,display_name,name,role_title,purpose,work_style,enabled)").eq("organization_id",auth.organizationId).eq("project_id",projectId).eq("status","active"),
     auth.supabase.from("project_scope_versions").select("version,included,excluded,assumptions,dependencies,deliverables,success_criteria,status").eq("organization_id",auth.organizationId).eq("project_id",projectId).order("version",{ascending:false}).limit(1).maybeSingle(),
-    auth.supabase.from("project_documents").select("file_name,category,extracted_summary,extraction_status").eq("organization_id",auth.organizationId).eq("project_id",projectId).order("created_at",{ascending:false}).limit(6),
+    auth.supabase.from("project_documents").select("file_name,category,extracted_summary,extraction_status").eq("confidentiality","operational").eq("organization_id",auth.organizationId).eq("project_id",projectId).order("created_at",{ascending:false}).limit(6),
     auth.supabase.from("project_approval_discussion_messages").select("id,speaker_type,user_id,agent_id,content,created_at,agents(id,agent_code,display_name,name,role_title,purpose,work_style,enabled)").eq("organization_id",auth.organizationId).eq("project_id",projectId).eq("approval_id",approvalId).order("created_at").order("id").limit(30),
   ]);
 

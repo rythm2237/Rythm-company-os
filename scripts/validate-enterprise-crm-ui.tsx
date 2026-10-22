@@ -1,0 +1,32 @@
+import assert from "node:assert/strict";
+import React,{act} from "react";
+import {renderToStaticMarkup} from "react-dom/server";
+import {createRoot} from "react-dom/client";
+import {JSDOM} from "jsdom";
+import {readFileSync,writeFileSync} from "node:fs";
+import {CustomerFields} from "../app/(app)/crm/customer-fields";
+import {ProjectsPortfolio,type PortfolioProject} from "../components/projects/projects-portfolio";
+(globalThis as typeof globalThis & {React:typeof React}).React=React;
+async function main(){
+const projects:PortfolioProject[]=[{id:"a",name:"Website delivery",projectCode:"WEB-1",department:"Engineering",manager:"Alex",customer:"Acme",engagementType:"external",updated:"2026-10-22",lifecycleState:"ACTIVE",progress:45,nextAction:"Review preview",approvalCount:0,continuousScope:false},{id:"b",name:"Internal process review",projectCode:"OPS-1",department:"Operations",manager:"Jamie",customer:"Internal",engagementType:"internal",updated:"2026-10-21",lifecycleState:"BLOCKED",progress:20,nextAction:"Provide requirements",approvalCount:1,continuousScope:false}];
+const fields=renderToStaticMarkup(<CustomerFields customer={{name:"Acme <script>",account_type:"individual",customer_status:"active"}} members={[{user_id:"one",display_name:"Alex"}]}/>);
+assert.match(fields,/Acme &lt;script&gt;/);assert.match(fields,/value="individual" selected/);assert.doesNotMatch(fields,/name="registration_number"[^>]*required/);assert.doesNotMatch(fields,/contract_value|amount_paid|billing_email/);
+const dom=new JSDOM("<html><body><div id='root'></div></body></html>",{url:"http://localhost"});
+Object.assign(globalThis,{window:dom.window,self:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true});
+const root=createRoot(dom.window.document.getElementById("root")!);
+await act(async()=>root.render(<ProjectsPortfolio projects={projects}/>));
+const text=()=>dom.window.document.body.textContent||"";
+assert.match(text(),/Website delivery/);assert.match(text(),/Internal process review/);
+const selects=Array.from(dom.window.document.querySelectorAll("select"));
+await act(async()=>{selects[0].value="Acme";selects[0].dispatchEvent(new dom.window.Event("change",{bubbles:true}))});
+assert.match(text(),/Website delivery/);assert.doesNotMatch(text(),/Internal process review/);
+await act(async()=>{selects[0].value="";selects[0].dispatchEvent(new dom.window.Event("change",{bubbles:true}));selects[1].value="Jamie";selects[1].dispatchEvent(new dom.window.Event("change",{bubbles:true}))});
+assert.doesNotMatch(text(),/Website delivery/);assert.match(text(),/Internal process review/);
+await act(async()=>{selects[1].value="";selects[1].dispatchEvent(new dom.window.Event("change",{bubbles:true}));selects[3].value="external";selects[3].dispatchEvent(new dom.window.Event("change",{bubbles:true}))});
+assert.match(text(),/Website delivery/);assert.doesNotMatch(text(),/Internal process review/);
+await act(async()=>root.unmount());dom.window.close();
+const css=["app/globals.css","app/finance-center.css","app/crm-center.css","app/project-portfolio.css"].map(p=>readFileSync(p,"utf8")).join("\n");
+writeFileSync("/tmp/crm-ui.html",`<!doctype html><html lang="en"><meta charset="utf-8"><title>CRM component QA fixture</title><style>${css}</style><main class="command-shell crm-shell"><header class="command-header"><div><p class="eyebrow">Component verification fixture</p><h1>Customer relationships</h1><p class="subtitle">Customer profiles and accountable delivery.</p></div></header><section class="panel"><h2>Customer profile</h2><form class="auth-form">${fields}<button class="primary-button">Save customer</button></form></section>${renderToStaticMarkup(<ProjectsPortfolio projects={projects}/>)}</main></html>`);
+console.log("Enterprise CRM UI: escaped names, individual optional fields, financial minimization, live customer/manager/type filters passed. Component QA fixture emitted.");
+}
+main().catch(error=>{console.error(error);process.exitCode=1});
