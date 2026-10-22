@@ -174,8 +174,29 @@ export default async function ProjectOperatingPage({searchParams}:Props){
       <div><strong>{onHold?"Project paused by governance":isContinuous?"Delivery milestones finished · monitoring remains open":"Delivery milestones finished · final verification required"}</strong>
       <p>{nextStepText}</p></div><Link className="secondary-button" href={`/projects/operating?project=${project.id}&view=${onHold?"decisions":"results"}`}>{onHold?"Review governance":"View outcome evidence"} →</Link>
     </section>:null}
-    {activeView==="roadmap"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project plan</p><h2>{roadmap?.title??"Roadmap pending"}</h2></div><span className="pill">{roadmap?.status??"Planning"}</span></div><p className="subtitle">{roadmap?.summary??"RYTHM needs to analyze this project before a manager-reviewable roadmap can be prepared."}</p>{roadmap?.phases?.length?<div className="data-list">{roadmap.phases.map(phase=><article className="data-row" key={phase.key}><div><strong>{phase.order}. {phase.title}</strong><details><summary style={{cursor:"pointer"}}>Milestone and deliverables</summary><p>{phase.milestone||phase.description}</p><small>Deliverables: {phase.deliverables.join(", ")||"To be defined"}</small></details></div><span className="pill">{phase.weight}% weight · {label(phase.status??"not_started")}</span></article>)}</div>:null}<p className="security-note">Progress begins only after the roadmap is approved and follows weighted completion.</p></section>:null}
-    {params.planning==="retry"?<p className="form-error" role="alert">The request was saved, but automatic planning did not finish. Open Roadmap and retry the analysis.</p>:null}
+    {activeView==="roadmap"?<section className="panel project-view-panel project-roadmap-panel">
+      <div className="panel-heading"><div><p className="label">Delivery plan</p><h2>{roadmap?.title??"Roadmap not created"}</h2></div>
+        <span className="pill">{roadmap?.isBaseline?"Approved baseline":roadmap?.status??"Planning"}</span>
+      </div>
+      <p className="subtitle">{roadmap?.summary??"Analyze the project to prepare a reviewable roadmap."}</p>
+      {roadmap?.phases?.length?<ol className="project-phase-grid">
+        {roadmap.phases.map(phase=>{
+          const state=String(phase.status??"not_started").toLowerCase();
+          const completed=["completed","done","validated"].includes(state);
+          const current=["active","running","in_progress"].includes(state);
+          return <li className={`project-phase-card ${completed?"is-complete":current?"is-current":""}`} key={phase.key}>
+            <div className="project-phase-top"><span className="project-phase-number">{completed?"✓":phase.order}</span><span className="project-phase-state">{label(state)}</span></div>
+            <h3>{phase.title}</h3>
+            <p>{phase.milestone||phase.description||"Milestone to be confirmed."}</p>
+            <div className="project-phase-foot"><span>{phase.weight}% of delivery scope</span>
+              <details><summary>Deliverables</summary><p>{phase.deliverables.join(", ")||"To be defined"}</p></details>
+            </div>
+          </li>;
+        })}
+      </ol>:<p className="security-note">No approved roadmap yet. Start with Project Analysis below.</p>}
+      <p className="security-note">Roadmap delivery completion is not overall project completion. Business outcomes, approvals and continuous monitoring are tracked separately.</p>
+    </section>:null}
+        {params.planning==="retry"?<p className="form-error" role="alert">The request was saved, but automatic planning did not finish. Open Roadmap and retry the analysis.</p>:null}
     {(activeView==="roadmap"||activeView==="advanced"||activeView==="decisions"||activeView==="files")?<ProjectOsControls projectId={project.id} canRun={canRun} status={latestExecution?.status??project.stage} analysisComplete={Boolean(latestReadiness)} showLiveOperations={activeView==="advanced"||activeView==="decisions"} liveMode={activeView==="decisions"?"approvals":"full"} showFileUpload={activeView==="files"}/>:null}
 
     {(activeView==="overview"||activeView==="decisions")?<section className="panel executive-inbox-compact"><div className="panel-heading"><div><p className="label">Executive Inbox</p><h2><ProjectAttentionHeading proposalCount={attention.length}/></h2></div><Link className="secondary-button" href="/inbox?category=approvals">Review approvals</Link></div>{attention.slice(0,3).map((p:any)=><div className="data-row" key={p.id}><div><strong>{p.title}</strong><span>{p.executive_summary}</span></div><span className="pill">{p.risk_level}</span></div>)}</section>:null}
