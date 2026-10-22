@@ -12,7 +12,7 @@
 
 ## Components and checks
 
-Changed: `DeliberationConsole.tsx`, `boardroom-immersive.module.css`, `page.tsx`.
+Changed: `BoardroomFocusBridge.tsx`, `DeliberationConsole.tsx`, `boardroom-immersive.module.css`, `page.tsx`.
 Added: `PresentationScreen.tsx`, `presentation-layout.ts`, `validate-boardroom-layout.ts`, isolated QA harness and browser tests. CI now runs `test:boardroom`.
 
 | Viewport | Long-content pages | Screen containment | LCD/participant collisions |
@@ -59,3 +59,7 @@ node scripts/qa/boardroom-visual.mjs
 ```
 
 The browser script starts its isolated component harness in the same process. `BOARDROOM_CHROMIUM` can select an installed Chromium executable; `BOARDROOM_QA_OUTPUT` selects a screenshot directory. Defaults write only to `/tmp/rythm-boardroom-qa`. This script never calls production services.
+
+## Authenticated production inspection follow-up
+
+Owner sign-in was verified and the existing completed Enterprise pilot meeting was opened read-only. Real agenda, four participants and long recorded synthesis were observed. The legacy Focus Bridge additionally overlaid its post-meeting banner on the immersive control dock. The bridge now defers its banner to the managed console; its existing detached-leave handler remains available through the room controls. Dismissing the immersive console restores body/document scrolling so the real CEO decision form is usable. The isolated suite now includes the production Focus Bridge (only its Next styled-JSX attributes/router use test adapters) and checks hidden legacy banners, detached leave delegation and restored scroll. Preview sign-in remains separate from production sign-in because the hostnames differ.

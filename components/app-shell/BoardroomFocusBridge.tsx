@@ -97,6 +97,12 @@ export default function BoardroomFocusBridge() {
   return <>
     <style jsx global>{`
       html.rythm-boardroom-focus, html.rythm-boardroom-focus body { overflow: hidden !important; }
+      html.rythm-boardroom-focus:not(.rythm-boardroom-active),
+      html.rythm-boardroom-focus:not(.rythm-boardroom-active) body { overflow: auto !important; }
+      /* The immersive console owns its controls; preserve the detached-leave
+         handler as a hidden bridge without overlaying the presentation/dock. */
+      html.rythm-boardroom-managed .boardroom-post-actions,
+      html.rythm-boardroom-active .boardroom-leave-room { display: none !important; }
       html.rythm-boardroom-focus .app-navigation,
       html.rythm-boardroom-focus .workspace-footer,
       html.rythm-boardroom-focus .project-pulse,

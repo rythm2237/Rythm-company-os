@@ -117,12 +117,17 @@ export default function DeliberationConsole({
   }, []);
 
   useEffect(() => {
+    document.documentElement.classList.add("rythm-boardroom-managed");
+    return () => document.documentElement.classList.remove("rythm-boardroom-managed");
+  }, []);
+  useEffect(() => {
+    if (dismissed) return;
     if (window.matchMedia("(min-width: 901px) and (max-width: 1100px)").matches) { setLeftCollapsed(true); setRightCollapsed(true); }
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     document.documentElement.classList.add("rythm-boardroom-active");
     return () => { document.body.style.overflow = previousOverflow; document.documentElement.classList.remove("rythm-boardroom-active"); };
-  }, []);
+  }, [dismissed]);
   useEffect(() => { try { const saved = localStorage.getItem(`rythm:boardroom:ceo:${sessionId}`); if (saved) setCeoText(saved); } catch {} }, [sessionId]);
   useEffect(() => { try { if (ceoText) localStorage.setItem(`rythm:boardroom:ceo:${sessionId}`, ceoText); else localStorage.removeItem(`rythm:boardroom:ceo:${sessionId}`); } catch {} }, [ceoText, sessionId]);
   useEffect(() => {
@@ -295,6 +300,7 @@ export default function DeliberationConsole({
         </div>
         <div className={styles.headerActions}>
           <Button onClick={() => setFocusRoom(true)}>Focus Room</Button>
+          <Button onClick={() => meetingState === "completed" ? router.push("/meetings") : document.querySelector<HTMLButtonElement>(".boardroom-leave-room")?.click()}>Leave room</Button>
           <Button onClick={async () => { try { await document.documentElement.requestFullscreen?.(); } catch { setProgressText("Fullscreen is unavailable in this browser."); } }} aria-label="Enter fullscreen">Full screen</Button>
           <Button onClick={() => setRailOpen((v) => !v)}>{railOpen ? "Close Notes" : "Notes"}</Button>
         </div>
@@ -375,7 +381,7 @@ export default function DeliberationConsole({
     </div>
 
     {endConfirm ? <div className={styles.confirmBackdrop}><div role="alertdialog" aria-modal="true" aria-labelledby="end-meeting-title" className={styles.confirmDialog}><h2 id="end-meeting-title">End this meeting?</h2><p>The Agent synthesis is complete. Close the meeting to continue to the Human CEO decision gate.</p><Button autoFocus onClick={() => setEndConfirm(false)}>Keep meeting open</Button><Button className={styles.endAction} onClick={closeMeeting} disabled={chairClosing}>Confirm End Meeting</Button></div></div> : null}
-    {navOpen ? <div className={styles.navDrawerBackdrop} onClick={() => setNavOpen(false)}><nav className={styles.navDrawer} onClick={(e) => e.stopPropagation()}><div><strong>RYTHM Workspace</strong><Button onClick={() => setNavOpen(false)}>×</Button></div><Button title="Meeting History" onClick={() => router.push("/meetings")}>Meetings</Button><Button title="Reports" onClick={() => router.push("/command-center")}>Command Center</Button><Button title="Files & Docs" onClick={() => router.push("/company-library")}>Company Library</Button><Button onClick={() => router.push("/studio/agents")}>Agent Studio</Button><Button onClick={() => router.push("/projects")}>Projects</Button><Button onClick={() => router.push("/settings")}>Settings</Button><Button onClick={() => { setRailMode("governance"); setRailOpen(true); setNavOpen(false); }}>Key Decisions</Button></nav></div> : null}
+    {navOpen ? <div className={styles.navDrawerBackdrop} onClick={() => setNavOpen(false)}><nav className={styles.navDrawer} onClick={(e) => e.stopPropagation()}><Button onClick={() => meetingState === "completed" ? router.push("/meetings") : document.querySelector<HTMLButtonElement>(".boardroom-leave-room")?.click()}>Leave room</Button><div><strong>RYTHM Workspace</strong><Button onClick={() => setNavOpen(false)}>×</Button></div><Button title="Meeting History" onClick={() => router.push("/meetings")}>Meetings</Button><Button title="Reports" onClick={() => router.push("/command-center")}>Command Center</Button><Button title="Files & Docs" onClick={() => router.push("/company-library")}>Company Library</Button><Button onClick={() => router.push("/studio/agents")}>Agent Studio</Button><Button onClick={() => router.push("/projects")}>Projects</Button><Button onClick={() => router.push("/settings")}>Settings</Button><Button onClick={() => { setRailMode("governance"); setRailOpen(true); setNavOpen(false); }}>Key Decisions</Button></nav></div> : null}
 
     <aside aria-label="Meeting notes and governance" inert={!railOpen || endConfirm} className={`${styles.liveRail} ${railOpen ? styles.liveRailOpen : ""}`}>
       <nav className={styles.railTabs}><Button className={railMode === "transcript" ? styles.railTabActive : ""} onClick={() => setRailMode("transcript")}>Live</Button><Button className={railMode === "summary" ? styles.railTabActive : ""} onClick={() => setRailMode("summary")}>Summary</Button><Button className={railMode === "governance" ? styles.railTabActive : ""} onClick={() => setRailMode("governance")}>Governance</Button><Button aria-label="Close meeting panel" onClick={() => setRailOpen(false)}>×</Button></nav>
