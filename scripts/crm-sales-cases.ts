@@ -9,6 +9,13 @@ export async function verifySales(db: PGlite, asUser: (user: string, sql: string
  await asUser(owner,`update crm_access_grants set revoked_at=now() where principal_id='${member}' returning id`);
  await db.exec(`create table public.company_events(id uuid default gen_random_uuid(),organization_id uuid,event_type text,aggregate_type text,actor_type text,actor_user_id uuid,payload jsonb);`);
  await db.exec(readFileSync("supabase/migrations/20261023104940_enterprise_customer_sales.sql","utf8"));
+ assert.equal(Number(await value("select count(*) from pg_class where relname in ('crm_leads','crm_preferences') and relrowsecurity")),2);
+ await db.exec("set role anon");
+ try{
+  await assert.rejects(()=>value("select count(*) from public.crm_leads"));
+  await assert.rejects(()=>value(`select public.crm_sales_report('${org}')`));
+  await assert.rejects(()=>value(`select public.crm_convert_lead('${customer}',null)`));
+ }finally{await db.exec("reset role");}
  await denied(owner,`insert into crm_accounts(organization_id,name) values('${org}',' customer ') returning id`);
  await asUser(owner,`update crm_accounts set email='hello@example.test' where id='${customer}' returning id`);
  await denied(owner,`insert into crm_accounts(organization_id,name,email) values('${org}','Different','HELLO@example.test') returning id`);
@@ -32,6 +39,7 @@ export async function verifySales(db: PGlite, asUser: (user: string, sql: string
  await denied(owner,`select crm_convert_lead('${duplicateLead}',null)`);
  assert.equal(await value(`select status from crm_leads where id='${duplicateLead}'`),'qualified',"Failed conversion is atomic");
  assert.equal(await asUser(owner,`select crm_convert_lead('${duplicateLead}','${converted}')`),converted,"Existing customer conversion");
+ assert.equal(Number(await value(`select count(*) from crm_contacts where account_id='${converted}'`)),2,"A customer retains multiple contacts");
  await denied(owner,`insert into crm_opportunities(organization_id,account_id,name,stage_code) values('${org}','${customer}','Bad stage','made-up') returning id`);
  const opportunity=await asUser(owner,`insert into crm_opportunities(organization_id,account_id,name,stage_code,status,value,currency) values('${org}','${customer}','New deal','qualified','won',200,'EUR') returning id`);
  assert.equal(await value(`select status from crm_opportunities where id='${opportunity}'`),'open',"DB derives status, ignoring forged status");

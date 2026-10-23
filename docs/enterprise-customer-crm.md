@@ -132,4 +132,19 @@ Local baseline/shared CRM PostgreSQL suite passes; new PGlite migration cases ex
 
 Local Chromium install failed because the browser download was empty/truncated. Dedicated CI browser QA uses Chrome preinstalled in the documented Ubuntu 24.04 runner image (no browser download), builds the actual components and tests desktop (1440), tablet (768), mobile (390), horizontal overflow, selectors, loss reasons, rejection, drag/drop, read-only controls and console errors; screenshots are uploaded as CI artifacts. Its local fixture uses a simulated transition endpoint and is explicitly not signed-in staging end-to-end verification. Final CI results are recorded in the PR.
 
+Verified CI browser result: `crm-browser` passed in [run 39945290949](https://github.com/rythm2237/Rythm-company-os/actions/runs/39945290949), including all three viewport sizes and zero browser console errors. Actual browser tests exposed ambiguous control labels and dragging from form controls; explicit accessible names and a separate drag handle resolve both. Desktop/tablet/mobile screenshots are in the run's `crm-browser-screenshots` artifact. Vercel preview build succeeded on earlier branch revisions; final-head status is recorded in the PR. A protected-preview request made through the connected Vercel access tool returned the application's sign-in page (HTTP 200), confirming auth gating, not authenticated CRM acceptance.
+
+Dependency audit was run against both baseline main `a504b63` and this branch: both report the same 13 findings (10 high, 3 critical) in the same existing packages, including Next, jspdf, xlsx, sharp and transitive tooling. Neither added test dependency introduces a new finding in this comparison. These are unresolved baseline risks; no broad dependency upgrades or automatic `audit fix` are included in the CRM change. This finding prevents claiming an unqualified production security certification.
+
+| Requested business scenario | Evidence |
+|---|---|
+| Customer + multiple contacts | Existing real PostgreSQL CRM suite; new profile/duplicate/converted contact cases |
+| Create and advance opportunity | Real PostgreSQL stage/version/authorization tests; browser selectors and drag/drop |
+| Customer-linked contract | Existing real PostgreSQL contract tenant/approval tests retained |
+| Customer-linked project | Existing real PostgreSQL relationship tests retained |
+| Exactly one manager / same manager on multiple projects | Existing DB constraints/history/reconciliation tests and multi-project manager case |
+| Denied / allowed financial access | Real authenticated-role RLS, scope, revocation and inactive membership tests; new report/summary/anonymous cases |
+| Existing project and contract compatibility | Shared CRM suite, Project OS/supervisor, security-definer, commercial payment and 11 project-completion regressions |
+| Permission-filtered Customer 360 | Caller-RLS summary tests; UI rendering/type/build checks; signed-in staging UI acceptance pending |
+
 Still pending: full sales quotation/order/approval/PDF lifecycle, support case/SLA lifecycle, customer relationship graph, multiple pipelines, typed custom-field schema/admin builder, historical sales cohorts, renewal/overdue/inactivity automation scheduling, dedicated commercial document/communication search and contact import/export. Existing contract/project/ledger flows are preserved but new staging browser acceptance against actual Supabase and private Storage remains required. No claim that the entire requested enterprise lifecycle is production-ready is made by this increment.
