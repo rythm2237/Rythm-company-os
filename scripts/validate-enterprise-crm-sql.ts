@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {PGlite} from "@electric-sql/pglite";
 import {verifySales} from "./crm-sales-cases";
+import {verifyConnectedRecords} from "./crm-connected-cases";
 async function main(){
 const db=new PGlite();
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
@@ -148,6 +149,7 @@ try{
  assert.equal(await asUser(owner,"select count(*)::int from project_document_chunks"),0,"Even owner cannot retrieve confidential chunks through shared knowledge");
  console.log("Enterprise CRM: real PostgreSQL migration, tenant RLS, explicit grants, revocation, membership, project integrity, reconciliation, contract approvals, timeline, attachments and audit tests passed.");
  await verifySales(db,asUser,denied);
+ await verifyConnectedRecords(db,asUser,denied);
 }finally{await db.close()}
 
 }

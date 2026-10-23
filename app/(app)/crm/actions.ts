@@ -6,7 +6,7 @@ import { requireCrm, CRM_CAPABILITIES } from "@/lib/crm/access";
 import { customProperties } from "@/lib/crm/sales";
 const text = (fd: FormData, key: string, max = 4000) => String(fd.get(key) ?? "").trim().slice(0, max);
 const uuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
-function done(path: string, failed: boolean):never { revalidatePath("/crm", "layout"); revalidatePath("/projects"); redirect(`${path}?${failed ? "error=Unable+to+save.+Check+your+access+and+the+required+fields." : "saved=1"}`); }
+function done(path: string, failed: boolean):never { revalidatePath("/crm", "layout"); revalidatePath("/projects"); revalidatePath("/projects/operating"); revalidatePath("/finance"); redirect(`${path}?${failed ? "error=Unable+to+save.+Check+your+access+and+the+required+fields." : "saved=1"}`); }
 
 export async function saveCustomer(fd: FormData) {
  const { supabase, organizationId, user } = await requireOrganizationContext();

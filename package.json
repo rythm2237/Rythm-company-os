@@ -59,17 +59,20 @@
     "test:boardroom": "node --import tsx scripts/validate-boardroom-layout.ts",
     "test:enterprise-crm": "node --import tsx scripts/validate-enterprise-crm-sql.ts && node --import tsx scripts/validate-enterprise-crm-ui.tsx",
     "test:crm-sales": "node --import tsx scripts/validate-crm-sales-ui.tsx && node --import tsx scripts/validate-crm-sales-api.ts",
-    "test:crm-sales-browser": "node scripts/validate-crm-sales-browser.mjs"
+    "test:crm-sales-browser": "node scripts/validate-crm-sales-browser.mjs",
+    "test:crm-connected": "node --import tsx scripts/validate-crm-connected.tsx"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.56.0",
+    "fflate": "0.8.3",
     "jspdf": "^3.0.2",
     "next": "^15.4.6",
     "openai": "^5.12.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "sharp": "0.35.4",
+    "unpdf": "1.9.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
