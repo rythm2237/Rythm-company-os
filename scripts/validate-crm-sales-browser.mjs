@@ -26,7 +26,7 @@ try{
   await page.screenshot({path:`test-results/crm/${name}.png`,fullPage:true});
  }
  await page.setViewportSize({width:1440,height:1000});await page.goto(url);const start=transitions.length;
- await page.locator(".crm-sales-card").dragTo(page.getByRole("region",{name:"Proposal stage",exact:true}));await page.getByRole("status").filter({hasText:"Stage saved"}).waitFor();assert.equal(transitions.length,start+1);
+ await page.locator(".crm-drag-handle").dragTo(page.getByRole("region",{name:"Proposal stage",exact:true}));await page.getByRole("status").filter({hasText:"Stage saved"}).waitFor();assert.equal(transitions.length,start+1);
  await page.goto(url+"/?readonly=1");assert.equal(await page.getByRole("button",{name:"Move",exact:true}).count(),0);
  assert.deepEqual(errors,[]);assert.ok(transitions.some(t=>t.stage==="lost"&&t.reason==="Budget postponed"));
  console.log("CRM browser component QA passed: desktop/tablet/mobile, no document overflow, stage selector, loss reason, rejected transition, drag/drop, read-only state and console errors. Screenshots: test-results/crm.");
