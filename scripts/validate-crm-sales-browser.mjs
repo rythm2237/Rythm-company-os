@@ -12,9 +12,9 @@ const server=createServer(async(req,res)=>{
  res.setHeader("Content-Type","text/html");res.end(`<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>CRM component QA</title><style>${css}</style></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>`);
 });
 await new Promise(r=>server.listen(0,"127.0.0.1",r));
-const url=`http://127.0.0.1:${server.address().port}`;let browser;
+const url=`http://127.0.0.1:${server.address().port}`;let browser;let page;const errors=[];
 try{
- browser=await chromium.launch({headless:true,channel:process.env.CRM_BROWSER_CHANNEL||undefined});const page=await browser.newPage();const errors=[];page.on("pageerror",e=>errors.push(e.message));
+ browser=await chromium.launch({headless:true,channel:process.env.CRM_BROWSER_CHANNEL||undefined});page=await browser.newPage();page.on("pageerror",e=>errors.push(e.message));
  mkdirSync("test-results/crm",{recursive:true});
  for(const [name,width,height] of [["desktop",1440,1000],["tablet",768,1024],["mobile",390,844]]){
   await page.setViewportSize({width,height});await page.goto(url);await page.getByRole("heading",{name:"Sales pipeline",exact:true}).waitFor();
@@ -30,4 +30,4 @@ try{
  await page.goto(url+"/?readonly=1");assert.equal(await page.getByRole("button",{name:"Move",exact:true}).count(),0);
  assert.deepEqual(errors,[]);assert.ok(transitions.some(t=>t.stage==="lost"&&t.reason==="Budget postponed"));
  console.log("CRM browser component QA passed: desktop/tablet/mobile, no document overflow, stage selector, loss reason, rejected transition, drag/drop, read-only state and console errors. Screenshots: test-results/crm.");
-}finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
+}catch(error){if(page){await page.screenshot({path:"test-results/crm/failure.png",fullPage:true});console.error("Browser errors:",errors);console.error("Form controls:",await page.locator("select,input").evaluateAll(elements=>elements.map(e=>({tag:e.tagName,label:e.getAttribute("aria-label"),name:e.getAttribute("name")}))));}throw error;}finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
