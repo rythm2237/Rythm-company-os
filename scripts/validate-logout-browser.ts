@@ -18,7 +18,7 @@ async function main(){
     const headers=new Headers();for(const [k,v]of Object.entries(req.headers))if(v)headers.set(k,Array.isArray(v)?v.join(","):v);
     const response=await POST(new NextRequest(origin+req.url,{method:"POST",headers}));res.statusCode=response.status;response.headers.forEach((v,k)=>{if(k!=="set-cookie")res.setHeader(k,v)});res.setHeader("set-cookie",response.headers.getSetCookie());res.end();return;
    }
-   if(req.url?.startsWith("/login")){res.end('<meta charset="utf-8"><h1>Sign in</h1>');return;}
+   if(req.url?.startsWith("/login")){res.setHeader("Content-Type","text/html; charset=utf-8");res.end('<!doctype html><html><meta charset="utf-8"><h1>Sign in</h1></html>');return;}
    res.setHeader("Content-Type","text/html; charset=utf-8");res.end('<!doctype html><html><meta charset="utf-8"><title>Logout test</title><div id="root"></div><script src="/bundle.js"></script></html>');
   }catch(error){errors.push(String(error));res.statusCode=500;res.end("fixture failed");}
  });
@@ -34,7 +34,7 @@ async function main(){
    const page=await context.newPage();page.on("pageerror",e=>errors.push(e.message));await page.goto(origin+"/workspace");
    const began=Date.now();await page.getByRole("button",{name:"Sign out"}).click({noWaitAfter:true});await page.waitForURL(/\/login/,{timeout:7000});
    assert.ok(Date.now()-began<6000,"navigation is bounded even with an unresponsive auth service");
-   assert.equal(await page.getByRole("heading",{name:"Sign in"}).count(),1);
+   assert.equal(await page.getByRole("heading",{name:"Sign in"}).count(),1,await page.content());
    const cookies=await context.cookies();assert.ok(!cookies.some(c=>c.name===name||c.name==="rythm_active_org"));assert.ok(cookies.some(c=>c.name==="unrelated-preference"));
    assert.equal(new URL(page.url()).searchParams.has("message"),mode!=="healthy");await context.close();
   }
