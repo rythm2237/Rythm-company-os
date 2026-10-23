@@ -16,7 +16,7 @@ export function suggestContractProfile(text:string):Partial<Record<ProfileField,
  const fields:Partial<Record<ProfileField,string>>={};let customerBlock=false;
  for(const raw of text.slice(0,150000).split(/\r?\n/).slice(0,5000)){
   let line=raw.trim();if(!line){customerBlock=false;continue;}
-  if(/^(?:supplier|provider|service provider|contractor|پیمانکار|مجری|szolgáltató)(?:\s|[:：])/i.test(line)){customerBlock=false;continue;}
+  if(/^(?:supplier|provider|service provider|contractor|پیمانکار|مجری|szolgáltató)(?:\s|[:：]|$)/i.test(line)){customerBlock=false;continue;}
   const prefixed=prefix.test(line);
   if(prefixed){line=line.replace(prefix,"");if(!line){customerBlock=true;continue;}}
   if(!prefixed&&!customerBlock)continue;

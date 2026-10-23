@@ -12,6 +12,7 @@ async function main(){
  const text='Provider name: OUR COMPANY\nProvider email: private@example.test\nCustomer name: Client A\nCustomer email: CLIENT@example.test\nCustomer VAT number: HU123\nCustomer contract value: 99999';
  assert.deepEqual(suggestContractProfile(text),{name:'Client A',email:'client@example.test',vat_number:'HU123'});
  assert.deepEqual(suggestContractProfile('Customer details:\nLegal name: Client Legal\n\nEmail: unrelated@example.test\nProvider:\nEmail: supplier@example.test'),{legal_name:'Client Legal'});
+ assert.deepEqual(suggestContractProfile('Customer details:\nName: Customer\nProvider\nEmail: supplier@example.test'),{name:'Customer'});
  assert.deepEqual(suggestContractProfile('Customers email: bad@example.test\nEmail: naked@example.test\nCustomer email: invalid\nCustomer website: javascript:bad'),{});
  assert.deepEqual(suggestContractProfile('مشتری نام: شرکت نمونه\nمشتری ایمیل: user@example.test'),{name:'شرکت نمونه',email:'user@example.test'});
  const txt=await privateContractText(strToU8(text),'text/plain');assert.deepEqual(suggestContractProfile(txt),suggestContractProfile(text));
