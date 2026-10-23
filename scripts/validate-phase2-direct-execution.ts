@@ -12,7 +12,7 @@ const sourceFiles=[...files("app"),...files("lib"),...files("components")].filte
 const connectionPlatformPaths=CONNECTION_PLATFORM_DIRECT_BOUNDARIES.map(item=>item.path);
 assert.deepEqual(connectionPlatformPaths.sort(),["lib/integrations/connections/github-app.ts","lib/integrations/connections/github-customer-oauth.ts","lib/integrations/connections/platform-oauth.ts","lib/integrations/connections/provider-credentials.ts"].sort(),"Core connection control-plane fetch boundaries must remain explicitly inventoried.");
 
-const sameOriginUiBoundaries=["components/ai-workspace/AIWorkspaceClient.tsx","components/ai-workspace/GuestAIClient.tsx","components/ai-workspace/FilesPanel.tsx","components/ai-workspace/WorkspaceResourcePanel.tsx","components/ai-workspace/CompanyMemberInviteForm.tsx","components/admin/AIWorkspaceGuestCodeForm.tsx","components/projects/project-completion-panel.tsx"];
+const sameOriginUiBoundaries=["components/ai-workspace/AIWorkspaceClient.tsx","components/ai-workspace/GuestAIClient.tsx","components/ai-workspace/FilesPanel.tsx","components/ai-workspace/WorkspaceResourcePanel.tsx","components/ai-workspace/CompanyMemberInviteForm.tsx","components/admin/AIWorkspaceGuestCodeForm.tsx","components/projects/project-completion-panel.tsx","app/(app)/crm/pipeline/pipeline-board.tsx"];
 const nailArtPushBoundaries=[
   "app/api/2nya-nailart/admin/route.ts",
   "app/api/2nya-nailart/book/route.ts",
@@ -92,6 +92,9 @@ assert.match(readFileSync("components/ai-workspace/WorkspaceResourcePanel.tsx","
 assert.match(readFileSync("components/ai-workspace/CompanyMemberInviteForm.tsx","utf8"),/fetch\(\"\/api\/ai-workspace\/company\/invite/);
 assert.match(readFileSync("components/admin/AIWorkspaceGuestCodeForm.tsx","utf8"),/fetch\(\"\/api\/admin\/ai-workspace\//);
 const projectCompletionUi=readFileSync("components/projects/project-completion-panel.tsx","utf8");
+const crmPipelineUi=readFileSync("app/(app)/crm/pipeline/pipeline-board.tsx","utf8");
+assert.match(crmPipelineUi,/fetch\(`\/api\/crm\/opportunities\/\$\{opportunity.id\}\/stage`/);
+assert.match(crmPipelineUi,/version:opportunity.version/);
 assert.match(projectCompletionUi,/await fetch\(url/);
 assert.match(projectCompletionUi,/request\((?:`|")\/api\/projects\/completion/);
 
