@@ -78,3 +78,5 @@ npm run dev
 Human CEO and product owner: Yas
 
 Shared CRM implementation and controlled-release status: [docs/shared-enterprise-crm.md](docs/shared-enterprise-crm.md).
+
+Native sales CRM audit, data model, permissions, API and QA: [docs/enterprise-customer-crm.md](docs/enterprise-customer-crm.md).
