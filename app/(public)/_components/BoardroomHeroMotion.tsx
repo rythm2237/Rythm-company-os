@@ -37,6 +37,7 @@ export default function BoardroomHeroMotion() {
   return (
     <>
     <div className="boardroom-hero-art" data-motion-ready={ready ? "true" : "false"}>
+      <div className="boardroom-hero-framing">
       <Image
         className="boardroom-hero-poster"
         src={ARTWORK}
@@ -45,6 +46,7 @@ export default function BoardroomHeroMotion() {
         sizes="(max-width: 1100px) 100vw, calc(100vw - 272px)"
       />
       <div className="boardroom-hero-canvas" ref={hostRef} />
+      </div>
     </div>
     </>
   );

@@ -29,8 +29,11 @@ export default async function HomePage() {
         <BoardroomHeroMotion />
         <p className="boardroom-scene-caption">Illustrative AI team · Human CEO authority</p>
         <div className="boardroom-hero-copy">
+          <div className="boardroom-hero-heading">
           <p className="boardroom-eyebrow">AI COMPANY OPERATING SYSTEM</p>
           <h1 id="boardroom-hero-title">Build your<br />AI company.<br /><span>Lead the way.</span></h1>
+          </div>
+          <div className="boardroom-hero-details">
           <p className="boardroom-hero-description">
             Bring specialized AI agents together as one team. Set the direction,
             review the decisions, and stay in control.
@@ -40,6 +43,7 @@ export default async function HomePage() {
             <Link className="boardroom-secondary" href="/product">See how it works</Link>
           </div>
           <p className="boardroom-trust">Human-led. Connected teams. Governed execution.</p>
+          </div>
         </div>
       </section>
 

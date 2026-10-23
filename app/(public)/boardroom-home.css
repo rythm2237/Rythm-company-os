@@ -30,6 +30,7 @@
   mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 85%, transparent);
 }
 .boardroom-hero-poster { object-fit: contain; object-position: center; }
+.boardroom-hero-framing { position: absolute; inset: 0; }
 .boardroom-hero-canvas { position: absolute; inset: 0; }
 .boardroom-hero-canvas canvas { display: block; width: 100%; height: 100%; }
 .boardroom-hero-art[data-motion-ready="false"] .boardroom-hero-canvas { opacity: 0; }
@@ -52,6 +53,7 @@
   justify-content: center;
   align-items: flex-start;
 }
+.boardroom-hero-heading, .boardroom-hero-details { min-width: 0; max-width: 100%; }
 .boardroom-home .boardroom-eyebrow {
   margin: 0 0 23px;
   display: flex;
@@ -121,11 +123,17 @@
 }
 
 @media (max-width: 760px) {
-  .boardroom-hero-copy { padding: 86px 24px 12px; }
-  .marketing-site .boardroom-home .boardroom-hero h1 { font-size: clamp(2rem, 10.5vw, 4rem); line-height: 1.08; letter-spacing: -.045em; }
-  .boardroom-hero-art { margin-top: 6px; }
-  .boardroom-home .boardroom-eyebrow { margin-bottom: 18px; font-size: .6rem; letter-spacing: .1em; }
-  .boardroom-home .boardroom-hero-description { max-width: 440px; margin-top: 20px; font-size: .95rem; line-height: 1.7; }
+  /* Flatten only the layout wrapper so the same content can frame the artwork. */
+  .boardroom-hero-copy { display: contents; }
+  .boardroom-hero-heading { order: 0; width: 100%; padding: 86px 24px 0; text-align: center; }
+  .marketing-site .boardroom-home .boardroom-hero h1 { font-size: clamp(2rem, 9.5vw, 3.4rem); line-height: 1.08; letter-spacing: -.045em; }
+  .boardroom-hero-art { order: 1; margin: 20px 0 0; aspect-ratio: 1100 / 941; }
+  /* The source has marketing space on its left. Crop that space in the artwork
+     viewport, sharing the exact same framing for the poster and animated canvas. */
+  .boardroom-hero-framing { left: auto; right: 0; width: 152%; }
+  .boardroom-hero-details { order: 2; width: 100%; padding: 20px 24px 32px; text-align: center; }
+  .boardroom-home .boardroom-eyebrow { justify-content: center; margin-bottom: 18px; font-size: .6rem; letter-spacing: .1em; }
+  .boardroom-home .boardroom-hero-description { max-width: 440px; margin: 0 auto; font-size: .95rem; line-height: 1.7; }
   .boardroom-hero-actions { width: 100%; margin-top: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .boardroom-hero-actions a { min-width: 0; min-height: 48px; padding: 12px 10px; font-size: .8rem; gap: 8px; }
   .boardroom-home .boardroom-trust { margin-top: 17px; }
@@ -136,7 +144,7 @@
   .marketing-site .boardroom-home .boardroom-team-section { padding-top: 58px; }
 }
 @media (max-width: 380px) {
-  .boardroom-hero-copy { padding-inline: 20px; }
+  .boardroom-hero-heading, .boardroom-hero-details { padding-inline: 20px; }
   .boardroom-hero-actions { grid-template-columns: minmax(0, 1fr); }
   .boardroom-hero-actions a { width: 100%; }
 }
