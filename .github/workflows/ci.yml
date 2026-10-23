@@ -18,6 +18,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node --import tsx scripts/validate-logout.ts
       - run: npm run test:company-logo
       - run: npm run test:enterprise-crm
       - run: npm run test:crm-sales
@@ -66,6 +67,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: google-chrome --version
+      - run: node --import tsx scripts/validate-logout-browser.ts
+        env:
+          CRM_BROWSER_CHANNEL: chrome
       - run: npm run test:crm-sales-browser
         env:
           CRM_BROWSER_CHANNEL: chrome

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import { SignOutForm } from "@/components/auth/SignOutForm";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -8,7 +9,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { switchOrganization } from "@/app/organization-context/actions";
 import RythmBrandLogo from "@/components/brand/RythmBrandLogo";
-import { logout } from "@/components/app-shell/actions";
 
 const groups = [
   { label: "Workspace", items: [
@@ -132,7 +132,7 @@ export default function ProductNav({ access, organization }: Props) {
           {organization ? <section className="workspace-context-card" aria-label="Active organization context" title={desktopCollapsed ? `${organization.activeOrganizationName} · ${organization.userName} · ${organization.activeRole}` : undefined}><div className="workspace-context-heading"><span className="workspace-context-avatar" aria-hidden="true">{organization.activeOrganizationName.slice(0, 1).toUpperCase()}</span><span className="workspace-context-copy"><strong>{organization.activeOrganizationName}</strong><small>{organization.userName} · {organization.activeRole}</small></span></div><div className="workspace-context-meta"><span>{organization.productCode ? productLabel[organization.productCode] ?? organization.productCode : "Workspace"}</span><span className={`workspace-status workspace-status-${organization.entitlementStatus ?? "unavailable"}`}><i aria-hidden="true" />{organization.entitlementStatus ?? "Not provisioned"}</span></div>{organization.organizations.length > 1 ? <form action={switchOrganization} className="workspace-switcher"><input type="hidden" name="next" value="/home" /><label><span className="sr-only">Active company</span><select name="organizationId" key={organization.activeOrganizationId} defaultValue={organization.activeOrganizationId} aria-label="Active company">{organization.organizations.map((item) => <option key={item.id} value={item.id}>{item.name} — {item.role}</option>)}</select></label><Button type="submit">Switch</Button></form> : null}</section> : null}
           <Link className="product-onboarding-link" href={access.active ? "/onboarding" : "/activation"} title={desktopCollapsed ? (access.active ? "Workspace guide" : "Activation required") : undefined}><span aria-hidden="true">?</span><span className="product-onboarding-copy"><strong>{access.active ? "Workspace guide" : "Activation required"}</strong><small>{access.active ? "Review the operating flow" : "Commercial tools remain locked"}</small></span></Link>
           <div className="workspace-system-state"><i aria-hidden="true" /><span>Tenant isolated</span><strong>{access.platformAdmin ? "Platform admin" : access.active ? "Entitlement active" : "Fail-closed"}</strong></div>
-          <form action={logout}><Button className="product-signout" type="submit" title={desktopCollapsed ? "Sign out" : undefined}><span className="product-signout-label">Sign out</span><span aria-hidden="true">↗</span></Button></form>
+          <SignOutForm className="product-signout" title={desktopCollapsed ? "Sign out" : undefined}/>
         </div>
       </div>
     </nav>
