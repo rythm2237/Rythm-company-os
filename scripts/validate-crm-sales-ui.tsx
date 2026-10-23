@@ -1,0 +1,37 @@
+import assert from "node:assert/strict";
+import React,{act} from "react";
+import {createRoot} from "react-dom/client";
+import {JSDOM} from "jsdom";
+import {PipelineBoard} from "../app/(app)/crm/pipeline/pipeline-board";
+import {leadInput,customProperties,customerCsv,type SalesOpportunity,type SalesStage} from "../lib/crm/sales";
+import {crmJson} from "../lib/crm/http";
+async function main(){
+ (globalThis as typeof globalThis&{React:typeof React}).React=React;
+ assert.equal(leadInput({name:"Alex",email:"A@EXAMPLE.TEST"}).email,"a@example.test");
+ for(const input of [{name:""},{name:"A",status:"converted"},{name:"A",owner_user_id:"foreign"},{name:"A",email:"broken"},{name:"A",next_follow_up_at:"bad"}])assert.throws(()=>leadInput(input));
+ assert.throws(()=>customProperties('{"nested":{"secret":1}}'));assert.throws(()=>customProperties('[]'));assert.deepEqual(customProperties('{"region":"EU","priority":2}'),{region:"EU",priority:2});
+ const csv=customerCsv([{name:'=WEBSERVICE("secret")',email:"contact@example.test",contract_value:123,notes:"PRIVATE"}]);assert.match(csv,/'=WEBSERVICE/);assert.doesNotMatch(csv,/123|PRIVATE|contract_value/);
+ await assert.rejects(()=>crmJson(new Request("https://example.test/api",{method:"POST",headers:{Origin:"https://attacker.test","Content-Type":"application/json"},body:'{}'})));
+ await assert.rejects(()=>crmJson(new Request("https://example.test/api",{method:"POST",headers:{Origin:"https://example.test","Content-Type":"application/json"},body:JSON.stringify({data:"x".repeat(128001)})})));
+ assert.deepEqual(await crmJson(new Request("https://example.test/api",{method:"POST",headers:{Origin:"https://example.test","Content-Type":"application/json"},body:'{"name":"Alex"}'})),{name:"Alex"});
+ const dom=new JSDOM('<html><body><div id="root"></div></body></html>',{url:"http://localhost"});
+ Object.assign(globalThis,{window:dom.window,self:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,FormData:dom.window.FormData,IS_REACT_ACT_ENVIRONMENT:true});
+ const stages:SalesStage[]=[{code:"qualified",name:"Qualified",probability:25,is_closed:false,is_won:false},{code:"proposal",name:"Proposal",probability:50,is_closed:false,is_won:false},{code:"lost",name:"Lost",probability:0,is_closed:true,is_won:false}];
+ const deal:SalesOpportunity={id:"test",account_id:"customer",name:"Example <script>",stage_code:"qualified",value:100,currency:"EUR",probability:25,version:1,expected_close_date:null,owner_user_id:null,lost_reason:null};
+ const calls:Array<{stage:string;reason:string}>=[];const root=createRoot(dom.window.document.getElementById("root")!);
+ const render=async(write=true,fail=false)=>act(async()=>root.render(<PipelineBoard stages={stages} opportunities={[deal]} writableIds={write?[deal.id]:[]} onTransition={async(_o,stage,reason)=>{if(fail)throw Error();calls.push({stage,reason});}}/>));
+ await render();assert.equal(dom.window.document.querySelector("script"),null);
+ const select=dom.window.document.querySelector("select")!;const form=dom.window.document.querySelector("form")!;
+ await act(async()=>{select.value="proposal";form.dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true}));});
+ assert.equal(calls[0].stage,"proposal");assert.match(dom.window.document.body.textContent||"",/Stage saved/);
+ await act(async()=>{select.value="lost";form.dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true}));});
+ assert.equal(calls.length,1);assert.match(dom.window.document.body.textContent||"",/loss reason/);
+ const drop=new dom.window.Event("drop",{bubbles:true,cancelable:true});Object.defineProperty(drop,"dataTransfer",{value:{getData:()=>deal.id}});
+ await act(async()=>dom.window.document.querySelector('[aria-label="Proposal stage"]')!.dispatchEvent(drop));
+ assert.equal(calls.length,2,"Drag-and-drop uses the same transition function");
+ await render(true,true);await act(async()=>{select.value="proposal";form.dispatchEvent(new dom.window.Event("submit",{bubbles:true,cancelable:true}));});assert.match(dom.window.document.body.textContent||"",/Stage not saved/);
+ await render(false);assert.equal(dom.window.document.querySelector("form"),null);assert.equal(dom.window.document.querySelector('[draggable="true"]'),null);
+ await act(async()=>root.unmount());dom.window.close();
+ console.log("CRM sales UI/API utilities: lead validation, custom fields, formula-safe exports, origin/body limits, accessible stage moves, loss validation, drag/drop and failure/read-only states passed.");
+}
+main().catch(error=>{console.error(error);process.exitCode=1});

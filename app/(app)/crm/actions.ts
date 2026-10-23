@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOrganizationContext, requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { requireCrm, CRM_CAPABILITIES } from "@/lib/crm/access";
+import { customProperties } from "@/lib/crm/sales";
 const text = (fd: FormData, key: string, max = 4000) => String(fd.get(key) ?? "").trim().slice(0, max);
 const uuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 function done(path: string, failed: boolean):never { revalidatePath("/crm", "layout"); revalidatePath("/projects"); redirect(`${path}?${failed ? "error=Unable+to+save.+Check+your+access+and+the+required+fields." : "saved=1"}`); }
@@ -13,7 +14,10 @@ export async function saveCustomer(fd: FormData) {
  await requireCrm(supabase,organizationId,id ? "customer.update" : "customer.create","customer",id || organizationId);
  if (!name || id && !uuid(id)) done("/crm",true);
  const payload = { name, account_type: text(fd,"account_type",30) || "company", customer_status: text(fd,"customer_status",30) || "lead", legal_name:text(fd,"legal_name",240)||null,registration_number:text(fd,"registration_number",100)||null,vat_number:text(fd,"vat_number",100)||null,address:text(fd,"address",1000)||null,preferred_language:text(fd,"preferred_language",50)||null,tags:text(fd,"tags",500).split(",").map(t=>t.trim()).filter(Boolean).slice(0,20),industry:text(fd,"industry",160)||null,country_code:text(fd,"country_code",2).toUpperCase()||null,website_url:text(fd,"website_url",1000)||null,phone:text(fd,"phone",100)||null,owner_user_id:text(fd,"owner_user_id",36)||null,source:text(fd,"source",100)||"manual",notes:text(fd,"notes",8000)||null,updated_at:new Date().toISOString() };
- const result = id ? await supabase.from("crm_accounts").update(payload).eq("id",id).eq("organization_id",organizationId).select("id").single() : await supabase.from("crm_accounts").insert({...payload,organization_id:organizationId,created_by_user_id:user.id}).select("id").single();
+ let properties;try{properties=customProperties(text(fd,"custom_fields",8193));}catch{done("/crm",true);}
+ const extended={...payload,email:text(fd,"email",320)||null,billing_address:text(fd,"billing_address",1000)||null,region:text(fd,"region",160)||null,custom_fields:properties};
+ const result = id ? await supabase.from("crm_accounts").update(extended).eq("id",id).eq("organization_id",organizationId).select("id").single() : await supabase.from("crm_accounts").insert({...extended,organization_id:organizationId,created_by_user_id:user.id}).select("id").single();
+ if(result.error?.code==="23505"){revalidatePath("/crm");redirect("/crm?error=duplicate");}
  done(result.data ? `/crm/${result.data.id}` : "/crm",!!result.error);
 }
 export async function saveContact(fd:FormData) {
@@ -61,7 +65,7 @@ export async function saveOpportunity(fd:FormData) {
  await requireCrm(supabase,organizationId,id?"finance.update":"finance.create","customer",customerId);
  const stage=text(fd,"stage_code",40)||"lead", value=Number(fd.get("value")),probability=Number(fd.get("probability"));
  if(!Number.isFinite(value)||value<0||!Number.isFinite(probability)||probability<0||probability>100||!text(fd,"name",240))done(`/crm/${customerId}`,true);
- const payload={account_id:customerId,name:text(fd,"name",240),stage_code:stage,status:stage==="won"?"won":stage==="lost"?"lost":"open",value,currency:/^[A-Z]{3}$/.test(text(fd,"currency",3))?text(fd,"currency",3):"EUR",probability,expected_close_date:text(fd,"expected_close_date",10)||null,next_step:text(fd,"next_step",2000)||null,owner_user_id:text(fd,"owner_user_id",36)||null,updated_at:new Date().toISOString()};
+ const payload={account_id:customerId,name:text(fd,"name",240),stage_code:stage,status:stage==="won"?"won":stage==="lost"?"lost":"open",value,currency:/^[A-Z]{3}$/.test(text(fd,"currency",3))?text(fd,"currency",3):"EUR",probability,expected_close_date:text(fd,"expected_close_date",10)||null,next_step:text(fd,"next_step",2000)||null,lost_reason:text(fd,"lost_reason",2000)||null,owner_user_id:text(fd,"owner_user_id",36)||null,updated_at:new Date().toISOString()};
  const result=id?await supabase.from("crm_opportunities").update(payload).eq("organization_id",organizationId).eq("id",id).eq("account_id",customerId).select("id").single():await supabase.from("crm_opportunities").insert({...payload,organization_id:organizationId,created_by_user_id:user.id});
  done(`/crm/${customerId}`,!!result.error);
 }

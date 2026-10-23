@@ -9,3 +9,6 @@ supabase/.temp/
 *.log
 *.tsbuildinfo
 .DS_Store
+
+# Isolated browser QA artifacts
+test-results/

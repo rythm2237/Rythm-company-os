@@ -57,7 +57,9 @@
     "test:google-business-quota": "node --import tsx scripts/validate-google-business-quota-recovery.ts",
     "test:project-details-ux": "node --import tsx scripts/validate-project-details-ux.ts",
     "test:boardroom": "node --import tsx scripts/validate-boardroom-layout.ts",
-    "test:enterprise-crm": "node --import tsx scripts/validate-enterprise-crm-sql.ts && node --import tsx scripts/validate-enterprise-crm-ui.tsx"
+    "test:enterprise-crm": "node --import tsx scripts/validate-enterprise-crm-sql.ts && node --import tsx scripts/validate-enterprise-crm-ui.tsx",
+    "test:crm-sales": "node --import tsx scripts/validate-crm-sales-ui.tsx && node --import tsx scripts/validate-crm-sales-api.ts",
+    "test:crm-sales-browser": "node scripts/validate-crm-sales-browser.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -76,9 +78,11 @@
     "@types/node": "^24.1.0",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
+    "esbuild": "0.25.12",
     "eslint": "^9.32.0",
     "eslint-config-next": "^15.4.6",
     "jsdom": "^30.1.1",
+    "playwright": "1.62.1",
     "tsx": "4.20.5",
     "typescript": "^5.9.2"
   }
