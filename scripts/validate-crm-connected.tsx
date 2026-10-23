@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import React,{act} from 'react';
+import {createRoot} from 'react-dom/client';
+import {JSDOM} from 'jsdom';
+import {zipSync,strToU8} from 'fflate';
+import {jsPDF} from 'jspdf';
+import {suggestContractProfile} from '../lib/crm/contract-profile';
+import {privateContractText} from '../lib/crm/contract-document';
+import {RecordLinks,ProjectCustomerFields} from '../components/crm/record-links';
+async function main(){
+ (globalThis as typeof globalThis&{React:typeof React}).React=React;
+ const text='Provider name: OUR COMPANY\nProvider email: private@example.test\nCustomer name: Client A\nCustomer email: CLIENT@example.test\nCustomer VAT number: HU123\nCustomer contract value: 99999';
+ assert.deepEqual(suggestContractProfile(text),{name:'Client A',email:'client@example.test',vat_number:'HU123'});
+ assert.deepEqual(suggestContractProfile('Customer details:\nLegal name: Client Legal\n\nEmail: unrelated@example.test\nProvider:\nEmail: supplier@example.test'),{legal_name:'Client Legal'});
+ assert.deepEqual(suggestContractProfile('Customers email: bad@example.test\nEmail: naked@example.test\nCustomer email: invalid\nCustomer website: javascript:bad'),{});
+ assert.deepEqual(suggestContractProfile('مشتری نام: شرکت نمونه\nمشتری ایمیل: user@example.test'),{name:'شرکت نمونه',email:'user@example.test'});
+ const txt=await privateContractText(strToU8(text),'text/plain');assert.deepEqual(suggestContractProfile(txt),suggestContractProfile(text));
+ const docx=zipSync({'word/document.xml':strToU8('<w:document><w:p><w:t>Customer name: Client &amp; Co</w:t></w:p></w:document>')});
+ assert.equal(suggestContractProfile(await privateContractText(docx,'application/vnd.openxmlformats-officedocument.wordprocessingml.document')).name,'Client & Co');
+ const pdf=new jsPDF();pdf.text('Customer name: PDF Client',10,10);assert.equal(suggestContractProfile(await privateContractText(new Uint8Array(pdf.output('arraybuffer')),'application/pdf')).name,'PDF Client');
+ await assert.rejects(()=>privateContractText(new Uint8Array(10*1024*1024+1),'text/plain'));await assert.rejects(()=>privateContractText(strToU8('bad'),'image/png'));
+ const dom=new JSDOM('<html><body><div id="root"></div></body></html>',{url:'http://localhost'});Object.assign(globalThis,{window:dom.window,self:dom.window,document:dom.window.document,IS_REACT_ACT_ENVIRONMENT:true});
+ const root=createRoot(dom.window.document.getElementById('root')!);
+ const customers=[{id:'a',name:'Client A',legal_name:'Legal A',email:'a@example.test'},{id:'b',name:'Client B',email:'b@example.test'}];
+ const contracts=[{id:'ca',contract_number:'A-1',customer_id:'a',project_ids:['pa']},{id:'cb',contract_number:'B-1',customer_id:'b',project_ids:['pb']}];
+ const projects=[{id:'pa',name:'Project A',customer_id:'a'},{id:'pb',name:'Project B',customer_id:'b'}];
+ const select=(label:string)=>dom.window.document.querySelector(`[aria-label="${label}"]`) as HTMLSelectElement;
+ const change=async(label:string,value:string)=>act(async()=>{const e=select(label);e.value=value;e.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});
+ await act(async()=>root.render(<RecordLinks customers={customers} contracts={contracts} projects={projects} invoiceProfile/>));
+ await change('Linked project','pa');assert.equal(select('Linked customer').value,'a');assert.equal((select('Invoice customer name') as unknown as HTMLInputElement).value,'Legal A');assert.equal(select('Linked contract').options.length,2);
+ await change('Linked contract','ca');await change('Linked customer','b');assert.equal(select('Linked project').value,'');assert.equal(select('Linked contract').value,'');assert.equal(select('Linked project').options[1].value,'pb');assert.equal((select('Invoice customer email') as unknown as HTMLInputElement).value,'b@example.test');
+ await act(async()=>root.render(<ProjectCustomerFields customers={customers} contracts={contracts} members={[{user_id:'manager',display_name:'Manager'}]} initialCustomer="a" initialContract="ca"/>));
+ assert.equal(select('Project classification').value,'external');assert.equal(select('Project contract').value,'ca');await change('Project customer','b');assert.equal(select('Project contract').value,'');assert.equal(select('Project contract').options[1].value,'cb');
+ await act(async()=>root.unmount());dom.window.close();console.log('Connected CRM UI/parser: canonical invoice autofill, dependent selectors, invalid link resets, project defaults, PDF/DOCX/TXT, Persian labels, provider exclusion and extraction bounds passed.');
+}
+main().catch(e=>{console.error(e);process.exitCode=1});

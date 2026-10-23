@@ -23,6 +23,9 @@ try{
   await page.getByLabel("Stage for Example delivery",{exact:true}).selectOption("lost");await page.getByRole("button",{name:"Move",exact:true}).click();await page.getByRole("status").filter({hasText:"Add a loss reason"}).waitFor();
   await page.getByLabel("Loss reason for Example delivery",{exact:true}).fill("Budget postponed");await page.getByRole("button",{name:"Move",exact:true}).click();await page.getByRole("status").filter({hasText:"Stage saved"}).waitFor();
   await page.getByLabel("Stage for Example delivery",{exact:true}).selectOption("won");await page.getByRole("button",{name:"Move",exact:true}).click();await page.getByRole("status").filter({hasText:"Stage not saved"}).waitFor();
+  await page.getByLabel("Linked project",{exact:true}).selectOption("project");assert.equal(await page.getByLabel("Linked customer",{exact:true}).inputValue(),"customer");assert.equal(await page.getByLabel("Invoice customer name",{exact:true}).inputValue(),"Client Legal A");
+  await page.getByLabel("Linked contract",{exact:true}).selectOption("contract");await page.getByLabel("Linked customer",{exact:true}).selectOption("other");assert.equal(await page.getByLabel("Linked project",{exact:true}).inputValue(),"");assert.equal(await page.getByLabel("Linked contract",{exact:true}).inputValue(),"");assert.equal(await page.getByLabel("Invoice customer email",{exact:true}).inputValue(),"b@example.test");
+  assert.equal(await page.getByLabel("Project contract",{exact:true}).inputValue(),"contract");await page.getByLabel("Project customer",{exact:true}).selectOption("other");assert.equal(await page.getByLabel("Project contract",{exact:true}).inputValue(),"");
   await page.screenshot({path:`test-results/crm/${name}.png`,fullPage:true});
  }
  await page.setViewportSize({width:1440,height:1000});await page.goto(url);const start=transitions.length;
