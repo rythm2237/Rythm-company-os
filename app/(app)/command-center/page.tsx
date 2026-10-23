@@ -1,8 +1,8 @@
 import { SubmitButton } from "@/components/ui/Button";
+import { SignOutForm } from "@/components/auth/SignOutForm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
-import { logout } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -152,7 +152,7 @@ export default async function CommandCenterPage({ searchParams }: CommandCenterP
           <p className="eyebrow">ACCESS DENIED</p>
           <h1 className="auth-title">Owner authorization required</h1>
           <p className="auth-copy">This account is authenticated but is not registered as an Owner.</p>
-          <form action={logout}><SubmitButton type="submit">Sign out</SubmitButton></form>
+          <SignOutForm/>
         </section>
       </main>
     );
