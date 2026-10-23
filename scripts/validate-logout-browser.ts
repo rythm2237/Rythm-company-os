@@ -12,7 +12,7 @@ async function main(){
  globalThis.fetch=async()=>{authCalls++;if(mode==="stalled")return await new Promise<Response>(()=>{});await new Promise(r=>setTimeout(r,150));return mode==="failure"?Response.json({message:"unavailable"},{status:503}):new Response(null,{status:204});};
  const server=createServer(async(req,res)=>{
   try{
-   const origin=`http://127.0.0.1:${(server.address() as {port:number}).port}`;
+   const origin=`http://localhost:${(server.address() as {port:number}).port}`;
    if(req.url==="/bundle.js"){res.setHeader("Content-Type","application/javascript");res.end(bundle.outputFiles[0].text);return;}
    if(req.url?.startsWith("/auth/logout")){
     const headers=new Headers();for(const [k,v]of Object.entries(req.headers))if(v)headers.set(k,Array.isArray(v)?v.join(","):v);
@@ -24,7 +24,8 @@ async function main(){
  });
  let browser;
  try{
-  await new Promise<void>(r=>server.listen(0,"127.0.0.1",r));const origin=`http://127.0.0.1:${(server.address() as {port:number}).port}`;
+  // NextRequest canonicalizes loopback IP URLs to localhost; use the same host as the browser Origin.
+  await new Promise<void>(r=>server.listen(0,"localhost",r));const origin=`http://localhost:${(server.address() as {port:number}).port}`;
   browser=await chromium.launch({headless:true,channel:process.env.CRM_BROWSER_CHANNEL||undefined});
   for(mode of ["healthy","failure","stalled"]){
    const context=await browser.newContext();const name="sb-logout-fixture-auth-token";
