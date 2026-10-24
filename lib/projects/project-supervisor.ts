@@ -1,3 +1,4 @@
+import { ensureProjectAgentReservation } from "@/lib/projects/project-agent-assignment";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type TaskRow={
@@ -84,31 +85,11 @@ async function loadProjectAgents(supabase:SupabaseClient,execution:ExecutionRow)
 }
 
 async function ensureManagerCapacity(supabase:SupabaseClient,execution:ExecutionRow,agentId:string){
-  const existing=await supabase.from("project_agent_capacity").select("allocation_percent").eq("project_id",execution.project_id).eq("agent_id",agentId).maybeSingle();
-  if(Number(existing.data?.allocation_percent??0)>0)return true;
-  const all=await supabase.from("project_agent_capacity").select("allocation_percent").eq("agent_id",agentId);
-  const used=(all.data??[]).reduce((sum,row)=>sum+Number(row.allocation_percent??0),0);
-  const available=Math.max(0,100-used);
-  if(available<=0)return false;
-  const allocation=Math.min(25,available);
-  const assignment=await supabase.from("project_agents").upsert({
-    organization_id:execution.organization_id,
-    project_id:execution.project_id,
-    agent_id:agentId,
-    assignment_role:"Recovery manager",
-    status:"active",
-    assigned_at:nowIso(),
-    authority_scope:{project_execution:true,project_recovery:true},
-  },{onConflict:"project_id,agent_id"});
-  if(assignment.error)return false;
-  const capacity=await supabase.from("project_agent_capacity").upsert({
-    organization_id:execution.organization_id,
-    project_id:execution.project_id,
-    agent_id:agentId,
-    allocation_percent:allocation,
-    priority:1,
-  },{onConflict:"project_id,agent_id"});
-  return !capacity.error;
+  const executionOwner=await supabase.from("project_executions").select("started_by_user_id").eq("organization_id",execution.organization_id).eq("id",execution.id).maybeSingle();
+  const actorId=executionOwner.data?.started_by_user_id;
+  if(!actorId)return false;
+  const reservation=await ensureProjectAgentReservation(supabase,{organizationId:execution.organization_id,projectId:execution.project_id,actorId,agentId,taskText:"Root cause analysis, risk analysis and strategic recovery"});
+  return reservation.ok;
 }
 
 async function chooseRecoveryManager(supabase:SupabaseClient,execution:ExecutionRow,task:TaskRow,projectAgents:AgentRow[]){
@@ -131,7 +112,7 @@ async function chooseRecoveryManager(supabase:SupabaseClient,execution:Execution
   for(const candidate of ranked){
     if(await ensureManagerCapacity(supabase,execution,candidate.id))return candidate.id;
   }
-  return task.assigned_agent_id;
+  return null;
 }
 
 async function markExecutionRecovery(supabase:SupabaseClient,execution:ExecutionRow){

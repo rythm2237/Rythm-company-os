@@ -1,3 +1,4 @@
+import { loadProjectNextAction } from "@/lib/projects/project-next-action";
 import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -46,6 +47,8 @@ export async function POST(request:Request){
     }
     if(body.action!=="approve_and_start")return NextResponse.json({ok:false,error:"Unsupported roadmap action."},{status:400});
 
+    const guidance=await loadProjectNextAction(auth.supabase,auth.organizationId,projectId);
+    if(["blocked","completion","verification"].includes(guidance.stage))return NextResponse.json({ok:false,error:guidance.reason,nextAction:guidance},{status:409});
     const roadmap=await approveProjectRoadmap(service,auth.organizationId,projectId,roadmapId,auth.user.id);if(!roadmap)throw new Error("Unable to approve roadmap.");
 
     // If a legacy run or an older roadmap version is still active, preserve its completed

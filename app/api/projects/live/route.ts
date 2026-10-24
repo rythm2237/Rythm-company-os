@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { encodeEventCursor, parseEventCursor, compareProjectEvents } from "@/lib/projects/project-live-events";
 import { getProjectProgressSnapshot } from "@/lib/projects/project-progress";
 
 export const dynamic = "force-dynamic";
@@ -21,14 +22,20 @@ async function projectContext(projectId:string){
 export async function GET(request:Request){
   const projectId=new URL(request.url).searchParams.get("projectId")?.trim()??"";
   if(!projectId)return NextResponse.json({ok:false,error:"projectId is required."},{status:400});
+  const cursorValue=new URL(request.url).searchParams.get("after");
+  const cursor=parseEventCursor(cursorValue);
+  if(cursorValue&&!cursor)return NextResponse.json({ok:false,error:"Invalid event cursor."},{status:400});
   const context=await projectContext(projectId);if(!context.ok)return context.response;
   const {auth,project}=context;
+  let eventQuery=auth.supabase.from("project_activity_events").select("id,event_type,headline,detail,importance,agent_id,metadata,created_at").eq("project_id",projectId).eq("organization_id",auth.organizationId);
+  if(cursor)eventQuery=eventQuery.or(`created_at.gt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.gt.${cursor.id})`);
+  eventQuery=eventQuery.order("created_at",{ascending:Boolean(cursor)}).order("id",{ascending:Boolean(cursor)}).limit(101);
   const [executionResult,tasksResult,approvalsResult,activityResult,agentsResult,progressSnapshot,historyResult]=await Promise.all([
     auth.supabase.from("project_executions").select("id,execution_no,status,started_at,last_heartbeat_at,updated_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("execution_no",{ascending:false}).limit(1).maybeSingle(),
     auth.supabase.from("project_task_runs").select("id,execution_id,task_key,title,status,priority,assigned_agent_id,waiting_on_approval_id,outcome_status,implementation_status,verification_status,next_required_action,started_at,completed_at,updated_at,agents(agent_code,display_name,name)").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("priority").order("created_at"),
     auth.supabase.from("approval_requests").select("id,subject_type,subject_id,title,summary,risk_level,status,conditions,created_at,expires_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).eq("status","pending").order("created_at",{ascending:false}),
-    auth.supabase.from("project_activity_events").select("id,event_type,headline,detail,importance,agent_id,created_at").eq("project_id",projectId).eq("organization_id",auth.organizationId).order("created_at",{ascending:false}).limit(12),
-    auth.supabase.from("project_agents").select("agent_id,status,assignment_role,agents(agent_code,display_name,name,role_title)").eq("project_id",projectId).eq("organization_id",auth.organizationId),
+    eventQuery,
+    auth.supabase.from("project_agents").select("agent_id,status,assignment_role,agents(agent_code,display_name,name,role_title,department)").eq("project_id",projectId).eq("organization_id",auth.organizationId),
     getProjectProgressSnapshot(auth.supabase,auth.organizationId,{id:project.id,status:project.status,updated_at:project.updated_at}),
     auth.supabase.from("approval_requests").select("id,subject_type,subject_id,title,summary,risk_level,status,created_at,expires_at,resolved_at,response_note,approver_user_id,requested_by_agent_id").eq("project_id",projectId).eq("organization_id",auth.organizationId).in("status",["approved","rejected"]).order("resolved_at",{ascending:false}).limit(30),
   ]);
@@ -38,9 +45,13 @@ export async function GET(request:Request){
   const latestExecutionId=executionResult.data?.id;
   const tasks=latestExecutionId?allTasks.filter((task:any)=>task.execution_id===latestExecutionId):allTasks;
   const approvals=approvalsResult.data??[];
-  const activity=activityResult.data??[];
+  const eventRows=activityResult.data??[];
+  const hasMoreEvents=Boolean(cursor)&&eventRows.length>100;
+  const events=eventRows.slice(0,100).map(event=>({...event,metadata:event.event_type==="task.handoff"?{source_agent_id:event.metadata?.source_agent_id,target_agent_id:event.metadata?.target_agent_id,source_task_id:event.metadata?.source_task_id,target_task_id:event.metadata?.target_task_id,target_status:event.metadata?.target_status}:undefined})).sort(compareProjectEvents);
+  const activity=[...events].reverse();
+  const eventCursor=events.length?encodeEventCursor(events[events.length-1]):cursorValue;
   const counts={running:progressSnapshot.runningTasks,queued:progressSnapshot.queuedTasks,waitingApproval:progressSnapshot.awaitingApproval,waitingOther:progressSnapshot.blockedTasks,completed:progressSnapshot.completedTasks,failed:progressSnapshot.failedTasks,total:progressSnapshot.totalTasks};
-  return NextResponse.json({ok:true,project:{...project,progress_percent:progressSnapshot.overallProjectProgress,lifecycle_state:progressSnapshot.lifecycleState??project.lifecycle_state},progressSnapshot,execution:executionResult.data??null,counts,tasks:tasks.slice(0,24),approvals,approvalHistory:historyResult.data??[],activity,agents:agentsResult.data??[],serverTime:new Date().toISOString()});
+  return NextResponse.json({ok:true,project:{...project,progress_percent:progressSnapshot.overallProjectProgress,lifecycle_state:progressSnapshot.lifecycleState??project.lifecycle_state},progressSnapshot,execution:executionResult.data??null,counts,tasks:tasks.slice(0,24),approvals,approvalHistory:historyResult.data??[],activity,events,eventCursor,hasMoreEvents,agents:agentsResult.data??[],serverTime:new Date().toISOString()},{headers:{"Cache-Control":"private, no-store"}});
 }
 
 export async function POST(request:Request){

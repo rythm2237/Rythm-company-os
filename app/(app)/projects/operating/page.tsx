@@ -1,3 +1,8 @@
+import { ProjectTeamAssignment } from "@/components/projects/project-team-assignment";
+import { suggestProjectIntake } from "@/lib/projects/project-intake";
+import { ProjectLiveOperations } from "@/components/projects/project-live-operations";
+import { ProjectNextActionCard } from "@/components/projects/project-next-action";
+import { loadProjectNextAction } from "@/lib/projects/project-next-action";
 import { assignManager } from "@/app/(app)/crm/actions";
 import { ProjectApprovalProvider, ProjectApprovalCount, ProjectAttentionHeading, ProjectApprovalList } from "@/components/projects/ProjectApprovalState";
 import Link from "next/link";
@@ -16,7 +21,7 @@ import { ContinuousProgramPanel, type ProgramReadModel, type ReviewReadModel, ty
 
 export const dynamic="force-dynamic";
 type View="overview"|"roadmap"|"work"|"activity"|"decisions"|"files"|"results"|"advanced";
-type Props={searchParams:Promise<{project?:string;view?:string;taskStatus?:string;taskAgent?:string;planning?:string;activityFilter?:string;programSaved?:string;programError?:string}>};
+type Props={searchParams:Promise<{project?:string;view?:string;taskStatus?:string;taskAgent?:string;planning?:string;activityFilter?:string;programSaved?:string;programError?:string;setupWarning?:string}>};
 const views:Array<{key:View;label:string}>=[{key:"overview",label:"Overview"},{key:"roadmap",label:"Roadmap"},{key:"work",label:"Work"},{key:"activity",label:"Activity"},{key:"decisions",label:"Decisions"},{key:"files",label:"Files"},{key:"results",label:"Results"},{key:"advanced",label:"Advanced"}];
 const legacyViews:Record<string,View>={live:"advanced",agents:"advanced",tasks:"work",approvals:"decisions",actions:"work"};
 const label=(value:string)=>value.replaceAll("_"," ").replaceAll("."," · ");
@@ -137,8 +142,9 @@ export default async function ProjectOperatingPage({searchParams}:Props){
   const proposalRows=proposals.data??[];const attention=proposalRows.filter((p:any)=>["ready_for_executive","needs_revision","internal_review"].includes(p.status));const pendingApprovalRows=(approvals.data??[]).filter((a:any)=>a.status==="pending");
   const roadmap=await getLatestProjectRoadmap(supabase,organizationId,project.id);
   const progress=await getProjectProgressSnapshot(supabase,organizationId,{id:project.id,status:project.status,updated_at:activity.data?.[0]?.created_at??project.updated_at});
-  const agents=team.data??[];const activeAgents=agents.filter((a:any)=>["active","assigned"].includes(a.status));
-  const canRun=Number(project.readiness_score??0)>=50&&openClarifications.filter((c:any)=>c.materiality==="required").length===0&&!latestExecution?.status?.match(/^(queued|running|paused)$/);
+  const agents=team.data??[];
+  const nextAction=await loadProjectNextAction(supabase,organizationId,project.id,role==="owner");
+  const canRun=nextAction.eligible&&!["blocked","completion","verification"].includes(nextAction.stage);
   const selectedStatus=params.taskStatus??"all",selectedAgent=params.taskAgent??"all";
   const filteredTasks=taskRows.filter((task:any)=>(selectedStatus==="all"||task.status===selectedStatus)&&(selectedAgent==="all"||task.assigned_agent_id===selectedAgent));
   const activityFilter=["important","all","agent","system"].includes(params.activityFilter??"")?params.activityFilter:"important";
@@ -151,11 +157,6 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     !onHold && !isContinuous && String(project.lifecycle_state)==="COMPLETED";
   const projectHealthLabel=onHold?"On hold":isContinuous?"Ongoing program":canDeclareCompleted?"Completed":
     workComplete?"Delivery complete · verification pending":label(String(project.lifecycle_state??project.status));
-  const nextStepText=typeof project.next_required_action==="string"&&project.next_required_action.trim()
-    ?project.next_required_action.trim()
-    :onHold?"Review the open governance holds before resuming execution."
-    :isContinuous?"Monitor verified outcomes and complete scheduled reviews."
-    :"Review the latest roadmap milestone and outstanding work.";
   const navCount=(view:View)=>view==="work"?taskRows.length+(projectActions.data?.length??0):view==="decisions"?pendingApprovalRows.length:view==="files"?(documents.data?.length??0):view==="activity"?(activity.data?.length??0):null;
   return <ProjectApprovalProvider key={`${project.id}:${activeView}`} initialApprovals={pendingApprovalRows}><main className="command-shell">
     <section className="panel" style={{marginBottom:18}} aria-label="Project accountability"><div className="crm-fields"><div><small>Customer</small><p>{crmCustomer.data?<Link href={`/crm/${crmCustomer.data.id}`}>{crmCustomer.data.name}</Link>:project.engagement_type==="external"?"Customer unavailable":"Internal project"}</p></div><div><small>Accountable manager</small><p>{crmManager.data?.display_name||(project.primary_manager_user_id?"Assigned manager":"Reconciliation required")}</p></div></div><details><summary>Reassign manager & history</summary><form action={assignManager} className="auth-form"><input type="hidden" name="project_id" value={project.id}/><label>Primary manager<select name="manager_id" required defaultValue={project.primary_manager_user_id||""}><option value="" disabled>Select one manager</option>{crmMembers.data?.map(m=><option key={m.user_id} value={m.user_id}>{m.display_name||m.user_id}</option>)}</select></label><label>Reason<input name="reason"/></label><SubmitButton>Assign manager</SubmitButton></form>{managerHistory.data?.map(h=><p key={h.id}>{new Date(h.created_at).toLocaleString("en-GB")} · {crmMembers.data?.find(m=>m.user_id===h.new_manager_user_id)?.display_name||h.new_manager_user_id} · {h.reason}</p>)}</details></section>
@@ -194,15 +195,14 @@ export default async function ProjectOperatingPage({searchParams}:Props){
       <div className="project-detail-summary-item"><span>Outcome evidence</span><strong>{progress.outcomeProgressPercent==null?"Not yet validated":`${progress.outcomeProgressPercent}%`}</strong></div>
       <div className="project-detail-summary-item"><span>Active work</span><strong>{taskRows.filter((task:any)=>["running","queued","in_progress"].includes(String(task.status).toLowerCase())).length} running</strong></div>
     </section>
-    {(onHold||workComplete&&!canDeclareCompleted)?<section className="project-detail-next-action" role="status" aria-label="Required next action">
-      <div><strong>{onHold?"Project paused by governance":isContinuous?"Delivery milestones finished · monitoring remains open":"Delivery milestones finished · final verification required"}</strong>
-      <p>{nextStepText}</p></div><Link className="secondary-button" href={`/projects/operating?project=${project.id}&view=${onHold?"decisions":"results"}`}>{onHold?"Review governance":"View outcome evidence"} →</Link>
-    </section>:null}
+    {params.setupWarning?<p role="alert" className="form-error">Your project was created, but some setup resources or AI assignment could not be saved. Review Files and the assigned team before continuing discovery.</p>:null}
+    <ProjectNextActionCard projectId={project.id} initial={nextAction}/>
     {activeView==="roadmap"?<section className="panel project-view-panel project-roadmap-panel">
       <div className="panel-heading"><div><p className="label">Delivery plan</p><h2>{roadmap?.title??"Roadmap not created"}</h2></div>
         <span className="pill">{roadmap?.isBaseline?"Approved baseline":roadmap?.status??"Planning"}</span>
       </div>
       <p className="subtitle">{roadmap?.summary??"Analyze the project to prepare a reviewable roadmap."}</p>
+      {roadmap?.intelligence?.diagnosis?<section className="security-note" aria-label="Problem definition for roadmap approval"><strong>{roadmap.intelligence.planKind==="discovery"?"Discovery Plan · diagnosis remains provisional":"Delivery Roadmap · problem definition"}</strong><p>{roadmap.intelligence.diagnosis.proposedProblemDefinition}</p><p>Desired outcome: {roadmap.intelligence.diagnosis.desiredOutcome}</p>{roadmap.intelligence.diagnosis.uncertainties.length?<><strong>Remaining uncertainty</strong><ul>{roadmap.intelligence.diagnosis.uncertainties.map((value,index)=><li key={index}>{value}</li>)}</ul></>:null}<p>Approval covers this problem definition and the scoped plan. It does not authorize contractual changes or grant access to protected information.</p></section>:null}
       {roadmap?.phases?.length?<ol className="project-phase-grid">
         {roadmap.phases.map(phase=>{
           const state=String(phase.status??"not_started").toLowerCase();
@@ -226,6 +226,7 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     {(activeView==="overview"||activeView==="decisions")?<section className="panel executive-inbox-compact"><div className="panel-heading"><div><p className="label">Executive Inbox</p><h2><ProjectAttentionHeading proposalCount={attention.length}/></h2></div><Link className="secondary-button" href="/inbox?category=approvals">Review approvals</Link></div>{attention.slice(0,3).map((p:any)=><div className="data-row" key={p.id}><div><strong>{p.title}</strong><span>{p.executive_summary}</span></div><span className="pill">{p.risk_level}</span></div>)}</section>:null}
 
     {activeView==="overview"?<>
+      <ProjectLiveOperations projectId={project.id} initialStatus={latestExecution?.status??project.status}/>
       {params.programError?<p role="alert" className="form-error">{params.programError}</p>:null}
       {project.lifecycle_kind==="continuous"?<ContinuousProgramPanel projectId={project.id} program={program} reviews={programReviews} proposals={programProposals} submitProposalAction={submitContinuousProposalForApproval} notice={params.programSaved}/>:null}
       {latestReadiness?<ProjectAnalysisBrief projectId={project.id} objective={project.objective} readiness={latestReadiness} team={agents as any} clarifications={openClarifications as any} assumptions={latestScope?.assumptions}/>:null}
@@ -236,6 +237,7 @@ export default async function ProjectOperatingPage({searchParams}:Props){
       <section className="panel project-view-panel"><div className="project-card-metrics"><div><span>Meetings</span><strong>{meetings.count??0}</strong></div><div><span>Decisions</span><strong>{decisions.count??0}</strong></div><div><span>Approvals</span><strong>{approvals.count??0}</strong></div><div><span>Workflow state</span><strong>{label(workflowState)}</strong></div><div><span>Open health events</span><strong>{health.data?.length??0}</strong></div><div><span>Last activity</span><strong>{formatDate(progress.lastActivityAt)}</strong></div></div></section>
     </>:null}
 
+    {activeView==="advanced"?<ProjectTeamAssignment projectId={project.id} skills={suggestProjectIntake(project.objective||project.description||project.name).capabilities} domain={suggestProjectIntake(project.objective||project.description||project.name).category}/>:null}
     {activeView==="advanced"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project-only team</p><h2>Assigned AI specialists</h2></div><span className="pill">{agents.length} agents</span></div><div className="data-list">{agents.map((row:any)=>{const agent=Array.isArray(row.agents)?row.agents[0]:row.agents;return <div className="data-row" key={agent?.id??row.assignment_role}><div><strong>{agent?.display_name||agent?.name||"Agent"}</strong><span>{agent?.role_title||row.assignment_role} · {agent?.agent_code||"AI"}</span></div><span className="pill">{row.status}</span></div>})}{!agents.length?<p className="subtitle">The project team forms after analysis.</p>:null}</div></section>:null}
 
     {activeView==="work"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Execution graph</p><h2>Project tasks</h2></div><span className="pill">{filteredTasks.length}/{taskRows.length}</span></div><form method="get" className="project-task-filters"><input type="hidden" name="project" value={project.id}/><input type="hidden" name="view" value="work"/><label>Status<select name="taskStatus" defaultValue={selectedStatus}><option value="all">All statuses</option>{[...new Set(taskRows.map((task:any)=>task.status))].map(status=><option key={status} value={status}>{label(status)}</option>)}</select></label><label>Agent<select name="taskAgent" defaultValue={selectedAgent}><option value="all">All agents</option>{agents.map((row:any)=>{const agent=Array.isArray(row.agents)?row.agents[0]:row.agents;return <option key={agent?.id??row.assignment_role} value={agent?.id}>{agent?.display_name||agent?.name||row.assignment_role}</option>})}</select></label><button>Apply filters</button></form><div className="data-list">{filteredTasks.map((task:any)=><div className="data-row" key={task.id}><div><strong>{task.title}</strong><span>{task.agents?.agent_code??"Unassigned"} · attempt {task.attempt_count}/{task.max_attempts}{task.error_message?` · ${task.error_message}`:""}</span></div><span className="pill">{label(task.status)}</span></div>)}</div></section>:null}
