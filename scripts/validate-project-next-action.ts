@@ -24,3 +24,6 @@ assert.equal(next({ projectStatus: "on_hold", executionState: "paused", roadmap:
 assert.match(next({ projectStatus: "on_hold" }).href, /view=overview/, "hold guidance leads to the available governance controls");
 for (const executionState of ["failed", "cancelled"]) assert.equal(next({ executionState, roadmap: { status: "approved", isBaseline: true } }).stage, "recovery");
 assert.equal(next({ projectStatus: "cancelled", executionState: "cancelled" }).stage, "completion");
+
+assert.equal(next({ executionState: "running", requiredQuestions: 1 }).action, "clarify");
+assert.equal(next({ executionState: "running", waitingForEvidence: true }).action, "supply_evidence");

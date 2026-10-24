@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type ProjectNextAction = {
   stage: "setup" | "discovery" | "diagnosis" | "planning" | "approval" | "execution" | "verification" | "completion" | "blocked" | "recovery";
   executionState: string | null;
-  action: "analyze" | "clarify" | "create_roadmap" | "review_roadmap" | "start" | "monitor" | "review_decisions" | "review_results" | "assign_team" | "review_recovery" | "none";
+  action: "analyze" | "clarify" | "create_roadmap" | "review_roadmap" | "start" | "monitor" | "review_decisions" | "review_results" | "assign_team" | "review_recovery" | "supply_evidence" | "none";
   label: string;
   reason: string;
   eligible: boolean;
@@ -23,6 +23,7 @@ export type NextActionInput = {
   roadmap: { status: string; isBaseline: boolean } | null;
   canManage: boolean;
   teamNeedsAttention?: boolean;
+  waitingForEvidence?: boolean;
 };
 
 /** Product-level projection only. Existing task waits and approval gates remain authoritative. */
@@ -43,6 +44,8 @@ export function deriveProjectNextAction(input: NextActionInput): ProjectNextActi
   }
   // Active legacy execution takes precedence over new setup fields: never restart it.
   if (["running", "queued"].includes(execution ?? "")) {
+    if (input.requiredQuestions > 0) return result("execution", "clarify", "Answer the next essential question", "A runnable task needs information only you can supply. Independent authorized work can continue.", "overview");
+    if (input.waitingForEvidence) return result("execution", "supply_evidence", "Supply evidence for the waiting work", "Page-specific work is waiting for usable screenshots or page content. Upload the relevant evidence; a website URL alone does not prove its pages were inspected.", "files");
     return input.pendingApprovals > 0
       ? result("execution", "review_decisions", "Review pending decisions", "Independent authorized work can continue while these decisions are reviewed.", "decisions")
       : result("execution", "monitor", "View live operations", "Execution continues on the server. Follow actual tasks, handoffs and blockers.", "overview");
@@ -62,7 +65,7 @@ export function deriveProjectNextAction(input: NextActionInput): ProjectNextActi
 }
 
 export async function loadProjectNextAction(supabase: SupabaseClient, organizationId: string, projectId: string, canManage = true) {
-  const [project, execution, assessment, questions, approvals, roadmap, lead, assignmentEvents] = await Promise.all([
+  const [project, execution, assessment, questions, approvals, roadmap, lead, assignmentEvents, evidenceWaits] = await Promise.all([
     supabase.from("projects").select("id,status,lifecycle_state,next_required_action").eq("organization_id", organizationId).eq("id", projectId).maybeSingle(),
     supabase.from("project_executions").select("status").eq("organization_id", organizationId).eq("project_id", projectId).order("execution_no", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("project_readiness_assessments").select("id,evidence").eq("organization_id", organizationId).eq("project_id", projectId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
@@ -71,8 +74,9 @@ export async function loadProjectNextAction(supabase: SupabaseClient, organizati
     supabase.from("project_roadmaps").select("status,is_baseline").eq("organization_id", organizationId).eq("project_id", projectId).order("version", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("project_agents").select("agent_id").eq("organization_id", organizationId).eq("project_id", projectId).eq("assignment_role", "AI Project Lead").in("status", ["assigned", "active"]).limit(1).maybeSingle(),
     supabase.from("project_activity_events").select("event_type,metadata").eq("organization_id", organizationId).eq("project_id", projectId).in("event_type", ["project.assignment.blocked", "project.agent.assigned"]).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(30),
+    supabase.from("project_task_runs").select("id,project_executions!inner(status)").eq("organization_id", organizationId).eq("project_id", projectId).eq("status", "waiting_for_data").eq("error_class", "missing_project_resource").in("project_executions.status", ["running", "queued"]).limit(1),
   ]);
-  if ([project, execution, assessment, questions, approvals, roadmap, lead, assignmentEvents].some(row => row.error)) throw new Error("Project guidance is unavailable. Refresh before taking the next action.");
+  if ([project, execution, assessment, questions, approvals, roadmap, lead, assignmentEvents, evidenceWaits].some(row => row.error)) throw new Error("Project guidance is unavailable. Refresh before taking the next action.");
   if (!project.data) throw new Error("Project not found.");
-  return deriveProjectNextAction({ projectId, projectStatus: project.data.status, lifecycleState: project.data.lifecycle_state, nextRequiredAction: project.data.next_required_action, executionState: execution.data?.status, hasAnalysis: Boolean(assessment.data), requiredQuestions: questions.count ?? 0, pendingApprovals: approvals.count ?? 0, roadmap: roadmap.data ? { status: roadmap.data.status, isBaseline: roadmap.data.is_baseline } : null, canManage, teamNeedsAttention: Boolean(assessment.data?.evidence?.diagnosis) && (!lead.data || assignmentEvents.data?.find(row => row.event_type === "project.assignment.blocked" || row.metadata?.role === "lead")?.event_type === "project.assignment.blocked") });
+  return deriveProjectNextAction({ projectId, projectStatus: project.data.status, lifecycleState: project.data.lifecycle_state, nextRequiredAction: project.data.next_required_action, executionState: execution.data?.status, hasAnalysis: Boolean(assessment.data), requiredQuestions: questions.count ?? 0, pendingApprovals: approvals.count ?? 0, roadmap: roadmap.data ? { status: roadmap.data.status, isBaseline: roadmap.data.is_baseline } : null, canManage, waitingForEvidence: Boolean(evidenceWaits.data?.length), teamNeedsAttention: Boolean(assessment.data?.evidence?.diagnosis) && (!lead.data || assignmentEvents.data?.find(row => row.event_type === "project.assignment.blocked" || row.metadata?.role === "lead")?.event_type === "project.assignment.blocked") });
 }
