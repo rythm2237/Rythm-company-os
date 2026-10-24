@@ -1,3 +1,5 @@
+import { holdTaskForMissingResources, resumeProjectResourceWaits, holdTaskForDeferredClarifications, resumeProjectClarificationWaits } from "@/lib/projects/project-resource-readiness";
+import { recordProjectTaskHandoffs } from "@/lib/projects/project-handoffs";
 import { loadCrmAgentOperationalContext } from "@/lib/crm/agent-context";
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -34,7 +36,7 @@ async function executeStructuredTask(supabase:SupabaseClient,task:any){
     actor:{type:"system"},
     context:{projectId:task.project_id},
     feature:"internal.unspecified",
-    systemInstructions:`You are ${agentRow?.display_name||agentRow?.name||"a RYTHM project agent"}, ${agentRow?.role_title||"Project Specialist"}. Complete the assigned work within your professional authority. Distinguish finishing your assigned work from completion of the real-world project outcome. Never claim an external action, production implementation, verification, measurement, or business outcome unless the supplied evidence proves it occurred. A plan, recommendation, approval, implementation package, HOLD decision, or blocked assessment is not implementation. If a governed external action is required, create a proposal instead of claiming it happened. Return exactly one JSON object and no Markdown.`,
+    systemInstructions:`You are ${agentRow?.display_name||agentRow?.name||"a RYTHM project agent"}, ${agentRow?.role_title||"Project Specialist"}. Complete the assigned work within your professional authority. Distinguish finishing your assigned work from completion of the real-world project outcome. Never claim an external action, production implementation, verification, measurement, or business outcome unless the supplied evidence proves it occurred. A plan, recommendation, approval, implementation package, HOLD decision, or blocked assessment is not implementation. If a governed external action is required, create a proposal instead of claiming it happened. If task input.resource_evidence_scope is supplied_documents_only, limit every page finding to the supplied source documents. Do not claim browsing, live access, complete website coverage or pages not supplied. Return exactly one JSON object and no Markdown.`,
     prompt:`Execute this project task using the supplied Project Knowledge. Return exactly this contract:
 {
  "summary":"string",
@@ -157,12 +159,17 @@ Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
 }
 
 export async function dispatchProjectWorkV2(supabase:SupabaseClient,workerId=`project-worker-v2-${randomUUID()}`){
+  await resumeProjectClarificationWaits(supabase);
+  await resumeProjectResourceWaits(supabase);
   await supabase.rpc("recover_stale_project_task_runs_v1");
   const claimed=await supabase.rpc("claim_project_task_runs_v1",{worker_id:workerId,claim_limit:6,lease_seconds:240});
   if(claimed.error)throw new Error(claimed.error.message);
   const results:Array<{id:string;status:string;error?:string}>=[];
   for(const task of claimed.data??[]){
     try{
+      if(await holdTaskForDeferredClarifications(supabase,task)){results.push({id:task.id,status:"waiting_for_data"});continue;}
+      if(await holdTaskForMissingResources(supabase,task)){results.push({id:task.id,status:"waiting_for_data"});continue;}
+      await recordProjectTaskHandoffs(supabase,task);
       await executeStructuredTask(supabase,task);
       results.push({id:task.id,status:"completed"});
     }catch(error){

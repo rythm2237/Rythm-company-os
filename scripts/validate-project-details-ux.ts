@@ -9,7 +9,7 @@ assert.ok(!page.includes("rx-cockpit"),"No duplicate UI cockpit on Project Detai
 assert.ok(page.includes('project.lifecycle_state)==="COMPLETED"'),"Completion requires actual lifecycle state");
 assert.ok(page.includes("next_required_action"),"Expose governed next step");
 assert.ok(page.includes("progress.outcomeProgressPercent"),"Outcome evidence must remain separate");
-assert.ok(page.includes('role="status" aria-label="Required next action"'),"Holds must appear accessibly");
+assert.ok(page.includes("<ProjectNextActionCard")&&readFileSync("components/projects/project-next-action.tsx","utf8").includes('role="status" aria-label="Required next action"'),"Holds must appear accessibly through canonical guidance");
 assert.ok(page.includes('className="project-phase-grid"'),"Roadmap must use responsive grid");
 assert.ok(css.includes("grid-template-columns:repeat(auto-fit"),"Phases must not force horizontal scrolling");
 assert.ok(page.includes('className="project-detail-more"'),"Secondary project tabs must be in accessible More menu");

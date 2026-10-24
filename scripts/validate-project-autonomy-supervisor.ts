@@ -16,7 +16,8 @@ const retryHealthResolution=read("supabase/migrations/20260927195500_project_ret
 requireText(supervisor,"superviseProjectExecutions","durable supervisor entrypoint");
 requireText(supervisor,"supervisor_recovery_count","bounded autonomous recovery");
 requireText(supervisor,"supervisor_transient_retry","retry-exhausted transient recovery");
-requireText(supervisor,"Recovery manager","department/manager recovery assignment");
+requireText(supervisor,"ensureProjectAgentReservation","atomic capacity-aware recovery assignment");
+forbidText(supervisor,'from("project_agent_capacity").upsert',"recovery must not bypass capacity reservations");
 requireText(supervisor,"recovery_for_task_id","durable recovery-task linkage");
 requireText(supervisor,"recovery_replace_dependencies","dependency deadlock re-plan");
 requireText(supervisor,"project_recovery","executive escalation only after autonomous recovery");

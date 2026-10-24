@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ensureProjectAgentReservation } from "@/lib/projects/project-agent-assignment";
 import { getApprovedProjectRoadmap, type RoadmapTask } from "@/lib/projects/project-roadmap";
 
 /**
@@ -132,30 +133,9 @@ export async function startProjectExecutionWithoutGlobalGate(
   try {
   const agentIds = [...new Set(tasks.map((task) => task.agentId).filter(Boolean))] as string[];
   for (const agentId of agentIds) {
-    const assignment = await supabase.from("project_agents").upsert(
-      {
-        project_id: projectId,
-        agent_id: agentId,
-        organization_id: organizationId,
-        assignment_role: "Execution team member",
-        status: "active",
-        assigned_at: now,
-        authority_scope: { project_execution: true },
-      },
-      { onConflict: "project_id,agent_id" },
-    );
-    if (assignment.error) throw new Error(`Unable to assign project agent: ${assignment.error.message}`);
-    const capacity = await supabase.from("project_agent_capacity").upsert(
-      {
-        organization_id: organizationId,
-        project_id: projectId,
-        agent_id: agentId,
-        allocation_percent: 25,
-        priority: Number(project.data.readiness_score ?? 0) >= 80 ? 2 : 3,
-      },
-      { onConflict: "project_id,agent_id" },
-    );
-    if (capacity.error) throw new Error(`Unable to assign agent capacity: ${capacity.error.message}`);
+    const reservation = await ensureProjectAgentReservation(supabase, { organizationId, projectId, actorId: userId, agentId,
+      taskText: tasks.filter(task => task.agentId === agentId).map(task => `${task.title} ${task.description}`).join(" ") });
+    if (!reservation.ok) throw new Error(`Unable to reserve agent capacity: ${reservation.reason}`);
   }
 
   for (const task of tasks) {
@@ -221,7 +201,7 @@ export async function startProjectExecutionWithoutGlobalGate(
       waiting_on_approval_id: approvalId,
       work_weight: Math.max(0.1, Number(task.workWeight || 1)),
       idempotency_key: `project:${projectId}:execution:${executionNo}:task:${task.key}`,
-      input: { description: task.description, risk: task.risk, roadmap_id: roadmap.id, roadmap_version: roadmap.version, roadmap_phase_id: task.phaseId, roadmap_phase_key: task.phaseKey },
+      input: { description: task.description, risk: task.risk, required_input_keys: task.requiredInputKeys ?? [], roadmap_id: roadmap.id, roadmap_version: roadmap.version, roadmap_phase_id: task.phaseId, roadmap_phase_key: task.phaseKey },
     });
     if (taskRun.error) throw new Error(`Unable to create project task: ${taskRun.error.message}`);
   }

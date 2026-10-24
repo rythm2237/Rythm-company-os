@@ -47,3 +47,9 @@ B-001 may read, analyze, prepare, coordinate, convene meetings, produce recommen
 ## Approved naming
 
 The company and platform name is **RYTHM Company OS**. Historical documents using the Athena working name are superseded as naming references, while their approved technical and governance content remains part of the specification lineage until formally migrated.
+
+## Universal project intelligence (2026-10-24)
+
+- [Architecture decision](architecture/ADR-universal-project-intelligence.md)
+- [Implementation, acceptance and release evidence](qa/universal-project-release.md)
+- [Guided setup QA](qa/universal-project-setup.md)

@@ -1,3 +1,6 @@
+import { ProjectSetupWizard } from "@/components/projects/project-setup-wizard";
+import { suggestProjectIntake, validateProjectResourceUrl } from "@/lib/projects/project-intake";
+import { assignProjectLead } from "@/lib/projects/project-agent-assignment";
 import {ProjectCustomerFields} from "@/components/crm/record-links";
 import { SubmitButton } from "@/components/ui/Button";
 import { ProjectsPortfolio } from "@/components/projects/projects-portfolio";
@@ -27,8 +30,12 @@ async function createProject(formData:FormData){
   await requireCrm(supabase,organizationId,"project.create");
   const objective=text(formData,"objective",5000);
   const quickStart=text(formData,"quickStart",10)==="1";
-  const projectCode=(quickStart?`PROJECT-${randomUUID().slice(0,8).toUpperCase()}`:text(formData,"projectCode",40).toUpperCase().replace(/[^A-Z0-9-]+/g,"-").replace(/^-+|-+$/g,""));
-  const name=quickStart?objective.slice(0,120):text(formData,"name",120);const description=text(formData,"description",5000);
+  const guidedSetup=text(formData,"guidedSetup",10)==="1";
+  const requestId=text(formData,"setupRequestId",36);
+  if(guidedSetup&&!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId))redirect("/projects?error=Invalid+setup+session.+Start+a+new+draft.");
+  const projectCode=guidedSetup?`PROJECT-${requestId.toUpperCase()}`:(quickStart?`PROJECT-${randomUUID().slice(0,8).toUpperCase()}`:text(formData,"projectCode",40).toUpperCase().replace(/[^A-Z0-9-]+/g,"-").replace(/^-+|-+$/g,""));
+  const intake=suggestProjectIntake(objective);
+  const name=quickStart?intake.title:text(formData,"name",120);const description=text(formData,"description",5000)||objective;
   if(projectCode.length<3||name.length<3)redirect("/projects?error=Project%20code%20and%20name%20must%20contain%20at%20least%203%20characters.");
   const priority=Math.max(1,Math.min(5,Number(formData.get("priority")??3)));
   const startDate=text(formData,"startDate",20)||null;const targetDate=text(formData,"targetDate",20)||null;
@@ -40,6 +47,13 @@ async function createProject(formData:FormData){
   const {data:eligible}=await supabase.from("organization_members").select("user_id").eq("organization_id",organizationId).eq("user_id",managerId).eq("membership_status","active").maybeSingle();
   if(!eligible)redirect("/projects?error=Select+an+active+company+member+as+manager.");
   if(customerId){const {data:customer}=await supabase.from("crm_accounts").select("id").eq("organization_id",organizationId).eq("id",customerId).maybeSingle();if(!customer)redirect("/projects?error=Customer+unavailable.");}
+  let existingGuidedProjectId:string|null=null;
+  if(guidedSetup){
+    const existing=await supabase.from("projects").select("id").eq("organization_id",organizationId).eq("project_code",projectCode).eq("created_by_user_id",user.id).maybeSingle();
+    existingGuidedProjectId=existing.data?.id??null;
+    if(existingGuidedProjectId){const previous=await supabase.from("project_context_documents").select("evidence").eq("organization_id",organizationId).eq("project_id",existingGuidedProjectId).eq("title","Project setup decisions").maybeSingle();if(previous.data?.evidence?.setup_complete===true)redirect(`/projects/operating?project=${existingGuidedProjectId}`);}
+  }
+  for(const resource of ["website","github","drive","figma"]){if(!validateProjectResourceUrl(text(formData,resource,1200)))redirect("/projects?error=Use+valid+public+resource+URLs+without+embedded+credentials.");}
   const selectedContract=text(formData,"existingContract",36);
   if(selectedContract)await requireCrm(supabase,organizationId,"contract.update","contract",selectedContract);
   const hasCommercialInput=Boolean(text(formData,"contractNumber")||text(formData,"contractValue")||text(formData,"deliverables")||text(formData,"paymentTerms")||text(formData,"specialClauses"));
@@ -49,12 +63,19 @@ async function createProject(formData:FormData){
   const category=text(formData,"fileCategory",80)||"other";
   const protectedDomain=["contract","amendment","nda","statement_of_work"].includes(category)?"contract":category==="financial"?"finance":null;
   if(protectedDomain&&formData.getAll("files").some(v=>v instanceof File&&v.size>0))await requireCrm(supabase,organizationId,protectedDomain+".update");
-  const projectValues={project_code:projectCode,name,description,primary_manager_user_id:managerId,customer_id:customerId,engagement_type:engagementType,project_type:text(formData,"projectType",80)||"business_project",status:"planning",stage:"intake",priority,owner_type:"human_ceo",objective,scope:{},success_criteria:jsonLines(text(formData,"successCriteria",5000)),constraints:["Human CEO retains consequential authority","External actions remain governed by Integration & Execution Gateway",...jsonLines(text(formData,"constraints",5000))],progress_percent:0,start_date:startDate,target_date:targetDate,internal_owner_label:text(formData,"internalOwner",160)||null,responsible_department:text(formData,"responsibleDepartment",160)||null,tags,notes:text(formData,"notes",8000),autonomy_mode:autonomyMode,readiness_score:0};
+  const projectValues={project_code:projectCode,name,description,primary_manager_user_id:managerId,customer_id:customerId,engagement_type:engagementType,project_type:guidedSetup?intake.category:text(formData,"projectType",80)||"business_project",status:"planning",stage:"intake",priority,owner_type:"human_ceo",objective,scope:{},success_criteria:jsonLines(text(formData,"successCriteria",5000)),constraints:["Human CEO retains consequential authority","External actions remain governed by Integration & Execution Gateway",...jsonLines(text(formData,"constraints",5000))],progress_percent:0,start_date:startDate,target_date:targetDate,internal_owner_label:text(formData,"internalOwner",160)||null,responsible_department:text(formData,"responsibleDepartment",160)||null,tags,notes:text(formData,"notes",8000),autonomy_mode:autonomyMode,readiness_score:0};
   const contractNumber=text(formData,"contractNumber",160),contractValue=text(formData,"contractValue",80);
   const newContract=hasCommercialInput?{contract_number:contractNumber||null,contract_start_date:text(formData,"contractStartDate",20)||null,contract_end_date:text(formData,"contractEndDate",20)||null,contract_value:contractValue?Number(contractValue):null,currency:text(formData,"currency",12)||null,payment_terms:text(formData,"paymentTerms",3000)||null,deliverables:jsonLines(text(formData,"deliverables",8000)),sla:{text:text(formData,"sla",4000)},milestones:jsonLines(text(formData,"contractMilestones",8000)),provider_obligations:jsonLines(text(formData,"providerObligations",8000)),client_obligations:jsonLines(text(formData,"clientObligations",8000)),exclusions:jsonLines(text(formData,"exclusions",8000)),dependencies:jsonLines(text(formData,"dependencies",8000)),approval_requirements:jsonLines(text(formData,"approvalRequirements",8000)),termination_conditions:text(formData,"terminationConditions",4000)||null,confidentiality_requirements:text(formData,"confidentiality",4000)||null,ip_ownership:text(formData,"ipOwnership",4000)||null,data_protection_requirements:text(formData,"dataProtection",4000)||null,special_clauses:jsonLines(text(formData,"specialClauses",8000)),notes:text(formData,"contractNotes",8000)}:null;
-  const {data:projectId,error}=await supabase.rpc("crm_create_linked_project",{p_organization_id:organizationId,p_project:projectValues,p_contract_id:selectedContract||null,p_new_contract:newContract});
-  if(error||!projectId)redirect("/projects?error=Project+not+created.+Check+the+customer,+contract,+manager+and+permissions.");
-  const project={id:projectId as string};
+  let projectId=existingGuidedProjectId;
+  let newlyCreated=false;
+  if(!projectId){
+    const created=await supabase.rpc("crm_create_linked_project",{p_organization_id:organizationId,p_project:projectValues,p_contract_id:selectedContract||null,p_new_contract:newContract});
+    projectId=created.data as string|null;newlyCreated=Boolean(projectId);
+    if((created.error||!projectId)&&guidedSetup){const existing=await supabase.from("projects").select("id").eq("organization_id",organizationId).eq("project_code",projectCode).eq("created_by_user_id",user.id).maybeSingle();projectId=existing.data?.id??null;}
+    if(!projectId)redirect("/projects?error=Project+not+created.+Check+the+customer,+contract,+manager+and+permissions.");
+  }
+  const project={id:projectId};
+  let setupWarning=false;
 
   const resources=[
     {type:"website",name:"Website",url:text(formData,"website",1200)},
@@ -62,24 +83,34 @@ async function createProject(formData:FormData){
     {type:"google_drive",name:"Google Drive",url:text(formData,"drive",1200)},
     {type:"figma",name:"Figma",url:text(formData,"figma",1200)},
   ].filter(r=>r.url);
-  if(resources.length)await supabase.from("project_resources").insert(resources.map(r=>({organization_id:organizationId,project_id:project.id,resource_type:r.type,name:r.name,url:r.url,status:"connected",source:"project_intake",access_status:"unknown"})));
+  if(resources.length){const stored=await supabase.from("project_resources").upsert(resources.map(r=>({organization_id:organizationId,project_id:project.id,resource_type:r.type,name:r.name,url:r.url,status:"planned",source:"project_intake",access_status:"unknown"})),{onConflict:"project_id,resource_type,name",ignoreDuplicates:true});if(stored.error)setupWarning=true;}
+
+  if(guidedSetup){
+    const assignmentMode=text(formData,"assignmentMode",20)==="manual"?"manual":"auto";
+    const service=createServerSupabaseClient();
+    let assignment:{status:string;agentId:string|null;reason:string}={status:"blocked",agentId:null,reason:"Assignment service unavailable. Assign a lead from the project workspace."};
+    try{if(service)assignment=await assignProjectLead(service,organizationId,project.id,user.id,{mode:assignmentMode,agentId:text(formData,"leadAgentId",36)||undefined,skills:intake.capabilities,domain:intake.category});}catch{assignment={status:"blocked",agentId:null,reason:"Assignment evidence is temporarily unavailable. Retry from the project workspace."};}
+    if(assignment.status!=="assigned")setupWarning=true;
+    const setup=await supabase.from("project_context_documents").upsert({organization_id:organizationId,project_id:project.id,context_type:"project_setup",title:"Project setup decisions",summary:`${name}. Human manager selected; ${assignment.status==='assigned'?'AI lead assigned.':'AI lead assignment needs attention.'}`,source_name:"Human-confirmed guided setup",status:"validated",confidence:1,confidentiality:"operational",evidence:{version:1,setup_complete:!setupWarning,original_brief:objective,category:{value:intake.category,status:"inferred",source:"brief classification"},capabilities:intake.capabilities,assignment_mode:assignmentMode,ai_lead_agent_id:assignment.agentId,assignment_status:assignment.status,assignment_reason:assignment.reason,primary_manager_user_id:managerId,resource_verification:"submitted_unverified",confirmed_by:user.id,confirmed_at:new Date().toISOString()}},{onConflict:"project_id,title"});
+    if(setup.error){setupWarning=true;console.error("project_setup_context_failed",{projectId:project.id,code:setup.error.code});}
+  }
 
   const files=formData.getAll("files").filter((item):item is File=>item instanceof File&&item.size>0).slice(0,20);
   if(files.length){
     const service=createServerSupabaseClient();
     if(service){for(const file of files){if(file.size>50*1024*1024)continue;const bytes=Buffer.from(await file.arrayBuffer());const storagePath=`${organizationId}/${project.id}/${randomUUID()}-${safeName(file.name)}`;const uploaded=await service.storage.from("project-files").upload(storagePath,bytes,{contentType:file.type||"application/octet-stream",upsert:false});if(!uploaded.error){const category=text(formData,"fileCategory",80)||"other";await service.from("project_documents").insert({organization_id:organizationId,project_id:project.id,category,file_name:file.name,storage_path:storagePath,mime_type:file.type,byte_size:file.size,checksum:createHash("sha256").update(bytes).digest("hex"),legal_document:["contract","amendment","nda","statement_of_work"].includes(category),uploaded_by_user_id:user.id});}}}
   }
-  await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"project.created",object_type:"project",object_id:project.id,risk_level:"low",payload:{project_code:projectCode,name,human_authority:"Human CEO / Owner",autonomy_mode:autonomyMode,files:files.length}});
-  revalidatePath("/projects");revalidatePath("/crm","layout");redirect(`/projects/operating?project=${project.id}`);
+  if(newlyCreated)await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"project.created",object_type:"project",object_id:project.id,risk_level:"low",payload:{project_code:projectCode,name,human_authority:"Human CEO / Owner",autonomy_mode:autonomyMode,files:files.length}});
+  revalidatePath("/projects");revalidatePath("/crm","layout");redirect(`/projects/operating?project=${project.id}${setupWarning?"&setupWarning=1":""}`);
 }
 
 export default async function ProjectsPortfolioPage({searchParams}:{searchParams:Promise<{error?:string;customer?:string;contract?:string}>}){
-  const query=await searchParams;const {supabase,organizationId}=await requireOrganizationContext();
+  const query=await searchParams;const {supabase,organizationId,user}=await requireOrganizationContext();
   const canCreate=await canCrm(supabase,organizationId,"project.create");
   const [projectsResult,attentionResult,customersResult,membersResult,contractsResult,canContract]=await Promise.all([
     supabase.from("projects").select("id,customer_id,primary_manager_user_id,engagement_type,project_code,name,description,status,stage,priority,progress_percent,readiness_score,target_date,updated_at,responsible_department,lifecycle_state,overall_project_progress,next_required_action,work_progress,deliverable_progress,implementation_progress,verification_progress,outcome_progress,acceptance_progress,closeout_progress,completion_eligible").eq("organization_id",organizationId).order("priority").order("updated_at",{ascending:false}),
     supabase.from("project_proposals").select("project_id,status").eq("organization_id",organizationId).in("status",["ready_for_executive","needs_revision"])
-    ,supabase.from("crm_accounts").select("id,name").eq("organization_id",organizationId).neq("customer_status","archived").order("name"),
+    ,supabase.from("crm_accounts").select("id,name,industry,website_url,country_code").eq("organization_id",organizationId).neq("customer_status","archived").order("name"),
     supabase.from("organization_members").select("user_id,display_name").eq("organization_id",organizationId).eq("membership_status","active"),
     supabase.from("project_contracts").select("id,contract_number,customer_id").eq("organization_id",organizationId).order("contract_number"),
     canCrm(supabase,organizationId,"contract.create")
@@ -94,7 +125,7 @@ export default async function ProjectsPortfolioPage({searchParams}:{searchParams
     {query.error?<p className="form-error">{query.error}</p>:null}
     <section className="organization-banner"><div><span>Total projects</span><strong>{projects.length}</strong></div><div><span>Running</span><strong>{running}</strong></div><div><span>Needs attention</span><strong>{attention.length}</strong></div><div><span>Blocked</span><strong>{blocked}</strong></div><div><span>Completed</span><strong>{completed}</strong></div></section>
 
-    {canCreate?<details id="create-project" open={Boolean(query.customer)} className="panel panel-wide" style={{marginTop:18}}><summary style={{cursor:"pointer",fontWeight:800}}>Start a project here</summary><div aria-labelledby="project-objective-heading"><div className="panel-heading"><div><p className="label">Delegate an outcome</p><h2 id="project-objective-heading">What should your company accomplish?</h2></div><span className="pill">Start with an objective</span></div><form action={createProject} className="auth-form"><input type="hidden" name="quickStart" value="1"/>{accountability}<label>Objective<textarea name="objective" required minLength={3} maxLength={5000} rows={3} placeholder="Build a landing page for my SaaS product, then show me a preview for review."/></label><SubmitButton type="submit">Create project</SubmitButton><p className="security-note">Next, run Project Analysis in the project workspace to get a roadmap, team and required connections. Execution starts only after readiness and approval gates are satisfied.</p></form></div></details>:null}
+    {canCreate?<details id="create-project" open={Boolean(query.customer)} className="panel panel-wide" style={{marginTop:18}}><summary style={{cursor:"pointer",fontWeight:800}}>Start a project</summary><ProjectSetupWizard action={createProject} organizationId={organizationId} userId={user.id} customers={customersResult.data??[]} members={membersResult.data??[]} initialCustomer={selectedCustomer} initialContract={selectedContract}/></details>:null}
 
     {canCreate?<section className="panel panel-wide" style={{marginTop:18}}><details><summary style={{cursor:"pointer",fontWeight:800,fontSize:18}}>Advanced project setup</summary><form action={createProject} className="auth-form" style={{marginTop:18}}>
       <div className="panel-heading"><div><p className="label">1 · Project Identity</p><h2>Outcome and ownership</h2></div><span className="pill">One accountable manager required</span></div>{accountability}

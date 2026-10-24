@@ -1,0 +1,29 @@
+import assert from "node:assert/strict";
+import { deriveProjectNextAction, type NextActionInput } from "../lib/projects/project-next-action";
+const base: NextActionInput = { projectId: "project", projectStatus: "draft", hasAnalysis: false, requiredQuestions: 0, pendingApprovals: 0, roadmap: null, canManage: true };
+const next = (overrides: Partial<NextActionInput>) => deriveProjectNextAction({ ...base, ...overrides });
+assert.equal(next({}).action, "analyze");
+assert.equal(next({ hasAnalysis: true }).action, "create_roadmap");
+assert.equal(next({ hasAnalysis: true, requiredQuestions: 8 }).action, "clarify");
+assert.equal(next({ hasAnalysis: true, roadmap: { status: "in_review", isBaseline: false } }).action, "review_roadmap");
+assert.equal(next({ hasAnalysis: true, roadmap: { status: "approved", isBaseline: true } }).action, "start");
+assert.equal(next({ executionState: "running" }).action, "monitor", "legacy active execution is never restarted by guidance");
+assert.equal(next({ executionState: "running", pendingApprovals: 2 }).stage, "execution");
+assert.equal(next({ projectStatus: "blocked", executionState: "running" }).stage, "blocked");
+assert.equal(next({ executionState: "paused" }).action, "review_decisions");
+assert.equal(next({ executionState: "completed", roadmap: { status: "approved", isBaseline: true } }).stage, "verification");
+assert.equal(next({ lifecycleState: "COMPLETED" }).action, "review_results");
+assert.equal(next({ canManage: false }).eligible, false);
+assert.equal(next({ roadmap: { status: "rejected", isBaseline: false }, hasAnalysis: true }).label, "Prepare a revised roadmap");
+assert.equal(next({ hasAnalysis: true, teamNeedsAttention: true }).action, "assign_team");
+assert.equal(next({ executionState: "running", teamNeedsAttention: true }).action, "monitor");
+console.log("PASS canonical next action: intake, discovery, clarification, roadmap review, existing execution, holds, outcomes and read-only roles.");
+
+assert.equal(next({ projectStatus: "active", executionState: "paused", hasAnalysis: true, roadmap: { status: "in_review", isBaseline: false } }).action, "review_roadmap", "legacy planning pause can review its first baseline");
+assert.equal(next({ projectStatus: "on_hold", executionState: "paused", roadmap: { status: "in_review", isBaseline: false } }).stage, "blocked", "human hold always wins");
+assert.match(next({ projectStatus: "on_hold" }).href, /view=overview/, "hold guidance leads to the available governance controls");
+for (const executionState of ["failed", "cancelled"]) assert.equal(next({ executionState, roadmap: { status: "approved", isBaseline: true } }).stage, "recovery");
+assert.equal(next({ projectStatus: "cancelled", executionState: "cancelled" }).stage, "completion");
+
+assert.equal(next({ executionState: "running", requiredQuestions: 1 }).action, "clarify");
+assert.equal(next({ executionState: "running", waitingForEvidence: true }).action, "supply_evidence");

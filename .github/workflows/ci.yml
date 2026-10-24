@@ -30,6 +30,7 @@ jobs:
       - run: npm run test:commercial-payment
       - run: npm run test:boardroom
       - run: npm run test:interactions
+      - run: npm run test:universal-project
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:i18n
@@ -76,6 +77,12 @@ jobs:
       - run: node scripts/validate-crm-experience-browser.mjs
         env:
           CRM_BROWSER_CHANNEL: chrome
+      - run: npm run test:project-setup-browser
+        env:
+          CRM_BROWSER_CHANNEL: chrome
+      - run: npm run test:project-live-browser
+        env:
+          CRM_BROWSER_CHANNEL: chrome
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -83,3 +90,5 @@ jobs:
           path: |
             test-results/crm
             test-results/crm-experience
+            test-results/project-setup
+            test-results/project-intelligence
