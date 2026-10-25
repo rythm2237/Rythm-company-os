@@ -159,12 +159,28 @@ async function verify() {
     const client = await login(user.key);
     for (const c of blueprint.companies) {
       const allowed = blueprint.memberships.some((m) => m.companyKey === c.key && m.userKey === user.key);
+      if (allowed) {
+        const selected = unwrap(await client.rpc("set_active_organization", { target_org_id: c.id }), "select own company");
+        assert.equal(String(selected), c.id);
+      }
       for (const [table, field, id] of [["organizations", "id", c.id], ["projects", "id", c.projectId], ["organization_entitlements", "organization_id", c.id]]) {
         const rows = unwrap(await client.from(table).select("*", { head: true, count: "exact" }).eq(field, id), "RLS " + table);
         assert.equal(rows, null);
         const count = await client.from(table).select("id", { count: "exact", head: true }).eq(field, id);
         if (count.error) throw Error("RLS count failed " + table + ": " + count.error.message);
         assert.equal(Number(count.count ?? 0), allowed ? 1 : 0, user.key + " -> " + c.key + " " + table);
+      }
+      if (!allowed) {
+        for (const table of ["organization_members", "crm_access_grants"]) {
+          const count = await client.from(table).select("organization_id", { head: true, count: "exact" }).eq("organization_id", c.id);
+          if (count.error) throw Error("Cross-tenant " + table + " read failed: " + count.error.message);
+          assert.equal(Number(count.count ?? 0), 0, user.key + " must not see " + c.key + " " + table);
+        }
+        // A same-value update uses disposable synthetic data, never a real customer's project.
+        const foreignWrite = await client.from("projects")
+          .update({ name: "W02 synthetic internal project " + c.key })
+          .eq("id", c.projectId).select("id");
+        if (!foreignWrite.error) assert.equal(foreignWrite.data?.length ?? 0, 0, "Foreign project write must be forbidden");
       }
       const cap = await client.rpc("crm_can", {
         p_organization_id: c.id, p_capability: "finance.read", p_resource_type: "company", p_resource_id: c.id
