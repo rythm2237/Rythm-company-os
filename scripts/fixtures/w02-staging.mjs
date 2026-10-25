@@ -25,7 +25,7 @@ assert.notEqual(process.env.VERCEL_ENV, "production");
 assert.equal(process.env.W02_W01_VERIFIED, "true", "W01 owner/QA dependency must be verified before real staging runs");
 assert.ok(serviceKey && anonKey && password && password.length >= 16, "Staging-only keys and 16+ char test password required");
 const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
-const state = { version: blueprint.version, projectRef: ref, organizations: blueprint.companies.map(({ key, id, projectId }) => ({ key, id, projectId })), users: {} };
+const state = { version: blueprint.version, projectRef: ref, organizations: blueprint.companies.map(({ key, id, projectId }) => ({ key, id, projectId })), negativeCases: blueprint.negativeCases,\n  permissionMatrix: blueprint.users.flatMap((user) => blueprint.companies.map((company) => ({ userKey: user.key, companyKey: company.key, member: blueprint.memberships.some((m) => m.userKey === user.key && m.companyKey === company.key), financeRead: blueprint.grants.some((g) => g.userKey === user.key && g.companyKey === company.key) }))), users: {} };
 const statePath = resolve(process.cwd(), ".w02-fixtures", ref + ".json");
 function persist() {
   mkdirSync(resolve(process.cwd(), ".w02-fixtures"), { recursive: true });
