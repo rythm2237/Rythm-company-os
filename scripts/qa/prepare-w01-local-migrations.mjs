@@ -16,7 +16,7 @@ import { resolve, join, basename } from "node:path";
 import { createHash } from "node:crypto";
 
 const source = resolve("supabase/migrations");
-const allowedIgnored = new Set(["202608050002_seed_company.sql"]);
+const allowedIgnored = new Set(["202608050002_seed_company.sql", "20260927104500_2nya_align_portfolio_seed_with_current_site.sql"]);
 const cliVersion = "2.84.2";
 const forbidden = [
   "SUPABASE_ACCESS_TOKEN",
@@ -54,7 +54,7 @@ function normalize(names, target) {
     const content = readFileSync(join(source, name));
     const checksum = createHash("sha256").update(content).digest("hex");
     if (allowedIgnored.has(name)) {
-      mapping.push({ source: name, sha256: checksum, action: "excluded_owner_seed" });
+      mapping.push({ source: name, sha256: checksum, action: "excluded_real_data_seed" });
       continue;
     }
     // Timestamped 14-digit version is CLI-compliant and increasing.
@@ -72,7 +72,7 @@ function normalize(names, target) {
     cli_version: cliVersion,
     source_migration_count: srcFiles.length,
     local_replay_count: count,
-    excluded_historical_owner_seed: [...allowedIgnored],
+    excluded_data_seeds: [...allowedIgnored],
     warning: "Normalized local filenames and omitted human-owner seed. Does NOT establish history equivalence or physical schema parity.",
     mapping,
   };
@@ -85,7 +85,7 @@ function selfTest() {
   const sources = getSources();
   assert.equal(sources.length, 218);
   assert(sources.includes("202608050002_seed_company.sql"));
-  assert(allowedIgnored.size === 1);
+  assert(allowedIgnored.size === 2);
   const sorted = [...sources].sort();
   assert.deepEqual(sources, sorted);
   isOfflineEnvironment();
