@@ -1,0 +1,41 @@
+name: W01 Baseline Evidence (offline only)
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/w01-baseline.yml"
+      - "scripts/qa/verify-w01-baseline.mjs"
+      - "docs/qa/W01_BASELINE_SNAPSHOT.json"
+      - "docs/qa/W01_SAFE_STAGING.md"
+      - "supabase/migrations/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: node --check scripts/qa/verify-w01-baseline.mjs
+      - name: Baseline and migration-history inventory check
+        run: node scripts/qa/verify-w01-baseline.mjs docs/qa/W01_BASELINE_SNAPSHOT.json
+      - name: Staging fail-closed regression scenarios (no services)
+        run: node scripts/qa/verify-w01-baseline.mjs --self-test
+      - name: Evidence content hashes
+        run: |
+          sha256sum docs/qa/W01_BASELINE_SNAPSHOT.json scripts/qa/verify-w01-baseline.mjs docs/qa/W01_SAFE_STAGING.md > w01-baseline-sha256.txt
+          cat w01-baseline-sha256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w01-offline-evidence
+          path: w01-baseline-sha256.txt
+          retention-days: 30
