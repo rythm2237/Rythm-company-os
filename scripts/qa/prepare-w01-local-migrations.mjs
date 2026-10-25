@@ -64,6 +64,10 @@ function normalize(names, target) {
   const dest = resolve(target);
   const migrations = join(dest, "supabase", "migrations");
   mkdirSync(migrations, { recursive: true });
+  const coreOnly = process.argv.includes("--core-smoke");
+  const coreLimit = 16; // first 16 validated foundation migrations, before historical strategy backfill
+  const allOrdered = replayOrder(srcFiles);
+  const selected = coreOnly ? allOrdered.slice(0, coreLimit) : allOrdered;
   const mapping = [];
   let count = 0;
   const baseTime = Date.UTC(2026, 9, 25, 0, 0, 0);
@@ -71,7 +75,7 @@ function normalize(names, target) {
     const checksum = createHash("sha256").update(readFileSync(join(source, name))).digest("hex");
     mapping.push({ source: name, sha256: checksum, action: "excluded_real_data_seed" });
   }
-  for (const name of replayOrder(srcFiles)) {
+  for (const name of selected) {
     const content = readFileSync(join(source, name));
     const checksum = createHash("sha256").update(content).digest("hex");
     // Timestamped 14-digit version is CLI-compliant and increasing.
@@ -82,19 +86,21 @@ function normalize(names, target) {
     mapping.push({ source: name, local_file: targetName, sha256: checksum, action: "local_copy_only" });
     count++;
   }
-  assert.equal(count, srcFiles.length - allowedIgnored.size);
+  assert.equal(count, coreOnly ? coreLimit : srcFiles.length - allowedIgnored.size);
   assert(!mapping.some((x) => x.action === "local_copy_only" && x.source.includes("seed_company")));
   const manifest = {
     version: 1,
     cli_version: cliVersion,
     source_migration_count: srcFiles.length,
     local_replay_count: count,
+    mode: coreOnly ? "isolated_core_tenant_smoke" : "all_schema_diagnostic",
+    deliberately_unreplayed_sql_count: allOrdered.length - selected.length,
     excluded_data_seeds: [...allowedIgnored],
     warning: "Normalized local names, moved two preflight migrations before their parent SQL, excluded two real-data seeds. DIAGNOSTIC ONLY: not original execution order, exact history, or production schema parity.",
     mapping,
   };
   writeFileSync(join(dest, "w01-local-migration-map.json"), JSON.stringify(manifest, null, 2) + "\n", { mode: 0o600 });
-  console.log("W01 local-only migration map: " + srcFiles.length + " source SQL; " + count + " replay copies; " + allowedIgnored.size + " quarantined real-data seeds.");
+  console.log("W01 local-only migration map: " + srcFiles.length + " source SQL; " + count + " replay copies; " + allowedIgnored.size + " quarantined real-data seeds; mode=" + (coreOnly ? "CORE_SMOKE" : "FULL_DIAGNOSTIC"));
   console.log("W01 map file created in disposable workspace. No source file rewritten. No credentials loaded.");
   return manifest;
 }
