@@ -1,0 +1,53 @@
+name: W01 Private Restore Harness (synthetic input only)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/w01-restore-harness.yml'
+      - 'scripts/qa/w01-*'
+      - 'docs/qa/W01_RESTORE*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  restore-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ''
+      SUPABASE_DB_PASSWORD: ''
+      SUPABASE_SERVICE_ROLE_KEY: ''
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
+        with:
+          version: 2.84.2
+      - name: Unit safety gates
+        run: node --test scripts/qa/w01-restore-safety.test.mjs
+      - name: Start empty initialized Supabase database only
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d "$RUNNER_TEMP/w01-restore.XXXXXX")"
+          echo "W01_RESTORE_ROOT=$root" >> "$GITHUB_ENV"
+          cd "$root"
+          supabase --version
+          supabase db start --help >/dev/null
+          supabase init --yes
+          sed -i 's/^project_id = .*/project_id = "w01-ci-restore"/' supabase/config.toml
+          supabase db start
+      - name: Real atomic rollback and restore using synthetic DDL only
+        run: node scripts/qa/w01-restore-integration.mjs
+      - name: Remove disposable local containers
+        if: always()
+        run: |
+          if [ -n "$W01_RESTORE_ROOT" ] && [ -d "$W01_RESTORE_ROOT" ]; then
+            cd "$W01_RESTORE_ROOT"
+            supabase stop --no-backup
+          fi
