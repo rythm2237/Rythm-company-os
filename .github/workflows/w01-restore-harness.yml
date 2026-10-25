@@ -44,6 +44,8 @@ jobs:
           supabase db start
       - name: Real atomic rollback and restore using synthetic DDL only
         run: node scripts/qa/w01-restore-integration.mjs
+      - name: Tenant assertion helpers and PL/pgSQL syntax (not full app matrix)
+        run: node scripts/qa/w01-test-helpers.mjs
       - name: Remove disposable local containers
         if: always()
         run: |

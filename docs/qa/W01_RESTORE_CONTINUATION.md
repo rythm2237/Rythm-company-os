@@ -2,6 +2,40 @@
 
 **W01 NOT ACCEPTED. No merge or production mutation is authorized.**
 
+## Latest: authoritative local restore committed (owner-local evidence)
+
+On 2026-10-25 the owner ran the controller on their Windows Docker machine and
+returned `schema_parity=PASS_WITH_DOCUMENTED_SCOPE`, `network=disconnected`,
+source SHA-256 `99178a9f3a21c1a88ab33cdf5a74526ffffd310ad39faecf454a971a7d6ffa64`.
+The real initialized PostgreSQL target reports version 17.11. The controller
+committed the single transaction only after matching every catalog bucket.
+This is owner-provided execution evidence, not a claim that Work controlled
+their computer. The original `rythm_w01_restore` template0 DB was not used.
+
+Two bundle defects were corrected before this successful run: missing SQL
+terminators between private function exports, and an unqualified public enum
+type in GRANT signatures after pg_dump cleared search_path. Actual functions,
+privileges and the original dump were preserved; no dummy types or dependencies
+were introduced. Regression CI covers consecutive functions and enum GRANTs.
+
+Next: `w01-tenant-matrix.sql` provisions Advertising A, Software Development B,
+Retail C, 23 synthetic Auth identities (21 tenant personas + shared + outsider),
+23 membership edges, independent finance/contract grants and known foreign IDs.
+It asserts 1,000 expected DB-role access outcomes, including real-policy CRUD,
+finance/contract boundaries, manager accountability, cross-tenant references,
+context RPC authorization, privilege escalation and claim handling. All setup,
+application triggers and test effects remain in one transaction and rollback.
+The local runner verifies network disconnection, the prior successful restore,
+the SQL checksum and post-run empty-fixture cleanup. It records failures without
+silently treating missing schema or unexpected SQL errors as correct denial.
+
+CI syntax-checks all PL/pgSQL bodies and exercises invoker-role assertion helpers
+against real disposable PostgreSQL. **CI does not execute the full application
+matrix without the private schema.** Owner-local execution is the next physical
+action. DB claim simulation does not verify HTTP JWT signatures or expiry.
+The TRUNCATE-privilege test is a database-role security check, not a claim that
+PostgREST exposes SQL TRUNCATE through its HTTP API.
+
 The owner-supplied public-only dump was materialized privately, unchanged:
 SHA-256 `99178a9f3a21c1a88ab33cdf5a74526ffffd310ad39faecf454a971a7d6ffa64`,
 1,257,468 bytes; 214 tables, 234 functions, 338 policies, 141 triggers,
@@ -66,7 +100,7 @@ harness workflow **does not attest production-schema restoration**.
 | Production/main baseline | PASS at inspection | Live READY production deployment still 8ba2f605f9fc926ab5428284f125589540a16ff0 |
 | Real production schema inventory | PASS, catalog only | 214 tables, 267 public/private functions, 338 policies, 141 triggers, 631 indexes, 1,381 constraints; bucket hashes committed |
 | Private authoritative restore inputs | PREPARED | Original public dump + real private functions + privilege catalog, private only |
-| Actual complete schema restoration | BLOCKED | This Work terminal has no Docker binary/socket/PostgreSQL and no access to the owner's Windows PowerShell |
+| Actual complete schema restoration | PASS WITH DOCUMENTED SCOPE | Owner-local controller committed and matched all expected catalog buckets; Work did not control Windows |
 | Three real application tenants and role matrix | NOT RUN | Must run against the complete, parity-verified restore; historical two-tenant core smoke is insufficient |
 | Missing/invalid auth, HTTP JWT validation | NOT RUN | Database-role simulation cannot attest HTTP authentication |
 | Vercel Preview safety | FAIL / CONTAINED FOR W01 | Shared targets still include preview+production; branch auto-deploy remains disabled |
