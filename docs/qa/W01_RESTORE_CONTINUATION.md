@@ -2,7 +2,43 @@
 
 **W01 NOT ACCEPTED. No merge or production mutation is authorized.**
 
-## Latest: full DB-role baseline executed — 999/1000 PASS
+## Latest: owner-local hardening committed and full matrix passed — 1000/1000
+
+On 2026-10-25 the owner returned the controller output from their Windows
+Docker target `supabase_db_w01-local-restore`. This is owner-supplied execution
+evidence, not direct control of that computer by Work.
+
+- `PASS_LOCAL_TRUNCATE_HARDENING`, `patch_committed=true`.
+- Source dump SHA-256: `99178a9f3a21c1a88ab33cdf5a74526ffffd310ad39faecf454a971a7d6ffa64`.
+- Patch SHA-256: `e5d48f1fce830a4f492a2a19bf92f220160ae8e19ec93baecee6333502133244`.
+- Effective ACLs: 5,939 / `0d2aba5da97a004371fe116693dbf30c` to
+  5,753 / `7fea1828e79dde41c9d99f0ad6bae922`.
+- All other catalog buckets unchanged; backend/DML permissions preserved.
+- Client TRUNCATE relations and future client TRUNCATE defaults: both zero.
+- Unchanged tenant SQL SHA-256: `2612bea0b68d22b2f541d91bcb412d044771575bf028107986852f6c2b00da7f`.
+- `PASS_DB_ROLE_SCOPE`: 3 companies, 23 actors, 1,000 checks,
+  1,000 passed, zero failed.
+- Cleanup reports zero cron jobs, Auth users, organizations, Vault secrets and
+  outbound requests; helper schema absent.
+
+This supersedes the 999/1000 baseline below. The first supplied hardening
+download command omitted `w01-schema-inventory.sql`; that attempt stopped
+before mutation. The pinned, checksummed inventory file was then supplied
+and the owner returned the successful output above.
+
+Read-only cloud metadata rechecked after this result:
+`rythm-phase3-staging` (`viqjdgohtxqkrdgwtull`) is still INACTIVE.
+Vercel has no branch-specific env entries for the W01 branch, while global
+Supabase URL/publishable/service-role entries and several provider secrets
+still target both Preview and Production. Values were not decrypted.
+No isolated HTTP/JWT target or Preview runtime is verified.
+
+**Database restore + local privilege hardening + full DB-role matrix are PASS
+within their documented scopes. Overall W01 remains NOT ACCEPTED.**
+HTTP/JWT validation, isolated Preview/runtime and historical replay/provenance
+remain unresolved. No Production change or main merge was performed.
+
+## Historical: full DB-role baseline executed — 999/1000 PASS
 
 The owner returned a completed local matrix: 3 companies, 23 identities,
 1,000 checks, 999 PASS and one failure: authenticated holds TRUNCATE on tenant
@@ -168,10 +204,10 @@ harness workflow **does not attest production-schema restoration**.
 | Real production schema inventory | PASS, catalog only | 214 tables, 267 public/private functions, 338 policies, 141 triggers, 631 indexes, 1,381 constraints; bucket hashes committed |
 | Private authoritative restore inputs | PREPARED | Original public dump + real private functions + privilege catalog, private only |
 | Actual complete schema restoration | PASS WITH DOCUMENTED SCOPE | Owner-local controller committed and matched all expected catalog buckets; Work did not control Windows |
-| Three real application tenants and role matrix | NOT RUN | Must run against the complete, parity-verified restore; historical two-tenant core smoke is insufficient |
+| Three real application tenants and role matrix | PASS_DB_ROLE_SCOPE | Owner-local unchanged matrix: 3 companies, 23 actors, 1000/1000 passed; cleanup complete |
 | Missing/invalid auth, HTTP JWT validation | NOT RUN | Database-role simulation cannot attest HTTP authentication |
 | Vercel Preview safety | FAIL / CONTAINED FOR W01 | Shared targets still include preview+production; branch auto-deploy remains disabled |
-| Restore controller safety | LOCAL UNIT PASS / CI PENDING | Remote-target, bundle-tamper and dependency-inventory tests; real Docker CI separately required |
+| Restore controller safety | PASS in synthetic CI | Real Docker restore rollback, assertion helpers and TRUNCATE regression: Actions run 40221017170 |
 | Full W01 signoff | NOT ACCEPTED | No merge, no staging/browser load against shared Preview keys |
 
 Vercel env metadata was rechecked without decryption. Database URL/publishable
@@ -181,14 +217,12 @@ Production targets. No values were read, rotated, copied or used for tests.
 No cloud project was started/paused/deleted; no billed model, message or payment
 was invoked. Production database access in this continuation was read-only.
 
-## Single next owner action
+## Next gate
 
-Run the supplied private bundle controller on the Windows machine that owns
-the already-running `supabase_db_w01-local-restore` container. It validates the
-actual machine state and attempts the atomic isolated restore only if pristine.
-Return only `w01-local-result.json` or the controller's short refusal/error.
-Do not upload the bundle, SQL, permissions catalog, logs containing SQL, Docker
-inspection environment, passwords or connection strings to this public PR.
-
-If preflight refuses a non-pristine database, no reset is allowed: retain its
-error and provision a new W01-only initialized database in the next continuation.
+Do not rerun the baseline restore or infer HTTP/JWT success from the DB matrix.
+Prepare an isolated Auth/PostgREST runtime with outbound actions disabled, then
+verify real normal-user JWTs, invalid/expired tokens and cross-tenant HTTP access.
+Separately provision and attest an isolated Preview backend; the inactive cloud
+candidate is not approved as clean or usable merely by its name. Any cloud
+reactivation/provisioning must first resolve cost and data-isolation requirements.
+Keep W01 auto-deploy disabled and do not test against shared Production targets.
