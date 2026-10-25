@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { joinFunctionDefinitions } from './w01-function-ddl.mjs';
+import { preparePermissionRestoreSql } from './w01-permissions-ddl.mjs';
 
 const container='supabase_db_w01-ci-restore';
 const root=mkdtempSync(join(tmpdir(),'w01-fixture-'));
@@ -15,12 +16,12 @@ const psql=sql=>{
 };
 try {
   const files={
-    'schema.sql':'CREATE SCHEMA public; CREATE TABLE public.w01_fixture(id uuid primary key, owner_id uuid references auth.users(id)); ALTER TABLE public.w01_fixture ENABLE ROW LEVEL SECURITY;',
+    'schema.sql':"SET search_path=''; CREATE SCHEMA public; CREATE TYPE public.w01_fixture_risk AS ENUM ('low','high'); CREATE FUNCTION public.w01_fixture_echo(v public.w01_fixture_risk) RETURNS public.w01_fixture_risk LANGUAGE sql AS 'SELECT v'; CREATE TABLE public.w01_fixture(id uuid primary key, owner_id uuid references auth.users(id)); ALTER TABLE public.w01_fixture ENABLE ROW LEVEL SECURITY;",
     'dependencies.sql':'CREATE SCHEMA crm_private;\n' + joinFunctionDefinitions([
       "CREATE OR REPLACE FUNCTION crm_private.w01_fixture_owner(id uuid) RETURNS boolean LANGUAGE sql STABLE AS $function$SELECT auth.uid() = id$function$\n",
       "CREATE OR REPLACE FUNCTION crm_private.w01_fixture_identity() RETURNS uuid LANGUAGE sql STABLE AS $function$SELECT auth.uid()$function$\n",
     ]),
-    'permissions.sql':'GRANT USAGE ON SCHEMA public TO authenticated; GRANT SELECT ON public.w01_fixture TO authenticated;',
+    'permissions.sql':preparePermissionRestoreSql('GRANT USAGE ON SCHEMA public TO authenticated; GRANT SELECT ON public.w01_fixture TO authenticated; REVOKE ALL ON FUNCTION public.w01_fixture_echo(public.w01_fixture_risk) FROM PUBLIC; GRANT EXECUTE ON FUNCTION public.w01_fixture_echo(w01_fixture_risk) TO authenticated;'),
     'attest.sql':"DO $$ BEGIN RAISE EXCEPTION 'W01 intentional fixture mismatch'; END $$;",
   };
   const save=()=>{
@@ -44,6 +45,8 @@ try {
   assert.equal(result.schema_parity,'HARNESS_FIXTURE_ONLY');
   assert.equal(result.w01,'NOT_ACCEPTED');
   assert.equal(psql("SELECT count(*) FROM public.w01_fixture;"),'0');
+  assert.equal(psql("SELECT has_function_privilege('authenticated','public.w01_fixture_echo(public.w01_fixture_risk)','EXECUTE');"),'t');
+  assert.equal(psql("SELECT has_function_privilege('anon','public.w01_fixture_echo(public.w01_fixture_risk)','EXECUTE');"),'f');
   // A rerun must refuse the populated schema; never reset or overwrite it.
   const rerun=run();
   assert.equal(rerun.status,1);
