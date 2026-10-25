@@ -134,3 +134,27 @@ Reviewer must separately confirm: cost approval, synthetic-only project, staging
 - No production rollback is needed because W01 changes only its feature branch documentation and tests.
 - Close W01 draft PR and delete feature branch to undo repository changes; no Production alias or schema is touched.
 - If an authorized staging environment is later created, stop background jobs and disable external actions; remove ONLY synthetic fixtures from staging with the vetted teardown procedure. Never delete production data or append-only audit records to 'clean' test traces.
+
+## Zero-cost disposable test implementation (2026-10-25 follow-up)
+
+The experimental `.github/workflows/w01-local-db.yml` runs a **temporary local Docker database on a standard public-repository GitHub Actions runner**; there is no hosted Supabase instance, service-role token, platform API key, external message, or third-party API in the job. It runs without secrets and never executes `supabase link`, `supabase db push` or `supabase db reset --linked`.
+
+`scripts/qa/prepare-w01-local-migrations.mjs` copies the 218 SQL files into a temporary runner directory, renames legacy/non-standard version prefixes to ordered, 14-digit local versions, records every source filename and SHA-256, and quarantines two files with historical real-world seeds: `202608050002_seed_company.sql` (fixed user UUID) and `20260927104500_2nya_align_portfolio_seed_with_current_site.sql` (live site portfolio seed). The original repository migrations and production migration history are untouched. This is **diagnostic replay of 216 migration copies, not an exact 218-file source replay, nor an attested match to the production migration history**.
+
+The workflow uses pinned `supabase/setup-cli` and CLI `2.84.2`, executes `supabase db start` on ephemeral Docker only, then runs read-only `scripts/qa/w01-local-db-attest.sql` with local `psql` to compare table/RLS counts and inventory/fingerprint. The workflow fails if SQL does not replay or RLS coverage is incomplete. A successful schema boot still does **not** prove Vercel Preview isolation, live Supabase migration parity, authenticated tenant-policy enforcement, or W02 synthetic lifecycle testing.
+
+Source files and CI instructions:
+
+```bash
+node scripts/qa/prepare-w01-local-migrations.mjs --self-test
+# Inside a disposable CI runner only, with no hosted cloud secrets:
+test_root="$(mktemp -d)"
+(cd "$test_root" && supabase init --yes)
+W01_ALLOW_LOCAL_TEST=true node scripts/qa/prepare-w01-local-migrations.mjs "$test_root"
+(cd "$test_root" && supabase db start)
+PGPASSWORD=postgres psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+  -f scripts/qa/w01-local-db-attest.sql
+# Clean up local container and directory; never target a remote ref.
+```
+
+A future full W01 PASS requires reconciling the actual schema and migration histories, replaying a formally approved synthetic-only baseline without data seeds, verifying authenticated organization-scoped RLS and privileged RPC behavior, and independently gating all preview/live provider credentials. **Until then AC2 is NOT VERIFIED**.
