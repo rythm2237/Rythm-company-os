@@ -32,6 +32,23 @@ function isOfflineEnvironment() {
 function getSources() {
   return readdirSync(source).filter((name) => name.endsWith(".sql")).sort();
 }
+// Both historical *preflight* files have a lexically later suffix but explicitly
+// belong before their corresponding migrations. Do not modify source SQL.
+const preflightPairs = [
+  ["202608060002a_production_hardening_preflight.sql", "202608060002_production_hardening.sql"],
+  ["202608060004a_agent_visual_identity_preflight.sql", "202608060004_agent_visual_identity.sql"],
+];
+function replayOrder(sourceNames) {
+  const files = sourceNames.filter((name) => !allowedIgnored.has(name));
+  for (const [preflight, main] of preflightPairs) {
+    assert(files.includes(preflight) && files.includes(main), "Missing reviewed migration/preflight pair");
+    files.splice(files.indexOf(preflight), 1);
+    files.splice(files.indexOf(main), 0, preflight);
+  }
+  assert(files.indexOf(preflightPairs[0][0]) < files.indexOf(preflightPairs[0][1]));
+  assert(files.indexOf(preflightPairs[1][0]) < files.indexOf(preflightPairs[1][1]));
+  return files;
+}
 function normalize(names, target) {
   assert(target, "Missing test workspace argument");
   assert(process.env.GITHUB_WORKSPACE || process.env.W01_ALLOW_LOCAL_TEST === "true",
@@ -50,13 +67,13 @@ function normalize(names, target) {
   const mapping = [];
   let count = 0;
   const baseTime = Date.UTC(2026, 9, 25, 0, 0, 0);
-  for (const name of srcFiles) {
+  for (const name of srcFiles.filter((x) => allowedIgnored.has(x))) {
+    const checksum = createHash("sha256").update(readFileSync(join(source, name))).digest("hex");
+    mapping.push({ source: name, sha256: checksum, action: "excluded_real_data_seed" });
+  }
+  for (const name of replayOrder(srcFiles)) {
     const content = readFileSync(join(source, name));
     const checksum = createHash("sha256").update(content).digest("hex");
-    if (allowedIgnored.has(name)) {
-      mapping.push({ source: name, sha256: checksum, action: "excluded_real_data_seed" });
-      continue;
-    }
     // Timestamped 14-digit version is CLI-compliant and increasing.
     const date = new Date(baseTime + count * 1000);
     const ver = date.toISOString().slice(0, 19).replace(/[-T:]/g, "");
@@ -73,11 +90,11 @@ function normalize(names, target) {
     source_migration_count: srcFiles.length,
     local_replay_count: count,
     excluded_data_seeds: [...allowedIgnored],
-    warning: "Normalized local filenames and omitted human-owner seed. Does NOT establish history equivalence or physical schema parity.",
+    warning: "Normalized local names, moved two preflight migrations before their parent SQL, excluded two real-data seeds. DIAGNOSTIC ONLY: not original execution order, exact history, or production schema parity.",
     mapping,
   };
   writeFileSync(join(dest, "w01-local-migration-map.json"), JSON.stringify(manifest, null, 2) + "\n", { mode: 0o600 });
-  console.log("W01 local-only migration map: " + srcFiles.length + " source SQL; " + count + " replay copies; " + allowedIgnored.size + " quarantined owner seed.");
+  console.log("W01 local-only migration map: " + srcFiles.length + " source SQL; " + count + " replay copies; " + allowedIgnored.size + " quarantined real-data seeds.");
   console.log("W01 map file created in disposable workspace. No source file rewritten. No credentials loaded.");
   return manifest;
 }
@@ -88,6 +105,8 @@ function selfTest() {
   assert(allowedIgnored.size === 2);
   const sorted = [...sources].sort();
   assert.deepEqual(sources, sorted);
+  const order = replayOrder(sources);
+  for (const [a,b] of preflightPairs) assert(order.indexOf(a) < order.indexOf(b));
   isOfflineEnvironment();
   console.log("W01 PASS: local replay preparation invariant self-test; no database connection made");
 }
