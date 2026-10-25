@@ -44,7 +44,9 @@ DO $after$ BEGIN
  END;
  EXECUTE 'RESET ROLE';
 END $after$;
+SET LOCAL ROLE postgres;
 CREATE TABLE public.w01_future_postgres(id int);
+RESET ROLE;
 SET LOCAL ROLE supabase_admin;
 CREATE TABLE public.w01_future_admin(id int);
 RESET ROLE;
@@ -56,6 +58,6 @@ DO $future$ DECLARE t text; BEGIN
 END $future$;
 ${patch}
 ROLLBACK;`;
-const r=spawnSync('docker',['exec','-i','supabase_db_w01-ci-restore','psql','-X','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1','-v','VERBOSITY=terse','-q'],{input:sql,encoding:'utf8',timeout:90000});
+const r=spawnSync('docker',['exec','-i','supabase_db_w01-ci-restore','psql','-X','-U','supabase_admin','-d','postgres','-v','ON_ERROR_STOP=1','-v','VERBOSITY=terse','-q'],{input:sql,encoding:'utf8',timeout:90000});
 assert.equal(r.status,0,r.stderr);
 console.log('PASS: baseline SQL TRUNCATE bypass reproduced and undone; authenticated/anon blocked after patch; data and backend/DML retained; global + schema defaults protected for postgres/supabase_admin; patch idempotent. No HTTP exploit claimed.');

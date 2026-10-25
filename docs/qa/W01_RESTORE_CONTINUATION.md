@@ -24,6 +24,13 @@ only where they currently grant client TRUNCATE. Other schemas' existing objects
 are untouched. It verifies all unrelated table privileges, including backend
 TRUNCATE, remain exactly as before. It aborts on residual inherited client grants.
 
+Changing defaults owned by supabase_admin requires that existing local admin
+role; the normal postgres role cannot alter those defaults. The candidate uses
+`psql -U supabase_admin -d postgres` over the disconnected container's local
+Unix socket for that administrative transaction only. Catalog reads remain as
+postgres, and matrix assertions remain authenticated/anon. No cloud password,
+token, credential reset, network connection or new admin role is introduced.
+
 The hardened expected catalog was computed through a **read-only filtered
 catalog query** on Production, not by changing Production. All structural,
 function, policy, owner, RLS, trigger/index/constraint and column-ACL buckets

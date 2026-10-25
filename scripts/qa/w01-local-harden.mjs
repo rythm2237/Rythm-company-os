@@ -19,6 +19,9 @@ const docker=(args,input)=>{
  return r.stdout.trim();
 };
 const psql=['exec','-i',container,'psql','-X','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1','-v','VERBOSITY=terse','-q','-A','-t'];
+// Local Unix socket only. This administrative role is needed to edit the
+// supabase_admin-owned defaults. Application assertions still run as normal users.
+const adminPsql=[...psql]; adminPsql[adminPsql.indexOf('-U')+1]='supabase_admin';
 let copied=false;
 try {
  assertContainer(container);
@@ -46,11 +49,11 @@ try {
   const previousMatrix=JSON.parse(readFileSync(join(root,'w01-tenant-result.json'),'utf8'));
   if(previousMatrix.report?.checks!==1000 || previousMatrix.report?.passed!==999 || previousMatrix.report?.failed!==1 || previousMatrix.report?.failures?.[0]?.case!=='DB privilege: authenticated cannot TRUNCATE tenant preferences') throw new Error('Expected reviewed 999/1000 baseline result is missing');
  }
- const guard="DO $guard$ BEGIN IF current_database()<>'postgres' OR session_user<>'postgres' OR EXISTS(SELECT 1 FROM auth.users) OR EXISTS(SELECT 1 FROM public.organizations) OR EXISTS(SELECT 1 FROM cron.job) OR EXISTS(SELECT 1 FROM vault.secrets) OR to_regnamespace('w01_test') IS NOT NULL THEN RAISE EXCEPTION 'Empty isolated restore required'; END IF; END $guard$;";
+ const guard="DO $guard$ BEGIN IF current_database()<>'postgres' OR session_user<>'supabase_admin' OR EXISTS(SELECT 1 FROM auth.users) OR EXISTS(SELECT 1 FROM public.organizations) OR EXISTS(SELECT 1 FROM cron.job) OR EXISTS(SELECT 1 FROM vault.secrets) OR to_regnamespace('w01_test') IS NOT NULL THEN RAISE EXCEPTION 'Empty isolated restore required'; END IF; END $guard$;";
  const body=query.replace('AS inventory FROM buckets;','INTO observed FROM buckets;');
  const attest="SET LOCAL search_path=''; DO $attest$ DECLARE observed jsonb; BEGIN\n"+body+"\nIF observed IS DISTINCT FROM '"+JSON.stringify(expected.inventory).replaceAll("'","''")+"'::jsonb THEN RAISE EXCEPTION 'Unexpected catalog change; patch rolled back'; END IF; END $attest$;";
  docker(['cp',join(root,'w01-revoke-client-truncate.sql'),`${container}:/tmp/w01-revoke-client-truncate.sql`]); copied=true;
- docker([...psql,'--single-transaction','-c',guard+" SET LOCAL client_min_messages='error'; SET LOCAL w01.allow_client_truncate_hardening='isolated-only';",'-f','/tmp/w01-revoke-client-truncate.sql','-c',attest]);
+ docker([...adminPsql,'--single-transaction','-c',guard+" SET LOCAL client_min_messages='error'; SET LOCAL w01.allow_client_truncate_hardening='isolated-only';",'-f','/tmp/w01-revoke-client-truncate.sql','-c',attest]);
  result.patch_committed=true;
  const after=readInventory();
  if(!isDeepStrictEqual(after,expected.inventory)) throw new Error('Post-commit catalog verification failed');
