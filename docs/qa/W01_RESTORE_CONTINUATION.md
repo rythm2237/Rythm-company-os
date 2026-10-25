@@ -2,6 +2,51 @@
 
 **W01 NOT ACCEPTED. No merge or production mutation is authorized.**
 
+## Latest: full DB-role baseline executed — 999/1000 PASS
+
+The owner returned a completed local matrix: 3 companies, 23 identities,
+1,000 checks, 999 PASS and one failure: authenticated holds TRUNCATE on tenant
+preferences. Cleanup independently confirmed zero organizations/users/jobs/
+secrets/outbound requests and no test-helper schema. The matrix actually ran;
+this is distinct from the earlier fixture-preparation failure.
+
+The authoritative privilege export confirms 121 public tables grant TRUNCATE to
+authenticated and 65 to anon (186 grant entries). This is a database-role
+boundary finding; no HTTP/PostgREST exploit is asserted. All 999 other matrix
+outcomes passed, including tenant CRUD denial, sensitive-domain access,
+manager/cross-reference restrictions, context RPC and escalation checks.
+
+The reviewed candidate `scripts/qa/w01-revoke-client-truncate.sql` is deliberately
+**local-QA-only**, requires an explicit transaction-local flag and is NOT a
+Production migration. It removes client/PUBLIC TRUNCATE from ordinary public
+tables and from public creator defaults; additive global defaults are revoked
+only where they currently grant client TRUNCATE. Other schemas' existing objects
+are untouched. It verifies all unrelated table privileges, including backend
+TRUNCATE, remain exactly as before. It aborts on residual inherited client grants.
+
+The hardened expected catalog was computed through a **read-only filtered
+catalog query** on Production, not by changing Production. All structural,
+function, policy, owner, RLS, trigger/index/constraint and column-ACL buckets
+remain identical. Only effective object grants change: 5,939 entries / MD5
+0d2aba5da97a004371fe116693dbf30c -> 5,753 entries / MD5
+7fea1828e79dde41c9d99f0ad6bae922. Default privileges have separate postconditions.
+
+`w01-local-harden.mjs` accepts only the known local disconnected container,
+the prior successful dump restore and the reviewed 999/1000 baseline finding.
+It checks the patch/query/manifest hashes and the complete pre-change catalog,
+then applies permissions and catalog assertions in ONE psql transaction. It
+saves `w01-hardening-result.json` separately from the unchanged historical
+baseline attestation, and reruns the **unchanged** 1,000-case matrix. A hardened
+clone intentionally has different ACLs from unmodified Production; no claim of
+unchanged privilege parity is made after this candidate is applied.
+
+CI tests actual authenticated/anon TRUNCATE denial, proves the prior SQL-role
+RLS bypass on synthetic rows then undoes it, checks data/backend/DML preservation,
+future tables created by postgres/supabase_admin with global + per-schema defaults,
+and idempotence. The full private-schema matrix still needs owner-local rerun.
+Production remediation/promotion is a separate reviewed release; W01 never
+applies this candidate to Production or merges main. HTTP auth/Preview are pending.
+
 ## Latest: authoritative local restore committed (owner-local evidence)
 
 On 2026-10-25 the owner ran the controller on their Windows Docker machine and

@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertContainer, assertLocalDocker } from './w01-local-restore.mjs';
@@ -33,6 +33,7 @@ try {
  const clean=cleanup.organizations===0 && cleanup.auth_users===0 && cleanup.helper_schema_absent && cleanup.cron_jobs===0 && cleanup.vault_secrets===0 && cleanup.outbound_queue===0;
  const pass=run.status===0 && report?.failed===0 && report?.checks===report?.checks_expected && clean;
  const result={container,source_sha256:sourceSha,tenant_sql_sha256:sqlSha,tenant_matrix:pass?'PASS_DB_ROLE_SCOPE':report?'FAIL':'INCOMPLETE_SQL_ERROR',report:report??null,cleanup,http_auth:'NOT_RUN',preview_isolation:'NOT_VERIFIED',w01:'NOT_ACCEPTED'};
+ if(existsSync(join(root,'w01-hardening-result.json'))) result.local_permission_hardening=JSON.parse(readFileSync(join(root,'w01-hardening-result.json'),'utf8'));
  if(run.status!==0) result.error=String(run.error?.message??run.stderr??'').slice(0,2000);
  writeFileSync(resultPath,JSON.stringify(result,null,2)+'\n');
  console.log(JSON.stringify(result,null,2));

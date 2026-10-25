@@ -46,6 +46,8 @@ jobs:
         run: node scripts/qa/w01-restore-integration.mjs
       - name: Tenant assertion helpers and PL/pgSQL syntax (not full app matrix)
         run: node scripts/qa/w01-test-helpers.mjs
+      - name: Client TRUNCATE hardening, future defaults and backend preservation
+        run: node scripts/qa/w01-test-truncate.mjs
       - name: Remove disposable local containers
         if: always()
         run: |
