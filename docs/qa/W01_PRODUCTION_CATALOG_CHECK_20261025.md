@@ -44,3 +44,10 @@ AND NOT EXISTS (
 ## Remaining W01 gate
 
 **AC1 PARTIAL / AC2 PARTIAL / AC3 PASS**. These SQL catalog reads establish inventory, not a reproducible `pg_dump --schema-only` equivalent. They do not certify the complete function definitions, triggers, extension DDL, grants, policies and clean local rebuild. A reviewed schema-only export or a separately validated exhaustive DDL reconstruction is still needed before W01 is marked PASS. Do not reset live DB password or merge into main for this test.
+
+## SECURITY DEFINER surface (read-only catalog check)
+
+- 148 public functions with `prosecdef=true`; all 148 set an explicit `search_path` via `proconfig`.
+- 8 SECURITY DEFINER functions have an effective `EXECUTE` grant for the database role `anon` (7 `nail_2nya_*` public booking/contact operations and 1 `provision_default_integration_department_on_entitlement_v1` function). Their actual authorization checks and function execution context were **not** exercised. The latter appears to be a trigger helper and needs review before declaring it externally callable.
+- 52 SECURITY DEFINER functions have effective `EXECUTE` grants for role `authenticated`. Grants alone do not show unintended access, but each privileged body must be reviewed and tested in the tenant matrix.
+- **This is a review finding, not a confirmed exploit.** No functions were executed or changed on production.
