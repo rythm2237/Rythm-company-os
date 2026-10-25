@@ -16,7 +16,7 @@ import { resolve, join, basename } from "node:path";
 import { createHash } from "node:crypto";
 
 const source = resolve("supabase/migrations");
-const allowedIgnored = new Set(["202608050002_seed_company.sql", "20260927104500_2nya_align_portfolio_seed_with_current_site.sql", "20260831014500_consolidate_canonical_rythm_workforce.sql"]);
+const allowedIgnored = new Set(["202608050002_seed_company.sql", "20260927104500_2nya_align_portfolio_seed_with_current_site.sql", "20260831014500_consolidate_canonical_rythm_workforce.sql", "20260920213500_web_development_company_commercial_template.sql"]);
 const cliVersion = "2.84.2";
 const forbidden = [
   "SUPABASE_ACCESS_TOKEN",
@@ -118,7 +118,7 @@ function selfTest() {
   const sources = getSources();
   assert.equal(sources.length, 218);
   assert(sources.includes("202608050002_seed_company.sql"));
-  assert(allowedIgnored.size === 3);
+  assert(allowedIgnored.size === 4);
   const sorted = [...sources].sort();
   assert.deepEqual(sources, sorted);
   const order = replayOrder(sources);
