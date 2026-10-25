@@ -90,7 +90,7 @@ INSERT INTO public.customer_profiles(user_id,onboarding_status) VALUES(md5('w01-
 
 -- Provisioning triggers remain active. Suppress all synthetic transport metadata
 -- and outbound switches, in addition to the disconnected Docker network.
-UPDATE public.communication_provider_connections SET inbound_enabled=false,outbound_enabled=false,status='disconnected';
+UPDATE public.communication_provider_connections SET inbound_enabled=false,outbound_enabled=false,status='disabled';
 UPDATE public.communication_settings SET auto_send_enabled=false;
 UPDATE public.communication_mailboxes SET is_active=false;
 

@@ -36,6 +36,17 @@ action. DB claim simulation does not verify HTTP JWT signatures or expiry.
 The TRUNCATE-privilege test is a database-role security check, not a claim that
 PostgREST exposes SQL TRUNCATE through its HTTP API.
 
+The first owner-local matrix attempt stopped during fixture setup: transport
+status `disconnected` violated the real provider connection CHECK. No matrix
+summary was produced. Independent cleanup returned zero organizations, Auth
+users, cron jobs, Vault secrets and outbound requests, with no helper schema.
+This was a fixture defect, not a completed failing authorization matrix.
+The fixture now uses the valid `disabled` status and keeps both transport flags
+false. CI executes this exact seed UPDATE against the actual table DDL extracted
+from tracked migration `20260820203000_communication_center_mvp.sql`; it no
+longer relies on syntax-only validation for that preparation step. Incomplete
+SQL runs now report `INCOMPLETE_SQL_ERROR` separately from completed assertions.
+
 The owner-supplied public-only dump was materialized privately, unchanged:
 SHA-256 `99178a9f3a21c1a88ab33cdf5a74526ffffd310ad39faecf454a971a7d6ffa64`,
 1,257,468 bytes; 214 tables, 234 functions, 338 policies, 141 triggers,

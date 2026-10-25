@@ -8,7 +8,7 @@ import { assertContainer, assertLocalDocker } from './w01-local-restore.mjs';
 const root=dirname(fileURLToPath(import.meta.url));
 const container='supabase_db_w01-local-restore';
 const sourceSha='99178a9f3a21c1a88ab33cdf5a74526ffffd310ad39faecf454a971a7d6ffa64';
-const sqlSha='ea184c15c744b3b67fbfcc39dfa1f82810783515cf9503ad1551bdf6b9de29ac';
+const sqlSha='2612bea0b68d22b2f541d91bcb412d044771575bf028107986852f6c2b00da7f';
 const sqlPath=join(root,'w01-tenant-matrix.sql');
 const resultPath=join(root,'w01-tenant-result.json');
 const docker=(args,input)=>{
@@ -32,7 +32,7 @@ try {
  const cleanup=JSON.parse(docker([...args,'-c',"SELECT jsonb_build_object('organizations',(SELECT count(*) FROM public.organizations),'auth_users',(SELECT count(*) FROM auth.users),'helper_schema_absent',to_regnamespace('w01_test') IS NULL,'cron_jobs',(SELECT count(*) FROM cron.job),'vault_secrets',(SELECT count(*) FROM vault.secrets),'outbound_queue',(SELECT count(*) FROM net.http_request_queue));"]));
  const clean=cleanup.organizations===0 && cleanup.auth_users===0 && cleanup.helper_schema_absent && cleanup.cron_jobs===0 && cleanup.vault_secrets===0 && cleanup.outbound_queue===0;
  const pass=run.status===0 && report?.failed===0 && report?.checks===report?.checks_expected && clean;
- const result={container,source_sha256:sourceSha,tenant_sql_sha256:sqlSha,tenant_matrix:pass?'PASS_DB_ROLE_SCOPE':'FAIL',report:report??null,cleanup,http_auth:'NOT_RUN',preview_isolation:'NOT_VERIFIED',w01:'NOT_ACCEPTED'};
+ const result={container,source_sha256:sourceSha,tenant_sql_sha256:sqlSha,tenant_matrix:pass?'PASS_DB_ROLE_SCOPE':report?'FAIL':'INCOMPLETE_SQL_ERROR',report:report??null,cleanup,http_auth:'NOT_RUN',preview_isolation:'NOT_VERIFIED',w01:'NOT_ACCEPTED'};
  if(run.status!==0) result.error=String(run.error?.message??run.stderr??'').slice(0,2000);
  writeFileSync(resultPath,JSON.stringify(result,null,2)+'\n');
  console.log(JSON.stringify(result,null,2));
