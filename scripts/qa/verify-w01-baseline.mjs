@@ -58,6 +58,7 @@ function validateStaging(a, baseline) {
   assert.equal(stage.status, "ACTIVE_HEALTHY", "staging project inactive");
   assert.equal(stage.url, "https://" + stage.ref + ".supabase.co", "staging URL/project mismatch");
   assert.equal(stage.contains_only_synthetic_data, true, "data isolation not attested");
+  assert.equal(stage.synthetic_seed_verified, true, "migration seeds not confirmed safe");
   assert.equal(stage.external_actions_enabled, false, "outbound actions not disabled");
   assert.equal(stage.agent_execution_enabled, false, "agent execution not disabled");
   assert.equal(stage.payment_live_mode_enabled, false, "live payments not disabled");
@@ -83,6 +84,7 @@ function testGuards(e) {
       status: "ACTIVE_HEALTHY",
       url: "https://" + e.staging_candidate.project_ref + ".supabase.co",
       contains_only_synthetic_data: true,
+      synthetic_seed_verified: true,
       external_actions_enabled: false,
       agent_execution_enabled: false,
       payment_live_mode_enabled: false,
@@ -102,6 +104,7 @@ function testGuards(e) {
     { runtime_supabase_ref: e.production.supabase.project_ref },
     { external_actions_enabled: true },
     { contains_only_synthetic_data: false },
+    { synthetic_seed_verified: false },
     { schema_fingerprint_md5: "0".repeat(32) },
     { migrations: [] },
     { live_smoke_passed: false },
@@ -109,7 +112,7 @@ function testGuards(e) {
   ]) {
     assert.throws(() => validateStaging({ ...fake, staging: { ...fake.staging, ...tamper } }, e));
   }
-  console.log("W01 PASS: eight staging tamper scenarios rejected (in-memory only)");
+  console.log("W01 PASS: nine staging tamper scenarios rejected (in-memory only)");
 }
 
 const args = process.argv.slice(2);
