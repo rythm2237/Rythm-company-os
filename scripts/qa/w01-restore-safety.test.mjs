@@ -6,6 +6,15 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { assertContainer, assertLocalDocker, verifyFiles } from './w01-local-restore.mjs';
 import { reviewDump } from './w01-dump-review.mjs';
+import { joinFunctionDefinitions } from './w01-function-ddl.mjs';
+
+test('Catalog function exports are individually terminated before concatenation', () => {
+  const a='CREATE OR REPLACE FUNCTION crm_private.a() RETURNS integer LANGUAGE sql AS $function$SELECT 1$function$\n';
+  const b='CREATE OR REPLACE FUNCTION crm_private.b() RETURNS integer LANGUAGE sql AS $function$SELECT 2$function$\n';
+  assert.equal(joinFunctionDefinitions([a,b]),a.trimEnd()+';\n\n'+b.trimEnd()+';\n');
+  assert.equal(joinFunctionDefinitions([a.trimEnd()+';']),a.trimEnd()+';\n');
+  assert.throws(()=>joinFunctionDefinitions(['SELECT 1']));
+});
 
 test('Docker controller refuses remote hosts and invalid target names', () => {
   for (const s of ['tcp://localhost:2375','ssh://user@server','https://docker','npipe:////server/pipe/docker','']) assert.throws(()=>assertLocalDocker(s));

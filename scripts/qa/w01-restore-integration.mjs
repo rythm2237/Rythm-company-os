@@ -5,6 +5,7 @@ import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
+import { joinFunctionDefinitions } from './w01-function-ddl.mjs';
 
 const container='supabase_db_w01-ci-restore';
 const root=mkdtempSync(join(tmpdir(),'w01-fixture-'));
@@ -15,7 +16,10 @@ const psql=sql=>{
 try {
   const files={
     'schema.sql':'CREATE SCHEMA public; CREATE TABLE public.w01_fixture(id uuid primary key, owner_id uuid references auth.users(id)); ALTER TABLE public.w01_fixture ENABLE ROW LEVEL SECURITY;',
-    'dependencies.sql':"CREATE SCHEMA crm_private; CREATE FUNCTION crm_private.w01_fixture_owner(id uuid) RETURNS boolean LANGUAGE sql STABLE AS 'SELECT auth.uid() = id';",
+    'dependencies.sql':'CREATE SCHEMA crm_private;\n' + joinFunctionDefinitions([
+      "CREATE OR REPLACE FUNCTION crm_private.w01_fixture_owner(id uuid) RETURNS boolean LANGUAGE sql STABLE AS $function$SELECT auth.uid() = id$function$\n",
+      "CREATE OR REPLACE FUNCTION crm_private.w01_fixture_identity() RETURNS uuid LANGUAGE sql STABLE AS $function$SELECT auth.uid()$function$\n",
+    ]),
     'permissions.sql':'GRANT USAGE ON SCHEMA public TO authenticated; GRANT SELECT ON public.w01_fixture TO authenticated;',
     'attest.sql':"DO $$ BEGIN RAISE EXCEPTION 'W01 intentional fixture mismatch'; END $$;",
   };
