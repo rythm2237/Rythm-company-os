@@ -82,8 +82,18 @@ function normalize(names, target) {
     const date = new Date(baseTime + count * 1000);
     const ver = date.toISOString().slice(0, 19).replace(/[-T:]/g, "");
     const targetName = ver + "_w01_source_" + String(count).padStart(3, "0") + ".sql";
-    copyFileSync(join(source, name), join(migrations, targetName));
-    mapping.push({ source: name, local_file: targetName, sha256: checksum, action: "local_copy_only" });
+    if (name === "202608060008_first_strategy_cycle.sql") {
+      // Historical SQL is invalid against current production structure too.
+      // Keep the actual source untouched. Record explicit local-only deviation.
+      const src = content.toString("utf8");
+      const old = "set status='completed', updated_at=now()";
+      assert.equal(src.split(old).length - 1, 1, "Expected historic bad-column statement changed");
+      const fixed = src.replace(old, "set status='completed'");
+      writeFileSync(join(migrations, targetName), fixed);
+    } else {
+      copyFileSync(join(source, name), join(migrations, targetName));
+    }
+    mapping.push({ source: name, local_file: targetName, sha256: checksum, action: name === "202608060008_first_strategy_cycle.sql" ? "local_only_remove_invalid_updated_at" : "local_copy_only" });
     count++;
   }
   assert.equal(count, coreOnly ? coreLimit : srcFiles.length - allowedIgnored.size);
@@ -96,7 +106,7 @@ function normalize(names, target) {
     mode: coreOnly ? "isolated_core_tenant_smoke" : "all_schema_diagnostic",
     deliberately_unreplayed_sql_count: allOrdered.length - selected.length,
     excluded_data_seeds: [...allowedIgnored],
-    warning: "Normalized local names, moved two preflight migrations before their parent SQL, excluded two real-data seeds. DIAGNOSTIC ONLY: not original execution order, exact history, or production schema parity.",
+    warning: "Diagnostic-only replay diverges from original history: normalized filenames; reordered two preflights; skipped two real-data seeds; removed one invalid updated_at assignment in disposable copy. DO NOT apply to production.",
     mapping,
   };
   writeFileSync(join(dest, "w01-local-migration-map.json"), JSON.stringify(manifest, null, 2) + "\n", { mode: 0o600 });
