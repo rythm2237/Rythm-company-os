@@ -21,7 +21,7 @@ try {
       "CREATE OR REPLACE FUNCTION crm_private.w01_fixture_owner(id uuid) RETURNS boolean LANGUAGE sql STABLE AS $function$SELECT auth.uid() = id$function$\n",
       "CREATE OR REPLACE FUNCTION crm_private.w01_fixture_identity() RETURNS uuid LANGUAGE sql STABLE AS $function$SELECT auth.uid()$function$\n",
     ]),
-    'permissions.sql':preparePermissionRestoreSql('GRANT USAGE ON SCHEMA public TO authenticated; GRANT SELECT ON public.w01_fixture TO authenticated; REVOKE ALL ON FUNCTION public.w01_fixture_echo(public.w01_fixture_risk) FROM PUBLIC; GRANT EXECUTE ON FUNCTION public.w01_fixture_echo(w01_fixture_risk) TO authenticated;'),
+    'permissions.sql':preparePermissionRestoreSql('GRANT USAGE ON SCHEMA public TO authenticated; GRANT SELECT ON public.w01_fixture TO authenticated; REVOKE ALL ON FUNCTION public.w01_fixture_echo(public.w01_fixture_risk) FROM PUBLIC, anon, authenticated, service_role; GRANT EXECUTE ON FUNCTION public.w01_fixture_echo(w01_fixture_risk) TO authenticated;'),
     'attest.sql':"DO $$ BEGIN RAISE EXCEPTION 'W01 intentional fixture mismatch'; END $$;",
   };
   const save=()=>{
