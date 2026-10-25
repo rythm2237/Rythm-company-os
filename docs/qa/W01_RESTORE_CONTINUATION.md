@@ -10,16 +10,18 @@ preferences. Cleanup independently confirmed zero organizations/users/jobs/
 secrets/outbound requests and no test-helper schema. The matrix actually ran;
 this is distinct from the earlier fixture-preparation failure.
 
-The authoritative privilege export confirms 121 public tables grant TRUNCATE to
-authenticated and 65 to anon (186 grant entries). This is a database-role
+The authoritative privilege export confirms 121 public relations (119 tables
+and 2 views) grant TRUNCATE to authenticated and 65 tables to anon (186 grant
+entries). View ACL bits are removed too, without asserting views can actually
+be truncated. This is a database-role
 boundary finding; no HTTP/PostgREST exploit is asserted. All 999 other matrix
 outcomes passed, including tenant CRUD denial, sensitive-domain access,
 manager/cross-reference restrictions, context RPC and escalation checks.
 
 The reviewed candidate `scripts/qa/w01-revoke-client-truncate.sql` is deliberately
 **local-QA-only**, requires an explicit transaction-local flag and is NOT a
-Production migration. It removes client/PUBLIC TRUNCATE from ordinary public
-tables and from public creator defaults; additive global defaults are revoked
+Production migration. It removes client/PUBLIC TRUNCATE from public tables,
+partitions, views/materialized views and public creator defaults; additive global defaults are revoked
 only where they currently grant client TRUNCATE. Other schemas' existing objects
 are untouched. It verifies all unrelated table privileges, including backend
 TRUNCATE, remain exactly as before. It aborts on residual inherited client grants.
@@ -27,7 +29,9 @@ TRUNCATE, remain exactly as before. It aborts on residual inherited client grant
 Changing defaults owned by supabase_admin requires that existing local admin
 role; the normal postgres role cannot alter those defaults. The candidate uses
 `psql -U supabase_admin -d postgres` over the disconnected container's local
-Unix socket for that administrative transaction only. Catalog reads remain as
+Unix socket for that administrative transaction only. Its existing development
+password is consumed only inside the local container via PGPASSWORD, never
+printed, returned to the host or passed in process arguments. Catalog reads remain as
 postgres, and matrix assertions remain authenticated/anon. No cloud password,
 token, credential reset, network connection or new admin role is introduced.
 

@@ -9,7 +9,7 @@ import { assertContainer, assertLocalDocker } from './w01-local-restore.mjs';
 const root=dirname(fileURLToPath(import.meta.url));
 const container='supabase_db_w01-local-restore';
 const sourceSha='99178a9f3a21c1a88ab33cdf5a74526ffffd310ad39faecf454a971a7d6ffa64';
-const patchSha='4d60bf5cf2e75e6246d560fe4645e45d038849262d47ffd94555852d74e270f7';
+const patchSha='e5d48f1fce830a4f492a2a19bf92f220160ae8e19ec93baecee6333502133244';
 const beforeAcl={count:5939,md5:'0d2aba5da97a004371fe116693dbf30c'};
 const resultPath=join(root,'w01-hardening-result.json');
 const result={container,source_sha256:sourceSha,patch_sha256:patchSha,status:'NOT_APPLIED',patch_committed:false,w01:'NOT_ACCEPTED',scope:'Local QA privilege candidate; Production not modified'};
@@ -21,7 +21,11 @@ const docker=(args,input)=>{
 const psql=['exec','-i',container,'psql','-X','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1','-v','VERBOSITY=terse','-q','-A','-t'];
 // Local Unix socket only. This administrative role is needed to edit the
 // supabase_admin-owned defaults. Application assertions still run as normal users.
-const adminPsql=[...psql]; adminPsql[adminPsql.indexOf('-U')+1]='supabase_admin';
+const adminOptions=psql.slice(psql.indexOf('psql')+1);
+adminOptions[adminOptions.indexOf('-U')+1]='supabase_admin';
+// Keep the existing local development password inside the container. It is
+// never printed, returned to the host, placed in argv, or used on a cloud DB.
+const adminPsql=['exec','-i',container,'sh','-c',': "${POSTGRES_PASSWORD:?Local development password is unavailable}"; export PGPASSWORD="$POSTGRES_PASSWORD"; exec psql -w "$@"','w01-local-admin',...adminOptions];
 let copied=false;
 try {
  assertContainer(container);
@@ -57,8 +61,8 @@ try {
  result.patch_committed=true;
  const after=readInventory();
  if(!isDeepStrictEqual(after,expected.inventory)) throw new Error('Post-commit catalog verification failed');
- const checks=JSON.parse(docker([...psql,'-c',"SELECT jsonb_build_object('client_truncate_tables',(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND (has_table_privilege('anon',c.oid,'TRUNCATE') OR has_table_privilege('authenticated',c.oid,'TRUNCATE'))),'future_client_truncate_defaults',(SELECT count(*) FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclobjtype='r' AND d.defaclnamespace IN (0,'public'::regnamespace::oid) AND a.privilege_type='TRUNCATE' AND a.grantee IN (0,'anon'::regrole::oid,'authenticated'::regrole::oid))); "]));
- if(checks.client_truncate_tables!==0 || checks.future_client_truncate_defaults!==0) throw new Error('Client TRUNCATE boundary incomplete');
+ const checks=JSON.parse(docker([...psql,'-c',"SELECT jsonb_build_object('client_truncate_relations',(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m') AND (has_table_privilege('anon',c.oid,'TRUNCATE') OR has_table_privilege('authenticated',c.oid,'TRUNCATE'))),'future_client_truncate_defaults',(SELECT count(*) FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a WHERE d.defaclobjtype='r' AND d.defaclnamespace IN (0,'public'::regnamespace::oid) AND a.privilege_type='TRUNCATE' AND a.grantee IN (0,'anon'::regrole::oid,'authenticated'::regrole::oid))); "]));
+ if(checks.client_truncate_relations!==0 || checks.future_client_truncate_defaults!==0) throw new Error('Client TRUNCATE boundary incomplete');
  Object.assign(result,{status:'PASS_LOCAL_TRUNCATE_HARDENING',effective_acl_before:before.effective_acl,effective_acl_after:after.effective_acl,all_other_catalog_buckets_unchanged:true,backend_and_dml_privileges_preserved:true,...checks});
  writeFileSync(resultPath,JSON.stringify(result,null,2)+'\n');
  console.log(JSON.stringify(result,null,2));
