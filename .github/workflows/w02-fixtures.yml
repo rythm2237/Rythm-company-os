@@ -1,0 +1,27 @@
+name: W02 Synthetic Tenant Contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/fixtures/w02-*.mjs'
+      - 'scripts/validate-w02-fixtures.mjs'
+      - '.github/workflows/w02-fixtures.yml'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate deterministic synthetic tenancy and permissions (no external network)
+        run: node scripts/validate-w02-fixtures.mjs
