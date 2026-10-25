@@ -2,6 +2,20 @@
 
 **W01 NOT ACCEPTED. No merge or production mutation is authorized.**
 
+## Cloud activation blocked by active free-project quota
+
+On 2026-10-25, continuing the owner's instruction to complete the isolated
+environment, Work attempted to restore only the existing
+`rythm-phase3-staging` project (`viqjdgohtxqkrdgwtull`).
+Supabase rejected the request with ForbiddenException: the account has reached
+the two-active-free-project limit. The active projects are Rythm-company-os and
+ai roadmap. No active project was paused, deleted or upgraded; the failed restore
+did not provide a working staging target. HTTP/JWT tests remain NOT RUN.
+The owner must choose whether the unrelated ai roadmap project may be paused,
+or approve a priced paid option. Do not pause Production or silently upgrade.
+No cloud Auth test users or fixtures were created. Local DB matrix remains
+1000/1000 PASS. No new HTTP harness is claimed implemented or executed.
+
 ## Latest: owner-local hardening committed and full matrix passed — 1000/1000
 
 On 2026-10-25 the owner returned the controller output from their Windows
