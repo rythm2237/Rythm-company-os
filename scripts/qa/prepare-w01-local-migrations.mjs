@@ -16,7 +16,7 @@ import { resolve, join, basename } from "node:path";
 import { createHash } from "node:crypto";
 
 const source = resolve("supabase/migrations");
-const allowedIgnored = new Set(["202608050002_seed_company.sql", "20260927104500_2nya_align_portfolio_seed_with_current_site.sql"]);
+const allowedIgnored = new Set(["202608050002_seed_company.sql", "20260927104500_2nya_align_portfolio_seed_with_current_site.sql", "20260831014500_consolidate_canonical_rythm_workforce.sql"]);
 const cliVersion = "2.84.2";
 const forbidden = [
   "SUPABASE_ACCESS_TOKEN",
@@ -73,7 +73,7 @@ function normalize(names, target) {
   const baseTime = Date.UTC(2026, 9, 25, 0, 0, 0);
   for (const name of srcFiles.filter((x) => allowedIgnored.has(x))) {
     const checksum = createHash("sha256").update(readFileSync(join(source, name))).digest("hex");
-    mapping.push({ source: name, sha256: checksum, action: "excluded_real_data_seed" });
+    mapping.push({ source: name, sha256: checksum, action: "excluded_live_data_dependency" });
   }
   for (const name of selected) {
     const content = readFileSync(join(source, name));
@@ -110,7 +110,7 @@ function normalize(names, target) {
     mapping,
   };
   writeFileSync(join(dest, "w01-local-migration-map.json"), JSON.stringify(manifest, null, 2) + "\n", { mode: 0o600 });
-  console.log("W01 local-only migration map: " + srcFiles.length + " source SQL; " + count + " replay copies; " + allowedIgnored.size + " quarantined real-data seeds; mode=" + (coreOnly ? "CORE_SMOKE" : "FULL_DIAGNOSTIC"));
+  console.log("W01 local-only migration map: " + srcFiles.length + " source SQL; " + count + " replay copies; " + allowedIgnored.size + " quarantined live-data dependent SQL; mode=" + (coreOnly ? "CORE_SMOKE" : "FULL_DIAGNOSTIC"));
   console.log("W01 map file created in disposable workspace. No source file rewritten. No credentials loaded.");
   return manifest;
 }
@@ -118,7 +118,7 @@ function selfTest() {
   const sources = getSources();
   assert.equal(sources.length, 218);
   assert(sources.includes("202608050002_seed_company.sql"));
-  assert(allowedIgnored.size === 2);
+  assert(allowedIgnored.size === 3);
   const sorted = [...sources].sort();
   assert.deepEqual(sources, sorted);
   const order = replayOrder(sources);
