@@ -40,7 +40,7 @@ function normalize(names, target) {
   const srcFiles = getSources();
   assert.equal(srcFiles.length, 218, "Source baseline migration count changed: recapture W01 manifest");
   assert(srcFiles.includes("202608050002_seed_company.sql"), "Historical owner seed not found: review exclusion");
-  assert(srcFiles.every((name) => /^[0-9]{12}[a-z]?_[a-z0-9_]+\.sql$/.test(name)),
+  assert(srcFiles.every((name) => /^[0-9]{12}(?:[0-9]{2}|[a-z])?_[a-z0-9_]+\.sql$/.test(name)),
     "Unrecognized original migration naming pattern");
   assert(srcFiles.filter((name) => /seed|fixture/i.test(name)).every((name) => allowedIgnored.has(name)),
     "Additional seed-like migration requires human review and exclusion strategy");
