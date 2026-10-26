@@ -2,7 +2,20 @@
 
 **W01 NOT ACCEPTED. No merge or production mutation is authorized.**
 
-## Current: cloud baseline, 1000 DB checks and 417 real HTTP checks passed — 2026-10-26
+## Environment availability after owner-requested switch — 2026-10-26
+
+The owner requested reactivating `ai roadmap`. W01 staging
+(`viqjdgohtxqkrdgwtull`) was paused to free the free-plan project slot.
+`ai roadmap` (`dqpdyschjpbdhhotmojs`) is now ACTIVE_HEALTHY and its database
+readiness query succeeded. Production Rythm was not paused or changed.
+
+The retained Preview configuration still targets staging, which is currently
+INACTIVE. The earlier successful Preview/HTTP results below are historical
+execution evidence; they do not claim a currently available staging backend.
+No W01 fixtures or preserved legacy data were removed by pausing.
+Overall W01 remains NOT ACCEPTED for the remaining gates already documented.
+
+## Verified before pause: cloud baseline, 1000 DB checks and 417 real HTTP checks passed — 2026-10-26
 
 **Completed scoped verification; overall W01 still NOT ACCEPTED in full scope.**
 
