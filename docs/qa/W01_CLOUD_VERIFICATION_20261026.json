@@ -9,7 +9,7 @@
   "source_commit": "0e3de1cebf87b50924ec5c2b949d3d8f2911ac39",
   "staging": {
     "ref": "viqjdgohtxqkrdgwtull",
-    "status": "ACTIVE_HEALTHY",
+    "status": "INACTIVE",
     "public_tables": 214,
     "rls_tables": 214,
     "baseline_source_dump_sha256": "99178a9f3a21c1a88ab33cdf5a74526ffffd310ad39faecf454a971a7d6ffa64",
@@ -100,7 +100,8 @@
       "public_organizations": 0,
       "archived_audit_events": 15,
       "archived_organizations": 2
-    }
+    },
+    "status_at_verification": "ACTIVE_HEALTHY"
   },
   "preview": {
     "id": "dpl_7uNdcj1Y65ALPpfbXtdBnpH9HybH",
@@ -163,9 +164,34 @@
   "other_project": {
     "name": "ai roadmap",
     "ref": "dqpdyschjpbdhhotmojs",
-    "status": "INACTIVE",
-    "owner_approved_temporary_pause": true
+    "status": "ACTIVE_HEALTHY",
+    "owner_approved_temporary_pause": true,
+    "owner_approved_temporary_pause_ended": true,
+    "owner_requested_reactivation": true
   },
   "version": 1,
-  "w01": "NOT_ACCEPTED"
+  "w01": "NOT_ACCEPTED",
+  "current_environment_availability": {
+    "observed_on": "2026-10-26",
+    "ai_roadmap": "ACTIVE_HEALTHY",
+    "staging": "INACTIVE",
+    "previous_http_and_preview_results": "HISTORICAL_EXECUTION_EVIDENCE"
+  },
+  "migration_source_recovery": {
+    "status": "THREE_ORIGINAL_PAYLOADS_RECOVERED_PRIVATELY",
+    "history_entries": 203,
+    "history_entries_with_source": 203,
+    "repository_sql_files": 218,
+    "unmatched_exact_names": 41,
+    "unmatched_names_are_not_proof_of_missing_schema": true,
+    "recovered_versions": [
+      "20260916070836",
+      "20260916071435",
+      "20260916071630"
+    ],
+    "hashes_verified": true,
+    "sql_executed": false,
+    "historical_replay": "FAIL",
+    "w01": "NOT_ACCEPTED"
+  }
 }

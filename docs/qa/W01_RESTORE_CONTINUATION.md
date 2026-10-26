@@ -15,6 +15,23 @@ execution evidence; they do not claim a currently available staging backend.
 No W01 fixtures or preserved legacy data were removed by pausing.
 Overall W01 remains NOT ACCEPTED for the remaining gates already documented.
 
+## Source recovery follow-up — 2026-10-26
+
+A read-only Production migration-history inspection found nonempty stored SQL
+for all 203 entries. The original booking foundation and two associated
+hardening payloads were recovered privately and their lengths/MD5 verified.
+The three-source recovery closes the source-location question; it does not
+close historical replay. No recovered SQL was run or committed publicly.
+
+An exact-name comparison against the current 218 repository files has 41
+unmatched history names; aliases and combined migrations need content review
+before treating them as missing schema. See the updated
+[migration provenance](W01_MISSING_PRODUCTION_MIGRATION_PROVENANCE.md).
+
+ai roadmap remains ACTIVE_HEALTHY and staging remains INACTIVE. W01 still needs
+an available isolated runtime, a securely configured staging server key, and
+the remaining replay/browser/expiry gates. No paid capacity was enabled.
+
 ## Verified before pause: cloud baseline, 1000 DB checks and 417 real HTTP checks passed — 2026-10-26
 
 **Completed scoped verification; overall W01 still NOT ACCEPTED in full scope.**
