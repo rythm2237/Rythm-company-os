@@ -2,6 +2,32 @@
 
 **W01 NOT ACCEPTED. No merge or production mutation is authorized.**
 
+## Owner-authorized availability cycle and matrix rerun — 2026-10-26
+
+The owner explicitly authorized temporary pauses of ai roadmap whenever required
+for W01 testing, with reactivation after testing. That authorization resolves the
+active-free-project capacity decision for future test cycles; no repeated
+permission question is required for the same temporary switch.
+
+ai roadmap was paused, staging was restored to ACTIVE_HEALTHY, and the retained
+full matrix was executed again inside a subtransaction that rolled back all
+synthetic fixtures. Actual result: 23 actors, 3 companies, 1000 checks, 1000 PASS,
+zero failures. Sanitized result is retained as
+`w01_qa_evidence.results.post_restore_db_matrix`.
+
+Independent post-run checks: 214 RLS tables, zero client TRUNCATE relations,
+zero public organizations, zero Auth sessions, jobs, Vault secrets and outbound
+queue; helper schema absent. The single preserved legacy Auth identity remains.
+No new real HTTP, expired-token, signed-in browser or privileged-backend result
+is claimed by this database-role rerun.
+
+After testing, staging was paused and ai roadmap restored to ACTIVE_HEALTHY;
+a database SELECT 1 readiness check succeeded. Production was not changed.
+Overall W01 remains NOT_ACCEPTED. The dedicated staging-only server key is
+still absent, and the historical replay/browser/correctly-signed-expiry gates
+remain unresolved. The connector has no Auth configuration or server-key
+retrieval tool; no JWT signing secret was extracted as a workaround.
+
 ## Environment availability after owner-requested switch — 2026-10-26
 
 The owner requested reactivating `ai roadmap`. W01 staging
