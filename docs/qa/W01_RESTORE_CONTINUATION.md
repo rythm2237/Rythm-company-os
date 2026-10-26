@@ -1,8 +1,99 @@
-# W01 private schema restore continuation — 2026-10-25
+# W01 private schema restore continuation — updated 2026-10-26
 
 **W01 NOT ACCEPTED. No merge or production mutation is authorized.**
 
-## Cloud activation blocked by active free-project quota
+## Current: cloud baseline, 1000 DB checks and 417 real HTTP checks passed — 2026-10-26
+
+**Completed scoped verification; overall W01 still NOT ACCEPTED in full scope.**
+
+The owner explicitly approved temporarily pausing `ai roadmap`
+(`dqpdyschjpbdhhotmojs`). It is INACTIVE. The existing
+`rythm-phase3-staging` (`viqjdgohtxqkrdgwtull`) was restored and is
+ACTIVE_HEALTHY. Production/main are unchanged at
+`8ba2f605f9fc926ab5428284f125589540a16ff0`.
+
+### Baseline and isolation
+The predecessor had 13 tables, two test-named organizations, 15 audit events,
+and one reserved-test-domain Auth identity with no sessions. Twelve public
+tables lacked RLS. The legacy schema and all its rows were preserved as
+`w01_legacy_20261025`, with web-role schema access revoked. No existing account
+was deleted. The authoritative private baseline was restored atomically;
+all original catalog buckets matched BEFORE staging-specific restrictions.
+Mixed CRLF/LF inside function bodies were preserved. A failed preflight attempt
+had rolled back when Python newline normalization changed function hashes;
+it was diagnosed and corrected without weakening comparison.
+
+All 214 current public tables have RLS. The independently derived staging
+expectation matches all ten catalog buckets after cleanup: 267 function
+definitions unchanged; only the declared ACL/notification-trigger deltas differ.
+Client TRUNCATE and unsafe new-public-table defaults are zero. Five application
+functions that directly schedule jobs or send network requests are non-executable
+by web/service/postgres application roles; `nail_2nya_push_new_booking` is disabled.
+No OS/network sandbox or revocation of managed extension-owner permissions is
+claimed. No cron jobs, queued outbound requests or Vault secrets exist.
+
+The private cloud SQL checkpoint (SHA-256
+`bc39b047ff4f302511ef594620e15e8f371d5b7e3f8e8afbdbb6ab4bbef9664f`)
+and original inputs were saved privately for the owner. Cloud migration transport
+referenced those checksummed private input bytes. That is a snapshot baseline
+with an external private source dependency, NOT a repaired/self-contained replay
+of the original historical migrations. The historical replay CI still FAILS.
+
+### Actual authorization results
+- Cloud DB-role matrix: **1000/1000 PASS**, 3 companies, 23 actors.
+  Only the fixture preflight was adapted to allow the preserved legacy test
+  identity; the 1000 authorization assertions were unchanged.
+- Real GoTrue/PostgREST HTTP: **417/417 PASS**, all 23 identities logged in
+  with passwords and normal `authenticated` JWTs. Covered own/foreign company,
+  customer/project and explicit finance/contract boundaries, confidential budget
+  columns/RPCs, positive owner CRUD, independent checks for silent foreign PATCH,
+  malformed/tampered tokens, real refresh, logout and revoked refresh rejection.
+- Setup was privileged SQL seeding of disposable Auth identities/password hashes,
+  not signup/Admin API testing. HTTP assertions never used a service-role token.
+- A correctly signed expired access JWT and a signed-in browser/SSR journey
+  were NOT tested. Auth refresh/logout behavior must not be represented as proof
+  that an unexpired access JWT is instantly invalidated.
+
+### Preview
+Pinned source `0e3de1cebf87b50924ec5c2b949d3d8f2911ac39`, deployment
+`dpl_7uNdcj1Y65ALPpfbXtdBnpH9HybH`, READY:
+https://rythm-company-feafa8vet-ytalashti-7156s-projects.vercel.app
+
+A separate-project create was rejected by Vercel permissions; existing-project
+branch-scoped env changes and deployment were authorized and succeeded instead.
+Twenty-one overrides apply ONLY to Preview on the W01 branch. The known shared
+provider settings are blanked, the URL/public key target staging, execution/
+external-action/continuous-program/repair flags are false and AI budget is zero.
+Production env records were not edited. Branch auto-deploy remains disabled.
+Live `/api/qa/w01-boundary` returned HTTP 200 and every control true, including
+no provider credentials and the expected staging ref. Landing/login form rendered
+in the browser. This is **normal-user-auth-only**: the staging server/admin key
+is intentionally blank, and privileged business workflows are not claimed tested.
+Deployment Protection was retained. No Production alias was assigned.
+
+### Cleanup and remaining gates
+All new fixtures were removed from the newly restored public schema: zero
+public rows/organizations, zero new W01 Auth users, zero sessions/jobs/Vault
+secrets/outbound requests; `w01_test` absent. Cleanup used a guarded transaction
+on the exclusive synthetic public dataset, without CASCADE into Auth/legacy.
+The original 13 archived tables, two legacy test organizations, 15 archived audit
+events and one original Auth test identity remain. Auth's own platform audit
+history is not claimed purged. Private QA evidence is retained separately.
+
+CI at the pinned source: application 40274678290 PASS; synthetic restore/
+hardening 40274678365 PASS; core RLS 40274678289 PASS; offline baseline
+40274678275 PASS; original historical replay 40274678266 FAIL.
+
+Full W01 acceptance remains withheld for the known history/provenance limitation
+and unverified privileged backend/complete browser/expiry scenarios. A separately
+scoped staging server key must be configured through the owner's secure provider
+settings before exercising privileged app flows; never paste it into chat or
+substitute the Production key. No main merge or production remediation occurred.
+
+The machine-readable [cloud verification evidence](W01_CLOUD_VERIFICATION_20261026.json)
+is authoritative for current scoped statuses. Older sections below are historical.
+
+## Historical: cloud activation blocked by active free-project quota
 
 On 2026-10-25, continuing the owner's instruction to complete the isolated
 environment, Work attempted to restore only the existing
@@ -16,7 +107,7 @@ or approve a priced paid option. Do not pause Production or silently upgrade.
 No cloud Auth test users or fixtures were created. Local DB matrix remains
 1000/1000 PASS. No new HTTP harness is claimed implemented or executed.
 
-## Latest: owner-local hardening committed and full matrix passed — 1000/1000
+## Historical: owner-local hardening committed and full matrix passed — 1000/1000
 
 On 2026-10-25 the owner returned the controller output from their Windows
 Docker target `supabase_db_w01-local-restore`. This is owner-supplied execution
@@ -108,7 +199,7 @@ and idempotence. The full private-schema matrix still needs owner-local rerun.
 Production remediation/promotion is a separate reviewed release; W01 never
 applies this candidate to Production or merges main. HTTP auth/Preview are pending.
 
-## Latest: authoritative local restore committed (owner-local evidence)
+## Historical: authoritative local restore committed (owner-local evidence)
 
 On 2026-10-25 the owner ran the controller on their Windows Docker machine and
 returned `schema_parity=PASS_WITH_DOCUMENTED_SCOPE`, `network=disconnected`,
@@ -210,7 +301,7 @@ restoration failure, actual transaction rollback, a corrected fixture restore,
 network disconnection and refusal to reset an already-restored schema. A green
 harness workflow **does not attest production-schema restoration**.
 
-## Current acceptance matrix
+## Historical pre-cloud acceptance matrix
 
 | Gate | Status | Evidence / remaining requirement |
 | --- | --- | --- |
@@ -231,7 +322,7 @@ Production targets. No values were read, rotated, copied or used for tests.
 No cloud project was started/paused/deleted; no billed model, message or payment
 was invoked. Production database access in this continuation was read-only.
 
-## Next gate
+## Historical previous next gate
 
 Do not rerun the baseline restore or infer HTTP/JWT success from the DB matrix.
 Prepare an isolated Auth/PostgREST runtime with outbound actions disabled, then
