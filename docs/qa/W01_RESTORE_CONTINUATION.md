@@ -1,3 +1,28 @@
+# W01 current execution status — 2026-10-28
+
+**Browser/backend verification and synthetic teardown completed. Overall W01 remains NOT_ACCEPTED under the original strict history/parity acceptance rule. No main merge or Production promotion.**
+
+The real owner email/password session passed home/context, reload persistence, customer create/update, lead creation, explicit customer-scoped contract grants, contract draft creation, private attachment upload/download (140 bytes, byte-for-byte equality), revocation of all three grants, denial of the same document after revocation, signout and protected CRM redirect back to login. No service-role token was used to claim normal-user RLS.
+
+The browser found a real contract INSERT RLS defect: the old policy resolves parent customer access through a contract row that does not exist yet. A staging-only candidate changes exactly the INSERT and SELECT policies to check the supplied parent customer directly. Seven focused regression checks passed, including ungranted customer/foreign organization denial and revoked access denial. The complete unchanged authorization matrix was then rerun **1000/1000**, 23 actors/3 companies, with rollback. Its preflight explicitly allows the two preserved reserved-domain Auth identities rather than the former one. No authorization assertion was removed.
+
+Candidate: scripts/qa/w01-contract-parent-policy-candidate.sql.
+The original private Production snapshot remains immutable; its earlier exact parity evidence must not be conflated with this intentional candidate policy delta.
+
+A private project-files bucket was prepared from the repository's existing bucket definition because schema-only import has no storage bucket data. The exact synthetic object was removed through the Storage API by an exact-owner/org/object Preview-only QA cleanup route. Database cleanup failed through the connector with Invalid or expired requestState; the owner executed the guarded public-only RESTRICT cleanup. Screenshot and independent database read confirmed success.
+
+Post-matrix cleanup: public organizations=0, Auth users=2 (legacy + owner-created QA identity preserved), Auth sessions=0, storage objects=0, jobs=0, Vault secrets=0, test helper absent. Private legacy organizations=2 and audit events=15 remain intact. Temporary branch-alias share revoked.
+
+Application source ac6312c1c63672cbda6368acda62996ccf9686c8, READY Preview dpl_92TkAyFQGBqkQ5qD1g1ovnDfYcKy. All five workflows passed: application CI 40753108406, diagnostic replay 40753108441, core RLS 40753108531, restore harness 40753108417 and offline baseline 40753108432.
+
+Fresh Production/main remain 8ba2f605f9fc926ab5428284f125589540a16ff0 and dpl_DkyZXAywZnoEtvRRmvmyXSg67MaF. Production public fingerprint 4cb5f82d276c88fe4cc6e9cadc3fdb72, 4022 inventory lines, 203 migration records, 214 RLS tables. Staging after declared restrictions/candidate: 08a6ba0e2500c5b02046bbe4bfb5ed1d, 4022 lines, 9 retained staging history records, 214 RLS tables. **Exact migration-history equality is not met and has not been fabricated.** The strict original checker cannot honestly pass these values.
+
+The recovered-source diagnostic replay now passes with 24 reviewed supplemental inputs and full 1000-check disconnected matrix. Its fingerprint differs from Production; see W01_REPLAY_RECOVERY_20261028.json. A snapshot-based release baseline with explicit candidate deltas requires a reviewed acceptance decision; this report does not silently replace the original exact-history criterion.
+
+Staging was paused after tests; ai roadmap restoration is underway and its final readiness result is recorded separately. Production stayed active. The historical log below is retained for provenance and contains superseded statuses.
+
+---
+
 # W01 private schema restore continuation — updated 2026-10-28
 
 **W01 NOT ACCEPTED. No merge or production mutation is authorized.**
