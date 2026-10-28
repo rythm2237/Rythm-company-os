@@ -1,6 +1,6 @@
 # W01 supplemental replay sources
 
-These 23 inputs recover missing booking-schema dependencies from actual stored
+These 24 inputs recover missing booking-schema dependencies from actual stored
 Production migration source, retrieved by read-only catalog queries on 2026-10-28.
 They are used ONLY by the zero-credential disposable replay workflow.
 The original 218-file migration directory and historical baseline remain unchanged.
@@ -20,7 +20,7 @@ or Vault values are included. DML in function bodies defines behavior; those
 functions are not invoked by source restoration. Earlier temporary media tables
 are created then removed by their actual subsequent historical migrations.
 
-The manifest records 218 original inputs, 23 supplements, their hashes, the
+The manifest records 218 original inputs, 24 supplements, their hashes, the
 schema-only projection and existing four quarantined live-data seeds. Source
 preparation is diagnostic and does not prove exact equivalence to all 203
 Production history entries. Physical replay, catalog comparison and behavioral
@@ -29,3 +29,5 @@ rewrite history, insert dummy dependencies, or count an excluded schema change
 as verified.
 
 The communication_daily_digest_schema_only input is the exact current canonical function DDL from a read-only pg_get_functiondef query, independently MD5-checked. It restores the missing real function without executing its notification writes or recreating any scheduled job. It is a declared catalog-derived projection, not a recovered full historical migration.
+
+The connection_setup_control_mode_schema_only input restores the exact canonical production trigger function and its real trigger. Only explicit public schema qualification is added to trigger DDL. Its derived payload hash was independently computed on the read-only source. No session/control-mode records are created or updated by recovery.
