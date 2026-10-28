@@ -1,0 +1,41 @@
+{
+  "w01": "NOT_ACCEPTED",
+  "observed_date": "2026-10-28",
+  "source_commit": "5e21fff3c4c41f723b26bc23ef166245858d9cf1",
+  "replay_run": 40652169498,
+  "application_ci": 40652169480,
+  "all_five_workflows_passed": true,
+  "original_migration_files_unchanged": 218,
+  "recovered_inputs": 24,
+  "effective_inputs": 242,
+  "quarantined_live_data_seeds": 4,
+  "replayed_copies": 238,
+  "public_tables": 214,
+  "rls_tables": 214,
+  "columns": 3232,
+  "policies": 338,
+  "functions": 234,
+  "relations": 218,
+  "inventory_lines": 4022,
+  "diagnostic_fingerprint": "213df9d072daab4b1c77d2f7c4b7dd06",
+  "production_fingerprint": "4cb5f82d276c88fe4cc6e9cadc3fdb72",
+  "exact_production_parity_claimed": false,
+  "scope": "Diagnostic original-source replay with explicit reviewed schema-only/catalog projections; authoritative private snapshot remains separate parity evidence",
+  "full_matrix": {
+    "companies": 3,
+    "actors": 23,
+    "checks": 1000,
+    "passed": 1000,
+    "failed": 0,
+    "network_disconnected": true,
+    "fixtures_rolled_back": true,
+    "cleanup_verified": true
+  },
+  "local_validation": {
+    "typecheck": "PASS",
+    "lint": "PASS_WITH_EXISTING_WARNINGS",
+    "postgres_parser_payloads": 24,
+    "checksum_tamper_rejected": true
+  },
+  "browser_gate": "Needs owner-created test password via secure browser handoff; signed-in Rythm workflows not yet executed"
+}
