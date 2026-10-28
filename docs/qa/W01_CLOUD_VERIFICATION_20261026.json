@@ -156,7 +156,7 @@
     }
   },
   "remaining": {
-    "privileged_backend_workflows": "NOT_RUN; staging-only server key intentionally absent",
+    "privileged_backend_workflows": "Server key verified live; authenticated business workflows NOT_RUN",
     "expired_valid_signature_jwt": "NOT_RUN",
     "historical_migration_replay": "FAIL; private snapshot fallback does not repair original history",
     "full_browser_sign_in": "NOT_RUN"
@@ -172,10 +172,10 @@
   "version": 1,
   "w01": "NOT_ACCEPTED",
   "current_environment_availability": {
-    "observed_on": "2026-10-26",
+    "observed_on": "2026-10-28",
     "ai_roadmap": "ACTIVE_HEALTHY",
     "staging": "INACTIVE",
-    "previous_http_and_preview_results": "HISTORICAL_EXECUTION_EVIDENCE"
+    "ai_roadmap_readiness_check": 1
   },
   "migration_source_recovery": {
     "status": "THREE_ORIGINAL_PAYLOADS_RECOVERED_PRIVATELY",
@@ -192,6 +192,36 @@
     "hashes_verified": true,
     "sql_executed": false,
     "historical_replay": "FAIL",
+    "w01": "NOT_ACCEPTED"
+  },
+  "latest_verification": {
+    "observed_on": "2026-10-28",
+    "source_commit": "b6cb6a64b3fbce20f40548bec8a273094e33cf16",
+    "preview_deployment": "dpl_EJnwLjENq549c2fHVZHsM8Vw8EWB",
+    "staging_admin_key_verified": true,
+    "credential_disclosed": false,
+    "boundary_http_status": 200,
+    "all_isolation_controls": true,
+    "anonymous_crm_routes": {
+      "/api/crm/customers/export": 401,
+      "/api/crm/leads": 401
+    },
+    "local_regression_tests": {
+      "passed": 7,
+      "failed": 0
+    },
+    "db_role_matrix": {
+      "checks": 1000,
+      "passed": 1000,
+      "failed": 0
+    },
+    "application_ci": "PASS",
+    "restore_harness_ci": "PASS",
+    "core_rls_ci": "PASS",
+    "historical_replay": "FAIL",
+    "authenticated_business_workflows": "NOT_RUN",
+    "browser_sign_in": "NOT_RUN",
+    "correctly_signed_expired_token": "NOT_RUN",
     "w01": "NOT_ACCEPTED"
   }
 }
