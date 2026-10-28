@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/w01-local-db.yml"
       - "scripts/qa/prepare-w01-local-migrations.mjs"
+      - "scripts/qa/recovered-migrations/**"
       - "scripts/qa/w01-local-db-attest.sql"
       - "supabase/migrations/**"
   workflow_dispatch:
