@@ -1,28 +1,29 @@
-# Recovered W01 replay sources
+# W01 supplemental replay sources
 
-These three original migration payloads were recovered by read-only SELECT from
-Production schema_migrations.statements on 2026-10-28. They were reviewed for
-credentials, business records and external side effects before inclusion here.
-They are original migration source, not the private Production schema dump.
+These 22 inputs recover missing booking-schema dependencies from actual stored
+Production migration source, retrieved by read-only catalog queries on 2026-10-28.
+They are used ONLY by the zero-credential disposable replay workflow.
+The original 218-file migration directory and historical baseline remain unchanged.
 
-The foundation includes a bootstrap INSERT for the public business-profile
-defaults (business name and already-public Instagram URL); it contains no
-customer/contact/appointment rows or credentials. Other INSERT statements are
-function bodies, not populated customer data. The two follow-ups harden grants,
-policy expressions and indexes. No scheduler, network, Vault or secret bootstrap
-is invoked by these payloads.
+21 payloads are exact original UTF-8 source, verified against independently
+queried history MD5 values. The file ending live_booking_pwa_admin_schema_only.sql
+is an explicitly reviewed schema-only projection: its original DDL, functions,
+grants and publication block are retained unchanged, while the credential
+bootstrap INSERT and public profile/service/hour/gallery data updates are omitted.
+Its projected bytes are independently hashed by a read-only server-side query.
+No credential bootstrap value or hash is included in the recovered inputs.
 
-Exact UTF-8 payload bytes are checked against independently queried Production
-history MD5 values in prepare-w01-local-migrations.mjs. No newline normalization
-or dummy dependency definitions are used. The source was not modified.
+Other original inputs contain the already-public profile/gallery defaults and
+storage bucket configuration. Their SQL has been reviewed: no customer/contact/
+appointment records, credentials, JWT signing secrets, outbound calls, job creation
+or Vault values are included. DML in function bodies defines behavior; those
+functions are not invoked by source restoration. Earlier temporary media tables
+are created then removed by their actual subsequent historical migrations.
 
-These are supplemental inputs to disposable offline replay ONLY. The historical
-218-file repository inventory remains unchanged. No production migration
-directory is changed, no production history is rewritten, and nothing is
-automatically deployed to Production. The replay manifest separately records
-original count 218, supplemental count 3, and effective count 221.
-
-Passing source preparation does not attest complete historical replay or
-catalog parity. The physical disposable replay and resulting catalog assertions
-must pass independently; existing quarantined data-seed/order deviations remain
-explicit. Adding these three sources alone is not full W01 acceptance.
+The manifest records 218 original inputs, 22 supplements, their hashes, the
+schema-only projection and existing four quarantined live-data seeds. Source
+preparation is diagnostic and does not prove exact equivalence to all 203
+Production history entries. Physical replay, catalog comparison and behavioral
+tests remain independent acceptance gates. Never apply these copies to Production,
+rewrite history, insert dummy dependencies, or count an excluded schema change
+as verified.
