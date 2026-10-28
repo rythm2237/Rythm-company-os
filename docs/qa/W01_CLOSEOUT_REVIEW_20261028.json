@@ -1,12 +1,17 @@
 {
   "observed_date": "2026-10-28",
   "execution_status": "PASS_BROWSER_BACKEND_TEARDOWN",
-  "w01": "NOT_ACCEPTED_STRICT_HISTORY_GATE",
+  "w01": "ACCEPTED_SNAPSHOT_BASELINE",
   "owner_review": {
     "proposal": "Accept immutable schema-only snapshot baseline with explicit staging safety restrictions and two reviewed contract policy deltas; keep diagnostic historical replay as separate evidence",
-    "decision": "PENDING",
+    "decision": "APPROVED",
     "no_history_forgery": true,
-    "original_strict_checker_unchanged": true
+    "original_strict_checker_unchanged": true,
+    "approved_date": "2026-10-28",
+    "approval_source": "Owner explicitly confirmed the immediately preceding snapshot-baseline acceptance proposal in this conversation.",
+    "accepted_scope": "Immutable verified schema-only snapshot, documented staging safety restrictions, and two tested project_contracts policy deltas.",
+    "excluded_scope": "Exact reconstruction/equality of original Production migration history is tracked separately; no claim of strict history parity.",
+    "production_merge_or_promotion_authorized": false
   },
   "checks": {
     "authoritative_snapshot_catalog_buckets": 10,
@@ -115,5 +120,6 @@
     "ai_roadmap": "ACTIVE_HEALTHY",
     "ai_roadmap_select_1": 1,
     "production": "ACTIVE_HEALTHY"
-  }
+  },
+  "followup": "W01_HISTORY_RECONCILIATION_FOLLOWUP.md"
 }
