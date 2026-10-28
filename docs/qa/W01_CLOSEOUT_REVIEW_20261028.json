@@ -1,0 +1,125 @@
+{
+  "observed_date": "2026-10-28",
+  "execution_status": "PASS_BROWSER_BACKEND_TEARDOWN",
+  "w01": "ACCEPTED_SNAPSHOT_BASELINE",
+  "owner_review": {
+    "proposal": "Accept immutable schema-only snapshot baseline with explicit staging safety restrictions and two reviewed contract policy deltas; keep diagnostic historical replay as separate evidence",
+    "decision": "APPROVED",
+    "no_history_forgery": true,
+    "original_strict_checker_unchanged": true,
+    "approved_date": "2026-10-28",
+    "approval_source": "Owner explicitly confirmed the immediately preceding snapshot-baseline acceptance proposal in this conversation.",
+    "accepted_scope": "Immutable verified schema-only snapshot, documented staging safety restrictions, and two tested project_contracts policy deltas.",
+    "excluded_scope": "Exact reconstruction/equality of original Production migration history is tracked separately; no claim of strict history parity.",
+    "production_merge_or_promotion_authorized": false
+  },
+  "checks": {
+    "authoritative_snapshot_catalog_buckets": 10,
+    "cloud_db_matrix_after_candidate": {
+      "companies": 3,
+      "actors": 23,
+      "checks": 1000,
+      "passed": 1000,
+      "failed": 0,
+      "fixtures_rolled_back": true,
+      "preflight_preserved_auth_users": 2
+    },
+    "real_http_prior": {
+      "checks": 417,
+      "passed": 417
+    },
+    "signed_expiry_prior": {
+      "checks": 10,
+      "passed": 10
+    },
+    "contract_candidate_regression": {
+      "checks": 7,
+      "passed": 7
+    },
+    "browser": {
+      "signin": true,
+      "reload": true,
+      "customer_create_update": true,
+      "lead_create": true,
+      "contract_denied_without_grant": true,
+      "explicit_customer_contract_grants": true,
+      "contract_draft_create": true,
+      "service_backend_upload": true,
+      "download_byte_identical": true,
+      "grants_revoked": true,
+      "download_denied_after_revoke": true,
+      "signout": true,
+      "protected_crm_denied_after_signout": true
+    },
+    "ci": [
+      {
+        "id": 40753108406,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 40753108441,
+        "name": "W01 Ephemeral Database Replay (zero credentials)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 40753108531,
+        "name": "W01 Synthetic Core RLS (no cloud credentials)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 40753108417,
+        "name": "W01 Private Restore Harness (synthetic input only)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 40753108432,
+        "name": "W01 Baseline Evidence (offline only)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "cleanup": {
+    "owner_executed_guarded_sql": true,
+    "independent_read_verified": true,
+    "organizations": 0,
+    "auth_users_preserved": 2,
+    "sessions": 0,
+    "storage_objects": 0,
+    "cron_jobs": 0,
+    "vault_secrets": 0,
+    "helper_absent": true,
+    "legacy_organizations": 2,
+    "legacy_audit_events": 15,
+    "temporary_alias_share_revoked": true
+  },
+  "baseline": {
+    "production_main_sha": "8ba2f605f9fc926ab5428284f125589540a16ff0",
+    "production_deployment": "dpl_DkyZXAywZnoEtvRRmvmyXSg67MaF",
+    "production_fingerprint": "4cb5f82d276c88fe4cc6e9cadc3fdb72",
+    "production_migration_records": 203,
+    "staging_fingerprint": "08a6ba0e2500c5b02046bbe4bfb5ed1d",
+    "staging_migration_records": 9,
+    "inventory_lines_both": 4022,
+    "rls_tables_both": 214,
+    "exact_current_catalog_or_history_equality": false
+  },
+  "preview": {
+    "application_sha": "ac6312c1c63672cbda6368acda62996ccf9686c8",
+    "deployment": "dpl_92TkAyFQGBqkQ5qD1g1ovnDfYcKy",
+    "state": "READY",
+    "production_promoted": false
+  },
+  "availability": {
+    "staging": "INACTIVE",
+    "ai_roadmap": "ACTIVE_HEALTHY",
+    "ai_roadmap_select_1": 1,
+    "production": "ACTIVE_HEALTHY"
+  },
+  "followup": "W01_HISTORY_RECONCILIATION_FOLLOWUP.md"
+}

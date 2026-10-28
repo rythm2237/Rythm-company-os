@@ -1,0 +1,67 @@
+{
+  "w01": "NOT_ACCEPTED",
+  "browser_tests": {
+    "normal_user_signin": true,
+    "session_reload": true,
+    "customer_create_update": true,
+    "lead_create": true,
+    "ungranted_contract_section_denied": true,
+    "explicit_customer_grants": true,
+    "contract_create": true,
+    "backend_upload": true,
+    "backend_download_byte_equal": true,
+    "document_bytes": 140,
+    "all_grants_revoked": true,
+    "document_download_denied_after_revoke": true,
+    "storage_object_deleted_via_storage_api": true,
+    "document_metadata_deleted": true,
+    "signout": true,
+    "protected_crm_redirect_to_login": true
+  },
+  "contract_policy_candidate": {
+    "file": "scripts/qa/w01-contract-parent-policy-candidate.sql",
+    "staging_only": true,
+    "regression_checks": 7,
+    "passed": 7,
+    "original_failure": "42501 new row violates row-level security policy",
+    "original_baseline_untouched": true,
+    "declared_catalog_delta": "Two project_contracts policies; explicit parent-customer lookup for INSERT and RETURNING"
+  },
+  "preview": {
+    "source": "ac6312c1c63672cbda6368acda62996ccf9686c8",
+    "deployment": "dpl_92TkAyFQGBqkQ5qD1g1ovnDfYcKy",
+    "target": "preview",
+    "state": "READY",
+    "typecheck": "PASS"
+  },
+  "fresh_inventory": {
+    "production": {
+      "fingerprint": "4cb5f82d276c88fe4cc6e9cadc3fdb72",
+      "lines": 4022,
+      "migration_records": 203,
+      "rls_tables": 214,
+      "main_sha": "8ba2f605f9fc926ab5428284f125589540a16ff0",
+      "deployment": "dpl_DkyZXAywZnoEtvRRmvmyXSg67MaF"
+    },
+    "staging": {
+      "fingerprint": "08a6ba0e2500c5b02046bbe4bfb5ed1d",
+      "lines": 4022,
+      "migration_records": 9,
+      "rls_tables": 214
+    },
+    "exact_history_parity": false
+  },
+  "remaining": {
+    "database_fixture_cleanup": "BLOCKED_CONNECTOR_INVALID_OR_EXPIRED_REQUEST_STATE",
+    "organizations": 1,
+    "auth_users_preserved": 2,
+    "sessions": 0,
+    "storage_objects": 0,
+    "active_test_grants": 0,
+    "full_matrix_rerun_after_candidate": "NOT_RUN",
+    "ai_roadmap": "TEMPORARILY_PAUSED_PENDING_CLEANUP_AND_TEST_COMPLETION",
+    "strict_original_history_acceptance": "NOT_SATISFIED"
+  },
+  "cleanup_script": "scripts/qa/w01-browser-fixture-cleanup.sql",
+  "no_production_changes": true
+}

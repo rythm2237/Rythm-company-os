@@ -1,0 +1,7 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {inspectW01Boundary} from '../../lib/qa/w01-boundary.ts';
+const safe={VERCEL_ENV:'preview',RYTHM_ENV:'staging',VERCEL_GIT_COMMIT_REF:'foundation/w01-baseline-staging-safety',NEXT_PUBLIC_SUPABASE_URL:'https://viqjdgohtxqkrdgwtull.supabase.co',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'sb_publishable_synthetic',RYTHM_AGENT_EXECUTION_ENABLED:'false',RYTHM_EXTERNAL_ACTIONS_ENABLED:'false',RYTHM_MONTHLY_AI_BUDGET_USD:'0',CONTINUOUS_PROGRAM_ENGINE_ENABLED:'false',GOOGLE_CONNECTION_REPAIR_ENABLED:'false'};
+test('attestation absent outside the explicit staging branch',()=>{for(const changed of [{VERCEL_ENV:'production'},{RYTHM_ENV:'production'},{VERCEL_GIT_COMMIT_REF:'main'}])assert.equal(inspectW01Boundary({...safe,...changed}),null);});
+test('production target, inherited keys and missing locks fail closed',()=>{assert.equal(inspectW01Boundary(safe).safe,true);for(const changed of [{NEXT_PUBLIC_SUPABASE_URL:'https://dezbacyuvsdrlpmmpjht.supabase.co'},{RYTHM_AGENT_EXECUTION_ENABLED:'true'},{RYTHM_EXTERNAL_ACTIONS_ENABLED:undefined},{RYTHM_MONTHLY_AI_BUDGET_USD:'1'},{OPENAI_API_KEY:'synthetic-value'},{SUPABASE_SERVICE_ROLE_KEY:'synthetic-value'}])assert.equal(inspectW01Boundary({...safe,...changed}).safe,false);});
+test('report never returns credential values',()=>{const report=JSON.stringify(inspectW01Boundary({...safe,OPENAI_API_KEY:'do-not-return-this'}));assert(!report.includes('do-not-return-this'));assert(!report.includes('sb_publishable_synthetic'));});
