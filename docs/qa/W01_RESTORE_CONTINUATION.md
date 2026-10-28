@@ -2,6 +2,43 @@
 
 **W01 NOT ACCEPTED. No merge or production mutation is authorized.**
 
+## Production reactivation and signed-token expiry — 2026-10-28
+
+At the owner's explicit request, Production Rythm was found INACTIVE in Supabase
+and restored to ACTIVE_HEALTHY; SELECT 1 succeeded. Vercel project unpause
+succeeded and https://rythm-os.com returned HTTP 200. Existing Production
+deployment remains dpl_DkyZXAywZnoEtvRRmvmyXSg67MaF at
+8ba2f605f9fc926ab5428284f125589540a16ff0. No W01 code was merged or promoted.
+
+The owner authorized browser fallback. Supabase dashboard sign-in was actually
+completed through the owner's selected GitHub/Google flow. An expired OAuth
+state during the first attempt was resolved using a fresh canonical target tab
+and the same sign-in method. This is dashboard authentication, not the separate
+signed-in Rythm application/SSR journey.
+
+Staging access token expiry was observed as 3600 seconds, temporarily set to 60
+seconds using its own Auth/Sessions dashboard, and restored to 3600 seconds.
+Saved restoration was confirmed after page reload; a separately issued token
+also had a 3600-second lifetime.
+
+[Signed expiry evidence](W01_SIGNED_EXPIRY_20261028.json): **10/10 PASS**.
+A real GoTrue normal-user access token, without modification or signing-secret
+access, was accepted before expiry and rejected by both Auth and PostgREST
+after expiry. Refresh after expiry succeeded, refreshed token was accepted,
+logout succeeded and the revoked refresh token was rejected. The first run's
+expiry assertions passed, but an independent global logout interfered with its
+refresh control; this fixture interference was retained and the complete suite
+passed in a clean independent rerun.
+
+Only synthetic expiry user f0100000-0000-4000-8000-000000000028 was deleted.
+Post-cleanup users=1 (preserved legacy identity), sessions=0, organizations=0,
+cron jobs=0, outbound queue=0. The temporary password input was removed.
+
+Correctly signed access-token expiry is now a completed gate. Full authenticated
+Rythm browser/SSR business workflows and historical migration reconciliation/
+replay remain unresolved; overall W01 is NOT_ACCEPTED. No production Auth
+configuration, schema or business rows were changed during this testing.
+
 ## Staging server-key verification and fresh Preview — 2026-10-28
 
 The owner configured the staging-only server key as a Secret scoped exclusively
