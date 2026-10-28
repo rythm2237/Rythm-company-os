@@ -157,7 +157,7 @@
   },
   "remaining": {
     "privileged_backend_workflows": "Server key verified live; authenticated business workflows NOT_RUN",
-    "expired_valid_signature_jwt": "NOT_RUN",
+    "expired_valid_signature_jwt": "PASS: 10/10 real signed-token expiry/refresh/logout checks",
     "historical_migration_replay": "FAIL; private snapshot fallback does not repair original history",
     "full_browser_sign_in": "NOT_RUN"
   },
@@ -173,9 +173,12 @@
   "w01": "NOT_ACCEPTED",
   "current_environment_availability": {
     "observed_on": "2026-10-28",
+    "production_rythm": "ACTIVE_HEALTHY",
+    "production_restored_at_owner_request": true,
+    "production_site_http_status": 200,
     "ai_roadmap": "ACTIVE_HEALTHY",
     "staging": "INACTIVE",
-    "ai_roadmap_readiness_check": 1
+    "readiness_checks_passed": true
   },
   "migration_source_recovery": {
     "status": "THREE_ORIGINAL_PAYLOADS_RECOVERED_PRIVATELY",
@@ -221,7 +224,61 @@
     "historical_replay": "FAIL",
     "authenticated_business_workflows": "NOT_RUN",
     "browser_sign_in": "NOT_RUN",
-    "correctly_signed_expired_token": "NOT_RUN",
+    "correctly_signed_expired_token": "PASS: see signed_expiry_verification",
     "w01": "NOT_ACCEPTED"
+  },
+  "signed_expiry_verification": {
+    "suite": "W01_SIGNED_ACCESS_TOKEN_EXPIRY",
+    "passed": 10,
+    "failed": 0,
+    "checks": [
+      {
+        "name": "password login returns real token",
+        "passed": true
+      },
+      {
+        "name": "real token short lifetime and correct normal role",
+        "passed": true
+      },
+      {
+        "name": "Auth accepts same token before expiry",
+        "passed": true
+      },
+      {
+        "name": "PostgREST accepts normal token before expiry",
+        "passed": true
+      },
+      {
+        "name": "Auth rejects original signed token after expiry",
+        "passed": true
+      },
+      {
+        "name": "PostgREST rejects original signed token after expiry",
+        "passed": true
+      },
+      {
+        "name": "refresh succeeds after access expiry",
+        "passed": true
+      },
+      {
+        "name": "new refreshed access token accepted",
+        "passed": true
+      },
+      {
+        "name": "logout succeeds",
+        "passed": true
+      },
+      {
+        "name": "revoked refresh rejected",
+        "passed": true
+      }
+    ],
+    "token_modified": false,
+    "signature_secret_accessed": false,
+    "w01": "NOT_ACCEPTED",
+    "observed_date": "2026-10-28",
+    "evidence": "W01_SIGNED_EXPIRY_20261028.json",
+    "expiry_setting_restored_seconds": 3600,
+    "own_fixture_removed": true
   }
 }
