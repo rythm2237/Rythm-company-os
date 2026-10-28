@@ -14,3 +14,31 @@ export function inspectW01Boundary(env: Record<string,string|undefined>) {
  };
  return {scope:"W01_PREVIEW_BOUNDARY",project_ref:ref,controls,safe:Object.values(controls).every(Boolean),backend_mode:"normal-user-auth-only",business_workflows_verified:false};
 }
+
+
+export async function inspectW01Runtime(env: Record<string, string | undefined>, request: typeof fetch = fetch) {
+  const report = inspectW01Boundary(env);
+  if (!report || !env.SUPABASE_SERVICE_ROLE_KEY) return report;
+  const { privileged_backend_disabled: disabled, ...controls } = report.controls;
+  void disabled;
+  let accepted = false;
+  // Never transmit the credential unless every static isolation lock passes.
+  if (Object.values(controls).every(Boolean)) {
+    try {
+      const response = await request("https://viqjdgohtxqkrdgwtull.supabase.co/auth/v1/admin/users?page=1&per_page=1", {
+        headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY },
+        cache: "no-store",
+        redirect: "error",
+        signal: AbortSignal.timeout(10000),
+      });
+      if (response.status === 200) {
+        const body = await response.json();
+        accepted = Array.isArray(body.users);
+      }
+    } catch { accepted = false; }
+  }
+  const checked = { ...controls, staging_admin_key_verified: accepted };
+  return { ...report, controls: checked, safe: Object.values(checked).every(Boolean),
+    backend_mode: accepted ? "staging-admin-key-verified" : "staging-admin-key-unverified",
+    business_workflows_verified: false };
+}

@@ -32,7 +32,7 @@ jobs:
       - name: Unit safety gates
         run: |
           node --test scripts/qa/w01-restore-safety.test.mjs
-          node --experimental-strip-types --test scripts/qa/w01-boundary.test.mjs
+          node --experimental-strip-types --test scripts/qa/w01-boundary.test.mjs scripts/qa/w01-runtime.test.mjs
       - name: Start empty initialized Supabase database only
         run: |
           set -euo pipefail
