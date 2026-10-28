@@ -28,5 +28,5 @@ begin
   return new;
 end;
 $function$
-
+;
 CREATE TRIGGER trg_connection_setup_auto_control_mode BEFORE INSERT OR UPDATE OF session_status, requires_user_action, user_action_required, browser_session_id, control_mode ON public.integration_setup_sessions FOR EACH ROW EXECUTE FUNCTION public.enforce_connection_setup_control_mode_v1();
