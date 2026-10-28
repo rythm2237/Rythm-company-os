@@ -1,6 +1,46 @@
-# W01 private schema restore continuation — updated 2026-10-26
+# W01 private schema restore continuation — updated 2026-10-28
 
 **W01 NOT ACCEPTED. No merge or production mutation is authorized.**
+
+## Staging server-key verification and fresh Preview — 2026-10-28
+
+The owner configured the staging-only server key as a Secret scoped exclusively
+to Preview branch `foundation/w01-baseline-staging-safety`. The old empty branch
+placeholder was renamed without touching the global Production variable.
+The key was never decrypted, printed, fetched into the Work runtime or committed.
+
+Source `b6cb6a64b3fbce20f40548bec8a273094e33cf16` now supports two distinct
+attestations: normal-user-only configuration, and a staging admin credential
+actually accepted by the fixed staging Auth admin endpoint. Every static
+isolation lock must pass before transmitting the credential. Redirects are
+refused; timeout/error/non-200/malformed responses fail closed. No credentials,
+Auth records or remote error bodies are returned in the report. The endpoint
+continues to report business_workflows_verified=false.
+
+Deployment `dpl_EJnwLjENq549c2fHVZHsM8Vw8EWB` is READY and returned HTTP 200:
+staging_admin_key_verified=true, safe=true; all isolation locks true.
+URL: https://rythm-company-1oxoews06-ytalashti-7156s-projects.vercel.app
+Both real application GET routes `/api/crm/customers/export` and
+`/api/crm/leads` returned 401 without an authenticated user, even while the
+server admin credential was active. These are anonymous denial checks, not
+authenticated business-workflow coverage.
+
+Seven local boundary/runtime regression tests passed. CI application
+40643545855, restore harness 40643545954, offline evidence 40643545864 and
+core RLS 40643545843 passed. Historical replay 40643545807 FAILED; the source
+reconciliation problem is not repaired by this change.
+
+The unchanged DB matrix reran: 1000/1000 PASS, 3 companies, 23 actors, zero
+failures; retained as admin_configuration_db_matrix. Fixtures rolled back.
+Post-run: organizations=0, sessions=0, cron jobs=0, outbound queue=0,
+helper schema absent; original legacy Auth identity=1.
+
+Remaining: signed-in browser/SSR journey, correctly signed expired access JWT,
+authenticated privileged business workflows, and reviewed full historical
+replay. Full W01 remains NOT_ACCEPTED; no main merge or Production mutation.
+Protected test fetches use Vercel's automatically expiring temporary share;
+no test link was published. Key configuration and actual server-key acceptance
+are now completed gates, not remaining owner setup.
 
 ## Owner-authorized availability cycle and matrix rerun — 2026-10-26
 
