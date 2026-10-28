@@ -44,3 +44,11 @@ BEGIN
  IF r <> 214 THEN RAISE EXCEPTION 'W01 RLS mismatch: production 214 RLS tables, local %', r; END IF;
 END
 $w01$;
+
+SELECT 'W01_COUNTS=' || jsonb_build_object(
+'columns',(SELECT count(*) FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m') AND a.attnum>0 AND NOT a.attisdropped),
+'policies',(SELECT count(*) FROM pg_policies WHERE schemaname='public'),
+'functions',(SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'),
+'relations',(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m'))
+)::text;
+SELECT 'W01_FUNCTIONS=' || jsonb_agg(jsonb_build_object('signature',p.proname||'('||pg_get_function_identity_arguments(p.oid)||')','hash',md5(pg_get_functiondef(p.oid))) ORDER BY p.proname,pg_get_function_identity_arguments(p.oid))::text FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public';
