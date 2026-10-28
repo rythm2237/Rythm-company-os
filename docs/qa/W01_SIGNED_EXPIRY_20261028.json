@@ -1,0 +1,68 @@
+{
+  "suite": "W01_SIGNED_ACCESS_TOKEN_EXPIRY",
+  "passed": 10,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "password login returns real token",
+      "passed": true
+    },
+    {
+      "name": "real token short lifetime and correct normal role",
+      "passed": true
+    },
+    {
+      "name": "Auth accepts same token before expiry",
+      "passed": true
+    },
+    {
+      "name": "PostgREST accepts normal token before expiry",
+      "passed": true
+    },
+    {
+      "name": "Auth rejects original signed token after expiry",
+      "passed": true
+    },
+    {
+      "name": "PostgREST rejects original signed token after expiry",
+      "passed": true
+    },
+    {
+      "name": "refresh succeeds after access expiry",
+      "passed": true
+    },
+    {
+      "name": "new refreshed access token accepted",
+      "passed": true
+    },
+    {
+      "name": "logout succeeds",
+      "passed": true
+    },
+    {
+      "name": "revoked refresh rejected",
+      "passed": true
+    }
+  ],
+  "token_modified": false,
+  "signature_secret_accessed": false,
+  "w01": "NOT_ACCEPTED",
+  "observed_date": "2026-10-28",
+  "scope": "Actual GoTrue-issued normal-user JWT, unchanged signature, expiry observed by Auth and PostgREST",
+  "temporary_expiry_seconds": 60,
+  "original_expiry_seconds": 3600,
+  "expiry_setting_restored": true,
+  "cleanup": {
+    "own_test_user_absent": true,
+    "auth_users": 1,
+    "auth_sessions": 0,
+    "organizations": 0,
+    "cron_jobs": 0,
+    "outbound_queue": 0
+  },
+  "first_run": {
+    "result": "FIXTURE_INTERFERENCE",
+    "expiry_checks_passed": 6,
+    "refresh_control_affected_by": "A separate global logout revoked the first test session; isolated rerun passed all 10 checks."
+  }
+}
