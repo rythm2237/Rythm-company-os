@@ -1,3 +1,15 @@
+# Owner-approved W01 closeout — 2026-10-28
+
+**W01 ACCEPTED_SNAPSHOT_BASELINE.** The owner explicitly approved accepting the immutable verified schema-only snapshot with the documented staging safety restrictions and two tested contract-policy deltas, while tracking exact migration-history reconstruction separately.
+
+This replaces the pending strict-history acceptance decision in the historical execution report below. It does not claim that 203 Production and 9 staging history records are equal, alter the original strict checker, or authorize merging/promoting W01 into Production.
+
+Final execution evidence and approved scope: [W01_CLOSEOUT_REVIEW_20261028.json](W01_CLOSEOUT_REVIEW_20261028.json). Separate remaining work: [migration-history reconciliation](W01_HISTORY_RECONCILIATION_FOLLOWUP.md).
+
+All browser/backend tests and post-candidate 1000-check matrix passed; synthetic fixtures, sessions and storage objects were cleaned, temporary alias share revoked, legacy data and both Auth identities preserved. After testing, staging was paused and ai roadmap was verified ACTIVE_HEALTHY with SELECT 1. Rythm Production remained active and unchanged.
+
+---
+
 # W01 current execution status — 2026-10-28
 
 **Browser/backend verification and synthetic teardown completed. Overall W01 remains NOT_ACCEPTED under the original strict history/parity acceptance rule. No main merge or Production promotion.**
