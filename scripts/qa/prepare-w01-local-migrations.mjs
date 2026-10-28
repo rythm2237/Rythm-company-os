@@ -29,6 +29,18 @@ function isOfflineEnvironment() {
     assert(!process.env[key], "Forbidden remote or service credential in disposable CI: " + key);
   }
 }
+
+const recoveredSource = resolve("scripts/qa/recovered-migrations");
+const recoveredHashes = new Map([["20260916070836_nail_2nya_booking_platform_foundation.sql","9c61ef81b14e2b0e8291bf83450c0611"],["20260916071435_nail_2nya_grant_hardening.sql","9b1665c6aa47509a190779023a6e563e"],["20260916071630_nail_2nya_security_performance_hardening.sql","09335c309099a96873f59ced6490f660"]]);
+function recoveredSources() {
+  const actual = readdirSync(recoveredSource).filter(name => name.endsWith(".sql")).sort();
+  assert.deepEqual(actual, [...recoveredHashes.keys()].sort(), "Unreviewed supplemental migration");
+  for (const name of actual) {
+    const digest = createHash("md5").update(readFileSync(join(recoveredSource, name))).digest("hex");
+    assert.equal(digest, recoveredHashes.get(name), "Recovered original source checksum mismatch: " + name);
+  }
+  return actual;
+}
 function getSources() {
   return readdirSync(source).filter((name) => name.endsWith(".sql")).sort();
 }
@@ -54,8 +66,11 @@ function normalize(names, target) {
   assert(process.env.GITHUB_WORKSPACE || process.env.W01_ALLOW_LOCAL_TEST === "true",
     "Must be in GitHub Actions or explicitly authorized disposable local test");
   isOfflineEnvironment();
-  const srcFiles = getSources();
-  assert.equal(srcFiles.length, 218, "Source baseline migration count changed: recapture W01 manifest");
+  const originals = getSources();
+  assert.equal(originals.length, 218, "Original source inventory changed: review baseline");
+  const supplements = recoveredSources();
+  assert(supplements.every(name => !originals.includes(name)), "Recovered source collides with repository source");
+  const srcFiles = [...originals, ...supplements].sort();
   assert(srcFiles.includes("202608050002_seed_company.sql"), "Historical owner seed not found: review exclusion");
   assert(srcFiles.every((name) => /^[0-9]{12}(?:[0-9]{2}|[a-z])?_[a-z0-9_]+\.sql$/.test(name)),
     "Unrecognized original migration naming pattern");
@@ -76,7 +91,8 @@ function normalize(names, target) {
     mapping.push({ source: name, sha256: checksum, action: "excluded_live_data_dependency" });
   }
   for (const name of selected) {
-    const content = readFileSync(join(source, name));
+    const sourceDirectory = recoveredHashes.has(name) ? recoveredSource : source;
+    const content = readFileSync(join(sourceDirectory, name));
     const checksum = createHash("sha256").update(content).digest("hex");
     // Timestamped 14-digit version is CLI-compliant and increasing.
     const date = new Date(baseTime + count * 1000);
@@ -91,7 +107,7 @@ function normalize(names, target) {
       const fixed = src.replace(old, "set status='completed'");
       writeFileSync(join(migrations, targetName), fixed);
     } else {
-      copyFileSync(join(source, name), join(migrations, targetName));
+      copyFileSync(join(sourceDirectory, name), join(migrations, targetName));
     }
     mapping.push({ source: name, local_file: targetName, sha256: checksum, action: name === "202608060008_first_strategy_cycle.sql" ? "local_only_remove_invalid_updated_at" : "local_copy_only" });
     count++;
@@ -102,6 +118,9 @@ function normalize(names, target) {
     version: 1,
     cli_version: cliVersion,
     source_migration_count: srcFiles.length,
+    original_repository_count: originals.length,
+    recovered_source_count: supplements.length,
+    recovered_source_md5: Object.fromEntries(recoveredHashes),
     local_replay_count: count,
     mode: coreOnly ? "isolated_core_tenant_smoke" : "all_schema_diagnostic",
     deliberately_unreplayed_sql_count: allOrdered.length - selected.length,
@@ -117,6 +136,7 @@ function normalize(names, target) {
 function selfTest() {
   const sources = getSources();
   assert.equal(sources.length, 218);
+  assert.equal(recoveredSources().length, 3);
   assert(sources.includes("202608050002_seed_company.sql"));
   assert(allowedIgnored.size === 4);
   const sorted = [...sources].sort();

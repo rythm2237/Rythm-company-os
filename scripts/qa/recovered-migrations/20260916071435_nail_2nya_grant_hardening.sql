@@ -1,0 +1,5 @@
+revoke all on table public.nail_2nya_admin_users, public.nail_2nya_appointments, public.nail_2nya_audit_log, public.nail_2nya_availability_exceptions, public.nail_2nya_blocked_periods, public.nail_2nya_booking_tokens, public.nail_2nya_business_hours, public.nail_2nya_customers, public.nail_2nya_special_availability from anon;
+revoke insert,update,delete,truncate,references,trigger on table public.nail_2nya_business_profile, public.nail_2nya_services, public.nail_2nya_portfolio_items, public.nail_2nya_site_settings from anon;
+grant select on table public.nail_2nya_business_profile, public.nail_2nya_services, public.nail_2nya_portfolio_items, public.nail_2nya_site_settings to anon;
+revoke insert,update,delete,truncate,references,trigger on table public.nail_2nya_admin_users, public.nail_2nya_audit_log from authenticated;
+grant select on table public.nail_2nya_admin_users, public.nail_2nya_audit_log to authenticated;
