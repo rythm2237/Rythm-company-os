@@ -112,7 +112,8 @@
   },
   "availability": {
     "staging": "INACTIVE",
-    "ai_roadmap": "COMING_UP_READINESS_PENDING",
+    "ai_roadmap": "ACTIVE_HEALTHY",
+    "ai_roadmap_select_1": 1,
     "production": "ACTIVE_HEALTHY"
   }
 }
