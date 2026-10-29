@@ -32,11 +32,11 @@ jobs:
       - name: Refuse missing or incorrect staging configuration
         shell: bash
         run: |
-          test "$W02_STAGING_REF" = "viqjdgohtxqkrdgwtull"
-          test "$W02_STAGING_SUPABASE_URL" = "https://viqjdgohtxqkrdgwtull.supabase.co"
-          test -n "$W02_STAGING_SERVICE_ROLE_KEY"
-          test -n "$W02_STAGING_ANON_KEY"
-          test "${#W02_TEST_PASSWORD}" -ge 16
+          if [[ "$W02_STAGING_REF" != "viqjdgohtxqkrdgwtull" ]]; then echo "::error::Staging project reference does not match"; exit 1; fi
+          if [[ "$W02_STAGING_SUPABASE_URL" != "https://viqjdgohtxqkrdgwtull.supabase.co" ]]; then echo "::error::Staging project URL does not match"; exit 1; fi
+          if [[ -z "$W02_STAGING_SERVICE_ROLE_KEY" ]]; then echo "::error::Service role key is missing"; exit 1; fi
+          if [[ -z "$W02_STAGING_ANON_KEY" ]]; then echo "::error::Anon key is missing"; exit 1; fi
+          if [[ "${#W02_TEST_PASSWORD}" -lt 16 ]]; then echo "::error::Test password has fewer than 16 characters"; exit 1; fi
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
