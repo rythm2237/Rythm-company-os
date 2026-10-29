@@ -109,12 +109,20 @@ async function setup() {
       assert.equal(existing.organization_id, c.id);
       assert.equal(existing.primary_manager_user_id, state.users[c.key + "_project_manager"]);
     } else {
-      unwrap(await admin.from("projects").insert({
-        id: c.projectId, organization_id: c.id, project_code: "W02-" + c.key,
-        name: "W02 synthetic internal project " + c.key, status: "planning",
-        engagement_type: "internal", primary_manager_user_id: state.users[c.key + "_project_manager"],
-        created_by_user_id: state.users[c.key + "_owner"]
-      }), "project " + c.key);
+      // Project creation must be attributable to an authenticated company owner.
+      // Never bypass crm_project_guard using service-role privileges.
+      const ownerClient = await login(c.key + "_owner");
+      try {
+        unwrap(await ownerClient.rpc("set_active_organization", { target_org_id: c.id }), "owner active company " + c.key);
+        unwrap(await ownerClient.from("projects").insert({
+          id: c.projectId, organization_id: c.id, project_code: "W02-" + c.key,
+          name: "W02 synthetic internal project " + c.key, status: "planning",
+          engagement_type: "internal", primary_manager_user_id: state.users[c.key + "_project_manager"],
+          created_by_user_id: state.users[c.key + "_owner"]
+        }), "project " + c.key);
+      } finally {
+        await ownerClient.auth.signOut();
+      }
     }
   }
   for (const g of blueprint.grants) {
