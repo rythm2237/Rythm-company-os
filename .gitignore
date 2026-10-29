@@ -12,3 +12,6 @@ supabase/.temp/
 
 # Isolated browser QA artifacts
 test-results/
+
+# W02 actual staging UUID manifests (never commit)
+.w02-fixtures/
