@@ -80,7 +80,7 @@ async function setup() {
       assert.equal(found.owner_user_id, state.users[c.key + "_owner"]);
     } else {
       unwrap(await admin.from("organizations").insert({
-        id: c.id, name: c.name, slug: c.slug, owner_user_id: state.users[c.key + "_owner"], status: "active"
+        id: c.id, name: c.name, slug: c.slug, owner_user_id: state.users[c.key + "_owner"], status: "draft"
       }), "insert " + c.key);
     }
     persist();
