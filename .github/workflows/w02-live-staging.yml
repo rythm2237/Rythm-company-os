@@ -1,0 +1,67 @@
+name: W02 Live Staging Acceptance (manual only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_staging_only:
+        description: 'Type W02-STAGING-ONLY to authorize disposable fixture tests'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: w02-live-staging
+  cancel-in-progress: false
+
+jobs:
+  verify-staging:
+    if: ${{ github.event.inputs.confirm_staging_only == 'W02-STAGING-ONLY' && github.ref == 'refs/heads/test/w02-isolated-multitenant-fixtures' }}
+    environment: w02-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      W02_STAGING_REF: ${{ vars.W02_STAGING_REF }}
+      W02_STAGING_SUPABASE_URL: ${{ vars.W02_STAGING_SUPABASE_URL }}
+      W02_STAGING_SERVICE_ROLE_KEY: ${{ secrets.W02_STAGING_SERVICE_ROLE_KEY }}
+      W02_STAGING_ANON_KEY: ${{ secrets.W02_STAGING_ANON_KEY }}
+      W02_TEST_PASSWORD: ${{ secrets.W02_TEST_PASSWORD }}
+      W02_W01_VERIFIED: 'true'
+    steps:
+      - name: Refuse missing or incorrect staging configuration
+        shell: bash
+        run: |
+          test "$W02_STAGING_REF" = "viqjdgohtxqkrdgwtull"
+          test "$W02_STAGING_SUPABASE_URL" = "https://viqjdgohtxqkrdgwtull.supabase.co"
+          test -n "$W02_STAGING_SERVICE_ROLE_KEY"
+          test -n "$W02_STAGING_ANON_KEY"
+          test "${#W02_TEST_PASSWORD}" -ge 16
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Offline contract gate
+        run: npm run test:w02
+      - name: Live isolated tenant setup, RLS verification and cleanup — first cycle
+        run: node scripts/fixtures/w02-staging.mjs roundtrip
+      - name: Live isolated tenant setup, RLS verification and cleanup — repeatability cycle
+        run: node scripts/fixtures/w02-staging.mjs roundtrip
+      - name: Verify no fixture tenants remain
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { createClient } from '@supabase/supabase-js';
+          import { buildW02Blueprint } from './scripts/fixtures/w02-blueprint.mjs';
+          const db = createClient(process.env.W02_STAGING_SUPABASE_URL, process.env.W02_STAGING_SERVICE_ROLE_KEY);
+          for (const c of buildW02Blueprint().companies) {
+            const { data, error } = await db.from('organizations').select('id').eq('id', c.id);
+            if (error) throw error;
+            assert.equal(data.length, 0, 'Synthetic organization remains after cleanup');
+          }
+          console.log('PASS: zero synthetic organizations remain in staging');
+          JS
