@@ -192,7 +192,7 @@ async function verify() {
         p_organization_id: c.id, p_capability: "finance.read", p_resource_type: "company", p_resource_id: c.id
       });
       if (cap.error) throw Error("finance authorization RPC: " + cap.error.message);
-      assert.equal(cap.data === true, user.key === c.key + "_finance_authorized");
+      assert.equal(cap.data === true, user.key === c.key + "_finance_authorized", "finance.read capability for " + user.key + " in " + c.key);
       if (!allowed) {
         const forged = await client.rpc("set_active_organization", { target_org_id: c.id });
         assert.ok(forged.error, "Foreign active-organization switch must fail");
