@@ -47,6 +47,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Offline contract gate
         run: npm run test:w02
+      - name: Complete or repair only the synthetic staging fixtures
+        run: node scripts/fixtures/w02-staging.mjs setup
       - name: Verify existing isolated fixtures without changing historical audit records
         run: node scripts/fixtures/w02-staging.mjs verify
       - name: Report blocked teardown as NOT ACCEPTED
