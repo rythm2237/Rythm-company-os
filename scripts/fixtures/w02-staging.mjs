@@ -230,6 +230,7 @@ async function auditCheck() {
 // AC3: quarantine is deliberately non-destructive. Audit parent rows remain intact.
 async function quarantine() {
   const users = await userMap();
+  state.users = users;
   for (const c of blueprint.companies) {
     const org = unwrap(await admin.from("organizations").select("id,name,slug").eq("id", c.id).single(), "quarantine organization guard");
     assert.equal(org.name, c.name);
