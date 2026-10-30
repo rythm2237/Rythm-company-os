@@ -71,3 +71,18 @@ Human sign-off checklist: W01 passed; staging is active/isolated and migration-c
 ## Rollback
 
 No production migration, deployment or release accompanies W02. Roll back repository changes by closing the draft PR or deleting the `test/w02-isolated-multitenant-fixtures` branch. If a staging run was performed, execute `node scripts/fixtures/w02-staging.mjs teardown` with the same staging-only variables and verify all fixture company UUIDs are absent; manually inspect failures before attempting further cleanup. Never use this procedure against production.
+
+
+## 2026-10-30 — Real staging evidence and immutable-audit teardown blocker
+
+- Successful authenticated RLS/finance/forged-switch verification: GitHub Actions run [41034885117](https://github.com/rythm2237/Rythm-company-os/actions/runs/41034885117). This verifies 3 organizations, 19 identities, 20 memberships, 37 forbidden user/tenant pairs; it **does not** verify teardown.
+- Real staging shows synthetic `project_manager_history` and `crm_audit_log` records referencing synthetic companies/projects. PostgreSQL foreign keys prohibit deletion of parent projects/companies while those immutable audit references exist.
+- Previous teardown failed on `project_manager_history_organization_id_project_id_fkey`; a partial disposable fixture remains. Repeating its original destructive cleanup is unsafe.
+- New `audit-check` command and `teardown` precondition fail closed **before any deletions** if historical references exist. Never delete or rewrite audit/history, disable triggers, relax FK constraints, or use production to achieve a green test.
+- **Acceptance status:** AC1 (setup/roles): PASS; AC2 (authenticated RLS and financial boundaries): PASS; AC3 (removable, repeatable fixtures): **NOT ACCEPTED**. Offline model repeatability is not live teardown evidence.
+
+### Architecture decision needed for AC3
+
+Audit-preserving cleanup cannot mean physically deleting all synthetic rows while retaining immutable audit rows with mandatory foreign keys to those rows. A safe solution must be explicit and verified against the deployed schema. Recommended option: archival/quarantine of synthetic operational records, revocation of active finance grants and memberships, disabling of fixture sign-ins, and read-only evidence that zero synthetic identities have active access. Retain historical parent IDs as required by audit FKs. Repeatability must use an unambiguous fresh fixture generation or safe reactivation with audited state transitions and must prove **zero active synthetic access**, not falsely assert zero historical rows. If strict physical deletion remains a mandatory acceptance criterion, use a **new isolated disposable database** with an approved evidence export/retention policy; do not erase immutable audit records in this staging database.
+
+**Until AC3 is agreed and implemented, do not run the old destructive `roundtrip` path or mark W02 complete.** Production and `main` application code remain outside this remediation.
