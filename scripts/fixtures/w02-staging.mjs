@@ -172,10 +172,8 @@ async function verify() {
         assert.equal(String(selected), c.id);
       }
       for (const [table, field, id] of [["organizations", "id", c.id], ["projects", "id", c.projectId], ["organization_entitlements", "organization_id", c.id]]) {
-        const rows = unwrap(await client.from(table).select("*", { head: true, count: "exact" }).eq(field, id), "RLS " + table);
-        assert.equal(rows, null);
         const count = await client.from(table).select("id", { count: "exact", head: true }).eq(field, id);
-        if (count.error) throw Error("RLS count failed " + table + ": " + count.error.message);
+        if (count.error) throw Error("RLS count failed " + table + ": " + JSON.stringify({ message: count.error.message, code: count.error.code, details: count.error.details, hint: count.error.hint }));
         assert.equal(Number(count.count ?? 0), allowed ? 1 : 0, user.key + " -> " + c.key + " " + table);
       }
       if (!allowed) {
