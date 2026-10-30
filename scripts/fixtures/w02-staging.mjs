@@ -127,11 +127,16 @@ async function setup() {
   }
   for (const g of blueprint.grants) {
     const c = blueprint.companies.find((v) => v.key === g.companyKey);
-    unwrap(await admin.from("crm_access_grants").upsert({
-      id: g.id, organization_id: c.id, principal_type: "user", principal_id: state.users[g.userKey],
-      capability: g.capability, resource_type: "company", resource_id: c.id, granted_by: state.users[c.key + "_owner"],
-      revoked_at: null
-    }, { onConflict: "organization_id,principal_type,principal_id,capability,resource_type,resource_id" }), "finance grant " + g.companyKey);
+    // The CRM grant guard requires an accountable active organization owner.
+    const ownerClient = await login(c.key + "_owner");
+    try {
+      unwrap(await ownerClient.rpc("set_active_organization", { target_org_id: c.id }), "finance owner context " + c.key);
+      unwrap(await ownerClient.from("crm_access_grants").upsert({
+        id: g.id, organization_id: c.id, principal_type: "user", principal_id: state.users[g.userKey],
+        capability: g.capability, resource_type: "company", resource_id: c.id, granted_by: state.users[c.key + "_owner"],
+        revoked_at: null
+      }, { onConflict: "organization_id,principal_type,principal_id,capability,resource_type,resource_id" }), "finance grant " + g.companyKey);
+    } finally { await ownerClient.auth.signOut(); }
   }
   persist();
 }
