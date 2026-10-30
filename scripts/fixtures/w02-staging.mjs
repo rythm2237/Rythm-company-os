@@ -7,8 +7,8 @@ import { assertW02Blueprint, buildW02Blueprint, W02_PRODUCTION_REF, W02_STAGING_
 const blueprint = buildW02Blueprint();
 assertW02Blueprint(blueprint);
 const command = process.argv[2];
-if (!["setup", "verify", "teardown", "roundtrip", "audit-check"].includes(command)) {
-  console.error("Usage: node scripts/fixtures/w02-staging.mjs setup|verify|teardown|roundtrip|audit-check");
+if (!["setup", "verify", "teardown", "roundtrip", "audit-check", "quarantine", "verify-quarantine"].includes(command)) {
+  console.error("Usage: node scripts/fixtures/w02-staging.mjs setup|verify|teardown|roundtrip|audit-check|quarantine|verify-quarantine");
   process.exit(2);
 }
 
@@ -227,6 +227,62 @@ async function auditCheck() {
     if (dependencies > 0) throw Error("Historical audit references exist for " + company.key + "; destructive teardown forbidden. Keep synthetic tenant isolated until reviewed archive policy.");
   }
 }
+// AC3: quarantine is deliberately non-destructive. Audit parent rows remain intact.
+async function quarantine() {
+  const users = await userMap();
+  for (const c of blueprint.companies) {
+    const org = unwrap(await admin.from("organizations").select("id,name,slug").eq("id", c.id).single(), "quarantine organization guard");
+    assert.equal(org.name, c.name);
+    assert.equal(org.slug, c.slug);
+  }
+  // Revoke finance capabilities with the authenticated tenant owner, before disabling owner login.
+  for (const g of blueprint.grants) {
+    const c = blueprint.companies.find(v => v.key === g.companyKey);
+    const ownerClient = await login(c.key + "_owner");
+    try {
+      unwrap(await ownerClient.rpc("set_active_organization", { target_org_id: c.id }), "quarantine owner context");
+      unwrap(await ownerClient.from("crm_access_grants").update({ revoked_at: new Date().toISOString() })
+        .eq("id", g.id).eq("organization_id", c.id).is("revoked_at", null), "revoke synthetic finance access " + c.key);
+    } finally { await ownerClient.auth.signOut(); }
+  }
+  // Deactivate only the predetermined fixture memberships, retaining referential integrity.
+  for (const m of blueprint.memberships) {
+    const c = blueprint.companies.find(v => v.key === m.companyKey);
+    unwrap(await admin.from("organization_members").update({ membership_status: "inactive", deactivated_at: new Date().toISOString() })
+      .eq("organization_id", c.id).eq("user_id", users[m.userKey]), "deactivate fixture membership " + m.userKey);
+  }
+  // Supabase Auth ban blocks new logins. Membership deactivation also prevents access with older JWTs.
+  for (const u of blueprint.users) {
+    const found = await findUser(u.email);
+    assert.equal(found?.id, users[u.key]);
+    assert.equal(found.user_metadata?.w02_fixture, "w02-v1");
+    unwrap(await admin.auth.admin.updateUserById(found.id, { ban_duration: "876000h" }), "ban fixture identity " + u.key);
+  }
+  await verifyQuarantine();
+  console.log("W02 audit-preserving quarantine PASS: historical data retained, fixture memberships inactive, finance grants revoked, fixture logins banned.");
+}
+async function verifyQuarantine() {
+  const users = await userMap();
+  for (const m of blueprint.memberships) {
+    const c = blueprint.companies.find(v => v.key === m.companyKey);
+    const x = unwrap(await admin.from("organization_members").select("membership_status")
+      .eq("organization_id", c.id).eq("user_id", users[m.userKey]).single(), "verify membership");
+    assert.notEqual(x.membership_status, "active", "Synthetic membership remains active: " + m.userKey);
+  }
+  for (const g of blueprint.grants) {
+    const c = blueprint.companies.find(v => v.key === g.companyKey);
+    const x = unwrap(await admin.from("crm_access_grants").select("revoked_at")
+      .eq("id", g.id).eq("organization_id", c.id).single(), "verify finance revocation");
+    assert.ok(x.revoked_at, "Synthetic finance grant still active: " + g.companyKey);
+  }
+  for (const u of blueprint.users) {
+    const found = await findUser(u.email);
+    assert.equal(found?.id, users[u.key]);
+    assert.equal(found.user_metadata?.w02_fixture, "w02-v1");
+    assert.ok(found.banned_until && Date.parse(found.banned_until) > Date.now(), "Fixture auth login not banned: " + u.key);
+  }
+  console.log("W02 quarantine verification PASS: zero active synthetic memberships and grants; all 19 fixture identities banned.");
+}
 async function teardown() {
   await auditCheck();
   // Do not delete by email prefix alone. Verify exact fixture labels and UUIDs first.
@@ -267,6 +323,8 @@ try {
   else if (command === "verify") await verify();
   else if (command === "teardown") await teardown();
   else if (command === "audit-check") await auditCheck();
+  else if (command === "quarantine") await quarantine();
+  else if (command === "verify-quarantine") await verifyQuarantine();
   else {
     try { await setup(); await verify(); }
     finally { await teardown(); }
