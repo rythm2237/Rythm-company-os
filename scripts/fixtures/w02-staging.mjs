@@ -217,15 +217,6 @@ async function verify() {
 async function auditCheck() {
   // Historical evidence is immutable. Identify FK blockers before any destructive operation.
   for (const company of blueprint.companies) {
-    const history = unwrap(await admin.from("project_manager_history")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", company.id).eq("project_id", company.projectId), "project manager audit inventory");
-    const crmAudit = unwrap(await admin.from("crm_audit_log")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", company.id), "CRM audit inventory");
-    // Queries above return null with head:true; use explicit count queries instead.
-    void history;
-    void crmAudit;
     const [h, a] = await Promise.all([
       admin.from("project_manager_history").select("id", { count: "exact", head: true }).eq("organization_id", company.id).eq("project_id", company.projectId),
       admin.from("crm_audit_log").select("id", { count: "exact", head: true }).eq("organization_id", company.id),
