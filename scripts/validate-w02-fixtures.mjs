@@ -77,5 +77,10 @@ assert.match(stagingRunner, /await auditCheck\(\);/, "historical audit reference
 assert.match(stagingRunner, /project_manager_history/, "history must be protected");
 assert.match(stagingRunner, /crm_audit_log/, "CRM audit must be protected");
 assert.match(stagingRunner, /destructive teardown forbidden/, "cleanup must fail closed when references exist");
+assert.match(stagingRunner, /async function quarantine\(\)/);
+assert.match(stagingRunner, /async function verifyQuarantine\(\)/);
+assert.match(stagingRunner, /ban_duration/);
+assert.match(stagingRunner, /revoked_at/);
+assert.match(stagingRunner, /membership_status: "inactive"/);
 console.log("PASS W02 offline contract: 3 tenants, 19 users, 20 memberships, 37 forbidden user/tenant pairs, 2 repeatable simulated setup/teardown runs.");
 console.log("LIVE RLS: previously PASS on staging. Audit-preserving live teardown and repeatability remain NOT ACCEPTED.");
