@@ -7,8 +7,8 @@ import { assertW02Blueprint, buildW02Blueprint, W02_PRODUCTION_REF, W02_STAGING_
 const blueprint = buildW02Blueprint();
 assertW02Blueprint(blueprint);
 const command = process.argv[2];
-if (!["setup", "verify", "teardown", "roundtrip"].includes(command)) {
-  console.error("Usage: node scripts/fixtures/w02-staging.mjs setup|verify|teardown|roundtrip");
+if (!["setup", "verify", "teardown", "roundtrip", "audit-check"].includes(command)) {
+  console.error("Usage: node scripts/fixtures/w02-staging.mjs setup|verify|teardown|roundtrip|audit-check");
   process.exit(2);
 }
 
@@ -214,7 +214,30 @@ async function verify() {
   persist();
   console.log("W02 staging verification passed: 3 organizations, 19 users, 20 memberships, role/finance/RLS/forged-switch checks.");
 }
+async function auditCheck() {
+  // Historical evidence is immutable. Identify FK blockers before any destructive operation.
+  for (const company of blueprint.companies) {
+    const history = unwrap(await admin.from("project_manager_history")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", company.id).eq("project_id", company.projectId), "project manager audit inventory");
+    const crmAudit = unwrap(await admin.from("crm_audit_log")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", company.id), "CRM audit inventory");
+    // Queries above return null with head:true; use explicit count queries instead.
+    void history;
+    void crmAudit;
+    const [h, a] = await Promise.all([
+      admin.from("project_manager_history").select("id", { count: "exact", head: true }).eq("organization_id", company.id).eq("project_id", company.projectId),
+      admin.from("crm_audit_log").select("id", { count: "exact", head: true }).eq("organization_id", company.id),
+    ]);
+    if (h.error || a.error) throw Error("Unable to inventory staging audit dependencies for company " + company.key);
+    const dependencies = Number(h.count ?? 0) + Number(a.count ?? 0);
+    console.log("W02 immutable audit inventory " + company.key + ": manager=" + (h.count ?? 0) + ", CRM=" + (a.count ?? 0));
+    if (dependencies > 0) throw Error("Historical audit references exist for " + company.key + "; destructive teardown forbidden. Keep synthetic tenant isolated until reviewed archive policy.");
+  }
+}
 async function teardown() {
+  await auditCheck();
   // Do not delete by email prefix alone. Verify exact fixture labels and UUIDs first.
   const users = {};
   for (const u of blueprint.users) {
@@ -252,6 +275,7 @@ try {
   if (command === "setup") await setup();
   else if (command === "verify") await verify();
   else if (command === "teardown") await teardown();
+  else if (command === "audit-check") await auditCheck();
   else {
     try { await setup(); await verify(); }
     finally { await teardown(); }
