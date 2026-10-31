@@ -86,3 +86,13 @@ No production migration, deployment or release accompanies W02. Roll back reposi
 Audit-preserving cleanup cannot mean physically deleting all synthetic rows while retaining immutable audit rows with mandatory foreign keys to those rows. A safe solution must be explicit and verified against the deployed schema. Recommended option: archival/quarantine of synthetic operational records, revocation of active finance grants and memberships, disabling of fixture sign-ins, and read-only evidence that zero synthetic identities have active access. Retain historical parent IDs as required by audit FKs. Repeatability must use an unambiguous fresh fixture generation or safe reactivation with audited state transitions and must prove **zero active synthetic access**, not falsely assert zero historical rows. If strict physical deletion remains a mandatory acceptance criterion, use a **new isolated disposable database** with an approved evidence export/retention policy; do not erase immutable audit records in this staging database.
 
 **Until AC3 is agreed and implemented, do not run the old destructive `roundtrip` path or mark W02 complete.** Production and `main` application code remain outside this remediation.
+
+
+## 2026-10-31 — Live W02 acceptance evidence
+
+- GitHub Actions [run #41221322661](https://github.com/rythm2237/Rythm-company-os/actions/runs/41221322661) completed **SUCCESS** on branch `test/w02-isolated-multitenant-fixtures`.
+- Real staging authentication/RLS verification: **PASS** for three synthetic companies, 19 users, 20 memberships and role/finance/forged-switch checks.
+- Audit-preserving quarantine: **PASS**. The three synthetic projects transitioned to schema-valid terminal `cancelled` state. All fixture memberships were deactivated, finance grants revoked and all 19 fixture Auth users banned. Historical project-manager and CRM audit references retained.
+- A separate `verify-quarantine` step rechecked zero active synthetic memberships/finance grants and all 19 fixture identities banned: **PASS**.
+- **AC3 under the revised audit-preserving zero-active-access policy is PASS.** This is NOT physical deletion and does NOT establish two complete live setup/verification/quarantine cycles on fresh identities. Historical fixture rows persist intentionally. A fresh-identity or disposable-database repeatability test remains a separate follow-on hardening test, not a claim made by this result.
+- All code changes remain on the feature branch. Only the manual GitHub Actions dispatch YAML was added to main earlier. No application or production database migration was deployed as part of this acceptance run.
