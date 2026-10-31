@@ -246,9 +246,9 @@ async function quarantine() {
     assert.equal(project.name, "W02 synthetic internal project " + company.key);
     assert.equal(project.primary_manager_user_id, users[company.key + "_project_manager"]);
   }
-  // Archive known synthetic projects before disabling their assigned managers.
+  // Cancel known synthetic projects (schema-valid terminal status) before disabling their assigned managers.
   for (const company of blueprint.companies) {
-    unwrap(await admin.from("projects").update({ status: "archived" })
+    unwrap(await admin.from("projects").update({ status: "cancelled" })
       .eq("organization_id", company.id).eq("id", company.projectId)
       .eq("project_code", "W02-" + company.key), "archive synthetic project " + company.key);
   }
