@@ -236,6 +236,17 @@ async function quarantine() {
     assert.equal(org.name, c.name);
     assert.equal(org.slug, c.slug);
   }
+  // Preflight MUST run before any changes. A manager assigned to an active project
+  // cannot lose their active membership under crm_project_guard invariants.
+  // Do not partially revoke grants or ban users until an approved archival policy exists.
+  for (const company of blueprint.companies) {
+    const assigned = unwrap(await admin.from("projects").select("id,primary_manager_user_id")
+      .eq("organization_id", company.id).eq("id", company.projectId), "quarantine manager dependency preflight");
+    if (assigned.some(p => p.primary_manager_user_id === users[company.key + "_project_manager"])) {
+      throw Error("Quarantine blocked before changes: synthetic project " + company.key +
+        " still requires an active assigned manager. Define an audit-safe archival transition first.");
+    }
+  }
   // Revoke finance capabilities with the authenticated tenant owner, before disabling owner login.
   for (const g of blueprint.grants) {
     const c = blueprint.companies.find(v => v.key === g.companyKey);
