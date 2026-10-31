@@ -236,16 +236,21 @@ async function quarantine() {
     assert.equal(org.name, c.name);
     assert.equal(org.slug, c.slug);
   }
-  // Preflight MUST run before any changes. A manager assigned to an active project
-  // cannot lose their active membership under crm_project_guard invariants.
-  // Do not partially revoke grants or ban users until an approved archival policy exists.
+  // PostgreSQL crm_membership_guard permits deactivation only when assigned
+  // projects are completed, cancelled, archived or failed.
+  // Check exact immutable fixture identities before changing project state.
   for (const company of blueprint.companies) {
-    const assigned = unwrap(await admin.from("projects").select("id,primary_manager_user_id")
-      .eq("organization_id", company.id).eq("id", company.projectId), "quarantine manager dependency preflight");
-    if (assigned.some(p => p.primary_manager_user_id === users[company.key + "_project_manager"])) {
-      throw Error("Quarantine blocked before changes: synthetic project " + company.key +
-        " still requires an active assigned manager. Define an audit-safe archival transition first.");
-    }
+    const project = unwrap(await admin.from("projects").select("id,organization_id,project_code,name,primary_manager_user_id,status")
+      .eq("organization_id", company.id).eq("id", company.projectId).single(), "quarantine project guard");
+    assert.equal(project.project_code, "W02-" + company.key);
+    assert.equal(project.name, "W02 synthetic internal project " + company.key);
+    assert.equal(project.primary_manager_user_id, users[company.key + "_project_manager"]);
+  }
+  // Archive known synthetic projects before disabling their assigned managers.
+  for (const company of blueprint.companies) {
+    unwrap(await admin.from("projects").update({ status: "archived" })
+      .eq("organization_id", company.id).eq("id", company.projectId)
+      .eq("project_code", "W02-" + company.key), "archive synthetic project " + company.key);
   }
   // Revoke finance capabilities with the authenticated tenant owner, before disabling owner login.
   for (const g of blueprint.grants) {
