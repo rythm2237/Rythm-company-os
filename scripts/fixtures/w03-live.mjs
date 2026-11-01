@@ -84,7 +84,7 @@ try{
     ['/api/privacy/export?organizationId='+org.id,{}],
     ['/api/projects/completion?projectId='+org.projectId,{}],
     ['/api/projects/roadmap?projectId='+org.projectId,{}],
-    ...['run','analyze','roadmap','completion','connections','approval-advice','approval-discussion'].map(route=>['/api/projects/'+route,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({projectId:org.projectId,action:'evaluate',integrationId:randomUUID(),resourceRef:'synthetic',approvalId:randomUUID(),message:'synthetic',content:'synthetic'})}]),
+    ...['run','analyze','roadmap','completion','connections','approval-advice','approval-discussion'].map(route=>['/api/projects/'+route,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({projectId:org.projectId,action:route==='roadmap'?'request_changes':'evaluate',roadmapId:randomUUID(),integrationId:randomUUID(),resourceRef:'synthetic',approvalId:randomUUID(),message:'synthetic',content:'synthetic'})}]),
    ]){const r=await http(u.key,path,options);record('http-api','foreign-object',u.key,org.key,[403,404].includes(r.status),path.split('?')[0]+' status-'+r.status);}
    const deniedForm=new FormData();deniedForm.set('projectId',org.projectId);deniedForm.set('category','other');deniedForm.append('files',new Blob(['W03-denied'],{type:'text/plain'}),'denied.txt');const deniedUpload=await http(u.key,'/api/projects/files',{method:'POST',body:deniedForm});record('files','foreign-upload',u.key,org.key,[403,404].includes(deniedUpload.status));
    const doc=seeds.get(org.key).find(x=>x[0]==='project_documents')[1];
