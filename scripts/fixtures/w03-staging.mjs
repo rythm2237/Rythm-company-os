@@ -1,0 +1,353 @@
+import assert from "node:assert/strict";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { createClient } from "@supabase/supabase-js";
+import { assertW03Blueprint, buildW03Blueprint, W03_PRODUCTION_REF, W03_STAGING_REF } from "./w03-blueprint.mjs";
+
+const blueprint = buildW03Blueprint();
+assertW03Blueprint(blueprint);
+const command = process.argv[2];
+if (!["setup", "verify", "teardown", "roundtrip", "audit-check", "quarantine", "verify-quarantine"].includes(command)) {
+  console.error("Usage: node scripts/fixtures/w03-staging.mjs setup|verify|teardown|roundtrip|audit-check|quarantine|verify-quarantine");
+  process.exit(2);
+}
+
+// No network call, production fallback, customer data or writes without ALL gates.
+const ref = process.env.W03_STAGING_REF;
+const url = process.env.W03_STAGING_SUPABASE_URL;
+const serviceKey = process.env.W03_STAGING_SERVICE_ROLE_KEY;
+const anonKey = process.env.W03_STAGING_ANON_KEY;
+const password = process.env.W03_TEST_PASSWORD;
+assert.equal(ref, W03_STAGING_REF, "W03 only permits the pre-existing dedicated staging Supabase project");
+assert.notEqual(ref, W03_PRODUCTION_REF);
+assert.equal(url, "https://" + W03_STAGING_REF + ".supabase.co", "Staging URL must match the allowlisted project");
+assert.notEqual(process.env.VERCEL_ENV, "production");
+assert.equal(process.env.W03_W01_VERIFIED, "true", "W01 owner/QA dependency must be verified before real staging runs");
+assert.ok(serviceKey && anonKey && password && password.length >= 16, "Staging-only keys and 16+ char test password required");
+const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+const state = { version: blueprint.version, projectRef: ref, organizations: blueprint.companies.map(({ key, id, projectId }) => ({ key, id, projectId })), negativeCases: blueprint.negativeCases,
+  permissionMatrix: blueprint.users.flatMap((user) => blueprint.companies.map((company) => ({ userKey: user.key, companyKey: company.key, member: blueprint.memberships.some((m) => m.userKey === user.key && m.companyKey === company.key), financeRead: blueprint.grants.some((g) => g.userKey === user.key && g.companyKey === company.key) }))), users: {} };
+const statePath = resolve(process.cwd(), ".w03-fixtures", ref + ".json");
+function persist() {
+  mkdirSync(resolve(process.cwd(), ".w03-fixtures"), { recursive: true });
+  writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", { mode: 0o600 });
+}
+function unwrap(response, label) {
+  if (response.error) throw Error(label + ": " + response.error.message);
+  return response.data;
+}
+async function findUser(email) {
+  for (let page = 1; page < 50; page++) {
+    const data = unwrap(await admin.auth.admin.listUsers({ page, perPage: 100 }), "list synthetic users");
+    const match = data.users.find((u) => u.email === email);
+    if (match) return match;
+    if (data.users.length < 100) break;
+  }
+  return null;
+}
+async function userMap() {
+  const mapped = {};
+  for (const u of blueprint.users) {
+    const candidate = await findUser(u.email);
+    if (!candidate) throw Error("Missing fixture identity " + u.key + ". Run setup first.");
+    assert.equal(candidate.user_metadata?.w03_fixture, "w03-v1", "Refuse to adopt a non-W03 user");
+    mapped[u.key] = candidate.id;
+  }
+  return mapped;
+}
+async function ensureUsers() {
+  for (const u of blueprint.users) {
+    let found = await findUser(u.email);
+    if (!found) {
+      const data = unwrap(await admin.auth.admin.createUser({
+        email: u.email, password, email_confirm: true, user_metadata: { w03_fixture: "w03-v1" }
+      }), "create " + u.key);
+      found = data.user;
+    }
+    assert.equal(found?.email, u.email);
+    assert.equal(found.user_metadata?.w03_fixture, "w03-v1");
+    state.users[u.key] = found.id;
+    persist();
+  }
+}
+async function setup() {
+  await ensureUsers();
+  for (const c of blueprint.companies) {
+    const found = unwrap(await admin.from("organizations").select("id,slug,name,owner_user_id").eq("id", c.id).maybeSingle(), "organization lookup");
+    if (found) {
+      assert.equal(found.slug, c.slug);
+      assert.equal(found.name, c.name);
+      assert.equal(found.owner_user_id, state.users[c.key + "_owner"]);
+    } else {
+      unwrap(await admin.from("organizations").insert({
+        id: c.id, name: c.name, slug: c.slug, owner_user_id: state.users[c.key + "_owner"], status: "draft"
+      }), "insert " + c.key);
+    }
+    persist();
+  }
+  for (const m of blueprint.memberships) {
+    const org = blueprint.companies.find((c) => c.key === m.companyKey);
+    unwrap(await admin.from("organization_members").upsert({
+      organization_id: org.id, user_id: state.users[m.userKey], role: m.dbRole, membership_status: "active"
+    }, { onConflict: "organization_id,user_id" }), "membership " + m.userKey + ":" + m.companyKey);
+  }
+  for (const c of blueprint.companies) {
+    const found = unwrap(await admin.from("organization_entitlements").select("id,product_code,status,selected_template_key").eq("organization_id", c.id).maybeSingle(), "entitlement lookup");
+    if (found) {
+      assert.equal(found.status, "pending");
+      assert.equal(found.product_code, c.productCode);
+      assert.equal(found.selected_template_key, c.templateKey);
+    } else {
+      unwrap(await admin.from("organization_entitlements").insert({
+        organization_id: c.id, product_code: c.productCode, selected_template_key: c.templateKey,
+        status: "pending", plan_code: "w03_synthetic", base_price: 0, ai_budget_limit: 0,
+        company_template_access: false, company_builder_enabled: false, agent_builder_enabled: false
+      }), "entitlement " + c.key);
+    }
+    const existing = unwrap(await admin.from("projects").select("id,organization_id,primary_manager_user_id").eq("id", c.projectId).maybeSingle(), "project lookup");
+    if (existing) {
+      assert.equal(existing.organization_id, c.id);
+      assert.equal(existing.primary_manager_user_id, state.users[c.key + "_project_manager"]);
+    } else {
+      // Project creation must be attributable to an authenticated company owner.
+      // Never bypass crm_project_guard using service-role privileges.
+      const ownerClient = await login(c.key + "_owner");
+      try {
+        unwrap(await ownerClient.rpc("set_active_organization", { target_org_id: c.id }), "owner active company " + c.key);
+        unwrap(await ownerClient.from("projects").insert({
+          id: c.projectId, organization_id: c.id, project_code: "W03-" + c.key,
+          name: "W03 synthetic internal project " + c.key, status: "planning",
+          engagement_type: "internal", primary_manager_user_id: state.users[c.key + "_project_manager"],
+          created_by_user_id: state.users[c.key + "_owner"]
+        }), "project " + c.key);
+      } finally {
+        await ownerClient.auth.signOut();
+      }
+    }
+  }
+  for (const g of blueprint.grants) {
+    const c = blueprint.companies.find((v) => v.key === g.companyKey);
+    // The CRM grant guard requires an accountable active organization owner.
+    const ownerClient = await login(c.key + "_owner");
+    try {
+      unwrap(await ownerClient.rpc("set_active_organization", { target_org_id: c.id }), "finance owner context " + c.key);
+      unwrap(await ownerClient.from("crm_access_grants").upsert({
+        id: g.id, organization_id: c.id, principal_type: "user", principal_id: state.users[g.userKey],
+        capability: g.capability, resource_type: "company", resource_id: c.id, granted_by: state.users[c.key + "_owner"],
+        revoked_at: null
+      }, { onConflict: "organization_id,principal_type,principal_id,capability,resource_type,resource_id" }), "finance grant " + g.companyKey);
+    } finally { await ownerClient.auth.signOut(); }
+  }
+  persist();
+}
+async function login(userKey) {
+  const u = blueprint.users.find((item) => item.key === userKey);
+  const client = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const { data, error } = await client.auth.signInWithPassword({ email: u.email, password });
+  if (error || !data.session || data.user.id !== state.users[userKey]) throw Error("Fixture login failed " + userKey + ": " + (error?.message ?? "identity mismatch"));
+  return client;
+}
+async function verify() {
+  state.users = await userMap();
+  persist();
+  for (const c of blueprint.companies) {
+    const org = unwrap(await admin.from("organizations").select("id,slug,owner_user_id").eq("id", c.id).single(), "org assert");
+    assert.equal(org.slug, c.slug);
+    assert.equal(org.owner_user_id, state.users[c.key + "_owner"]);
+    const { data: entitlement } = await admin.from("organization_entitlements").select("status,base_price,ai_budget_limit,product_code,selected_template_key").eq("organization_id", c.id).single();
+    assert.equal(entitlement?.status, "pending");
+    assert.equal(Number(entitlement?.base_price), 0);
+    assert.equal(Number(entitlement?.ai_budget_limit), 0);
+    assert.equal(entitlement?.selected_template_key, c.templateKey);
+    const project = unwrap(await admin.from("projects").select("primary_manager_user_id").eq("id", c.projectId).single(), "manager assert");
+    assert.equal(project.primary_manager_user_id, state.users[c.key + "_project_manager"]);
+  }
+  for (const m of blueprint.memberships) {
+    const c = blueprint.companies.find((v) => v.key === m.companyKey);
+    const membership = unwrap(await admin.from("organization_members").select("role,membership_status").eq("organization_id", c.id).eq("user_id", state.users[m.userKey]).single(), "role assert");
+    assert.equal(membership.role, m.dbRole);
+    assert.equal(membership.membership_status, "active");
+  }
+  for (const user of blueprint.users) {
+    const client = await login(user.key);
+    for (const c of blueprint.companies) {
+      const allowed = blueprint.memberships.some((m) => m.companyKey === c.key && m.userKey === user.key);
+      if (allowed) {
+        const selected = unwrap(await client.rpc("set_active_organization", { target_org_id: c.id }), "select own company");
+        assert.equal(String(selected), c.id);
+      }
+      for (const [table, field, id] of [["organizations", "id", c.id], ["projects", "id", c.projectId], ["organization_entitlements", "organization_id", c.id]]) {
+        const count = await client.from(table).select("id", { count: "exact", head: true }).eq(field, id);
+        if (count.error) throw Error("RLS count failed " + table + ": " + JSON.stringify({ message: count.error.message, code: count.error.code, details: count.error.details, hint: count.error.hint }));
+        assert.equal(Number(count.count ?? 0), allowed ? 1 : 0, user.key + " -> " + c.key + " " + table);
+      }
+      if (!allowed) {
+        for (const table of ["organization_members", "crm_access_grants"]) {
+          const count = await client.from(table).select("organization_id", { head: true, count: "exact" }).eq("organization_id", c.id);
+          if (count.error) throw Error("Cross-tenant " + table + " read failed: " + count.error.message);
+          assert.equal(Number(count.count ?? 0), 0, user.key + " must not see " + c.key + " " + table);
+        }
+        // A same-value update uses disposable synthetic data, never a real customer's project.
+        const foreignWrite = await client.from("projects")
+          .update({ name: "W03 synthetic internal project " + c.key })
+          .eq("id", c.projectId).select("id");
+        if (!foreignWrite.error) assert.equal(foreignWrite.data?.length ?? 0, 0, "Foreign project write must be forbidden");
+      }
+      const cap = await client.rpc("crm_can", {
+        p_organization_id: c.id, p_capability: "finance.read", p_resource_type: "company", p_resource_id: c.id
+      });
+      if (cap.error) throw Error("finance authorization RPC: " + cap.error.message);
+      assert.equal(cap.data === true, user.key === c.key + "_finance_authorized", "finance.read capability for " + user.key + " in " + c.key);
+      if (!allowed) {
+        const forged = await client.rpc("set_active_organization", { target_org_id: c.id });
+        assert.ok(forged.error, "Foreign active-organization switch must fail");
+      }
+    }
+    await client.auth.signOut();
+  }
+  const shared = await login("shared");
+  for (const c of blueprint.companies.slice(0, 2)) {
+    const switched = unwrap(await shared.rpc("set_active_organization", { target_org_id: c.id }), "shared switching");
+    assert.equal(String(switched), c.id);
+  }
+  await shared.auth.signOut();
+  persist();
+  console.log("W03 staging verification passed: 3 organizations, 19 users, 20 memberships, role/finance/RLS/forged-switch checks.");
+}
+async function auditCheck() {
+  // Historical evidence is immutable. Identify FK blockers before any destructive operation.
+  for (const company of blueprint.companies) {
+    const [h, a] = await Promise.all([
+      admin.from("project_manager_history").select("id", { count: "exact", head: true }).eq("organization_id", company.id).eq("project_id", company.projectId),
+      admin.from("crm_audit_log").select("id", { count: "exact", head: true }).eq("organization_id", company.id),
+    ]);
+    if (h.error || a.error) throw Error("Unable to inventory staging audit dependencies for company " + company.key);
+    const dependencies = Number(h.count ?? 0) + Number(a.count ?? 0);
+    console.log("W03 immutable audit inventory " + company.key + ": manager=" + (h.count ?? 0) + ", CRM=" + (a.count ?? 0));
+    if (dependencies > 0) throw Error("Historical audit references exist for " + company.key + "; destructive teardown forbidden. Keep synthetic tenant isolated until reviewed archive policy.");
+  }
+}
+// AC3: quarantine is deliberately non-destructive. Audit parent rows remain intact.
+async function quarantine() {
+  const users = await userMap();
+  state.users = users;
+  for (const c of blueprint.companies) {
+    const org = unwrap(await admin.from("organizations").select("id,name,slug").eq("id", c.id).single(), "quarantine organization guard");
+    assert.equal(org.name, c.name);
+    assert.equal(org.slug, c.slug);
+  }
+  // PostgreSQL crm_membership_guard permits deactivation only when assigned
+  // projects are completed, cancelled, archived or failed.
+  // Check exact immutable fixture identities before changing project state.
+  for (const company of blueprint.companies) {
+    const project = unwrap(await admin.from("projects").select("id,organization_id,project_code,name,primary_manager_user_id,status")
+      .eq("organization_id", company.id).eq("id", company.projectId).single(), "quarantine project guard");
+    assert.equal(project.project_code, "W03-" + company.key);
+    assert.equal(project.name, "W03 synthetic internal project " + company.key);
+    assert.equal(project.primary_manager_user_id, users[company.key + "_project_manager"]);
+  }
+  // Cancel known synthetic projects (schema-valid terminal status) before disabling their assigned managers.
+  for (const company of blueprint.companies) {
+    unwrap(await admin.from("projects").update({ status: "cancelled" })
+      .eq("organization_id", company.id).eq("id", company.projectId)
+      .eq("project_code", "W03-" + company.key), "archive synthetic project " + company.key);
+  }
+  // Revoke finance capabilities with the authenticated tenant owner, before disabling owner login.
+  for (const g of blueprint.grants) {
+    const c = blueprint.companies.find(v => v.key === g.companyKey);
+    const ownerClient = await login(c.key + "_owner");
+    try {
+      unwrap(await ownerClient.rpc("set_active_organization", { target_org_id: c.id }), "quarantine owner context");
+      unwrap(await ownerClient.from("crm_access_grants").update({ revoked_at: new Date().toISOString() })
+        .eq("id", g.id).eq("organization_id", c.id).is("revoked_at", null), "revoke synthetic finance access " + c.key);
+    } finally { await ownerClient.auth.signOut(); }
+  }
+  // Deactivate only the predetermined fixture memberships, retaining referential integrity.
+  for (const m of blueprint.memberships) {
+    const c = blueprint.companies.find(v => v.key === m.companyKey);
+    unwrap(await admin.from("organization_members").update({ membership_status: "inactive", deactivated_at: new Date().toISOString() })
+      .eq("organization_id", c.id).eq("user_id", users[m.userKey]), "deactivate fixture membership " + m.userKey);
+  }
+  // Supabase Auth ban blocks new logins. Membership deactivation also prevents access with older JWTs.
+  for (const u of blueprint.users) {
+    const found = await findUser(u.email);
+    assert.equal(found?.id, users[u.key]);
+    assert.equal(found.user_metadata?.w03_fixture, "w03-v1");
+    unwrap(await admin.auth.admin.updateUserById(found.id, { ban_duration: "876000h" }), "ban fixture identity " + u.key);
+  }
+  await verifyQuarantine();
+  console.log("W03 audit-preserving quarantine PASS: historical data retained, fixture memberships inactive, finance grants revoked, fixture logins banned.");
+}
+async function verifyQuarantine() {
+  const users = await userMap();
+  for (const m of blueprint.memberships) {
+    const c = blueprint.companies.find(v => v.key === m.companyKey);
+    const x = unwrap(await admin.from("organization_members").select("membership_status")
+      .eq("organization_id", c.id).eq("user_id", users[m.userKey]).single(), "verify membership");
+    assert.notEqual(x.membership_status, "active", "Synthetic membership remains active: " + m.userKey);
+  }
+  for (const g of blueprint.grants) {
+    const c = blueprint.companies.find(v => v.key === g.companyKey);
+    const x = unwrap(await admin.from("crm_access_grants").select("revoked_at")
+      .eq("id", g.id).eq("organization_id", c.id).single(), "verify finance revocation");
+    assert.ok(x.revoked_at, "Synthetic finance grant still active: " + g.companyKey);
+  }
+  for (const u of blueprint.users) {
+    const found = await findUser(u.email);
+    assert.equal(found?.id, users[u.key]);
+    assert.equal(found.user_metadata?.w03_fixture, "w03-v1");
+    assert.ok(found.banned_until && Date.parse(found.banned_until) > Date.now(), "Fixture auth login not banned: " + u.key);
+  }
+  console.log("W03 quarantine verification PASS: zero active synthetic memberships and grants; all 19 fixture identities banned.");
+}
+async function teardown() {
+  await auditCheck();
+  // Do not delete by email prefix alone. Verify exact fixture labels and UUIDs first.
+  const users = {};
+  for (const u of blueprint.users) {
+    const found = await findUser(u.email);
+    if (found) {
+      assert.equal(found.user_metadata?.w03_fixture, "w03-v1");
+      users[u.key] = found.id;
+      const membership = unwrap(await admin.from("organization_members").select("organization_id").eq("user_id", found.id), "membership ownership check");
+      assert.ok(membership.every((m) => blueprint.companies.some((c) => c.id === m.organization_id)), "Fixture user has non-W03 membership; refusing delete");
+    }
+  }
+  for (const c of blueprint.companies) {
+    const org = unwrap(await admin.from("organizations").select("name,slug").eq("id", c.id).maybeSingle(), "cleanup org guard");
+    if (org) { assert.equal(org.name, c.name); assert.equal(org.slug, c.slug); }
+  }
+  for (const c of blueprint.companies) {
+    // Projects must be removed before memberships (manager-departure guard).
+    unwrap(await admin.from("projects").delete().eq("id", c.projectId).eq("organization_id", c.id), "cleanup project");
+    unwrap(await admin.from("crm_access_grants").delete().eq("organization_id", c.id).in("id", blueprint.grants.map((g) => g.id)), "cleanup grants");
+    unwrap(await admin.from("organization_entitlements").delete().eq("organization_id", c.id).eq("plan_code", "w03_synthetic"), "cleanup entitlement");
+    unwrap(await admin.from("organization_members").delete().eq("organization_id", c.id), "cleanup memberships");
+    unwrap(await admin.from("organizations").delete().eq("id", c.id).eq("slug", c.slug), "cleanup organization");
+  }
+  for (const uid of Object.values(users)) unwrap(await admin.auth.admin.deleteUser(uid), "cleanup auth fixture");
+  for (const c of blueprint.companies) {
+    const remaining = unwrap(await admin.from("organizations").select("id").eq("id", c.id), "cleanup verification");
+    assert.equal(remaining.length, 0);
+  }
+  state.users = {};
+  persist();
+  console.log("W03 teardown verified: all synthetic companies and users removed from staging.");
+}
+let operationFailed = false;
+try {
+  if (command === "setup") await setup();
+  else if (command === "verify") await verify();
+  else if (command === "teardown") await teardown();
+  else if (command === "audit-check") await auditCheck();
+  else if (command === "quarantine") await quarantine();
+  else if (command === "verify-quarantine") await verifyQuarantine();
+  else {
+    try { await setup(); await verify(); }
+    finally { await teardown(); }
+  }
+} catch (error) {
+  operationFailed = true;
+  console.error("W03 " + command + " failed: " + error.message);
+}
+if (operationFailed) process.exitCode = 1;
