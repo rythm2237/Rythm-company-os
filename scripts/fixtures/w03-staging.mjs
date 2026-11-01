@@ -302,11 +302,13 @@ async function verifyQuarantine() {
 }
 async function quarantinePartial() {
   const foundUsers = {};
+  const bannedUsers = new Set();
   for (const u of blueprint.users) {
     const found = await findUser(u.email);
     if (!found) continue;
     assert.equal(found.user_metadata?.w03_fixture, "w03-v1");
     foundUsers[u.key] = found.id;
+    if(found.banned_until && Date.parse(found.banned_until)>Date.now())bannedUsers.add(found.id);
   }
   state.users = foundUsers;
   for (const c of blueprint.companies) {
@@ -314,7 +316,7 @@ async function quarantinePartial() {
     if (!org) continue;
     assert.equal(org.slug,c.slug);assert.equal(org.name,c.name);
     unwrap(await admin.from("projects").update({status:"cancelled"}).eq("id",c.projectId).eq("organization_id",c.id),"partial cancel");
-    if (foundUsers[c.key+"_owner"]) {
+    if (foundUsers[c.key+"_owner"] && !bannedUsers.has(foundUsers[c.key+"_owner"])) {
       const owner=await login(c.key+"_owner");
       try {unwrap(await owner.rpc("set_active_organization",{target_org_id:c.id}),"partial owner context");
         unwrap(await owner.from("crm_access_grants").update({revoked_at:new Date().toISOString()}).eq("organization_id",c.id).is("revoked_at",null),"partial revoke");
