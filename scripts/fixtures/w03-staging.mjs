@@ -315,7 +315,7 @@ async function quarantinePartial() {
     const org = unwrap(await admin.from("organizations").select("name,slug").eq("id", c.id).maybeSingle(), "partial org guard");
     if (!org) continue;
     assert.equal(org.slug,c.slug);assert.equal(org.name,c.name);
-    unwrap(await admin.from("projects").update({status:"cancelled"}).eq("id",c.projectId).eq("organization_id",c.id),"partial cancel");
+    unwrap(await admin.from("projects").update({status:"cancelled"}).eq("id",c.projectId).eq("organization_id",c.id).neq("status","cancelled"),"partial cancel");
     if (foundUsers[c.key+"_owner"] && !bannedUsers.has(foundUsers[c.key+"_owner"])) {
       const owner=await login(c.key+"_owner");
       try {unwrap(await owner.rpc("set_active_organization",{target_org_id:c.id}),"partial owner context");
