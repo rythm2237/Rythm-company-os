@@ -59,7 +59,7 @@ try{
  }
  phase='negative-matrix';
  for(const u of b.users){
-  const {client:c}=clients.get(u.key);
+  const {client:c}=clients.get(u.key);console.log(JSON.stringify({actor:u.key,checksCompleted:checks.length}));
   const home=b.memberships.find(m=>m.userKey===u.key);
   unwrap(await c.rpc('set_active_organization',{target_org_id:b.companies.find(x=>x.key===home.companyKey).id}),'actor context');
   for(const table of ['project_contracts','finance_invoices']){const r=await c.from(table).select('id').eq('organization_id',b.companies.find(x=>x.key===home.companyKey).id);const expected=u.key.endsWith('_owner')||(table==='finance_invoices'&&u.key.endsWith('_finance_authorized'))?1:0;record(table,'same-tenant-role',u.key,home.companyKey,!r.error&&r.data?.length===expected);}
