@@ -1,0 +1,21 @@
+{
+  "stagingRef": "viqjdgohtxqkrdgwtull",
+  "runId": 41343124808,
+  "transaction": "ROLLBACK",
+  "claims": "SQL simulated authenticated subjects; real token HTTP handled separately",
+  "results": [
+    {
+      "allowed": false,
+      "cases": 37,
+      "min_rows": 0,
+      "max_rows": 0
+    },
+    {
+      "allowed": true,
+      "cases": 20,
+      "min_rows": 1,
+      "max_rows": 1
+    }
+  ],
+  "scope": "projects READ, 19 synthetic identities/20 memberships/3 companies; no whole-task PASS implied"
+}
