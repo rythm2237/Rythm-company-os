@@ -1,0 +1,512 @@
+{
+  "baseline": "995888ae6f7077f70527bbc95f74efd584115955",
+  "status": "NOT_ACCEPTED",
+  "note": "Inventory only. NOT_RUN entries are not verified. Isolated handler and embedded SQL results do not establish live HTTP or staging RLS.",
+  "routes": [
+    {
+      "path": "app/api/2nya-nailart/admin/gallery/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/admin/login/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/admin/logout/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/admin/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/admin-messages/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/admin-page/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/availability/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/book/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/bootstrap/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/contact-message/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/logo/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/manage/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/media/[...path]/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/media-health/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/page/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/portfolio/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/push-key/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/2nya-nailart/site/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/admin/ai-workspace/guest-codes/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/admin/automation/dispatch/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/admin/integrations/google-search-console/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/agent-avatar/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/agents/[code]/benchmark/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/ai-workspace/chat/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/ai-workspace/company/invite/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/ai-workspace/files/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/ai-workspace/guest/activate/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/ai-workspace/guest/logout/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/ai-workspace/resources/[kind]/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/ai-workspace/session/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/analytics/public-events/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/billing/checkout/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/billing/portal/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/billing/webhook/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/bootstrap-status/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/communication/inbound/cloudflare/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/communication/inbound/resend/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/communication/outbound/resend/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/company-logo/[id]/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/consumer/withdrawal/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/crm/customers/export/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "PASS_EXISTING_REGRESSION"
+    },
+    {
+      "path": "app/api/crm/documents/[id]/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "PASS"
+    },
+    {
+      "path": "app/api/crm/leads/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "PASS_EXISTING_REGRESSION"
+    },
+    {
+      "path": "app/api/crm/opportunities/[id]/stage/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "PASS_EXISTING_REGRESSION"
+    },
+    {
+      "path": "app/api/executions/[id]/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/executions/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/health/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/bing-webmaster/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/bing-webmaster/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/cloudflare/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/cloudflare/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/connection-agent/status/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/github/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/github/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-ads/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-ads/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-analytics/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-analytics/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-business-profile/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-business-profile/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-drive/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-drive/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-search-console/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-search-console/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-workspace/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/google-workspace/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/linkedin-marketing/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/linkedin-marketing/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/microsoft-365/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/microsoft-365/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/supabase/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/supabase/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/vercel/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/vercel/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/youtube/callback/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/integrations/youtube/connect/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/meetings/ceo-contribute/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/meetings/close/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/meetings/continue-detached/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/meetings/deliberate/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/meetings/legal-review/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/meetings/legal-triage/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/meetings/summarize/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/privacy/export/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/privacy/requests/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/project-pulse/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/projects/analyze/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/projects/approval-advice/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/projects/approval-discussion/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/projects/completion/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/projects/connections/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/projects/control/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/projects/dispatch/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/projects/files/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/projects/live/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/projects/roadmap/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/projects/run/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/runtime/execute-validation/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/seo/indexnow/submit/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/status/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    },
+    {
+      "path": "app/api/system/deployment-version/route.ts",
+      "liveAuthenticatedHttp": "NOT_RUN",
+      "isolatedHandler": "NOT_RUN"
+    }
+  ]
+}
