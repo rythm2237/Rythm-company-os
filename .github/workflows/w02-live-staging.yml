@@ -59,7 +59,9 @@ jobs:
           if(!ready)throw Error('Staging did not become healthy');
           JS
       - name: Quarantine identities from interrupted first setup
-        run: W03_FIXTURE_RUN=41342662942 node scripts/fixtures/w03-staging.mjs quarantine-partial
+        run: |
+          W03_FIXTURE_RUN=41342662942 node scripts/fixtures/w03-staging.mjs quarantine-partial
+          W03_FIXTURE_RUN=41343124808 node scripts/fixtures/w03-staging.mjs quarantine-partial
       - name: Create fresh W03 identities and fixtures
         run: node scripts/fixtures/w03-staging.mjs setup
       - name: Authenticated RLS and HTTP matrix
