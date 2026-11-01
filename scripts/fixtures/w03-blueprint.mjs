@@ -41,7 +41,7 @@ export function buildW03Blueprint() {
     dbRole: label === "owner" ? "owner" : label === "admin" ? "executive" : "operator",
   })));
   for (const companyKey of ["A", "B"]) {
-    memberships.push({ companyKey, userKey: "shared", persona: "shared", dbRole: "operator" });
+    memberships.push({ companyKey, userKey: "shared", persona: "shared", dbRole: companyKey === "A" ? "executive" : "operator" });
   }
   const grants = companies.map((company) => ({
     companyKey: company.key, userKey: company.key + "_finance_authorized", capability: "finance.read",
