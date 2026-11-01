@@ -7,7 +7,7 @@ export const W03_PRODUCTION_REF = "dezbacyuvsdrlpmmpjht";
 export const W03_ROLES = ["owner", "admin", "project_manager", "member", "finance_restricted", "finance_authorized"];
 export const W03_TABLES = ["organizations", "organization_members", "projects", "organization_entitlements", "crm_access_grants"];
 
-const runNamespace = (process.env.GITHUB_RUN_ID || "local") + "-" + (process.env.GITHUB_RUN_ATTEMPT || "1");
+const runNamespace = (process.env.W03_FIXTURE_RUN || process.env.GITHUB_RUN_ID || "local") + "-" + (process.env.GITHUB_RUN_ATTEMPT || "1");
 export function fixtureUuid(label) {
   const hex = createHash("sha256").update("rythm:w03:v1:" + runNamespace + ":" + label).digest("hex").slice(0, 32).split("");
   hex[12] = "4";
