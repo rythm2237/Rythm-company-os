@@ -48,6 +48,16 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Wait for restored staging health
+        run: |
+          node --input-type=module <<'JS'
+          let ready=false;
+          for(let i=0;i<120;i++){
+            try {const r=await fetch(process.env.W03_STAGING_SUPABASE_URL+'/auth/v1/health',{headers:{apikey:process.env.W03_STAGING_ANON_KEY}});if(r.ok){ready=true;break;}}catch{}
+            await new Promise(r=>setTimeout(r,5000));
+          }
+          if(!ready)throw Error('Staging did not become healthy');
+          JS
       - name: Create fresh W03 identities and fixtures
         run: node scripts/fixtures/w03-staging.mjs setup
       - name: Authenticated RLS and HTTP matrix
