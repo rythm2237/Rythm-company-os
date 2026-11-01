@@ -69,7 +69,7 @@ try{
     const update=await c.from(table).update({id:row.id}).eq('id',row.id).select('id');record(table,'UPDATE',u.key,org.key,update.error?.code==='42501'||(!update.error&&update.data?.length===0),update.error?.code??'');
     const del=await c.from(table).delete().eq('id',row.id).select('id');record(table,'DELETE',u.key,org.key,del.error?.code==='42501'||(!del.error&&del.data?.length===0),del.error?.code??'');
     if(table!=='projects'){
-     const insert=await c.from(table).insert({...row,id:randomUUID()}).select('id');record(table,'INSERT',u.key,org.key,insert.error?.code==='42501',insert.error?.code??'');
+     const forged={...row,id:randomUUID()};for(const key of ['name','title','internal_reference','contract_number'])if(key in forged)forged[key]='W03-forged-'+randomUUID();if('storage_path' in forged)forged.storage_path=org.id+'/'+org.projectId+'/'+randomUUID()+'-synthetic.txt';const insert=await c.from(table).insert(forged).select('id');record(table,'INSERT',u.key,org.key,insert.error?.code==='42501',insert.error?.code??'');
     }
     const remain=unwrap(await admin.from(table).select('id').eq('id',row.id).single(),'sentinel remains');assert.equal(remain.id,row.id);
    }
