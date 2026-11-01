@@ -53,18 +53,20 @@ jobs:
           node --input-type=module <<'JS'
           let ready=false;
           for(let i=0;i<120;i++){
-            try {const r=await fetch(process.env.W03_STAGING_SUPABASE_URL+'/auth/v1/health',{headers:{apikey:process.env.W03_STAGING_ANON_KEY}});if(r.ok){ready=true;break;}}catch{}
+            try {const r=await fetch(process.env.W03_STAGING_SUPABASE_URL+'/rest/v1/organizations?select=id&limit=0',{headers:{apikey:process.env.W03_STAGING_SERVICE_ROLE_KEY,Authorization:'Bearer '+process.env.W03_STAGING_SERVICE_ROLE_KEY}});if(r.ok){ready=true;break;}}catch{}
             await new Promise(r=>setTimeout(r,5000));
           }
           if(!ready)throw Error('Staging did not become healthy');
           JS
+      - name: Quarantine identities from interrupted first setup
+        run: W03_FIXTURE_RUN=41342662942 node scripts/fixtures/w03-staging.mjs quarantine-partial
       - name: Create fresh W03 identities and fixtures
         run: node scripts/fixtures/w03-staging.mjs setup
       - name: Authenticated RLS and HTTP matrix
         run: node scripts/fixtures/w03-live.mjs
       - name: Quarantine W03 identities preserving audit history
         if: always()
-        run: node scripts/fixtures/w03-staging.mjs quarantine
+        run: node scripts/fixtures/w03-staging.mjs quarantine-partial
       - uses: actions/upload-artifact@v4
         if: always()
         with:
