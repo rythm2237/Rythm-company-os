@@ -343,7 +343,6 @@ async function teardown() {
       assert.ok(membership.every((m) => blueprint.companies.some((c) => c.id === m.organization_id)), "Fixture user has non-W03 membership; refusing delete");
     }
   }
-  state.users = foundUsers;
   for (const c of blueprint.companies) {
     const org = unwrap(await admin.from("organizations").select("name,slug").eq("id", c.id).maybeSingle(), "cleanup org guard");
     if (org) { assert.equal(org.name, c.name); assert.equal(org.slug, c.slug); }
