@@ -41,6 +41,8 @@ try{
    ['project_contracts',{id:randomUUID(),organization_id:org.id,customer_id:customer,contract_number:'W03-'+org.key,contract_value:1}],
    ['finance_invoices',{id:randomUUID(),organization_id:org.id,customer_id:customer,internal_reference:'W03-'+org.key,total:1}],
    ['company_memory',{id:randomUUID(),organization_id:org.id,memory_type:'test',title:'W03-SENTINEL-'+org.key,content:{synthetic:true},source_type:'test'}],
+   ['company_knowledge',{id:randomUUID(),organization_id:org.id,title:'W03-SENTINEL-'+org.key,content:'synthetic knowledge',created_by:user.id}],
+   ['project_decision_memory',{id:randomUUID(),organization_id:org.id,project_id:org.projectId,decision:'W03-SENTINEL-'+org.key,decision_maker_type:'test'}],
    ['action_items',{id:randomUUID(),organization_id:org.id,title:'W03-SENTINEL-'+org.key}],
    ['notifications',{id:randomUUID(),organization_id:org.id,user_id:user.id,category:'test',title:'W03-SENTINEL-'+org.key}],
   ];
@@ -60,9 +62,11 @@ try{
   const {client:c}=clients.get(u.key);
   const home=b.memberships.find(m=>m.userKey===u.key);
   unwrap(await c.rpc('set_active_organization',{target_org_id:b.companies.find(x=>x.key===home.companyKey).id}),'actor context');
+  for(const table of ['project_contracts','finance_invoices']){const r=await c.from(table).select('id').eq('organization_id',b.companies.find(x=>x.key===home.companyKey).id);const expected=u.key.endsWith('_owner')||(table==='finance_invoices'&&u.key.endsWith('_finance_authorized'))?1:0;record(table,'same-tenant-role',u.key,home.companyKey,!r.error&&r.data?.length===expected);}
   const own=await http(u.key,'/api/crm/leads');record('api-auth','session-positive',u.key,home.companyKey,own.status===200,'status-'+own.status);
   for(const org of b.companies){
    if(b.memberships.some(m=>m.userKey===u.key&&m.companyKey===org.key))continue;
+   const forgedProject=await c.from('projects').insert({id:randomUUID(),organization_id:org.id,project_code:'W03-forged-'+randomUUID(),name:'W03 forged project',status:'planning',engagement_type:'internal',primary_manager_user_id:clients.get(org.key+'_project_manager').user.id,created_by_user_id:clients.get(u.key).user.id}).select('id');record('projects','INSERT',u.key,org.key,!!forgedProject.error,forgedProject.error?.code??'');
    const switched=await c.rpc('set_active_organization',{target_org_id:org.id});record('role-switch','foreign-denied',u.key,org.key,!!switched.error);
    for(const [table,row] of seeds.get(org.key)){
     const read=await c.from(table).select('id').eq('id',row.id);record(table,'READ',u.key,org.key,!read.error&&read.data?.length===0);
@@ -78,17 +82,24 @@ try{
     ['/api/projects/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({projectId:org.projectId,action:'pause'})}],
     ['/api/crm/documents/'+seeds.get(org.key).find(x=>x[0]==='project_documents')[1].id,{}],
     ['/api/privacy/export?organizationId='+org.id,{}],
+    ['/api/projects/completion?projectId='+org.projectId,{}],
+    ['/api/projects/roadmap?projectId='+org.projectId,{}],
+    ...['run','analyze','roadmap','completion','connections','approval-advice','approval-discussion'].map(route=>['/api/projects/'+route,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({projectId:org.projectId,action:'evaluate',integrationId:randomUUID(),resourceRef:'synthetic',approvalId:randomUUID(),message:'synthetic',content:'synthetic'})}]),
    ]){const r=await http(u.key,path,options);record('http-api','foreign-object',u.key,org.key,[403,404].includes(r.status),path.split('?')[0]+' status-'+r.status);}
+   const deniedForm=new FormData();deniedForm.set('projectId',org.projectId);deniedForm.set('category','other');deniedForm.append('files',new Blob(['W03-denied'],{type:'text/plain'}),'denied.txt');const deniedUpload=await http(u.key,'/api/projects/files',{method:'POST',body:deniedForm});record('files','foreign-upload',u.key,org.key,[403,404].includes(deniedUpload.status));
    const doc=seeds.get(org.key).find(x=>x[0]==='project_documents')[1];
+   const write=await c.storage.from('project-files').upload(org.id+'/'+org.projectId+'/'+randomUUID()+'-denied.txt',new Blob(['denied'],{type:'text/plain'}));record('storage','foreign-write',u.key,org.key,!!write.error);
+   const rpc=await c.rpc('crm_agent_customer_context',{p_organization_id:org.id,p_customer_id:seeds.get(org.key).find(x=>x[0]==='crm_accounts')[1].id,p_agent_id:randomUUID(),p_user_id:clients.get(u.key).user.id,p_include_contracts:true,p_include_finance:true});record('privileged-rpc','agent-context-denied',u.key,org.key,!!rpc.error);
    const file=await c.storage.from('project-files').download(doc.storage_path);record('storage','foreign-bytes',u.key,org.key,!!file.error);
    const signed=await c.storage.from('project-files').createSignedUrl(doc.storage_path,30);record('storage','foreign-signed-url',u.key,org.key,!!signed.error);
   }
+  const dispatch=await http(u.key,'/api/projects/dispatch',{headers:{authorization:'Bearer '+(await c.auth.getSession()).data.session.access_token}});record('background-job','user-token-denied',u.key,home.companyKey,dispatch.status===401);
   const exported=await http(u.key,'/api/crm/customers/export');
   if(u.key.endsWith('_owner')){const data=await exported.text();record('export','own-positive',u.key,home.companyKey,exported.status===200&&data.includes('W03-SENTINEL-'+home.companyKey));for(const o of b.companies.filter(o=>o.key!==home.companyKey))record('export','no-foreign',u.key,o.key,!data.includes('W03-SENTINEL-'+o.key));}
   else record('export','nonowner-denied',u.key,home.companyKey,exported.status===403);
  }
  phase='shared-switch';
- for(const org of b.companies.slice(0,2)){const c=clients.get('shared').client;assert.equal(unwrap(await c.rpc('set_active_organization',{target_org_id:org.id}),'shared switch'),org.id);const r=await http('shared','/api/crm/leads');record('role-switch','shared-context', 'shared',org.key,r.status===200);}
+ for(const org of b.companies.slice(0,2)){const c=clients.get('shared').client;assert.equal(unwrap(await c.rpc('set_active_organization',{target_org_id:org.id}),'shared switch'),org.id);const r=await http('shared','/api/crm/leads');record('role-switch','shared-context', 'shared',org.key,r.status===200);const memberships=unwrap(await c.rpc('list_my_organizations'),'shared roles');record('role-switch','role-bound', 'shared',org.key,memberships.find(m=>m.organization_id===org.id)?.membership_role===(org.key==='A'?'executive':'operator'));}
  phase='finished';
 }catch(e){checks.push({phase,ok:false,error:String(e.message).replace(/eyJ\S+/g,'[redacted]')});process.exitCode=1;}
 finally{server?.kill();mkdirSync('.w03-evidence',{recursive:true});writeFileSync('.w03-evidence/result.json',JSON.stringify({phase,checks,pass:checks.filter(x=>x.ok).length,fail:checks.filter(x=>!x.ok).length,scope:'Real staging REST RLS and local Next HTTP; not published preview parity or complete API inventory'},null,2));console.log(JSON.stringify({phase,pass:checks.filter(x=>x.ok).length,fail:checks.filter(x=>!x.ok).length,last:checks.at(-1)}));}
