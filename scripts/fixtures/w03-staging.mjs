@@ -7,7 +7,7 @@ import { assertW03Blueprint, buildW03Blueprint, W03_PRODUCTION_REF, W03_STAGING_
 const blueprint = buildW03Blueprint();
 assertW03Blueprint(blueprint);
 const command = process.argv[2];
-if (!["setup", "verify", "teardown", "roundtrip", "audit-check", "quarantine", "verify-quarantine"].includes(command)) {
+if (!["setup", "verify", "teardown", "roundtrip", "audit-check", "quarantine", "verify-quarantine", "quarantine-partial"].includes(command)) {
   console.error("Usage: node scripts/fixtures/w03-staging.mjs setup|verify|teardown|roundtrip|audit-check|quarantine|verify-quarantine");
   process.exit(2);
 }
@@ -300,6 +300,35 @@ async function verifyQuarantine() {
   }
   console.log("W03 quarantine verification PASS: zero active synthetic memberships and grants; all 19 fixture identities banned.");
 }
+async function quarantinePartial() {
+  const foundUsers = {};
+  for (const u of blueprint.users) {
+    const found = await findUser(u.email);
+    if (!found) continue;
+    assert.equal(found.user_metadata?.w03_fixture, "w03-v1");
+    foundUsers[u.key] = found.id;
+  }
+  for (const c of blueprint.companies) {
+    const org = unwrap(await admin.from("organizations").select("name,slug").eq("id", c.id).maybeSingle(), "partial org guard");
+    if (!org) continue;
+    assert.equal(org.slug,c.slug);assert.equal(org.name,c.name);
+    unwrap(await admin.from("projects").update({status:"cancelled"}).eq("id",c.projectId).eq("organization_id",c.id),"partial cancel");
+    if (foundUsers[c.key+"_owner"]) {
+      const owner=await login(c.key+"_owner");
+      try {unwrap(await owner.rpc("set_active_organization",{target_org_id:c.id}),"partial owner context");
+        unwrap(await owner.from("crm_access_grants").update({revoked_at:new Date().toISOString()}).eq("organization_id",c.id).is("revoked_at",null),"partial revoke");
+      } finally {await owner.auth.signOut();}
+    }
+    for (const m of blueprint.memberships.filter(m=>m.companyKey===c.key&&foundUsers[m.userKey]))
+      unwrap(await admin.from("organization_members").update({membership_status:"inactive",deactivated_at:new Date().toISOString()}).eq("organization_id",c.id).eq("user_id",foundUsers[m.userKey]),"partial deactivate");
+  }
+  for(const [key,id] of Object.entries(foundUsers)){
+    const memberships=unwrap(await admin.from("organization_members").select("organization_id,membership_status").eq("user_id",id),"partial membership guard");
+    assert.ok(memberships.every(m=>blueprint.companies.some(c=>c.id===m.organization_id)&&m.membership_status!=="active"));
+    unwrap(await admin.auth.admin.updateUserById(id,{ban_duration:"876000h"}),"partial ban "+key);
+  }
+  console.log("PASS W03 partial/full quarantine: exact synthetic memberships inactive and identities banned; audit parents retained.");
+}
 async function teardown() {
   await auditCheck();
   // Do not delete by email prefix alone. Verify exact fixture labels and UUIDs first.
@@ -336,7 +365,8 @@ async function teardown() {
 }
 let operationFailed = false;
 try {
-  if (command === "setup") await setup();
+  if (command === "quarantine-partial") await quarantinePartial();
+  else if (command === "setup") await setup();
   else if (command === "verify") await verify();
   else if (command === "teardown") await teardown();
   else if (command === "audit-check") await auditCheck();
