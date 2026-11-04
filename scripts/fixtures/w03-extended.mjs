@@ -61,7 +61,10 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
   const account=unwrap(await admin.from('aiw_accounts').select('id').eq('user_id',userId).single(),'actor account');
   const wallet=unwrap(await admin.from('usage_wallets').select('id').eq('personal_account_id',account.id).eq('payer_type','personal').single(),'actor wallet');
   const requestKey='w03-replay-'+randomUUID();
-  unwrap(await admin.from('ai_usage_requests').insert({id:randomUUID(),wallet_id:wallet.id,workspace_id:own.workspace.id,organization_id:org.id,user_id:userId,request_kind:'answer',routing_mode:'auto',prompt_profile:'normal',reserved_micros:0,actual_micros:0,status:'settled',internal_result:'W03-ANSWER-'+u.key,idempotency_key:own.workspace.id+':'+requestKey+':answer',client_request_key:requestKey}),'zero-cost replay seed');
+  const mode=own.modes[0];
+  unwrap(await admin.from('ai_usage_requests').insert({id:randomUUID(),wallet_id:wallet.id,workspace_id:own.workspace.id,organization_id:org.id,user_id:userId,request_kind:'answer',routing_mode:mode,prompt_profile:'normal',reserved_micros:0,actual_micros:0,status:'settled',internal_result:'W03-ANSWER-'+u.key,idempotency_key:own.workspace.id+':'+requestKey+':answer',client_request_key:requestKey}),'zero-cost replay seed');
+  const positiveChat=await http(u.key,'/api/ai-workspace/chat',json({prompt:'synthetic own replay',requestKey,mode}));const positiveChatData=await positiveChat.json();
+  test('workspace-chat','own-replay-positive',u.key,org.key,positiveChat.status===200&&positiveChatData.message==='W03-ANSWER-'+u.key,'status-'+positiveChat.status+' '+(positiveChatData.error??''));
   for(const target of b.companies){
    const f=fixtures.get(target.key);
    if(u.key!==target.key+'_owner'){
@@ -81,9 +84,9 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
     const remaining=unwrap(await admin.storage.from('ai-workspace-private').download(f.file.storage_path),'private foreign bytes remain');
     test('workspace-files','foreign-bytes-unchanged',u.key,target.key,(await remaining.text())===f.text);
     const before=unwrap(await admin.from('aiw_messages').select('id').eq('conversation_id',f.conversation.id),'foreign history before');
-    const chat=await http(u.key,'/api/ai-workspace/chat',json({prompt:'synthetic boundary check',requestKey,conversationId:f.conversation.id,workspaceId:f.personal.workspace.id,projectId:f.personal.defaultProject.id,organizationId:target.id,walletId:f.wallet.id}));
+    const chat=await http(u.key,'/api/ai-workspace/chat',json({prompt:'synthetic boundary check',requestKey,mode,conversationId:f.conversation.id,workspaceId:f.personal.workspace.id,projectId:f.personal.defaultProject.id,organizationId:target.id,walletId:f.wallet.id}));
     const data=await chat.json();
-    test('workspace-chat','foreign-conversation-replaced',u.key,target.key,chat.status===200&&data.message==='W03-ANSWER-'+u.key&&data.conversationId!==f.conversation.id,'status-'+chat.status);
+    test('workspace-chat','foreign-conversation-replaced',u.key,target.key,chat.status===200&&data.message==='W03-ANSWER-'+u.key&&data.conversationId!==f.conversation.id,'status-'+chat.status+' '+(data.error??''));
     const after=unwrap(await admin.from('aiw_messages').select('id').eq('conversation_id',f.conversation.id),'foreign history after');
     test('workspace-chat','foreign-history-unchanged',u.key,target.key,after.length===before.length);
    }
