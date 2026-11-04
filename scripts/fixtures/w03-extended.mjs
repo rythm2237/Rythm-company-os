@@ -42,8 +42,12 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
   for(const path of ['/api/meetings/continue-detached?meeting='+meeting.id,'/api/meetings/legal-triage?sessionId='+meetingSession.id,'/api/meetings/legal-review?sessionId='+meetingSession.id,'/api/executions']){
    const r=await http(actor,path);record('extended-http','owner-positive',actor,org.key,r.status===200,path.split('?')[0]+' status-'+r.status);
   }
+  const pulse=await http(actor,'/api/project-pulse?project='+org.projectId);const pulseData=await pulse.json();
+  record('project-pulse','own-project-positive',actor,org.key,pulse.status===200&&pulseData.project?.name);
  }
- for(const u of b.users){
+ for(let batch=0;batch<b.users.length;batch+=3){
+ await Promise.all(b.users.slice(batch,batch+3).map(async u=>{
+  console.log(JSON.stringify({extendedActor:u.key}));
   const c=clients.get(u.key).client,userId=clients.get(u.key).user.id;
   const home=b.memberships.find(m=>m.userKey===u.key),org=b.companies.find(o=>o.key===home.companyKey);
   unwrap(await c.rpc('set_active_organization',{target_org_id:org.id}),'extended actor active');
@@ -79,7 +83,10 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
     test('workspace-chat','foreign-history-unchanged',u.key,target.key,after.length===before.length);
    }
    if(b.memberships.some(m=>m.userKey===u.key&&m.companyKey===target.key))continue;
+   const pulse=await http(u.key,'/api/project-pulse?project='+target.projectId);const pulseData=await pulse.json();
+   test('project-pulse','foreign-project-denied',u.key,target.key,pulse.status===403||pulse.status===200&&pulseData.project===null&&pulseData.event===null&&pulseData.nodes?.length===0,'status-'+pulse.status);
    for(const [path,options,statuses] of [
+    ['/api/projects/live',json({projectId:target.projectId,approvalId:randomUUID(),resolution:'approved',responseNote:'W03 forbidden synthetic approval'}),[403,404]],
     ['/api/executions/'+f.execution.id,json({action:'execute'}),[403,404]],
     ['/api/executions/'+f.execution.id,json({action:'rollback'}),[403,404]],
     ['/api/meetings/continue-detached?meeting='+f.meeting.id,{},[403,404]],
@@ -110,7 +117,17 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
      ['project_task_runs',{id:randomUUID(),organization_id:org.id,project_id:target.projectId,execution_id:seeds.get(org.key).find(r=>r[0]==='project_executions')[1].id,task_key:'W03-'+randomUUID(),title:'W03-forged-reference',idempotency_key:randomUUID(),status:'cancelled'}],
      ['project_documents',{id:randomUUID(),organization_id:org.id,project_id:target.projectId,category:'other',file_name:'W03-forged-reference.txt',storage_path:org.id+'/'+randomUUID()+'.txt'}],
     ];
-    for(const [table,row] of rowsToTry){const r=await c.from(table).insert(row).select('id');test('cross-parent-reference',table,u.key,target.key,!!r.error&&['42501','23503','P0001'].includes(r.error.code),r.error?.code??'INSERT-ACCEPTED');}
+    for(const [table,row] of rowsToTry){const r=await c.from(table).insert(row).select('id');test('cross-parent-reference',table,u.key,target.key,!!r.error&&(['42501','23503'].includes(r.error.code)||r.error.code==='P0001'&&r.error.message==='Document project unavailable'),r.error? r.error.code+':'+r.error.message:'INSERT-ACCEPTED');}
+    for(const table of ['project_contracts','finance_invoices']){
+     const ownRow=seeds.get(org.key).find(r=>r[0]===table)[1];
+     const foreignCustomer=seeds.get(target.key).find(r=>r[0]==='crm_accounts')[1].id;
+     const inserted={...ownRow,id:randomUUID(),customer_id:foreignCustomer};
+     if(table==='project_contracts')inserted.contract_number='W03-forged-'+randomUUID();else inserted.internal_reference='W03-forged-'+randomUUID();
+     const r=await c.from(table).insert(inserted).select('id');test('crm-cross-parent',table+'-INSERT',u.key,target.key,r.error?.code==='23503',r.error?.code??'INSERT-ACCEPTED');
+     const changed=await c.from(table).update({customer_id:foreignCustomer}).eq('id',ownRow.id).select('id');
+     const remaining=unwrap(await admin.from(table).select('customer_id').eq('id',ownRow.id).single(),'CRM parent poststate');
+     test('crm-cross-parent',table+'-UPDATE',u.key,target.key,changed.error?.code==='23503'&&remaining.customer_id===ownRow.customer_id,changed.error?.code??'UPDATE-ACCEPTED');
+    }
     for(const table of ['project_decision_memory','project_task_runs']){
      const ownRow=seeds.get(org.key).find(r=>r[0]===table)[1];
      const changed=await c.from(table).update({project_id:target.projectId}).eq('id',ownRow.id).select('id');
@@ -121,6 +138,7 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
   }
   const ledger=await http(u.key,'/api/executions');const ledgerText=await ledger.text();
   test('execution-ledger','role-and-sentinels',u.key,home.companyKey,u.key.endsWith('_owner')?ledger.status===200&&b.companies.filter(o=>o.key!==org.key).every(o=>!ledgerText.includes(fixtures.get(o.key).execution.correlation_id)):ledger.status===403);
+ }));
  }
  // File dedup digests must remain private to each personal workspace.
  for(const [key,f] of fixtures){const row=unwrap(await admin.from('aiw_files').select('sha256').eq('id',f.file.id).single(),'file digest');test('workspace-files','digest-control',key,key,row.sha256===createHash('sha256').update(f.text).digest('hex'));}

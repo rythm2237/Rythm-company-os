@@ -150,6 +150,8 @@ try{
  }
  phase='shared-switch';
  for(const org of b.companies.slice(0,2)){const c=clients.get('shared').client;assert.equal(unwrap(await c.rpc('set_active_organization',{target_org_id:org.id}),'shared switch'),org.id);const r=await http('shared','/api/crm/leads');record('role-switch','shared-context', 'shared',org.key,r.status===200);const memberships=unwrap(await c.rpc('list_my_organizations'),'shared roles');record('role-switch','role-bound', 'shared',org.key,memberships.find(m=>m.organization_id===org.id)?.membership_role===(org.key==='A'?'executive':'operator'));}
+ phase='extended-matrix';await extendedMatrix({b,clients,admin,http,record,unwrap,seeds});
+ assert.ok(checks.every(x=>x.ok),'Combined matrix has failing cases');
  }
  phase='finished';
 }catch(e){checks.push({phase,ok:false,error:String(e.message).replace(/eyJ\S+/g,'[redacted]')});process.exitCode=1;}

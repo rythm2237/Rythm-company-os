@@ -70,7 +70,7 @@ jobs:
       - name: Create fresh W03 identities and fixtures
         run: node scripts/fixtures/w03-staging.mjs setup
       - name: Authenticated RLS and HTTP matrix
-        run: node scripts/fixtures/w03-live.mjs --extended-only
+        run: node scripts/fixtures/w03-live.mjs
       - name: Quarantine W03 identities preserving audit history
         if: always()
         run: node scripts/fixtures/w03-staging.mjs quarantine-partial
