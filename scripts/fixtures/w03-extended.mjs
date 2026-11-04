@@ -1,9 +1,11 @@
 import {randomUUID,createHash} from 'node:crypto';
+import {workerBoundaryMatrix} from './w03-worker.mjs';
 
 // Real staging Auth/REST/Storage and the actual local Next HTTP handlers.
 // Chat uses an explicitly synthetic, zero-cost settled replay; no model is called.
 export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds}){
  const fixtures=new Map();
+ await workerBoundaryMatrix({b,admin,seeds,record});
  const provider=unwrap(await admin.from('integration_providers').select('provider_key').eq('provider_key','internal').maybeSingle(),'internal provider lookup');
  if(!provider)unwrap(await admin.from('integration_providers').insert({provider_key:'internal',display_name:'RYTHM Internal Control',category:'internal_control',enabled:false,kill_switch:true,supports_token:false}),'disabled internal reference seed');
  const test=(...args)=>{try{record(...args);}catch{/* collect all independent failures */}};
