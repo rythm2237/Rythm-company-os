@@ -4,6 +4,7 @@ import {spawn} from 'node:child_process';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 import {buildW03Blueprint} from './w03-blueprint.mjs';
+import {extendedMatrix} from './w03-extended.mjs';
 const b=buildW03Blueprint(),url=process.env.W03_STAGING_SUPABASE_URL;
 assert.equal(url,'https://viqjdgohtxqkrdgwtull.supabase.co');
 assert.notEqual(process.env.VERCEL_ENV,'production');
@@ -64,6 +65,10 @@ try{
   for(const [table,row] of rows){const own=await c.from(table).select('id').eq('id',row.id);record(table,'owner-positive-read',org.key,org.key,!own.error&&own.data?.length===1);}
   const downloaded=await http(org.key+'_owner','/api/crm/documents/'+doc.id);record('files','own-download',org.key,org.key,downloaded.status===200&&(await downloaded.text())==='W03-FILE-'+org.key);
  }
+ if(process.argv.includes('--extended-only')){
+  phase='extended-matrix';await extendedMatrix({b,clients,admin,http,record,unwrap,seeds});
+  assert.ok(checks.every(x=>x.ok),'Extended matrix has failing cases');
+ }else{
  phase='workspace-memory';
  const workspaceSeeds=new Map();
  for(const org of b.companies){
@@ -145,6 +150,7 @@ try{
  }
  phase='shared-switch';
  for(const org of b.companies.slice(0,2)){const c=clients.get('shared').client;assert.equal(unwrap(await c.rpc('set_active_organization',{target_org_id:org.id}),'shared switch'),org.id);const r=await http('shared','/api/crm/leads');record('role-switch','shared-context', 'shared',org.key,r.status===200);const memberships=unwrap(await c.rpc('list_my_organizations'),'shared roles');record('role-switch','role-bound', 'shared',org.key,memberships.find(m=>m.organization_id===org.id)?.membership_role===(org.key==='A'?'executive':'operator'));}
+ }
  phase='finished';
 }catch(e){checks.push({phase,ok:false,error:String(e.message).replace(/eyJ\S+/g,'[redacted]')});process.exitCode=1;}
 finally{server?.kill();mkdirSync('.w03-evidence',{recursive:true});writeFileSync('.w03-evidence/result.json',JSON.stringify({phase,checks,pass:checks.filter(x=>x.ok).length,fail:checks.filter(x=>!x.ok).length,scope:'Real staging REST RLS and local Next HTTP; not published preview parity or complete API inventory'},null,2));console.log(JSON.stringify({phase,pass:checks.filter(x=>x.ok).length,fail:checks.filter(x=>!x.ok).length,last:checks.at(-1)}));}
