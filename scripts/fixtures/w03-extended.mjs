@@ -6,7 +6,11 @@ import {governedMeetingMatrix} from './w03-governed-meetings.mjs';
 // Chat uses an explicitly synthetic, zero-cost settled replay; no model is called.
 export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds}){
  const fixtures=new Map();
- await workerBoundaryMatrix({b,admin,seeds,record});
+ const level=unwrap(await admin.from('agent_level_definitions').select('level_key').eq('level_key','associate').maybeSingle(),'agent level lookup');
+ if(!level)unwrap(await admin.from('agent_level_definitions').insert({level_key:'associate',display_name:'Associate',rank_order:1,requirements:{governance_pass_required:true},description:'Configured AI Agent with defined role and governance boundaries; professional capability not yet independently established.'}),'canonical associate reference seed');
+ const agentFixtures=new Map();
+ for(const org of b.companies){const agent={id:randomUUID(),organization_id:org.id,agent_code:'W03-'+randomUUID(),name:'W03 synthetic disabled agent',role_title:'Synthetic boundary fixture',purpose:'Tenant isolation test only',enabled:false,agent_status:'paused'};unwrap(await admin.from('agents').insert(agent),'disabled synthetic agent seed');agentFixtures.set(org.key,agent);}
+ await workerBoundaryMatrix({b,admin,seeds,record,agentFixtures});
  const provider=unwrap(await admin.from('integration_providers').select('provider_key').eq('provider_key','internal').maybeSingle(),'internal provider lookup');
  if(!provider)unwrap(await admin.from('integration_providers').insert({provider_key:'internal',display_name:'RYTHM Internal Control',category:'internal_control',enabled:false,kill_switch:true,supports_token:false}),'disabled internal reference seed');
  const test=(...args)=>{try{record(...args);}catch{/* collect all independent failures */}};
@@ -117,6 +121,7 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
      ['project_decision_memory',{id:randomUUID(),organization_id:org.id,project_id:target.projectId,decision:'W03-forged-reference',decision_maker_type:'test'}],
      ['project_task_runs',{id:randomUUID(),organization_id:org.id,project_id:target.projectId,execution_id:seeds.get(org.key).find(r=>r[0]==='project_executions')[1].id,task_key:'W03-'+randomUUID(),title:'W03-forged-reference',idempotency_key:randomUUID(),status:'cancelled'}],
      ['project_documents',{id:randomUUID(),organization_id:org.id,project_id:target.projectId,category:'other',file_name:'W03-forged-reference.txt',storage_path:org.id+'/'+randomUUID()+'.txt'}],
+     ...[['assigned_agent_id',agentFixtures.get(target.key).id],['action_item_id',seeds.get(target.key).find(r=>r[0]==='action_items')[1].id]].map(([field,id])=>['project_task_runs',{id:randomUUID(),organization_id:org.id,project_id:org.projectId,execution_id:seeds.get(org.key).find(r=>r[0]==='project_executions')[1].id,task_key:'W03-'+randomUUID(),title:'W03-forged-'+field,idempotency_key:randomUUID(),status:'cancelled',[field]:id}]),
     ];
     for(const [table,row] of rowsToTry){const r=await c.from(table).insert(row).select('id');test('cross-parent-reference',table,u.key,target.key,!!r.error&&(['42501','23503'].includes(r.error.code)||r.error.code==='P0001'&&r.error.message==='Document project unavailable'),r.error? r.error.code+':'+r.error.message:'INSERT-ACCEPTED');}
     for(const table of ['project_contracts','finance_invoices']){

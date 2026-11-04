@@ -4,7 +4,7 @@ import {createRequire} from 'node:module';
 // Actual worker, real staging context reads, controlled claim payload only.
 // Provider calls and all writes are intercepted: no global queue is claimed,
 // no customer job is processed, no model call or execution side effect occurs.
-export async function workerBoundaryMatrix({b,admin,seeds,record}){
+export async function workerBoundaryMatrix({b,admin,seeds,record,agentFixtures}){
  const state={calls:[],writes:[]};globalThis.w03WorkerBoundary=state;
  try{
   const built=await build({entryPoints:['lib/projects/project-work-v2.ts'],bundle:true,write:false,platform:'node',format:'cjs',packages:'external',plugins:[{name:'w03-provider-boundary',setup(build){
@@ -19,13 +19,17 @@ export async function workerBoundaryMatrix({b,admin,seeds,record}){
   for(const org of b.companies){
    const task=seeds.get(org.key).find(r=>r[0]==='project_task_runs')[1];
    for(const target of b.companies){
-    const claimed={...task,project_id:target.projectId,lease_owner:'w03-intercepted',attempt_count:1,max_attempts:1,assigned_agent_id:null};state.calls=[];state.writes=[];
+    const cases=[['project',{project_id:target.projectId}]];
+    if(target.id!==org.id&&agentFixtures)cases.push(['agent',{assigned_agent_id:agentFixtures.get(target.key).id}],['action',{action_item_id:seeds.get(target.key).find(r=>r[0]==='action_items')[1].id}],['execution',{execution_id:seeds.get(target.key).find(r=>r[0]==='project_executions')[1].id}]);
+    for(const [kind,patch] of cases){
+    const claimed={...task,lease_owner:'w03-intercepted',attempt_count:1,max_attempts:1,assigned_agent_id:null,...patch};state.calls=[];state.writes=[];
     const service={rpc:async(name)=>({data:name==='claim_project_task_runs_v1'?[claimed]:0,error:null}),from(table){
      const real=admin.from(table);return new Proxy(real,{get(obj,key){if(['insert','update','upsert','delete'].includes(key))return payload=>{state.writes.push({table,operation:key,payload});return noop;};const value=obj[key];return typeof value==='function'?value.bind(obj):value;}});
     }};
     await mod.exports.dispatchProjectWorkV2(service,'w03-controlled-claim');
     const own=target.id===org.id;
-    try{record('background-worker',own?'own-context-positive':'foreign-project-provider-boundary',org.key,target.key,own?state.calls.length===1&&state.calls[0].prompt.includes('W03-SENTINEL-'+org.key):state.calls.length===0,`intercepted-provider-calls-${state.calls.length};real-staging-reads;controlled-claim;writes-intercepted`);}catch{/* preserve all independent results */}
+    try{record('background-worker',own?'own-context-positive':'foreign-'+kind+'-provider-boundary',org.key,target.key,own?state.calls.length===1&&state.calls[0].prompt.includes('W03-SENTINEL-'+org.key):state.calls.length===0,`intercepted-provider-calls-${state.calls.length};real-staging-reads;controlled-claim;writes-intercepted`);}catch{/* preserve all independent results */}
+    }
    }
   }
  }finally{delete globalThis.w03WorkerBoundary;}
