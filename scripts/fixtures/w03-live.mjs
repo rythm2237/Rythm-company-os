@@ -13,7 +13,7 @@ const checks=[];let phase='startup',server;
 const record=(surface,operation,actor,target,ok,detail='')=>{checks.push({surface,operation,actor,target,ok,detail});assert.ok(ok,`${surface}/${operation}/${actor}/${target}/${detail}`);};
 const unwrap=(r,label)=>{if(r.error)throw Error(label+':'+r.error.code);return r.data;};
 const clients=new Map(),cookies=new Map(),seeds=new Map();
-const api='http://127.0.0.1:3103';
+const api='http://localhost:3103';
 async function http(actor,path,options={}){return fetch(api+path,{...options,redirect:'manual',headers:{cookie:cookies.get(actor),origin:api,...options.headers}});}
 try{
  phase='login';
@@ -27,16 +27,18 @@ try{
  }
  phase='server';
  const env={...process.env,NEXT_PUBLIC_SUPABASE_URL:url,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:process.env.W03_STAGING_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY:process.env.W03_STAGING_SERVICE_ROLE_KEY,RYTHM_AGENT_EXECUTION_ENABLED:'false',RYTHM_EXTERNAL_ACTIONS_ENABLED:'false',OPENAI_API_KEY:'',ANTHROPIC_API_KEY:'',GEMINI_API_KEY:'',NEXT_TELEMETRY_DISABLED:'1'};
- server=spawn(process.execPath,['node_modules/next/dist/bin/next','dev','--hostname','127.0.0.1','--port','3103'],{env,stdio:'ignore'});
+ server=spawn(process.execPath,['node_modules/next/dist/bin/next','dev','--hostname','localhost','--port','3103'],{env,stdio:'ignore'});
  for(let i=0;i<90;i++){try{await fetch(api+'/api/crm/leads');break;}catch{await new Promise(r=>setTimeout(r,1000));}}
  phase='seed';
  for(const org of b.companies){
   const {client:c,user}=clients.get(org.key+'_owner');
   unwrap(await c.rpc('set_active_organization',{target_org_id:org.id}),'active');
   for(const capability of ['contract.create','contract.read','contract.update','finance.create','finance.read','finance.update'])unwrap(await c.from('crm_access_grants').insert({organization_id:org.id,principal_type:'user',principal_id:user.id,capability,resource_type:'company',resource_id:org.id,granted_by:user.id}),'grant');
-  const customer=randomUUID();
+  const customer=randomUUID(),executionId=randomUUID();
   const rows=[
    ['projects',{id:org.projectId,organization_id:org.id}],
+   ['project_executions',{id:executionId,organization_id:org.id,project_id:org.projectId,execution_no:1,status:'completed'}],
+   ['project_task_runs',{id:randomUUID(),organization_id:org.id,project_id:org.projectId,execution_id:executionId,task_key:'W03-synthetic',title:'W03-SENTINEL-'+org.key,idempotency_key:'W03-'+randomUUID(),status:'completed'}],
    ['crm_accounts',{id:customer,organization_id:org.id,name:'W03-SENTINEL-'+org.key}],
    ['project_contracts',{id:randomUUID(),organization_id:org.id,customer_id:customer,contract_number:'W03-'+org.key,contract_value:1}],
    ['finance_invoices',{id:randomUUID(),organization_id:org.id,customer_id:customer,internal_reference:'W03-'+org.key,total:1}],
@@ -76,6 +78,15 @@ try{
    if(u.key===org.key+'_owner')continue;
    const seed=workspaceSeeds.get(org.key);
    record('workspace-memory','foreign-read',u.key,org.key,!ownData.includes('W03-MEMORY-'+org.key));
+   const directRead=await clients.get(u.key).client.from('aiw_memories').select('id').eq('id',seed.memoryId);
+   record('workspace-memory','direct-READ',u.key,org.key,directRead.error?.code==='42501');
+   const directUpdate=await clients.get(u.key).client.from('aiw_memories').update({title:'W03-denied'}).eq('id',seed.memoryId).select('id');
+   record('workspace-memory','direct-UPDATE',u.key,org.key,directUpdate.error?.code==='42501');
+   const directDelete=await clients.get(u.key).client.from('aiw_memories').delete().eq('id',seed.memoryId).select('id');
+   record('workspace-memory','direct-DELETE',u.key,org.key,directDelete.error?.code==='42501');
+   const foreignMemory=unwrap(await admin.from('aiw_memories').select('workspace_id').eq('id',seed.memoryId).single(),'memory fixture workspace');
+   const directInsert=await clients.get(u.key).client.from('aiw_memories').insert({id:randomUUID(),workspace_id:foreignMemory.workspace_id,project_id:seed.projectId,scope:'project',title:'W03-forged',content:'synthetic'}).select('id');
+   record('workspace-memory','direct-INSERT',u.key,org.key,directInsert.error?.code==='42501');
    const forged=await http(u.key,'/api/ai-workspace/resources/memories',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({projectId:seed.projectId,title:'W03-FORGED',content:'synthetic foreign project reference'})});
    record('workspace-memory','foreign-project-insert',u.key,org.key,forged.status===404,'status-'+forged.status);
    const removed=await http(u.key,'/api/ai-workspace/resources/memories?id='+seed.memoryId,{method:'DELETE'});
@@ -92,14 +103,14 @@ try{
   const own=await http(u.key,'/api/crm/leads');record('api-auth','session-positive',u.key,home.companyKey,own.status===200,'status-'+own.status);
   for(const org of b.companies){
    if(b.memberships.some(m=>m.userKey===u.key&&m.companyKey===org.key))continue;
-   const forgedProject=await c.from('projects').insert({id:randomUUID(),organization_id:org.id,project_code:'W03-forged-'+randomUUID(),name:'W03 forged project',status:'planning',engagement_type:'internal',primary_manager_user_id:clients.get(org.key+'_project_manager').user.id,created_by_user_id:clients.get(u.key).user.id}).select('id');record('projects','INSERT',u.key,org.key,!!forgedProject.error,forgedProject.error?.code??'');
+   const forgedProject=await c.from('projects').insert({id:randomUUID(),organization_id:org.id,project_code:'W03-forged-'+randomUUID(),name:'W03 forged project',status:'planning',engagement_type:'internal',primary_manager_user_id:clients.get(org.key+'_project_manager').user.id,created_by_user_id:clients.get(u.key).user.id}).select('id');record('projects','INSERT',u.key,org.key,forgedProject.error?.code==='42501'||(forgedProject.error?.code==='P0001'&&forgedProject.error.message==='Project ownership permission required'),forgedProject.error?.code??'');
    const switched=await c.rpc('set_active_organization',{target_org_id:org.id});record('role-switch','foreign-denied',u.key,org.key,!!switched.error);
    for(const [table,row] of seeds.get(org.key)){
     const read=await c.from(table).select('id').eq('id',row.id);record(table,'READ',u.key,org.key,!read.error&&read.data?.length===0);
     const update=await c.from(table).update({id:row.id}).eq('id',row.id).select('id');record(table,'UPDATE',u.key,org.key,update.error?.code==='42501'||(!update.error&&update.data?.length===0),update.error?.code??'');
     const del=await c.from(table).delete().eq('id',row.id).select('id');record(table,'DELETE',u.key,org.key,del.error?.code==='42501'||(!del.error&&del.data?.length===0),del.error?.code??'');
     if(table!=='projects'){
-     const forged={...row,id:randomUUID()};for(const key of ['name','title','internal_reference','contract_number'])if(key in forged)forged[key]='W03-forged-'+randomUUID();if('storage_path' in forged)forged.storage_path=org.id+'/'+org.projectId+'/'+randomUUID()+'-synthetic.txt';const insert=await c.from(table).insert(forged).select('id');record(table,'INSERT',u.key,org.key,insert.error?.code==='42501',insert.error?.code??'');
+     const forged={...row,id:randomUUID()};for(const key of ['name','title','internal_reference','contract_number','task_key','idempotency_key'])if(key in forged)forged[key]='W03-forged-'+randomUUID();if('execution_no' in forged)forged.execution_no=2;if('storage_path' in forged)forged.storage_path=org.id+'/'+org.projectId+'/'+randomUUID()+'-synthetic.txt';const insert=await c.from(table).insert(forged).select('id');record(table,'INSERT',u.key,org.key,insert.error?.code==='42501',insert.error?.code??'');
     }
     const remain=unwrap(await admin.from(table).select('id').eq('id',row.id).single(),'sentinel remains');assert.equal(remain.id,row.id);
    }
