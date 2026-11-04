@@ -34,11 +34,16 @@ try{
   const {client:c,user}=clients.get(org.key+'_owner');
   unwrap(await c.rpc('set_active_organization',{target_org_id:org.id}),'active');
   for(const capability of ['contract.create','contract.read','contract.update','finance.create','finance.read','finance.update'])unwrap(await c.from('crm_access_grants').insert({organization_id:org.id,principal_type:'user',principal_id:user.id,capability,resource_type:'company',resource_id:org.id,granted_by:user.id}),'grant');
+  // W01 schema restore intentionally has no global completion-policy reference rows.
+  // Keep the fixture policy tenant-bound, with all default evidence/acceptance gates enabled.
+  const completionPolicy=randomUUID();
+  unwrap(await admin.from('project_completion_policies').insert({id:completionPolicy,organization_id:org.id,code:'w03_synthetic',name:'W03 synthetic isolation fixture',acceptance_authority:'project_owner'}),'seed fixture completion policy');
+  unwrap(await c.from('projects').update({completion_policy_id:completionPolicy}).eq('organization_id',org.id).eq('id',org.projectId),'bind fixture completion policy');
   const customer=randomUUID(),executionId=randomUUID();
   const rows=[
    ['projects',{id:org.projectId,organization_id:org.id}],
-   ['project_executions',{id:executionId,organization_id:org.id,project_id:org.projectId,execution_no:1,status:'completed'}],
-   ['project_task_runs',{id:randomUUID(),organization_id:org.id,project_id:org.projectId,execution_id:executionId,task_key:'W03-synthetic',title:'W03-SENTINEL-'+org.key,idempotency_key:'W03-'+randomUUID(),status:'completed'}],
+   ['project_executions',{id:executionId,organization_id:org.id,project_id:org.projectId,execution_no:1,status:'cancelled'}],
+   ['project_task_runs',{id:randomUUID(),organization_id:org.id,project_id:org.projectId,execution_id:executionId,task_key:'W03-synthetic',title:'W03-SENTINEL-'+org.key,idempotency_key:'W03-'+randomUUID(),status:'cancelled'}],
    ['crm_accounts',{id:customer,organization_id:org.id,name:'W03-SENTINEL-'+org.key}],
    ['project_contracts',{id:randomUUID(),organization_id:org.id,customer_id:customer,contract_number:'W03-'+org.key,contract_value:1}],
    ['finance_invoices',{id:randomUUID(),organization_id:org.id,customer_id:customer,internal_reference:'W03-'+org.key,total:1}],
@@ -74,6 +79,7 @@ try{
   const listed=await http(u.key,'/api/ai-workspace/resources/memories');
   record('workspace-memory','own-list',u.key,'personal',listed.status===200,'status-'+listed.status);
   const ownData=await listed.text();
+  if(u.key.endsWith('_owner'))record('workspace-memory','own-payload',u.key,u.key[0],ownData.includes('W03-MEMORY-'+u.key[0]));
   for(const org of b.companies){
    if(u.key===org.key+'_owner')continue;
    const seed=workspaceSeeds.get(org.key);
@@ -89,6 +95,8 @@ try{
    record('workspace-memory','direct-INSERT',u.key,org.key,directInsert.error?.code==='42501');
    const forged=await http(u.key,'/api/ai-workspace/resources/memories',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({projectId:seed.projectId,title:'W03-FORGED',content:'synthetic foreign project reference'})});
    record('workspace-memory','foreign-project-insert',u.key,org.key,forged.status===404,'status-'+forged.status);
+   const forbiddenRows=unwrap(await admin.from('aiw_memories').select('id').eq('created_by',clients.get(u.key).user.id).eq('project_id',seed.projectId),'foreign memory poststate');
+   record('workspace-memory','no-foreign-association',u.key,org.key,forbiddenRows.length===0);
    const removed=await http(u.key,'/api/ai-workspace/resources/memories?id='+seed.memoryId,{method:'DELETE'});
    const remaining=unwrap(await admin.from('aiw_memories').select('id').eq('id',seed.memoryId).single(),'workspace memory sentinel');
    record('workspace-memory','foreign-delete-noop',u.key,org.key,removed.status===200&&remaining.id===seed.memoryId);
