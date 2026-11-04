@@ -1,6 +1,6 @@
 {
   "stagingRef": "viqjdgohtxqkrdgwtull",
-  "runId": 41825010580,
+  "runId": 41831048886,
   "transaction": "ROLLBACK",
   "claims": "SQL simulated authenticated subjects; real token HTTP handled separately",
   "results": [
@@ -19,7 +19,7 @@
   ],
   "scope": "projects READ, 19 synthetic identities/20 memberships/3 companies; no whole-task PASS implied",
   "date": "2026-11-04",
-  "attempt": 2,
+  "attempt": 1,
   "strictCardinality": 57,
   "privilegedRpc": {
     "function": "public.crm_agent_customer_context",

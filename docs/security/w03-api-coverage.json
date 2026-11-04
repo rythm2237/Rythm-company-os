@@ -1,7 +1,7 @@
 {
   "baseline": "995888ae6f7077f70527bbc95f74efd584115955",
-  "status": "NOT_ACCEPTED",
-  "note": "Inventory only. NOT_RUN entries are not verified. Isolated handler and embedded SQL results do not establish live HTTP or staging RLS.",
+  "status": "EXECUTED_HIGH_RISK_SUBSET",
+  "note": "16 of 101 route files have listed real authenticated HTTP cases. Only listed methods/parameters are verified; 85 route files remain NOT_RUN. Not published Vercel preview parity or full-inventory acceptance.",
   "routes": [
     {
       "path": "app/api/2nya-nailart/admin/gallery/route.ts",
@@ -145,8 +145,25 @@
     },
     {
       "path": "app/api/ai-workspace/resources/[kind]/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS_W03_MEMORY_PROJECT_BOUNDARY",
+      "testedMethods": [
+        "GET",
+        "POST",
+        "DELETE"
+      ],
+      "testedKinds": {
+        "projects": [
+          "GET"
+        ],
+        "memories": [
+          "GET",
+          "POST",
+          "DELETE"
+        ]
+      },
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/ai-workspace/session/route.ts",
@@ -205,18 +222,33 @@
     },
     {
       "path": "app/api/crm/customers/export/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "PASS_EXISTING_REGRESSION"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS_EXISTING_REGRESSION",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/crm/documents/[id]/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "PASS"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/crm/leads/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "PASS_EXISTING_REGRESSION"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS_EXISTING_REGRESSION",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/crm/opportunities/[id]/stage/route.ts",
@@ -420,8 +452,13 @@
     },
     {
       "path": "app/api/privacy/export/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/privacy/requests/route.ts",
@@ -435,58 +472,115 @@
     },
     {
       "path": "app/api/projects/analyze/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/projects/approval-advice/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/projects/approval-discussion/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/projects/completion/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "GET",
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/projects/connections/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/projects/control/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/projects/dispatch/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/projects/files/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/projects/live/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/projects/roadmap/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "GET",
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/projects/run/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1
     },
     {
       "path": "app/api/runtime/execute-validation/route.ts",
@@ -508,5 +602,6 @@
       "liveAuthenticatedHttp": "NOT_RUN",
       "isolatedHandler": "NOT_RUN"
     }
-  ]
+  ],
+  "testedSha": "2724e6c99a86fb026b212952665f071361d7bd88"
 }

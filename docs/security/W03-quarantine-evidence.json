@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-04",
+  "stagingRef": "viqjdgohtxqkrdgwtull",
+  "runId": 41831048886,
+  "results": [
+    {
+      "users": 19,
+      "banned": 19,
+      "memberships": 20,
+      "inactive": 20,
+      "active_grants": 0,
+      "cancelled_projects": 3,
+      "fresh_invalid_memory_associations": 0,
+      "all_w03_users": 152,
+      "all_w03_banned": 152
+    }
+  ],
+  "auditParentsRetained": true
+}

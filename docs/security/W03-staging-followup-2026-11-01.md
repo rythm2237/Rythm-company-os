@@ -1,3 +1,5 @@
+> Historical snapshot. Superseded for current execution status by [W03 live execution report](W03-live-execution-report.md).
+
 # W03 staging follow-up
 
 Owner explicitly authorized temporary project pause/restore. Paused AI Roadmap (dqpdyschjpbdhhotmojs), restored allowlisted staging (viqjdgohtxqkrdgwtull). Staging reached ACTIVE_HEALTHY after COMING_UP; early SQL calls returned not-accessible/ECONNREFUSED. Executed scripts/w03-staging-read-matrix.sql through execute_sql on staging: 24 result rows, all ZERO_ROWS_INACTIVE_CONTEXT, zero FAIL_VISIBLE. Transaction rolled back. Three exact synthetic W02 owners, authenticated database role and simulated JWT subject claims; not live HTTP tokens. No account unbanned, no membership reactivated. No positive active-member controls. Empty tables can also yield zero: this is limited evidence, not proof of isolation.

@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-04",
+  "stagingRef": "viqjdgohtxqkrdgwtull",
+  "runId": 41831048886,
+  "attempt": 1,
+  "transaction": "ROLLBACK",
+  "claims": "SQL assigned authenticated subjects, supplement to real token HTTP",
+  "cases": 259,
+  "results": [
+    {
+      "operation": "finance grant INSERT",
+      "cases": 37,
+      "affected": "0"
+    },
+    {
+      "operation": "membership DELETE",
+      "cases": 37,
+      "affected": "0"
+    },
+    {
+      "operation": "membership INSERT",
+      "cases": 37,
+      "affected": "0"
+    },
+    {
+      "operation": "membership UPDATE",
+      "cases": 37,
+      "affected": "0"
+    },
+    {
+      "operation": "organization DELETE",
+      "cases": 37,
+      "affected": "0"
+    },
+    {
+      "operation": "organization READ",
+      "cases": 37,
+      "affected": "0"
+    },
+    {
+      "operation": "organization UPDATE",
+      "cases": 37,
+      "affected": "0"
+    }
+  ]
+}
