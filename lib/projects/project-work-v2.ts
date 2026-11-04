@@ -17,14 +17,23 @@ const cleanJson=(value:string)=>{
   return start>=0&&end>start?stripped.slice(start,end+1).replace(/,\s*([}\]])/g,"$1"):stripped;
 };
 
+class ProjectTaskTenantBoundaryError extends Error {
+  constructor(){super("Project task tenant relationship is invalid.");}
+}
+
 async function executeStructuredTask(supabase:SupabaseClient,task:any){
-  const [project,agent,context,decisions]=await Promise.all([
-    supabase.from("projects").select("id,name,description,objective,scope,success_criteria,constraints,autonomy_mode,lifecycle_state,next_required_action").eq("id",task.project_id).single(),
-    task.assigned_agent_id?supabase.from("agents").select("id,agent_code,name,display_name,role_title,purpose,authority_level,risk_ceiling,permissions").eq("id",task.assigned_agent_id).maybeSingle():Promise.resolve({data:null}),
-    supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("confidentiality","operational").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
-    supabase.from("project_decision_memory").select("decision,rationale,constraints,outcome,created_at").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
+  const [project,agent,execution,action]=await Promise.all([
+    supabase.from("projects").select("id,name,description,objective,scope,success_criteria,constraints,autonomy_mode,lifecycle_state,next_required_action").eq("id",task.project_id).eq("organization_id",task.organization_id).single(),
+    task.assigned_agent_id?supabase.from("agents").select("id,agent_code,name,display_name,role_title,purpose,authority_level,risk_ceiling,permissions").eq("id",task.assigned_agent_id).eq("organization_id",task.organization_id).maybeSingle():Promise.resolve({data:null,error:null}),
+    supabase.from("project_executions").select("id").eq("id",task.execution_id).eq("project_id",task.project_id).eq("organization_id",task.organization_id).maybeSingle(),
+    task.action_item_id?supabase.from("action_items").select("id,project_id").eq("id",task.action_item_id).eq("organization_id",task.organization_id).maybeSingle():Promise.resolve({data:null,error:null}),
   ]);
-  if(!project.data)throw new Error("Project context unavailable.");
+  if(project.error||!project.data||execution.error||!execution.data||agent.error||(task.assigned_agent_id&&!agent.data)||action.error||(task.action_item_id&&(!action.data||(action.data.project_id&&action.data.project_id!==task.project_id))))throw new ProjectTaskTenantBoundaryError();
+  const [context,decisions]=await Promise.all([
+    supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("organization_id",task.organization_id).eq("confidentiality","operational").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
+    supabase.from("project_decision_memory").select("decision,rationale,constraints,outcome,created_at").eq("organization_id",task.organization_id).eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
+  ]);
+  if(context.error||decisions.error)throw new Error("Project context unavailable.");
   const customerContext=await loadCrmAgentOperationalContext(supabase,{organizationId:task.organization_id,projectId:task.project_id,executionId:task.execution_id,agentId:task.assigned_agent_id||null});
   const config=getRuntimeConfig();
   if(!config.openAIConfigured||!config.dryRunModel)throw new Error("Project intelligence provider is unavailable.");
@@ -93,7 +102,7 @@ Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
         title:text(p.title,task.title),summary:text(p.executive_summary,"Executive decision required."),risk_level:text(p.risk_level,"medium"),
         requested_by_agent_id:task.assigned_agent_id,status:"pending",conditions:["Approval authorizes only the scoped proposal; downstream high-risk actions remain governed by the Execution Gateway."],
       }).select("id").single();
-      await supabase.from("project_proposals").update({approval_request_id:approval.data?.id??null}).eq("id",proposal.data.id);
+      await supabase.from("project_proposals").update({approval_request_id:approval.data?.id??null}).eq("id",proposal.data.id).eq("organization_id",task.organization_id).eq("project_id",task.project_id);
     }
   }
 
@@ -121,9 +130,9 @@ Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
     verification_status:verification,
     next_required_action:nextRequiredAction,completion_evidence:evidence,
     completed_at:completedAt,lease_owner:null,lease_expires_at:null,updated_at:completedAt,
-  }).eq("id",task.id).eq("lease_owner",task.lease_owner);
+  }).eq("id",task.id).eq("organization_id",task.organization_id).eq("project_id",task.project_id).eq("lease_owner",task.lease_owner);
   if(taskUpdate.error)throw new Error(taskUpdate.error.message);
-  if(task.action_item_id)await supabase.from("action_items").update({status:"completed",completed_at:completedAt}).eq("id",task.action_item_id).in("status",["open","in_progress","blocked"]);
+  if(task.action_item_id)await supabase.from("action_items").update({status:"completed",completed_at:completedAt}).eq("id",task.action_item_id).eq("organization_id",task.organization_id).in("status",["open","in_progress","blocked"]);
 
   for(const item of evidence){
     const dimension=text(item.lifecycle_dimension);
@@ -166,13 +175,18 @@ export async function dispatchProjectWorkV2(supabase:SupabaseClient,workerId=`pr
       await executeStructuredTask(supabase,task);
       results.push({id:task.id,status:"completed"});
     }catch(error){
-      const exhausted=Number(task.attempt_count??1)>=Number(task.max_attempts??5);
+      const boundaryFailure=error instanceof ProjectTaskTenantBoundaryError;
+      const exhausted=boundaryFailure||Number(task.attempt_count??1)>=Number(task.max_attempts??5);
       const delay=Math.min(1800,30*(2**Math.min(Number(task.attempt_count??1),6)));
       await supabase.from("project_task_runs").update({
-        status:exhausted?"failed":"retrying",error_class:exhausted?"retry_exhausted":"transient_or_unknown",
+        status:exhausted?"failed":"retrying",error_class:boundaryFailure?"tenant_boundary":exhausted?"retry_exhausted":"transient_or_unknown",
         error_message:error instanceof Error?error.message:"Project task execution failed.",lease_owner:null,lease_expires_at:null,
         next_attempt_at:exhausted?null:new Date(Date.now()+delay*1000).toISOString(),updated_at:new Date().toISOString(),
-      }).eq("id",task.id);
+      }).eq("id",task.id).eq("organization_id",task.organization_id).eq("project_id",task.project_id).eq("lease_owner",task.lease_owner);
+      if(boundaryFailure){
+        results.push({id:task.id,status:"failed",error:"Project task tenant relationship is invalid."});
+        continue;
+      }
       await supabase.from("project_activity_events").insert({
         organization_id:task.organization_id,project_id:task.project_id,execution_id:task.execution_id,agent_id:task.assigned_agent_id,
         event_type:exhausted?"task.failed":"task.retrying",headline:exhausted?`Task failed: ${task.title}`:`Task retry scheduled: ${task.title}`,

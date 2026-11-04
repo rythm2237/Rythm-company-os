@@ -37,6 +37,8 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
   unwrap(await admin.from('meeting_agent_sessions').insert(meetingSession),'meeting session seed');
   unwrap(await admin.from('meeting_legal_reviews').insert({organization_id:org.id,meeting_id:meeting.id,session_id:meetingSession.id,status:'pending',executive_note:'W03-LEGAL-'+org.key}),'legal review seed');
   fixtures.set(org.key,{personal,wallet,conversation,file,text,integration,execution,meeting,meetingSession});
+  const positiveProposal=await http(actor,'/api/executions',json({integrationId:integration.id,toolId:'internal.validation',capabilityKey:'validation.record.create',projectId:org.projectId,input:{},target:'w03-own-positive'}));
+  record('execution-proposal','own-context-positive',actor,org.key,positiveProposal.status===200,'status-'+positiveProposal.status);
   for(const path of ['/api/meetings/continue-detached?meeting='+meeting.id,'/api/meetings/legal-triage?sessionId='+meetingSession.id,'/api/meetings/legal-review?sessionId='+meetingSession.id,'/api/executions']){
    const r=await http(actor,path);record('extended-http','owner-positive',actor,org.key,r.status===200,path.split('?')[0]+' status-'+r.status);
   }
@@ -96,13 +98,25 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
     const ownF=fixtures.get(home.companyKey);
     const substituted=await http(u.key,'/api/executions',json({integrationId:ownF.integration.id,toolId:'internal.validation',capabilityKey:'validation.record.create',projectId:target.projectId,input:{},target:'w03-synthetic'}));
     const rows=unwrap(await admin.from('tool_execution_requests').select('id').eq('organization_id',org.id).eq('project_id',target.projectId),'execution foreign project poststate');
-    test('execution-proposal','foreign-project-reference',u.key,target.key,rows.length===0,'status-'+substituted.status);
+    const substitutedData=await substituted.json();
+    test('execution-proposal','foreign-project-reference',u.key,target.key,rows.length===0&&substituted.status===400&&substitutedData.error==='Execution context is not available to this company.','status-'+substituted.status);
+    for(const [field,id,column] of [['meetingId',f.meeting.id,'meeting_id'],['sessionId',f.meetingSession.id,'session_id']]){
+     const r=await http(u.key,'/api/executions',json({integrationId:ownF.integration.id,toolId:'internal.validation',capabilityKey:'validation.record.create',[field]:id,input:{}}));const data=await r.json();
+     const persisted=unwrap(await admin.from('tool_execution_requests').select('id').eq('organization_id',org.id).eq(column,id),'foreign execution context poststate');
+     test('execution-proposal','foreign-'+field,u.key,target.key,r.status===400&&data.error==='Execution context is not available to this company.'&&persisted.length===0,'status-'+r.status);
+    }
     const rowsToTry=[
      ['project_decision_memory',{id:randomUUID(),organization_id:org.id,project_id:target.projectId,decision:'W03-forged-reference',decision_maker_type:'test'}],
      ['project_task_runs',{id:randomUUID(),organization_id:org.id,project_id:target.projectId,execution_id:seeds.get(org.key).find(r=>r[0]==='project_executions')[1].id,task_key:'W03-'+randomUUID(),title:'W03-forged-reference',idempotency_key:randomUUID(),status:'cancelled'}],
      ['project_documents',{id:randomUUID(),organization_id:org.id,project_id:target.projectId,category:'other',file_name:'W03-forged-reference.txt',storage_path:org.id+'/'+randomUUID()+'.txt'}],
     ];
     for(const [table,row] of rowsToTry){const r=await c.from(table).insert(row).select('id');test('cross-parent-reference',table,u.key,target.key,!!r.error&&['42501','23503','P0001'].includes(r.error.code),r.error?.code??'INSERT-ACCEPTED');}
+    for(const table of ['project_decision_memory','project_task_runs']){
+     const ownRow=seeds.get(org.key).find(r=>r[0]===table)[1];
+     const changed=await c.from(table).update({project_id:target.projectId}).eq('id',ownRow.id).select('id');
+     const after=unwrap(await admin.from(table).select('project_id').eq('id',ownRow.id).single(),'cross parent update poststate');
+     test('cross-parent-update',table,u.key,target.key,changed.error?.code==='23503'&&after.project_id===org.projectId,changed.error?.code??'UPDATE-ACCEPTED');
+    }
    }
   }
   const ledger=await http(u.key,'/api/executions');const ledgerText=await ledger.text();
