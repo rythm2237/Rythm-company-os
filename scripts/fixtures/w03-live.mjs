@@ -57,6 +57,32 @@ try{
   for(const [table,row] of rows){const own=await c.from(table).select('id').eq('id',row.id);record(table,'owner-positive-read',org.key,org.key,!own.error&&own.data?.length===1);}
   const downloaded=await http(org.key+'_owner','/api/crm/documents/'+doc.id);record('files','own-download',org.key,org.key,downloaded.status===200&&(await downloaded.text())==='W03-FILE-'+org.key);
  }
+ phase='workspace-memory';
+ const workspaceSeeds=new Map();
+ for(const org of b.companies){
+  const actor=org.key+'_owner';
+  const projects=await http(actor,'/api/ai-workspace/resources/projects');
+  record('workspace-memory','projects-positive',actor,org.key,projects.status===200,'status-'+projects.status);
+  const project=(await projects.json()).items[0];assert.ok(project?.id);
+  const created=await http(actor,'/api/ai-workspace/resources/memories',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({projectId:project.id,title:'W03-MEMORY-'+org.key,content:'synthetic memory'})});
+  record('workspace-memory','own-create',actor,org.key,created.status===201,'status-'+created.status);
+  const memory=(await created.json()).item;assert.ok(memory?.id);workspaceSeeds.set(org.key,{projectId:project.id,memoryId:memory.id});
+ }
+ for(const u of b.users){
+  const listed=await http(u.key,'/api/ai-workspace/resources/memories');
+  record('workspace-memory','own-list',u.key,'personal',listed.status===200,'status-'+listed.status);
+  const ownData=await listed.text();
+  for(const org of b.companies){
+   if(u.key===org.key+'_owner')continue;
+   const seed=workspaceSeeds.get(org.key);
+   record('workspace-memory','foreign-read',u.key,org.key,!ownData.includes('W03-MEMORY-'+org.key));
+   const forged=await http(u.key,'/api/ai-workspace/resources/memories',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({projectId:seed.projectId,title:'W03-FORGED',content:'synthetic foreign project reference'})});
+   record('workspace-memory','foreign-project-insert',u.key,org.key,forged.status===404,'status-'+forged.status);
+   const removed=await http(u.key,'/api/ai-workspace/resources/memories?id='+seed.memoryId,{method:'DELETE'});
+   const remaining=unwrap(await admin.from('aiw_memories').select('id').eq('id',seed.memoryId).single(),'workspace memory sentinel');
+   record('workspace-memory','foreign-delete-noop',u.key,org.key,removed.status===200&&remaining.id===seed.memoryId);
+  }
+ }
  phase='negative-matrix';
  for(const u of b.users){
   const {client:c}=clients.get(u.key);console.log(JSON.stringify({actor:u.key,checksCompleted:checks.length}));
