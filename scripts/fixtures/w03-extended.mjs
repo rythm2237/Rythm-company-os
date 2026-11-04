@@ -4,6 +4,8 @@ import {randomUUID,createHash} from 'node:crypto';
 // Chat uses an explicitly synthetic, zero-cost settled replay; no model is called.
 export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds}){
  const fixtures=new Map();
+ const provider=unwrap(await admin.from('integration_providers').select('provider_key').eq('provider_key','internal').maybeSingle(),'internal provider lookup');
+ if(!provider)unwrap(await admin.from('integration_providers').insert({provider_key:'internal',display_name:'RYTHM Internal Control',category:'internal_control',enabled:false,kill_switch:true,supports_token:false}),'disabled internal reference seed');
  const test=(...args)=>{try{record(...args);}catch{/* collect all independent failures */}};
  const json=(body)=>({method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
  for(const org of b.companies){
@@ -31,6 +33,7 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
   unwrap(await admin.from('meetings').insert(meeting),'meeting seed');
   const meetingSession={id:randomUUID(),organization_id:org.id,meeting_id:meeting.id,project_id:org.projectId,decision_question:'Synthetic W03 boundary?',status:'completed',budget_cap_usd:0,synthesis:'W03-SYNTHESIS-'+org.key};
   unwrap(await admin.from('meeting_agent_sessions').insert(meetingSession),'meeting session seed');
+  unwrap(await admin.from('meeting_legal_reviews').insert({organization_id:org.id,meeting_id:meeting.id,session_id:meetingSession.id,status:'pending',executive_note:'W03-LEGAL-'+org.key}),'legal review seed');
   fixtures.set(org.key,{personal,wallet,conversation,file,text,integration,execution,meeting,meetingSession});
   for(const path of ['/api/meetings/continue-detached?meeting='+meeting.id,'/api/meetings/legal-triage?sessionId='+meetingSession.id,'/api/meetings/legal-review?sessionId='+meetingSession.id,'/api/executions']){
    const r=await http(actor,path);record('extended-http','owner-positive',actor,org.key,r.status===200,path.split('?')[0]+' status-'+r.status);
@@ -80,9 +83,11 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
     ['/api/meetings/close',json({sessionId:f.meetingSession.id}),[403,404]],
     ['/api/meetings/ceo-contribute',json({sessionId:f.meetingSession.id,content:'synthetic contribution'}),[403,409]],
     ['/api/meetings/legal-triage?sessionId='+f.meetingSession.id,{},[403,404]],
-    ['/api/meetings/legal-review?sessionId='+f.meetingSession.id,{},[403,404]],
+    
     ['/api/privacy/requests',json({requestType:'access',scope:'organization',organizationId:target.id}),[403]],
    ]){const r=await http(u.key,path,options);test('extended-http','foreign-object',u.key,target.key,statuses.includes(r.status),path.split('?')[0]+' status-'+r.status);}
+   const legal=await http(u.key,'/api/meetings/legal-review?sessionId='+f.meetingSession.id);const legalData=await legal.json();
+   test('extended-http','foreign-legal-review',u.key,target.key,legal.status===403||legal.status===200&&legalData.review===null,'status-'+legal.status);
    const proposal=await http(u.key,'/api/executions',json({integrationId:f.integration.id,toolId:'internal.validation',capabilityKey:'validation.record.create',input:{}}));
    const pd=await proposal.json();test('execution-proposal','foreign-integration',u.key,target.key,proposal.status===403||proposal.status===400&&pd.error==='Integration is not available to this company.','status-'+proposal.status);
    if(u.key.endsWith('_owner')){
