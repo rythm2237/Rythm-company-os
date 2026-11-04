@@ -1,5 +1,6 @@
 import {randomUUID,createHash} from 'node:crypto';
 import {workerBoundaryMatrix} from './w03-worker.mjs';
+import {governedMeetingMatrix} from './w03-governed-meetings.mjs';
 
 // Real staging Auth/REST/Storage and the actual local Next HTTP handlers.
 // Chat uses an explicitly synthetic, zero-cost settled replay; no model is called.
@@ -140,6 +141,7 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
   test('execution-ledger','role-and-sentinels',u.key,home.companyKey,u.key.endsWith('_owner')?ledger.status===200&&b.companies.filter(o=>o.key!==org.key).every(o=>!ledgerText.includes(fixtures.get(o.key).execution.correlation_id)):ledger.status===403);
  }));
  }
+ await governedMeetingMatrix({b,clients,fixtures,record,unwrap});
  // File dedup digests must remain private to each personal workspace.
  for(const [key,f] of fixtures){const row=unwrap(await admin.from('aiw_files').select('sha256').eq('id',f.file.id).single(),'file digest');test('workspace-files','digest-control',key,key,row.sha256===createHash('sha256').update(f.text).digest('hex'));}
 }
