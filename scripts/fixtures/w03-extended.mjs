@@ -1,6 +1,7 @@
 import {randomUUID,createHash} from 'node:crypto';
 import {workerBoundaryMatrix} from './w03-worker.mjs';
 import {governedMeetingMatrix} from './w03-governed-meetings.mjs';
+import {agentFileMatrix} from './w03-agent-files.mjs';
 
 // Real staging Auth/REST/Storage and the actual local Next HTTP handlers.
 // Chat uses an explicitly synthetic, zero-cost settled replay; no model is called.
@@ -132,10 +133,11 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
      const foreignCustomer=seeds.get(target.key).find(r=>r[0]==='crm_accounts')[1].id;
      const inserted={...ownRow,id:randomUUID(),customer_id:foreignCustomer};
      if(table==='project_contracts')inserted.contract_number='W03-forged-'+randomUUID();else inserted.internal_reference='W03-forged-'+randomUUID();
-     const r=await c.from(table).insert(inserted).select('id');test('crm-cross-parent',table+'-INSERT',u.key,target.key,r.error?.code==='23503',r.error?.code??'INSERT-ACCEPTED');
+     const rejected=e=>e?.code==='23503'||table==='finance_invoices'&&e?.code==='P0001'&&e.message==='Customer unavailable';
+     const r=await c.from(table).insert(inserted).select('id');test('crm-cross-parent',table+'-INSERT',u.key,target.key,rejected(r.error),r.error?r.error.code+':'+r.error.message:'INSERT-ACCEPTED');
      const changed=await c.from(table).update({customer_id:foreignCustomer}).eq('id',ownRow.id).select('id');
      const remaining=unwrap(await admin.from(table).select('customer_id').eq('id',ownRow.id).single(),'CRM parent poststate');
-     test('crm-cross-parent',table+'-UPDATE',u.key,target.key,changed.error?.code==='23503'&&remaining.customer_id===ownRow.customer_id,changed.error?.code??'UPDATE-ACCEPTED');
+     test('crm-cross-parent',table+'-UPDATE',u.key,target.key,rejected(changed.error)&&remaining.customer_id===ownRow.customer_id,changed.error?changed.error.code+':'+changed.error.message:'UPDATE-ACCEPTED');
     }
     for(const table of ['project_decision_memory','project_task_runs']){
      const ownRow=seeds.get(org.key).find(r=>r[0]===table)[1];
@@ -150,6 +152,7 @@ export async function extendedMatrix({b,clients,admin,http,record,unwrap,seeds})
  }));
  }
  await governedMeetingMatrix({b,clients,fixtures,record,unwrap});
+ await agentFileMatrix({b,clients,admin,http,record,unwrap,seeds,agentFixtures});
  // File dedup digests must remain private to each personal workspace.
  for(const [key,f] of fixtures){const row=unwrap(await admin.from('aiw_files').select('sha256').eq('id',f.file.id).single(),'file digest');test('workspace-files','digest-control',key,key,row.sha256===createHash('sha256').update(f.text).digest('hex'));}
 }

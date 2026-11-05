@@ -23,5 +23,20 @@ try{
  for(const values of ["'pb','a','ea','aa','ia'","'pa','a','eb','aa','ia'","'pa','a','ea','ab','ia'","'pa','a','ea','aa','ib'"])await reject("insert into project_task_runs values('foreign',"+values+')');
  await db.exec("delete from agents where id='aa';delete from action_items where id='ia';");
  const row=(await db.query("select * from project_task_runs where id='wa'")).rows[0];assert.equal(row.organization_id,'a');assert.equal(row.assigned_agent_id,null);assert.equal(row.action_item_id,null);
- assert.equal(denied,12);console.log('PASS W03 real Postgres migration: 12 cross-tenant INSERT/UPDATE violations denied; own references pass; nullable parent deletion preserves organization.');
+ assert.equal(denied,12);
+ await db.exec(`create table agent_attachments(id text primary key,organization_id text not null,agent_id text not null);
+ create table agent_memories(id text primary key,organization_id text not null,agent_id text not null,source_attachment_id text);
+ insert into agents values('ac','a');`);
+ await db.exec(readFileSync('supabase/migrations/20261104192628_w03_agent_memory_attachment_tenant_relations.sql','utf8'));
+ await db.exec("insert into agent_attachments values('fa','a','ac'),('fb','b','ab');insert into agent_memories values('ma2','a','ac','fa');");
+ await reject("insert into agent_attachments values('forged','a','ab')");
+ await reject("update agent_attachments set agent_id='ab' where id='fa'");
+ await reject("insert into agent_memories values('forged','a','ab',null)");
+ await reject("update agent_memories set agent_id='ab' where id='ma2'");
+ await reject("insert into agent_memories values('forged','a','ac','fb')");
+ await reject("update agent_memories set source_attachment_id='fb' where id='ma2'");
+ await db.exec("delete from agent_attachments where id='fa'");
+ const memory=(await db.query("select * from agent_memories where id='ma2'")).rows[0];assert.equal(memory.source_attachment_id,null);assert.equal(memory.organization_id,'a');
+ await db.exec("delete from agents where id='ac'");assert.equal((await db.query("select count(*)::int as n from agent_memories where id='ma2'")).rows[0].n,0);
+ assert.equal(denied,18);console.log('PASS W03 real Postgres migrations: 18 cross-tenant INSERT/UPDATE violations denied; own references pass; nullable parent deletion preserves organization; agent deletion cascades correctly.');
 }finally{await db.close();}
