@@ -1,7 +1,7 @@
 {
   "baseline": "995888ae6f7077f70527bbc95f74efd584115955",
   "status": "EXECUTED_HIGH_RISK_SUBSET",
-  "note": "16 of 101 route files have listed real authenticated HTTP cases. Only listed methods/parameters are verified; 85 route files remain NOT_RUN. Not published Vercel preview parity or full-inventory acceptance.",
+  "note": "29 of 101 route files have listed real authenticated HTTP cases. Only listed methods and parameters are verified; four governed meeting POST handlers additionally use real staging Auth/RLS and in-memory runtime/entitlement/provider adapters. Unlisted paths remain NOT_RUN. Not full-inventory or published preview certification.",
   "routes": [
     {
       "path": "app/api/2nya-nailart/admin/gallery/route.ts",
@@ -120,8 +120,9 @@
     },
     {
       "path": "app/api/ai-workspace/chat/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332
     },
     {
       "path": "app/api/ai-workspace/company/invite/route.ts",
@@ -130,8 +131,9 @@
     },
     {
       "path": "app/api/ai-workspace/files/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332
     },
     {
       "path": "app/api/ai-workspace/guest/activate/route.ts",
@@ -167,8 +169,9 @@
     },
     {
       "path": "app/api/ai-workspace/session/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332
     },
     {
       "path": "app/api/analytics/public-events/route.ts",
@@ -212,8 +215,9 @@
     },
     {
       "path": "app/api/company-logo/[id]/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332
     },
     {
       "path": "app/api/consumer/withdrawal/route.ts",
@@ -257,13 +261,15 @@
     },
     {
       "path": "app/api/executions/[id]/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332
     },
     {
       "path": "app/api/executions/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332
     },
     {
       "path": "app/api/health/route.ts",
@@ -417,38 +423,47 @@
     },
     {
       "path": "app/api/meetings/ceo-contribute/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332
     },
     {
       "path": "app/api/meetings/close/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332
     },
     {
       "path": "app/api/meetings/continue-detached/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332
     },
     {
       "path": "app/api/meetings/deliberate/route.ts",
       "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_MOCK_RUNTIME_PROVIDER",
+      "isolatedEvidenceRun": 42100571332
     },
     {
       "path": "app/api/meetings/legal-review/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_MOCK_RUNTIME_PROVIDER",
+      "liveEvidenceRun": 42100571332,
+      "isolatedEvidenceRun": 42100571332
     },
     {
       "path": "app/api/meetings/legal-triage/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_MOCK_RUNTIME_PROVIDER",
+      "liveEvidenceRun": 42100571332,
+      "isolatedEvidenceRun": 42100571332
     },
     {
       "path": "app/api/meetings/summarize/route.ts",
       "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_MOCK_RUNTIME_PROVIDER",
+      "isolatedEvidenceRun": 42100571332
     },
     {
       "path": "app/api/privacy/export/route.ts",
@@ -462,13 +477,15 @@
     },
     {
       "path": "app/api/privacy/requests/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332
     },
     {
       "path": "app/api/project-pulse/route.ts",
-      "liveAuthenticatedHttp": "NOT_RUN",
-      "isolatedHandler": "NOT_RUN"
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332
     },
     {
       "path": "app/api/projects/analyze/route.ts",
@@ -603,5 +620,10 @@
       "isolatedHandler": "NOT_RUN"
     }
   ],
-  "testedSha": "2724e6c99a86fb026b212952665f071361d7bd88"
+  "testedSha": "2724e6c99a86fb026b212952665f071361d7bd88",
+  "counts": {
+    "liveHttpRouteFiles": 29,
+    "routeFiles": 101,
+    "noLiveHttpRouteFiles": 72
+  }
 }

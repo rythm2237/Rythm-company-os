@@ -1,5 +1,7 @@
 # W03 live tenant isolation evidence
 
+> Historical report. Superseded by [2026-11-05 validation report](W03-2026-11-05-validation-report.md), which includes additional confirmed fixes, real-token file/agent/ledger tests and final replay evidence.
+
 Date: 2026-11-04. This record supersedes the execution gaps in `W03-2026-11-01.md`; historical reports remain historical evidence. This is a finite security test matrix, not release authorization or proof of every possible route/input combination.
 
 ## Baseline and execution binding

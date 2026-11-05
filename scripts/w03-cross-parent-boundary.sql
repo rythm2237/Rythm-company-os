@@ -50,7 +50,7 @@ begin
    execute 'reset role';
   end loop;
  end loop;
- if (select count(*) from w03_parent_cases)<>60 or exists(select 1 from w03_parent_cases where not denied) then raise exception 'W03 parent matrix failed or incomplete';end if;
+ if (select count(*) from w03_parent_cases)<>60 or exists(select 1 from w03_parent_cases pc where not pc.denied) then raise exception 'W03 parent matrix failed or incomplete';end if;
 end $$;
 select surface,operation,count(*) as executed,bool_and(denied) as passed from w03_parent_cases group by surface,operation order by surface,operation;
 rollback;

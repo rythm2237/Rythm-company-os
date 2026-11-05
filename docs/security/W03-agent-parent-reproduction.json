@@ -1,0 +1,16 @@
+{
+  "environment": "viqjdgohtxqkrdgwtull staging only",
+  "fixtureNamespace": "41896185001-1",
+  "authentication": "SQL authenticated role and request.jwt.claims bound to the synthetic company A owner; all referenced objects were disposable W03 fixtures",
+  "baseline": "before 20261104192628_w03_agent_memory_attachment_tenant_relations.sql",
+  "probes": [
+    {"surface":"agent_memories","mutation":"INSERT organization_id=A, agent_id=B_agent, created_by=A_owner","observed":"INSERT-ACCEPTED","transaction":"ROLLBACK"},
+    {"surface":"agent_attachments","mutation":"INSERT organization_id=A, agent_id=B_agent, uploaded_by=A_owner, size_bytes=0, synthetic storage_path","observed":"INSERT-ACCEPTED","transaction":"ROLLBACK; metadata only, no bytes uploaded"},
+    {"surface":"agent_memories","mutation":"INSERT organization_id=A, agent_id=A_agent, source_attachment_id=B_attachment, created_by=A_owner","observed":"INSERT-ACCEPTED","transaction":"ROLLBACK"}
+  ],
+  "fixturePreparation": "Use the same synthetic agent, attachment and memory shapes in scripts/w03-agent-memory-matrix.sql. The canonical associate level reference is inserted only inside the rollback-only probe when absent. No production tables, real customers, provider calls, messages or charges were involved.",
+  "passingRegression": {
+    "stagingSQL": "scripts/w03-agent-memory-matrix.sql: 372 passing cases, including 36 authenticated cross-parent INSERT/UPDATE denials; saved in W03-run30-sql-evidence.json",
+    "localPostgres": "node scripts/validate-w03-project-relationships.mjs: actual migration SQL; 18 total cross-parent INSERT/UPDATE denials; successful own-parent and nullable deletion controls"
+  }
+}
