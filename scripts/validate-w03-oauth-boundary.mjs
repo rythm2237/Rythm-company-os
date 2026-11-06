@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {createRequire} from 'node:module';
-import {generateKeyPairSync,createHmac} from 'node:crypto';
+import {generateKeyPairSync,createHmac,randomUUID} from 'node:crypto';
 import {writeFileSync,mkdirSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+
+export async function oauthBoundaryMatrix(live=null){
 
 // Real connect/callback handlers and real signing/cookie verification. Only auth,
 // DB and provider I/O are replaced. This is isolated coverage, not live HTTP.
@@ -23,8 +26,12 @@ for(const prefix of ['GOOGLE_WORKSPACE','GOOGLE','MICROSOFT_365','BING_WEBMASTER
 process.env.GITHUB_APP_ID='123';process.env.GITHUB_APP_SLUG='w03-test';
 process.env.GITHUB_APP_PRIVATE_KEY=generateKeyPairSync('rsa',{modulusLength:2048,privateKeyEncoding:{type:'pkcs8',format:'pem'},publicKeyEncoding:{type:'spki',format:'pem'}}).privateKey;
 process.env.VERCEL_INTEGRATION_SLUG='w03-test';process.env.CLOUDFLARE_OAUTH_SCOPES='account:read';
-globalThis.fetch=async()=>{state.providerCalls++;throw Error('W03_PROVIDER_INTERCEPTED');};
+globalThis.fetch=async(input,init)=>{
+ if(live&&new URL(typeof input==='string'?input:input.url??input.href).hostname==='viqjdgohtxqkrdgwtull.supabase.co')return originalFetch(input,init);
+ state.providerCalls++;throw Error('W03_PROVIDER_INTERCEPTED');
+};
 const checks=[];
+const liveIntegrationIds=[];
 async function compile(path){
  const replacements={
   'server-only':'export {};',
@@ -76,9 +83,60 @@ try{
   if(slug!=='github')assert.equal(state.providerCalls,1,slug+' own callback must reach intercepted token endpoint');
   assert.ok(state.writes.every(w=>w.filters.some(([k,v])=>k==='organization_id'&&v==='A')||w.mutation.organization_id==='A'),slug+' error bookkeeping must stay in own company');
   checks.push({provider,operation:'callback-own-provider-intercept',ok:true});
+  if(live){
+   const {b,clients,admin,record,unwrap}=live;
+   const catalog=unwrap(await admin.from('integration_providers').select('provider_key').eq('provider_key',provider).maybeSingle(),'OAuth catalog');
+   if(!catalog)unwrap(await admin.from('integration_providers').insert({provider_key:provider,display_name:'W03 synthetic '+provider,category:'test',supports_oauth:true,supports_token:false,enabled:false}),'OAuth disabled catalog fixture');
+   const integrations=new Map();
+   for(const company of b.companies){
+    const row={id:randomUUID(),organization_id:company.id,provider_key:provider,display_name:slug==='google-workspace'?'Google Workspace':'W03 OAuth '+provider,connected_by_user_id:clients.get(company.key+'_owner').user.id,auth_type:'oauth',enabled:false,status:'disconnected'};
+    unwrap(await admin.from('organization_integrations').insert(row),'OAuth tenant fixture');liveIntegrationIds.push(row.id);integrations.set(company.key,row);
+   }
+   state.db=admin;
+   for(const target of b.companies){
+    const targetOwner=clients.get(target.key+'_owner');
+    state.context={organizationId:target.id,role:'owner',user:targetOwner.user,supabase:targetOwner.client,entitlement:{active:true,status:'active',ai_budget_limit:0}};
+    reset();const launch=await start(integrations.get(target.key).id),launchUrl=new URL(launch.headers.get('location'));
+    record('oauth-real-auth-rls','own-connect-positive',target.key+'_owner',provider,launchUrl.hostname!=='localhost'&&state.providerCalls===0,'in-memory-active-zero-budget-entitlement;no-provider');
+    const launchState=launchUrl.searchParams.get('state'),launchCookie=launch.cookies.getAll().map(c=>c.name+'='+encodeURIComponent(c.value)).join('; ');
+    for(const user of b.users){
+     const membership=b.memberships.find(m=>m.userKey===user.key),home=b.companies.find(o=>o.key===membership.companyKey),identity=clients.get(user.key);
+     const actual=unwrap(await identity.client.from('organization_members').select('role,membership_status').eq('organization_id',home.id).eq('user_id',identity.user.id).single(),'OAuth real membership');
+     assert.equal(actual.membership_status,'active');
+     const c={organizationId:home.id,role:actual.role,user:identity.user,supabase:identity.client,entitlement:{active:true,status:'active',ai_budget_limit:0}};
+     await call(c,launchState,launchCookie);
+     const own=user.key===target.key+'_owner';
+     record('oauth-real-auth-rls',own?'own-callback-provider-intercept':'foreign-identity-or-role-callback-denied',user.key,target.key+'/'+provider,own?(slug==='github'||state.providerCalls===1):state.providerCalls===0,'actual-token-and-RLS;context-adapter;provider-intercepted');
+    }
+    for(const user of b.users.filter(u=>u.key!==target.key+'_owner')){
+     const membership=b.memberships.find(m=>m.userKey===user.key),home=b.companies.find(o=>o.key===membership.companyKey),identity=clients.get(user.key);
+     state.context={organizationId:home.id,role:membership.dbRole,user:identity.user,supabase:identity.client,entitlement:{active:true,status:'active',ai_budget_limit:0}};
+     reset();const denied=await start(integrations.get(target.key).id),url=new URL(denied.headers.get('location'));
+     const ignored=slug==='google-workspace'&&membership.dbRole==='owner';
+     record('oauth-real-auth-rls',ignored?'foreign-id-ignored-own-connection':'foreign-id-or-role-connect-denied',user.key,target.key+'/'+provider,ignored?url.hostname!=='localhost':url.hostname==='localhost','actual-token-and-RLS;context-adapter;no-provider');
+    }
+   }
+   // Shared identity has different actual roles in A/B; verify each context.
+   const shared=clients.get('shared');
+   for(const company of b.companies.slice(0,2)){
+    unwrap(await shared.client.rpc('set_active_organization',{target_org_id:company.id}),'OAuth shared switch');
+    const member=unwrap(await shared.client.from('organization_members').select('role').eq('organization_id',company.id).eq('user_id',shared.user.id).single(),'OAuth switched role');
+    state.context={organizationId:company.id,role:member.role,user:shared.user,supabase:shared.client,entitlement:{active:true}};
+    reset();const denied=await start(integrations.get(company.key).id);
+    record('oauth-real-auth-rls','shared-role-switch-denied','shared',company.key+'/'+provider,new URL(denied.headers.get('location')).hostname==='localhost'&&state.providerCalls===0,'role-'+member.role);
+   }
+   state.db=db;
+   for(const company of b.companies){
+    const row=unwrap(await admin.from('organization_integrations').select('organization_id,vault_secret_id,account_ref').eq('id',integrations.get(company.key).id).single(),'OAuth poststate');
+    record('oauth-real-auth-rls','no-credential-or-company-reassignment','all',company.key+'/'+provider,row.organization_id===company.id&&row.vault_secret_id===null&&row.account_ref===null,'synthetic-rows-only');
+   }
+  }
  }
  console.log(JSON.stringify({suite:'W03 OAuth actual handlers / synthetic DB and auth',pass:checks.length,fail:0}));
 }finally{
+ if(live&&liveIntegrationIds.length)live.unwrap(await live.admin.from('organization_integrations').update({enabled:false,status:'disconnected'}).in('id',liveIntegrationIds),'disable exact synthetic OAuth connections');
  mkdirSync('.w03-evidence',{recursive:true});writeFileSync('.w03-evidence/oauth-isolated.json',JSON.stringify({scope:'Isolated actual route handlers; synthetic auth/DB; real signing and cookies; provider intercepted before I/O',checks},null,2));
  globalThis.fetch=originalFetch;for(const k of Object.keys(process.env))if(!(k in originalEnv))delete process.env[k];Object.assign(process.env,originalEnv);delete globalThis.w03OAuth;
 }
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)await oauthBoundaryMatrix();

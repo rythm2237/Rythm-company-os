@@ -7,6 +7,12 @@ on:
         description: 'Type W03-STAGING-ONLY to authorize disposable fixture tests'
         required: true
         type: string
+      matrix:
+        description: 'Bounded W03 matrix wave'
+        required: true
+        default: routes
+        type: choice
+        options: [routes, oauth, extended]
 
 permissions:
   contents: read
@@ -70,7 +76,11 @@ jobs:
       - name: Create fresh W03 identities and fixtures
         run: node scripts/fixtures/w03-staging.mjs setup
       - name: Authenticated RLS and HTTP matrix
-        run: node scripts/fixtures/w03-live.mjs --routes-only
+        env:
+          W03_MATRIX: ${{ inputs.matrix }}
+        run: |
+          case "$W03_MATRIX" in routes|oauth|extended) ;; *) exit 1 ;; esac
+          node scripts/fixtures/w03-live.mjs "--${W03_MATRIX}-only"
       - name: Quarantine W03 identities preserving audit history
         if: always()
         run: node scripts/fixtures/w03-staging.mjs quarantine-partial
