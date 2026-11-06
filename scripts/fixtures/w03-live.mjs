@@ -28,6 +28,8 @@ try{
   const c=createClient(url,process.env.W03_STAGING_ANON_KEY,opts);
   const s=unwrap(await c.auth.signInWithPassword({email:u.email,password:process.env.W03_TEST_PASSWORD}),'login');
   assert.ok(s.session?.access_token);clients.set(u.key,{client:c,user:s.user});
+  const membership=b.memberships.find(m=>m.userKey===u.key),home=b.companies.find(o=>o.key===membership.companyKey);
+  unwrap(await c.rpc('set_active_organization',{target_org_id:home.id}),'initialize authenticated actor company');
   const text='base64-'+Buffer.from(JSON.stringify(s.session)).toString('base64url');
   const name='sb-viqjdgohtxqkrdgwtull-auth-token';
   cookies.set(u.key,Array.from({length:Math.ceil(text.length/3000)},(_,i)=>name+'.'+i+'='+text.slice(i*3000,(i+1)*3000)).join('; '));
