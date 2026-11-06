@@ -50,7 +50,7 @@ begin
     raise exception 'authentication required' using errcode = '42501';
   end if;
 
-  if p_scope is null or p_scope !~ '^[a-z0-9:_-]{1,80}
+  if p_scope is null or p_scope !~ '^[a-z0-9:_-]{1,80}$' then
     raise exception 'invalid rate limit scope' using errcode = '22023';
   end if;
   if p_limit is null or p_limit < 1 or p_limit > 1000 then
