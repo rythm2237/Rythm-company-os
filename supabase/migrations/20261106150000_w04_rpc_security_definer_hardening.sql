@@ -90,4 +90,76 @@ begin
 end;
 $w04_rate_limit$;
 
+-- An authenticated org member could pass a privileged agent UUID and receive
+-- confidential/restricted knowledge solely based on that agent's department/role.
+-- Preserve member access to public/internal knowledge. Sensitive chunks require
+-- the authenticated org OWNER or the trusted server service_role, in addition
+-- to existing agent department/role restrictions.
+create or replace function public.search_company_knowledge_for_agent_v1(
+  target_org_id uuid, target_agent_id uuid, query_text text, max_results integer default 8
+)
+returns table (
+  knowledge_id uuid, title text, category text, confidentiality text,
+  chunk_index integer, content text, rank real
+)
+language plpgsql
+security definer
+set search_path = ''
+as $w04_knowledge$
+declare
+  v_agent public.agents%rowtype;
+  v_department text;
+  v_service_role boolean := coalesce(auth.jwt()->>'role','') = 'service_role';
+  v_can_read_sensitive boolean;
+begin
+  if auth.uid() is null and not v_service_role then
+    raise exception 'Authentication required';
+  end if;
+  if not v_service_role and not public.is_org_member(target_org_id) then
+    raise exception 'not_authorized';
+  end if;
+  v_can_read_sensitive := v_service_role or public.is_org_owner(target_org_id);
+
+  select * into v_agent from public.agents
+    where id=target_agent_id and organization_id=target_org_id;
+  if v_agent.id is null or not v_agent.company_knowledge_connected then
+    return;
+  end if;
+  select name into v_department from public.departments
+    where id=v_agent.department_id and organization_id=target_org_id;
+
+  return query
+  select k.id,k.title,k.category,k.confidentiality,c.chunk_index,c.content,
+    case
+      when nullif(trim(coalesce(query_text,'')),'') is null then 0::real
+      else ts_rank(c.search_vector,plainto_tsquery('simple',query_text))
+    end as rank
+  from public.company_knowledge_chunks c
+    join public.company_knowledge k
+      on k.id=c.knowledge_id and k.organization_id=c.organization_id
+  where c.organization_id=target_org_id
+    and k.status='active' and k.ingestion_status='ready'
+    and (nullif(trim(coalesce(query_text,'')),'') is null
+      or c.search_vector @@ plainto_tsquery('simple',query_text))
+    and (
+      k.confidentiality in ('public','internal')
+      or (
+        v_can_read_sensitive
+        and k.confidentiality in ('confidential','restricted')
+        and (
+          (coalesce(array_length(k.allowed_departments,1),0)>0
+            and exists(select 1 from unnest(k.allowed_departments) d
+              where lower(d)=lower(coalesce(v_department,''))))
+          or (coalesce(array_length(k.allowed_role_keywords,1),0)>0
+            and exists(select 1 from unnest(k.allowed_role_keywords) r
+              where lower(v_agent.role_title) like '%'||lower(r)||'%'
+                 or lower(coalesce(v_agent.canonical_role,'')) like '%'||lower(r)||'%'))
+        )
+      )
+    )
+  order by rank desc,c.created_at desc
+  limit greatest(1,least(coalesce(max_results,8),20));
+end;
+$w04_knowledge$;
+
 commit;
