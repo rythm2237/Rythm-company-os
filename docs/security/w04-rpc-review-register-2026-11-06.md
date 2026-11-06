@@ -1,0 +1,95 @@
+# W04 | RPC / SECURITY DEFINER review register (production catalog snapshot)
+
+**Captured:** 2026-11-06; connected Supabase project `Rythm-company-os` (`dezbacyuvsdrlpmmpjht`), **READ ONLY**. GitHub main: `995888ae6f7077f70527bbc95f74efd584115955`. Production deploy: `dpl_GqWEucPScpnLAhyc1BFsv1VBDSLR`. Dedicated proposed branch: `security/w04-rpc-definer-hardening`.
+
+**Scope:** Exactly **52** `authenticated`-callable public-schema SECURITY DEFINER signatures (including **8** anon-callable), from the live `pg_proc` catalog. All 52 are owned by `postgres`. Existing tenant security relies on internal guards because definer code can bypass caller RLS. The table is a per-function catalog/code-path **triage register**, **not** a claim that all 52 passed negative runtime testing.
+
+**Legend:** `STATIC_REVIEW_ONLY` = catalog, ACL, search path and presence of authorization logic inspected; control-flow proof, nested callees and synthetic alternate UUID execution NOT VERIFIED. `PUBLIC_EXCEPTION_REVIEW` = intentionally public booking/contact surface retained but requires human approval and adversarial validation. `FIX_PROPOSED` = migration proposed, **not applied** to production or staging.
+
+| # | Exact RPC signature | Executable as | Detected boundary | search_path (live) | Disposition | Review notes and next negative test |
+|---|---|---|---|---|---|---|
+| 01 | `agent_operational_readiness_v1(uuid)` | authenticated | member | search_path="" | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 02 | `apply_company_template_integration_profile_v1(uuid,uuid,text)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 03 | `approve_agent_position_contract_v1(uuid)` | authenticated | owner | search_path="" | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 04 | `build_company_from_draft(uuid)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Resolves draft, then checks is_org_owner(draft.organization_id), entitlement and buildable state; foreign draft UUID must be denied in staging. |
+| 05 | `clone_agent_v1(uuid)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 06 | `complete_agent_knowledge_provisioning_v1(uuid,text)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 07 | `confirm_company_bootstrap_v1(uuid,text)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 08 | `consume_api_rate_limit(text,integer,integer)` | authenticated | uid/self-or-custom | search_path=public, pg_temp | STATIC_REVIEW_ONLY | Self-scoped by auth.uid; user-controlled rate-limit parameters bounded, but suitability for actual upstream enforcement requires review. |
+| 09 | `create_agent_provisioning_v3(uuid,text,text,text,text,text,text,text,text,text[],uuid,uuid,smallint,text,text,text,jsonb,jsonb,jsonb,jsonb,jsonb)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 10 | `create_agent_v1(uuid,text,text,text,uuid,uuid,smallint,text,text,jsonb,jsonb,jsonb,jsonb,jsonb)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 11 | `create_agent_v2(uuid,text,text,text,text,text,text,uuid,uuid,smallint,text,text,text,jsonb,jsonb,jsonb,jsonb,jsonb)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 12 | `create_agent_work_assignment_v1(uuid,text,text,text,jsonb,text,boolean)` | authenticated | owner | search_path="" | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 13 | `create_company_bootstrap_run_v1(uuid,uuid)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 14 | `fail_agent_knowledge_provisioning_v1(uuid,text)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 15 | `get_security_posture(uuid)` | authenticated | owner | search_path=public, pg_catalog | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 16 | `has_active_organization_entitlement(uuid)` | authenticated | uid/self-or-custom | search_path=public | STATIC_REVIEW_ONLY | Entitlement helper scoped via caller membership in the observed definition. |
+| 17 | `is_org_member(uuid)` | authenticated | member | search_path=public | STATIC_REVIEW_ONLY | Membership lookup keyed to auth.uid. |
+| 18 | `is_org_owner(uuid)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner lookup keyed to auth.uid. |
+| 19 | `is_platform_admin()` | authenticated | platform-admin | search_path=public | STATIC_REVIEW_ONLY | Platform-admin lookup keyed to auth.uid. |
+| 20 | `list_my_organizations()` | authenticated | uid/self-or-custom | search_path=public | STATIC_REVIEW_ONLY | Returns organizations for auth.uid membership. |
+| 21 | `nail_2nya_admin_create_appointment(uuid,timestamp with time zone,text,text,text,text,text,text)` | authenticated | uid/self-or-custom | search_path=public, extensions, auth | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 22 | `nail_2nya_available_dates(uuid,date,integer)` | anon + authenticated | custom/no-auth.uid | search_path=public | PUBLIC_EXCEPTION_REVIEW | Public date/slot metadata; booking flow depends on anonymous availability. |
+| 23 | `nail_2nya_available_slots(date,uuid)` | anon + authenticated | custom/no-auth.uid | search_path=public | PUBLIC_EXCEPTION_REVIEW | Public slot metadata; verify private appointments not exposed. |
+| 24 | `nail_2nya_cancel_booking(uuid,text)` | anon + authenticated | custom/no-auth.uid | search_path=public, extensions | PUBLIC_EXCEPTION_REVIEW | SHA-256 booking-token match AND expiry checked; alternate appointment UUID/token negative test pending. |
+| 25 | `nail_2nya_claim_admin(text)` | authenticated | uid/self-or-custom | search_path=public, extensions, auth | STATIC_REVIEW_ONLY | Authenticated claim by bootstrap secret; token lifecycle and misuse remain review gates. |
+| 26 | `nail_2nya_create_booking(uuid,timestamp with time zone,text,text,text,text,text)` | anon + authenticated | custom/no-auth.uid | search_path=public, extensions | PUBLIC_EXCEPTION_REVIEW | Public booking enforces active service and available slot; spam/input limits need separate review. |
+| 27 | `nail_2nya_create_contact_message(text,text,text,text)` | anon + authenticated | custom/no-auth.uid | search_path=public | PUBLIC_EXCEPTION_REVIEW | Public contact form bounds field lengths; rate-limit/abuse controls require review. |
+| 28 | `nail_2nya_get_booking(uuid,text)` | anon + authenticated | custom/no-auth.uid | search_path=public, extensions | PUBLIC_EXCEPTION_REVIEW | SHA-256 booking-token match AND expiry checked; alternate appointment UUID/token negative test pending. |
+| 29 | `nail_2nya_is_admin()` | authenticated | uid/self-or-custom | search_path=public, auth | STATIC_REVIEW_ONLY | Authenticated admin helper; role lookup uses auth.uid. |
+| 30 | `nail_2nya_subscribe_customer_push(uuid,text,text,text,text)` | anon + authenticated | custom/no-auth.uid | search_path=public, extensions | PUBLIC_EXCEPTION_REVIEW | Booking-token hash checked, but token expiry is NOT checked in observed body; needs expiry-regression test before modifying booking flow. |
+| 31 | `organization_agent_operational_readiness_v1(uuid)` | authenticated | member | search_path="" | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 32 | `platform_confirm_company_payment_v1(uuid,text,numeric,text,timestamp with time zone,timestamp with time zone)` | authenticated | platform-admin | search_path="" | STATIC_REVIEW_ONLY | Payment mutation gated by auth.uid and is_platform_admin; reject nonadmin and alternate-organization UUID in staging. |
+| 33 | `platform_customer_detail_v1(uuid)` | authenticated | platform-admin | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 34 | `platform_customer_list_v1(text,text,text,integer)` | authenticated | platform-admin | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 35 | `promote_agent_autonomy_v1(uuid,integer,text)` | authenticated | owner | search_path="" | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 36 | `provision_agent_template_v1(uuid,text,text)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 37 | `provision_commercial_company_v1(text,text,text)` | authenticated | uid/self-or-custom | search_path="" | STATIC_REVIEW_ONLY | Authenticated commercial signup derives newly created ownership from caller; synthetic repeated signup and spoofed identity pending. |
+| 38 | `provision_company_template(uuid,text,text)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 39 | `provision_company_template_v2(uuid,text,text)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 40 | `provision_default_integration_department_on_entitlement_v1()` | anon + authenticated | custom/no-auth.uid | search_path=public | FIX_PROPOSED | RETURNS trigger; internal trigger-only body has no caller check. PUBLIC/anon/auth EXECUTE confirmed; W04 revokes direct grants. |
+| 41 | `reconnect_agent_company_knowledge_v1(uuid)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 42 | `refresh_agent_foundation_update_status(uuid)` | authenticated | member | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 43 | `sanitize_agent_company_data_for_transfer(uuid)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 44 | `sanitize_agent_for_transfer(uuid)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 45 | `search_company_knowledge_for_agent_v1(uuid,uuid,text,integer)` | authenticated | member | search_path="" | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 46 | `search_company_knowledge_for_meeting_v1(uuid,text,integer)` | authenticated | member | search_path="" | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 47 | `set_active_organization(uuid)` | authenticated | uid/self-or-custom | search_path=public | STATIC_REVIEW_ONLY | Active-org change checks caller's membership in target. |
+| 48 | `set_agent_status_v1(uuid,text)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 49 | `start_software_project_blueprint_v1(uuid,text)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 50 | `update_agent_v1(uuid,text,text,text,uuid,uuid,smallint,text,text,jsonb,jsonb,jsonb,jsonb,jsonb)` | authenticated | owner | search_path=public | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 51 | `validate_agent_work_outcome_v1(uuid,boolean,integer,text)` | authenticated | owner | search_path="" | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+| 52 | `verify_agent_mastery_v1(uuid)` | authenticated | owner | search_path="" | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
+
+## Public / anonymous exceptions
+
+Seven `nail_2nya_*` methods above appear intentionally available to a public booking/contact workflow. Keep anonymous grants during W04. This is **technical intent**, **not owner sign-off**. Test cross-appointment IDs, expired/wrong tokens, overlapping slots, admin bypass, input abuse, consent and endpoint reassignment in disposable staging. In particular, `nail_2nya_subscribe_customer_push` checks token hash but does **not** check `expires_at` in the observed definition; treat as an open security review, do not break existing booking access without a controlled patch and regression suite.
+
+The **eighth** anonymous grant, `public.provision_default_integration_department_on_entitlement_v1()`, is an internal trigger function. It had `PUBLIC`, `anon`, and `authenticated` execution grants in the live catalog, unlike the neighboring hardened triggers in `supabase/migrations/20260914004500_default_integration_department.sql`. The W04 proposed migration explicitly revokes direct grants while retaining `service_role` execution.
+
+## Search path drift (not SECURITY DEFINER)
+
+The two Supabase Advisor `function_search_path_mutable` warnings refer to **SECURITY INVOKER** immutable SQL classifiers, not the 52 definer calls:
+- `public.project_approval_decision_group_v1(text,text)`
+- `public.project_approval_is_delegatable_v1(text,text,text,text,jsonb,text,text,text)`
+
+Their observed bodies use built-ins and literals; proposed idempotent ALTER FUNCTION sets `pg_catalog, pg_temp` and leaves the function source, volatility and grants unchanged. Assertions in `scripts/w04-staging-catalog-assertions.sql` are **unexecuted** until staging is available.
+
+## Actual code sources / drift
+
+- `supabase/migrations/202608110005_day3_company_builder_drafts.sql:44-45` defines `build_company_from_draft`; lines 242-243 restrict the execution grant. Observed function also resolves `target_draft_id`, validates `auth.uid()`, `public.is_org_owner(v_draft.organization_id)`, entitlement and draft state before mutation.
+- `supabase/migrations/20260914004500_default_integration_department.sql:75-81` shows the corresponding internal *organization* trigger correctly revoked. Live entitlement trigger has a different, excess grant.
+- `docs/security/security-definer-authenticated-audit-2026-09-11.md` is a historical **39-function** audit; it cannot certify the present 52-function state.
+- Current main contains 218 migration files; the connected production migration ledger does not use the same version identifiers for many historical migrations. Reconcile actual applied definitions/migration history before execution.
+
+## Test and release gates
+
+1. **Offline static contract:** `node scripts/validate-w04-rpc-hardening.mjs` (wired into `npm run test:security-definer`), must pass; it tests migration shape, not runtime authorization.
+2. **Staging catalog after migration:** run `scripts/w04-staging-catalog-assertions.sql` on an authorized, isolated staging database, twice after repeated migration application for idempotency. Do not run on production.
+3. **Negative RPC matrix:** synthetic organization A owner/admin/member, B owner/member, no-member authenticated, unauthenticated, and non-admin. For **each** tenant-sensitive target UUID, compare same-org successful authorization with alternate-org UUID denial; check no cross-tenant writes/audit events and no Human CEO gate bypass. Exercise the seven public exceptions with invalid and expired tokens. No real customer data.
+4. **Supabase staging Security Advisor:** rerun and record before/after counts, including exactly zero mutable-search-path warnings and no unintended public definer grants. Booking warnings may remain as documented exceptions.
+5. **Release sign-off:** review with owner; no automatic merge, production migration, deploy, or security acceptance. Reconcile W01/W02 evidence first.
+
+## Rollback
+
+In isolated staging, restore the previous *two* helper-function configuration states with `ALTER FUNCTION ... RESET search_path` and restore the previous explicit grants to the internal trigger only if authorized and absolutely needed; restoring public grant is a **security regression** and must not be the default fallback. Prefer correcting a trigger compatibility issue without restoring `PUBLIC` execution. Rolling back the Git branch/PR alone has **no database effect** if no migration was applied.
