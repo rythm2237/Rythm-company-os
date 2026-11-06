@@ -66,7 +66,7 @@ const pinned = readFileSync(
   "supabase/migrations/20261106180000_w04_explicit_pg_temp_for_definers.sql",
   "utf8"
 );
-assert.equal((pinned.match(/'public\\.[^']+'::regprocedure/g) ?? []).length, 52);
+assert.equal((pinned.match(/'public\.[^']+'::regprocedure/g) ?? []).length, 52);
 assert.match(pinned, /if old_path in \('""',''\) then/i);
 assert.match(pinned, /new_path:='pg_catalog, pg_temp'/i);
 assert.match(pinned, /new_path:=old_path\|\|', pg_temp'/i);
@@ -88,7 +88,7 @@ const publicE2E = readFileSync("scripts/w04-staging-public-booking-e2e.sql","utf
 for (const name of [
   "available_slots","available_dates","create_booking","get_booking",
   "subscribe_customer_push","cancel_booking","create_contact_message",
-]) assert.match(publicE2E, new RegExp("nail_2nya_"+name+"\\\\(", "i"));
+]) assert.ok(publicE2E.includes("nail_2nya_"+name+"("));
 
 const lifecycle = readFileSync("scripts/w04-staging-booking-token-lifecycle.sql", "utf8");
 assert.match(lifecycle, /w04-token-expired/i);
