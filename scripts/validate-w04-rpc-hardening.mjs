@@ -33,4 +33,7 @@ assert.match(crossTenant, /public\.build_company_from_draft\(/i);
 assert.match(crossTenant, /public\.search_company_knowledge_for_agent_v1\(/i);
 assert.match(crossTenant, /rollback;/i);
 
+assert.match(sql, /create or replace function public\.has_active_organization_entitlement\(target_org_id uuid\)/i);
+assert.match(sql, /om\.user_id=auth\.uid\(\)\s+and om\.membership_status='active'/i);
+
 console.log("W04 offline migration contract PASS (staging/runtime unverified).");
