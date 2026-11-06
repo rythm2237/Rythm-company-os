@@ -56,3 +56,28 @@ Earlier `scripts/w04-staging-cross-tenant.sql` runs failed due to intentionally 
 Staging test transactions self-reverted. W04 security migration modifies only function definitions/config/grants; no table rows are rewritten by the migration itself. For a staging-specific rollback, use pre-W04 `pg_get_functiondef` snapshots and restore both search_path settings, trigger grants and the previous four function bodies under an approved change plan; note that restoring unsafe rate limit, knowledge, entitlement and booking-token behavior reopens documented defects. Preferred rollback is a forward corrective migration, not reopening PUBLIC execution.
 
 **Not approved for production, not merged, not release accepted.** Owner sign-off checklist: review all 52 RPCs; approve public booking exceptions; complete full negative-caller/tenant matrix and valid/expired public booking token tests; verify staging infrastructure restored; review green latest CI; authorize production separately.
+
+## Subsequent W04 validation — complete runtime coverage vectors (2026-11-06)
+
+This section **supersedes** the earlier first-run note that valid/expired public booking tests were not executed, and narrows the earlier scope limitation regarding the 52 original routines.
+
+**Second migration:** `20261106180000_w04_explicit_pg_temp_for_definers.sql` applied on staging successfully as version `20261106180314`, and reapplied successfully under verification version `20261106180432`. Only the originally reviewed **52** functions were targeted: append `pg_temp` LAST without rearranging existing trusted namespaces, or use `pg_catalog, pg_temp` for formerly empty search paths. Catalogue inspection confirmed 51/51 authenticated-executable definer paths, 7/7 anonymous-executable paths, and the internal trigger path have `pg_temp` last; the revoked direct execute grant remains revoked. The two pure INVOKER approval helpers also remain pinned.
+
+**Full additional staging suite, rerun after this migration:**
+- `w04-staging-catalog-assertions.sql` — PASS;
+- `w04-staging-negative-rpc.sql` — PASS;
+- `w04-staging-cross-tenant.sql` — PASS;
+- `w04-staging-sensitive-knowledge.sql` — PASS, including authenticated ordinary member, owner, and trusted service_role;
+- `w04-staging-public-booking-negatives.sql` — PASS;
+- `w04-staging-booking-token-lifecycle.sql` — PASS, valid/expired/incorrect/cross-appointment tokens under public `anon`;
+- `w04-staging-52-rpc-outsider-matrix.sql` — PASS, **51/51** callable routines invoked (37 rejection exceptions, 14 negative/limited/public results);
+- `w04-staging-29-rpc-cross-tenant-matrix.sql` — PASS, **29/29** functions with first-org/Agent arguments invoked by A owner against existing synthetic B Agent/org (28 rejections, one false entitlement; no mutation);
+- `w04-staging-public-booking-e2e.sql` — PASS, all **7** anonymous booking/contact operations through an actual disposable synthetic service, date, slot, booking, customer, push subscription and contact message. Valid token get/push/cancel worked; wrong and expired tokens rejected on privileged operations.
+
+All test-only INSERT/UPDATE changes were reverted via `ROLLBACK` and outward notification triggers were suppressed in those scripts using `SET LOCAL session_replication_role=replica`. Post-suite inspection found **zero** synthetic bookings, services, profiles, hours, contacts, push subscriptions, Agents, and zero active W02 fixture memberships. No production or customer mutations occurred.
+
+The Security Advisor still reports `anon_security_definer_function_executable: 7` and `authenticated_security_definer_function_executable: 51` by design; these count **function exposure**, not confirmed vulnerabilities. No mutable-search-path warnings remain. Outside W04 scope: 33 INFO rows for RLS-enabled tables without policies and 1 authentication password-leak protection warning.
+
+**Detailed 52-row evidence matrix:** `docs/security/w04-rpc-runtime-coverage-2026-11-06.md`. This documents the exact covered caller/input vectors without claiming every imaginable negative case.
+
+**Still requires owner action before release:** explicit acceptance of seven justified public booking/contact exceptions; reconciliation of W01/W02 acceptance and staging/production migration histories; separate approval to merge/deploy/apply production schema. W04 technical staged vectors PASS, but **W04 official launch status remains NOT ACCEPTED** pending those gates. GitHub CI for the latest branch head and project restore status must be confirmed after the last documentation/checker commits.
