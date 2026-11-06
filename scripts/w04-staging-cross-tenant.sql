@@ -87,4 +87,54 @@ end;
 $w04$;
 
 reset role;
+
+-- Synthetic, transaction-scoped revoked-membership entitlement regression.
+-- The W02 organization entitlement is pending; simulate ACTIVE only in this
+-- rollback-only transaction to distinguish false from the actual status check.
+do $w04$
+declare v_b_org uuid; v_b_member uuid;
+begin
+  select id into v_b_org from public.organizations
+    where slug='w02-synthetic-b-staging-v1';
+  select id into v_b_member from auth.users
+    where email='w02-b-member@example.test';
+  if v_b_org is null or v_b_member is null then
+    raise exception 'Missing synthetic B member fixture';
+  end if;
+  if not exists (
+    select 1 from public.organization_members
+    where organization_id=v_b_org and user_id=v_b_member
+      and membership_status='active'
+  ) then
+    raise exception 'B member must be active in W02 fixture before test';
+  end if;
+  update public.organization_entitlements
+    set status='active'
+    where organization_id=v_b_org and status='pending';
+  if not found then
+    raise exception 'B entitlement fixture must be pending before test';
+  end if;
+  update public.organization_members
+    set membership_status='inactive'
+    where organization_id=v_b_org and user_id=v_b_member;
+end;
+$w04$;
+
+select set_config('request.jwt.claim.sub',
+  (select id::text from auth.users where email='w02-b-member@example.test'),true);
+set local role authenticated;
+do $w04$
+declare v_b_org uuid;
+begin
+  select id into v_b_org from public.organizations
+    where slug='w02-synthetic-b-staging-v1';
+  if public.is_org_member(v_b_org) then
+    raise exception 'Inactive synthetic member passed member check';
+  end if;
+  if public.has_active_organization_entitlement(v_b_org) then
+    raise exception 'Inactive synthetic member leaked active entitlement';
+  end if;
+end;
+$w04$;
+reset role;
 rollback;
