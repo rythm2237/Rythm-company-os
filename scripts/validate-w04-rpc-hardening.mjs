@@ -15,16 +15,22 @@ assert.match(probe, /has_function_privilege\('anon'/i);
 assert.match(probe, /has_function_privilege\('authenticated'/i);
 assert.match(probe, /proconfig/i);
 
-assert.match(sql, /create or replace function public\\.consume_api_rate_limit\\(/i);
-assert.match(sql, /request_count = case\\s+when public\\.api_rate_limits\\.request_count >= 2147483647 then 2147483647\\s+else public\\.api_rate_limits\\.request_count \\+ 1\\s+end,/i);
-assert.doesNotMatch(sql, /request_count = least\\(public\\.api_rate_limits\\.request_count \\+ 1, p_limit \\+ 1\\)/i);
+assert.match(sql, /create or replace function public\.consume_api_rate_limit\(/i);
+assert.match(sql, /request_count = case\s+when public\.api_rate_limits\.request_count >= 2147483647 then 2147483647\s+else public\.api_rate_limits\.request_count \+ 1\s+end,/i);
+assert.doesNotMatch(sql, /request_count = least\(public\.api_rate_limits\.request_count \+ 1, p_limit \+ 1\)/i);
 const negative = readFileSync("scripts/w04-staging-negative-rpc.sql", "utf8");
 assert.match(negative, /set local role authenticated;/i);
 assert.match(negative, /if v_count <> 101/i);
 assert.match(negative, /rollback;/i);
 
-assert.match(sql, /create or replace function public\\.search_company_knowledge_for_agent_v1\\(/i);
-assert.match(sql, /v_can_read_sensitive := v_service_role or public\\.is_org_owner\\(target_org_id\\)/i);
-assert.match(sql, /k\\.confidentiality in \\('public','internal'\\)\\s+or \\(\\s+v_can_read_sensitive\\s+and k\\.confidentiality in \\('confidential','restricted'\\)/i);
+assert.match(sql, /create or replace function public\.search_company_knowledge_for_agent_v1\(/i);
+assert.match(sql, /v_can_read_sensitive := v_service_role or public\.is_org_owner\(target_org_id\)/i);
+assert.match(sql, /k\.confidentiality in \('public','internal'\)\s+or \(\s+v_can_read_sensitive\s+and k\.confidentiality in \('confidential','restricted'\)/i);
+
+const crossTenant = readFileSync("scripts/w04-staging-cross-tenant.sql", "utf8");
+assert.match(crossTenant, /set local role authenticated;/i);
+assert.match(crossTenant, /public\.build_company_from_draft\(/i);
+assert.match(crossTenant, /public\.search_company_knowledge_for_agent_v1\(/i);
+assert.match(crossTenant, /rollback;/i);
 
 console.log("W04 offline migration contract PASS (staging/runtime unverified).");
