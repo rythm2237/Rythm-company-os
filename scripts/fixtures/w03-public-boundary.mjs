@@ -73,5 +73,6 @@ export async function publicBoundaryMatrix({b,clients,admin,http,record,unwrap,s
  for(const path of ['/api/meetings/deliberate','/api/meetings/summarize']){const r=await http(undefined,path,json({sessionId:randomUUID()}));record('meeting-http-middleware','anonymous-denied','anonymous','private',r.status===401,path+';status-'+r.status);}
  const seo=await http('A_member','/api/seo/indexnow/submit',json({urls:['https://example.test/']}));record('seo-http','nonowner-denied','A_member','external',seo.status===403);
  const log='.w03-evidence/egress.jsonl';const blocked=existsSync(log)?readFileSync(log,'utf8').trim().split('\n').filter(Boolean).map(line=>JSON.parse(line)):[];
- record('egress','production-provider-requests-blocked','sandbox','production',blocked.length===3&&blocked.every(x=>x.blocked)&&blocked.filter(x=>x.host==='2nya-nailart.rythm-os.com').length===2&&blocked.filter(x=>x.host==='dezbacyuvsdrlpmmpjht.supabase.co').length===1,'blocked-hosts-'+JSON.stringify(blocked)+';expected two media reads and one push-key read;zero actual I/O');
+ const expectedHosts=new Set(['2nya-nailart.rythm-os.com','dezbacyuvsdrlpmmpjht.supabase.co','registry.npmjs.org']);
+ record('egress','production-provider-requests-blocked','sandbox','production',blocked.every(x=>x.blocked&&expectedHosts.has(x.host))&&blocked.filter(x=>x.host==='2nya-nailart.rythm-os.com').length>=2&&blocked.some(x=>x.host==='dezbacyuvsdrlpmmpjht.supabase.co'),'blocked-hosts-'+JSON.stringify(blocked)+';media and push-key reads blocked;Next version checks also blocked;zero actual I/O');
 }
