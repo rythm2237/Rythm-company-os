@@ -75,11 +75,6 @@ begin
  then raise exception 'Token life cycle failed valid/expired/cross/wrong %,%,%,%',
    v_valid,v_expired,v_cross,v_wrong; end if;
 
- if (select count(*) from public.nail_2nya_customer_push_subscriptions
-   where appointment_id in (v_a,v_b)
-     and endpoint like 'https://example.test/w04-%') <> 1 then
-   raise exception 'Unexpected subscription insert after token checks'; end if;
-
  select public.nail_2nya_cancel_booking(v_b,'w04-token-expired') into v_cancel_expired;
  select public.nail_2nya_cancel_booking(v_a,'w04-token-valid') into v_cancel_valid;
  if v_cancel_expired is distinct from false or v_cancel_valid is distinct from true then
@@ -88,4 +83,15 @@ begin
 end;
 $w04$;
 reset role;
+-- Verify writes as the test administrator, not the intentionally unprivileged anon.
+do $w04$
+begin
+ if (select count(*) from public.nail_2nya_customer_push_subscriptions
+   where appointment_id in ('00000000-0000-4000-8000-000000000415'::uuid,
+     '00000000-0000-4000-8000-000000000416'::uuid)
+     and endpoint like 'https://example.test/w04-%') <> 1 then
+   raise exception 'Unexpected subscription insert after token checks';
+ end if;
+end;
+$w04$;
 rollback;
