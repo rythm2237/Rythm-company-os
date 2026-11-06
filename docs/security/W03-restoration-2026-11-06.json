@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-11-06T12:47:56.037785+00:00",
+  "authorization": "Temporary project-capacity swap explicitly authorized by owner; original states restored",
+  "original": {
+    "production": "ACTIVE_HEALTHY",
+    "staging": "INACTIVE",
+    "aiRoadmap": "ACTIVE_HEALTHY"
+  },
+  "verifiedFinal": {
+    "production": {
+      "id": "dezbacyuvsdrlpmmpjht",
+      "status": "ACTIVE_HEALTHY"
+    },
+    "staging": {
+      "id": "viqjdgohtxqkrdgwtull",
+      "status": "INACTIVE"
+    },
+    "aiRoadmap": {
+      "id": "dqpdyschjpbdhhotmojs",
+      "status": "ACTIVE_HEALTHY",
+      "select1RestoredHealth": 1
+    }
+  },
+  "productionDeployment": "dpl_GqWEucPScpnLAhyc1BFsv1VBDSLR",
+  "mainSha": "995888ae6f7077f70527bbc95f74efd584115955",
+  "productionReleasePerformed": false,
+  "productionMigrationPerformed": false,
+  "quarantineEvidence": "W03-quarantine-2026-11-06.json"
+}

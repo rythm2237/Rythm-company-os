@@ -1,5 +1,7 @@
 # W03 — tenant isolation implementation and verification
 
+Superseded by [the November 6 final execution report](W03-2026-11-06-validation-report.md), which closes the API inventory and adds the benchmark error-path fix and full OAuth matrix.
+
 Status: **PASS for the executed mandatory high-risk matrix; ready for human review.** Full-inventory and production security are not certified. No automatic owner acceptance, merge or production approval.
 
 This report supersedes the narrower 2026-11-04 execution summary. It distinguishes authenticated HTTP/REST/Storage, SQL RLS, isolated actual handlers and unexecuted surfaces. Counts are executed cases, not a claim that every possible route/input combination is secure.
