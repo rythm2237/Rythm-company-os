@@ -18,7 +18,7 @@ export async function validationRuntimeMatrix({b,clients,admin,record,unwrap}){
   const runs=new Map();
   for(const o of b.companies){
    const owner=clients.get(o.key+'_owner');
-   unwrap(await admin.from('runtime_policies').upsert({organization_id:o.id,dry_run_execution_enabled:false,monthly_budget_usd:0,per_run_budget_usd:0}),'disabled zero-budget runtime policy');
+   unwrap(await owner.client.from('runtime_policies').upsert({organization_id:o.id,dry_run_execution_enabled:false,monthly_budget_usd:0,per_run_budget_usd:0,updated_by_user_id:owner.user.id}),'disabled zero-budget runtime policy');
    const agent={id:randomUUID(),organization_id:o.id,agent_code:'W03-RUNTIME-'+randomUUID(),name:'W03 paused runtime fixture',role_title:'Synthetic test',purpose:'Tenant boundary only',enabled:false,agent_status:'paused'};
    unwrap(await admin.from('agents').insert(agent),'runtime agent');
    const run={id:randomUUID(),organization_id:o.id,agent_id:agent.id,trigger_type:'manual',input_summary:'W03 synthetic blocked; never execute',status:'blocked',idempotency_key:'w03-'+randomUUID(),requested_by_user_id:owner.user.id,execution_mode:'dry_run',risk_level:'low',budget_cap_usd:0,requires_human_approval:true};
