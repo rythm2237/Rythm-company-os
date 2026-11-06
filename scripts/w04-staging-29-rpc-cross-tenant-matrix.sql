@@ -25,7 +25,7 @@ begin
  insert into public.agents(id,organization_id,agent_code,name,role_title,purpose,enabled,agent_status)
  values('00000000-0000-4000-8000-000000000451'::uuid,v_b,
  'W04-CROSS-AGENT','W04 Synthetic B Agent','W04 Test Only',
- 'Rollback-only B organization Agent authorization test',false,'paused');
+ 'Rollback-only B organization Agent authorization test',true,'enabled');
 end;
 $w04$;
 
@@ -117,8 +117,8 @@ begin
  select * into v_agent from public.agents
  where id='00000000-0000-4000-8000-000000000451'::uuid;
  if v_agent.id is null or v_agent.agent_code<>'W04-CROSS-AGENT'
-   or v_agent.name<>'W04 Synthetic B Agent' or v_agent.enabled<>false
-   or v_agent.agent_status<>'paused' then
+   or v_agent.name<>'W04 Synthetic B Agent' or v_agent.enabled<>true
+   or v_agent.agent_status<>'enabled' then
      raise exception 'Foreign agent was modified by unauthorised owner'; end if;
  if (select count(*) from public.agents
    where organization_id=(select id from public.organizations where slug='w02-synthetic-b-staging-v1'))<>1 then
