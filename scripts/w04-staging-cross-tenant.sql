@@ -99,6 +99,9 @@ end;
 $w04$;
 
 reset role;
+-- Clear A's synthetic JWT claim before postgres-only fixture setup;
+-- RESET ROLE alone does not reset request.jwt.claim.sub.
+select set_config('request.jwt.claim.sub','',true);
 
 -- Synthetic, transaction-scoped revoked-membership entitlement regression.
 -- The W02 organization entitlement is pending; simulate ACTIVE only in this
