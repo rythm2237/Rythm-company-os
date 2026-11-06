@@ -39,4 +39,18 @@ assert.match(sql, /om\.user_id=auth\.uid\(\)\s+and om\.membership_status='active
 assert.match(sql, /create or replace function public\.nail_2nya_subscribe_customer_push\(/i);
 assert.match(sql, /t\.token_hash=extensions\.digest\(coalesce\(p_token,''\)::bytea,'sha256'\)\s+and \(t\.expires_at is null or t\.expires_at>now\(\)\)/i);
 
+assert.equal((sql.match(/^commit;$/gm) ?? []).length, 1, "Only one transaction commit is permitted");
+assert.ok(
+  sql.includes("p_scope !~ '^[a-z0-9:_-]{1,80}" + String.fromCharCode(36) + "' then"),
+  "Rate-limit scope regexp must end with a quoted $ anchor"
+);
+for (const file of [
+  "scripts/w04-staging-sensitive-knowledge.sql",
+  "scripts/w04-staging-public-booking-negatives.sql",
+]) {
+  const candidate = readFileSync(file, "utf8");
+  assert.match(candidate, /set local role (?:anon|authenticated);/i);
+  assert.match(candidate, /rollback;/i);
+}
+
 console.log("W04 offline migration contract PASS (staging/runtime unverified).");
