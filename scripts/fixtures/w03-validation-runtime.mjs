@@ -17,10 +17,12 @@ export async function validationRuntimeMatrix({b,clients,admin,record,unwrap}){
   const mod={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(createRequire(process.cwd()+'/package.json'),mod,mod.exports);
   const runs=new Map();
   for(const o of b.companies){
+   const owner=clients.get(o.key+'_owner');
+   unwrap(await admin.from('runtime_policies').upsert({organization_id:o.id,dry_run_execution_enabled:false,monthly_budget_usd:0,per_run_budget_usd:0}),'disabled zero-budget runtime policy');
    const agent={id:randomUUID(),organization_id:o.id,agent_code:'W03-RUNTIME-'+randomUUID(),name:'W03 paused runtime fixture',role_title:'Synthetic test',purpose:'Tenant boundary only',enabled:false,agent_status:'paused'};
    unwrap(await admin.from('agents').insert(agent),'runtime agent');
-   const run={id:randomUUID(),organization_id:o.id,agent_id:agent.id,trigger_type:'manual',input_summary:'W03 synthetic cancelled; never execute',status:'cancelled',idempotency_key:'w03-'+randomUUID()};
-   unwrap(await admin.from('agent_runs').insert(run),'cancelled runtime run');runs.set(o.key,run);
+   const run={id:randomUUID(),organization_id:o.id,agent_id:agent.id,trigger_type:'manual',input_summary:'W03 synthetic blocked; never execute',status:'blocked',idempotency_key:'w03-'+randomUUID(),requested_by_user_id:owner.user.id,execution_mode:'dry_run',risk_level:'low',budget_cap_usd:0,requires_human_approval:true};
+   unwrap(await owner.client.from('agent_runs').insert(run),'blocked runtime run');runs.set(o.key,run);
   }
   for(const u of b.users){
    const c=clients.get(u.key).client;state.client=c;
@@ -32,6 +34,6 @@ export async function validationRuntimeMatrix({b,clients,admin,record,unwrap}){
     record('validation-runtime-real-auth-rls','run-boundary',u.key,target.key,response.status===expected&&state.providerCalls===0,'actual-auth-RLS;in-memory-enabled-runtime;status-'+response.status);
    }
   }
-  for(const o of b.companies){const r=unwrap(await admin.from('agent_runs').select('status,cost_usd').eq('id',runs.get(o.key).id).single(),'runtime poststate');record('validation-runtime-real-auth-rls','sentinel-unchanged','all',o.key,r.status==='cancelled'&&Number(r.cost_usd)===0);}
+  for(const o of b.companies){const r=unwrap(await admin.from('agent_runs').select('status,cost_usd').eq('id',runs.get(o.key).id).single(),'runtime poststate');record('validation-runtime-real-auth-rls','sentinel-unchanged','all',o.key,r.status==='blocked'&&Number(r.cost_usd)===0);}
  }finally{delete globalThis.w03ValidationRuntime;}
 }

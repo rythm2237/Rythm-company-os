@@ -8,9 +8,10 @@ export async function publicBoundaryMatrix({b,clients,admin,http,record,unwrap,s
  const fixtures=new Map();
  for(const o of b.companies){
   const owner=clients.get(o.key+'_owner').user.id;
-  for(const [code,sequence_no] of [['w03_qualified',801],['w03_proposal',802]])unwrap(await admin.from('crm_pipeline_stages').insert({organization_id:o.id,code,name:'W03 synthetic '+code,sequence_no}),'pipeline fixture');
+  const ownerClient=clients.get(o.key+'_owner').client;
+  for(const [code,sequence_no] of [['w03_qualified',801],['w03_proposal',802]])unwrap(await ownerClient.from('crm_pipeline_stages').insert({organization_id:o.id,code,name:'W03 synthetic '+code,sequence_no}),'pipeline fixture');
   const opportunity={id:randomUUID(),organization_id:o.id,account_id:seeds.get(o.key).find(r=>r[0]==='crm_accounts')[1].id,name:'W03 opportunity '+o.key,stage_code:'w03_qualified',created_by_user_id:owner};
-  unwrap(await admin.from('crm_opportunities').insert(opportunity),'opportunity fixture');
+  unwrap(await ownerClient.from('crm_opportunities').insert(opportunity),'opportunity fixture');
   const mailbox={id:randomUUID(),organization_id:o.id,local_part:'w03',address:'w03-'+o.id+'@example.test',display_name:'W03 synthetic inactive mailbox',purpose:'Isolation test only',is_active:false,approval_mode:'draft_only'};
   unwrap(await admin.from('communication_mailboxes').insert(mailbox),'inactive mailbox fixture');
   const thread={id:randomUUID(),organization_id:o.id,mailbox_id:mailbox.id,subject:'W03-MAIL-'+o.key};unwrap(await admin.from('communication_threads').insert(thread),'mail thread');
