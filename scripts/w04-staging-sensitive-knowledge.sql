@@ -86,4 +86,28 @@ begin
 end;
 $w04$;
 reset role;
+
+-- Trusted server principal is the only non-owner exception for confidential
+-- agent search. Simulate signed Supabase service_role JWT claims in this
+-- disposable staging-only transaction; never make this a client-side claim.
+select set_config('request.jwt.claim.sub','',true);
+select set_config('request.jwt.claim.role','service_role',true);
+select set_config('request.jwt.claims','{"role":"service_role"}',true);
+set local role service_role;
+do $w04$
+declare v_org uuid; v_internal bigint; v_confidential bigint;
+begin
+ select id into v_org from public.organizations where slug='w02-synthetic-a-staging-v1';
+ select count(*) filter(where confidentiality='internal'),
+        count(*) filter(where confidentiality='confidential')
+ into v_internal,v_confidential
+ from public.search_company_knowledge_for_agent_v1(
+   v_org,'00000000-0000-4000-8000-000000000407'::uuid,'w04-synthetic-canary',20);
+ if v_internal<>1 or v_confidential<>1 then
+   raise exception 'Service principal expected both tiers, actual %,%',
+     v_internal,v_confidential;
+ end if;
+end;
+$w04$;
+reset role;
 rollback;
