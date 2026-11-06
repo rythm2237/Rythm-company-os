@@ -125,6 +125,8 @@ try{
     reset();const denied=await start(integrations.get(company.key).id);
     record('oauth-real-auth-rls','shared-role-switch-denied','shared',company.key+'/'+provider,new URL(denied.headers.get('location')).hostname==='localhost'&&state.providerCalls===0,'role-'+member.role);
    }
+   const restored=unwrap(await shared.client.rpc('set_active_organization',{target_org_id:b.companies[0].id}),'restore shared fixture home company');
+   record('oauth-real-auth-rls','shared-home-restored','shared',provider,restored===b.companies[0].id,'next provider starts with the same actual company context');
    state.db=db;
    for(const company of b.companies){
     const row=unwrap(await admin.from('organization_integrations').select('organization_id,vault_secret_id,account_ref').eq('id',integrations.get(company.key).id).single(),'OAuth poststate');
