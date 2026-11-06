@@ -24,6 +24,18 @@ begin
     raise exception 'W02 disposable staging fixtures missing; stop without attempting real data';
   end if;
 
+  -- W03 intentionally quarantined synthetic memberships; enable only the
+  -- required fixtures within this transaction. Final ROLLBACK restores them.
+  update public.organization_members set membership_status='active'
+  where organization_id=(select id from public.organizations
+    where slug='w02-synthetic-a-staging-v1')
+    and user_id=(select id from auth.users where email='w02-a-owner@example.test');
+  if not found then raise exception 'Missing synthetic A owner membership'; end if;
+  update public.organization_members set membership_status='active'
+  where organization_id=v_b_org
+    and user_id=(select id from auth.users where email='w02-b-member@example.test');
+  if not found then raise exception 'Missing synthetic B member membership'; end if;
+
   insert into public.company_builder_drafts(
     id,organization_id,created_by_user_id,company_name,
     company_type,business_model,company_size_intent
