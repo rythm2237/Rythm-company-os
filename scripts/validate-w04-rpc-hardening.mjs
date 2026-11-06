@@ -15,4 +15,12 @@ assert.match(probe, /has_function_privilege\('anon'/i);
 assert.match(probe, /has_function_privilege\('authenticated'/i);
 assert.match(probe, /proconfig/i);
 
+assert.match(sql, /create or replace function public\\.consume_api_rate_limit\\(/i);
+assert.match(sql, /request_count = case\\s+when public\\.api_rate_limits\\.request_count >= 2147483647 then 2147483647\\s+else public\\.api_rate_limits\\.request_count \\+ 1\\s+end,/i);
+assert.doesNotMatch(sql, /request_count = least\\(public\\.api_rate_limits\\.request_count \\+ 1, p_limit \\+ 1\\)/i);
+const negative = readFileSync("scripts/w04-staging-negative-rpc.sql", "utf8");
+assert.match(negative, /set local role authenticated;/i);
+assert.match(negative, /if v_count <> 101/i);
+assert.match(negative, /rollback;/i);
+
 console.log("W04 offline migration contract PASS (staging/runtime unverified).");
