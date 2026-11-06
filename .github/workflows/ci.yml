@@ -28,6 +28,7 @@ jobs:
       - run: node scripts/validate-w03-execution-references.mjs
       - run: node scripts/validate-w03-benchmark-boundary.mjs
       - run: node scripts/validate-w03-oauth-boundary.mjs
+      - run: node scripts/validate-w03-egress-guard.mjs
       - run: node scripts/validate-w03-project-relationships.mjs
       - run: npm run test:crm-connected
       - run: npm run test:customers

@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-06",
+  "vulnerableBranchHead": "628bedd4fc8d3f3f04ffdf37ed623c2dd5967d24",
+  "productionBaseline": "995888ae6f7077f70527bbc95f74efd584115955",
+  "route": "POST /api/agents/GTM-STRAT-001/benchmark",
+  "body": {"runId": "22222222-2222-4222-8222-222222222222", "finalize": true},
+  "identity": "No authenticated context; separate test also uses authorized owner of A",
+  "target": "Disposable tenant B benchmark batch, status running",
+  "redCommand": "node scripts/validate-w03-benchmark-boundary.mjs against pre-fix route",
+  "redResult": {"exitCode": 1, "assertion": "unauthenticated must not fail tenant B batch", "expectedStatus": "running", "actualStatus": "failed"},
+  "reproductionScope": "Real route compiled and executed; synthetic auth and DB adapters; no production request and no model/provider I/O",
+  "fixCommit": "d698a981bfc0399fe19a3afb6b7035310ffab56e",
+  "greenCommand": "node scripts/validate-w03-benchmark-boundary.mjs",
+  "greenResult": {"exitCode": 0, "anonymousForeignMutation": false, "authorizedOtherTenantMutation": false, "ownAuthorizedFailurePersists": true},
+  "liveRegression": {"runId": 42180458687, "httpPoststateCases": 60, "finalSentinels": 3, "failures": 0},
+  "productionMutationAttempted": false
+}
