@@ -61,6 +61,12 @@
 | 51 | `validate_agent_work_outcome_v1(uuid,boolean,integer,text)` | authenticated | owner | search_path="" | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
 | 52 | `verify_agent_mastery_v1(uuid)` | authenticated | owner | search_path="" | STATIC_REVIEW_ONLY | Owner/member/identity predicate detected from function source where reported; alternate tenant UUID and side-effect checks not executed. |
 
+## Verified rate-limit counter defect and proposed mitigation
+
+`public.consume_api_rate_limit(text,integer,integer)` is callable by `authenticated`. The live function and `supabase/migrations/20260814233500_api_rate_limits.sql` used `request_count = least(current_count + 1, p_limit + 1)`. Because `p_limit` is caller-supplied, a caller can **decrease** an existing counter (for example, 100 to 2) without direct table privileges. This can undermine a higher server-enforced threshold. W04's new `CREATE OR REPLACE FUNCTION` changes ONLY the conflict-update formula to monotonic integer-saturating increment, retains authentication, scope/validation, result shape and grants. **Proposed only; stage validation pending.**
+
+`scripts/w04-staging-negative-rpc.sql` contains a dedicated transactional, synthetic-user regression: seed 100, invoke as `authenticated` with `p_limit=1`, assert denied and counter 101, then `ROLLBACK`. It also checks both approval helpers with attacker-controlled `search_path` and nondelegatable production wording. The script has not been executed.
+
 ## Public / anonymous exceptions
 
 Seven `nail_2nya_*` methods above appear intentionally available to a public booking/contact workflow. Keep anonymous grants during W04. This is **technical intent**, **not owner sign-off**. Test cross-appointment IDs, expired/wrong tokens, overlapping slots, admin bypass, input abuse, consent and endpoint reassignment in disposable staging. In particular, `nail_2nya_subscribe_customer_push` checks token hash but does **not** check `expires_at` in the observed definition; treat as an open security review, do not break existing booking access without a controlled patch and regression suite.
@@ -86,9 +92,9 @@ Their observed bodies use built-ins and literals; proposed idempotent ALTER FUNC
 
 1. **Offline static contract:** `node scripts/validate-w04-rpc-hardening.mjs` (wired into `npm run test:security-definer`), must pass; it tests migration shape, not runtime authorization.
 2. **Staging catalog after migration:** run `scripts/w04-staging-catalog-assertions.sql` on an authorized, isolated staging database, twice after repeated migration application for idempotency. Do not run on production.
-3. **Negative RPC matrix:** synthetic organization A owner/admin/member, B owner/member, no-member authenticated, unauthenticated, and non-admin. For **each** tenant-sensitive target UUID, compare same-org successful authorization with alternate-org UUID denial; check no cross-tenant writes/audit events and no Human CEO gate bypass. Exercise the seven public exceptions with invalid and expired tokens. No real customer data.
-4. **Supabase staging Security Advisor:** rerun and record before/after counts, including exactly zero mutable-search-path warnings and no unintended public definer grants. Booking warnings may remain as documented exceptions.
-5. **Release sign-off:** review with owner; no automatic merge, production migration, deploy, or security acceptance. Reconcile W01/W02 evidence first.
+3. **Rate-limit negative RPC:** `scripts/w04-staging-negative-rpc.sql` is ready for staging-only transactional execution, not yet run.\n4. **Negative RPC matrix:** synthetic organization A owner/admin/member, B owner/member, no-member authenticated, unauthenticated, and non-admin. For **each** tenant-sensitive target UUID, compare same-org successful authorization with alternate-org UUID denial; check no cross-tenant writes/audit events and no Human CEO gate bypass. Exercise the seven public exceptions with invalid and expired tokens. No real customer data.
+5. **Supabase staging Security Advisor:** rerun and record before/after counts, including exactly zero mutable-search-path warnings and no unintended public definer grants. Booking warnings may remain as documented exceptions.
+6. **Release sign-off:** review with owner; no automatic merge, production migration, deploy, or security acceptance. Reconcile W01/W02 evidence first.
 
 ## Rollback
 
