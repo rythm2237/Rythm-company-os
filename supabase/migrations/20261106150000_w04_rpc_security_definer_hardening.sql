@@ -162,4 +162,25 @@ begin
 end;
 $w04_knowledge$;
 
+-- Expired/suspended memberships must not retain even entitlement visibility:
+-- the previous helper joined organization_members on user_id without status.
+-- Align it with the canonical active-member predicate in is_org_member.
+create or replace function public.has_active_organization_entitlement(target_org_id uuid)
+returns boolean
+language sql stable security definer set search_path = public
+as $w04_entitlement$
+  select exists (
+    select 1
+    from public.organization_entitlements e
+    join public.organization_members om
+      on om.organization_id=e.organization_id
+     and om.user_id=auth.uid()
+     and om.membership_status='active'
+    where e.organization_id=target_org_id
+      and e.status='active'
+      and (e.starts_at is null or e.starts_at<=now())
+      and (e.ends_at is null or e.ends_at>now())
+  );
+$w04_entitlement$;
+
 commit;
