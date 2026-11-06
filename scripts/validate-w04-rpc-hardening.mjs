@@ -23,4 +23,8 @@ assert.match(negative, /set local role authenticated;/i);
 assert.match(negative, /if v_count <> 101/i);
 assert.match(negative, /rollback;/i);
 
+assert.match(sql, /create or replace function public\\.search_company_knowledge_for_agent_v1\\(/i);
+assert.match(sql, /v_can_read_sensitive := v_service_role or public\\.is_org_owner\\(target_org_id\\)/i);
+assert.match(sql, /k\\.confidentiality in \\('public','internal'\\)\\s+or \\(\\s+v_can_read_sensitive\\s+and k\\.confidentiality in \\('confidential','restricted'\\)/i);
+
 console.log("W04 offline migration contract PASS (staging/runtime unverified).");
