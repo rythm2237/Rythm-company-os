@@ -12,7 +12,7 @@ on:
         required: true
         default: routes
         type: choice
-        options: [routes, oauth, extended]
+        options: [routes, oauth, public, extended]
 
 permissions:
   contents: read
@@ -79,7 +79,7 @@ jobs:
         env:
           W03_MATRIX: ${{ inputs.matrix }}
         run: |
-          case "$W03_MATRIX" in routes|oauth|extended) ;; *) exit 1 ;; esac
+          case "$W03_MATRIX" in routes|oauth|public|extended) ;; *) exit 1 ;; esac
           node scripts/fixtures/w03-live.mjs "--${W03_MATRIX}-only"
       - name: Quarantine W03 identities preserving audit history
         if: always()

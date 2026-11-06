@@ -11,7 +11,7 @@ function check(value){
  throw Error('W03_EXTERNAL_EGRESS_BLOCKED');
 }
 const original=globalThis.fetch;
-globalThis.fetch=function(input,init){check(input);return original.call(this,input,init);};
+globalThis.fetch=async function(input,init){check(input);return original.call(this,input,init);};
 for(const [client,protocol] of [[http,'http:'],[https,'https:']]){
  const request=client.request,get=client.get;
  const inspect=args=>{const a=args[0];check(typeof a==='string'||a instanceof URL?a:new URL(`${a.protocol??protocol}//${a.hostname??a.host??'localhost'}${a.path??'/'}`));};

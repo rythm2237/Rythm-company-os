@@ -8,6 +8,7 @@ import {extendedMatrix} from './w03-extended.mjs';
 import {routeWave} from './w03-route-wave.mjs';
 import {oauthBoundaryMatrix} from '../validate-w03-oauth-boundary.mjs';
 import {validationRuntimeMatrix} from './w03-validation-runtime.mjs';
+import {publicBoundaryMatrix} from './w03-public-boundary.mjs';
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
 const b=buildW03Blueprint(),url=process.env.W03_STAGING_SUPABASE_URL;
@@ -32,8 +33,9 @@ try{
   cookies.set(u.key,Array.from({length:Math.ceil(text.length/3000)},(_,i)=>name+'.'+i+'='+text.slice(i*3000,(i+1)*3000)).join('; '));
  }
  phase='server';
+ mkdirSync('.w03-evidence',{recursive:true});
  const env={...process.env,NEXT_PUBLIC_SUPABASE_URL:url,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:process.env.W03_STAGING_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY:process.env.W03_STAGING_SERVICE_ROLE_KEY,RYTHM_AGENT_EXECUTION_ENABLED:'false',RYTHM_EXTERNAL_ACTIONS_ENABLED:'false',OPENAI_API_KEY:'',ANTHROPIC_API_KEY:'',GEMINI_API_KEY:'',NEXT_TELEMETRY_DISABLED:'1'};
- if(process.argv.includes('--routes-only'))Object.assign(env,{NODE_OPTIONS:((process.env.NODE_OPTIONS??'')+' --import '+pathToFileURL(resolve('scripts/fixtures/w03-egress-guard.mjs')).href).trim(),W03_EGRESS_LOG:resolve('.w03-evidence/egress.jsonl'),CRON_SECRET:'W03_SYNTHETIC_CRON',CLOUDFLARE_EMAIL_WORKER_SECRET:'W03_SYNTHETIC_INGEST',RESEND_WEBHOOK_SECRET:'whsec_VzAzX1NZTlRIRVRJQw=='});
+ if(process.argv.includes('--routes-only')||process.argv.includes('--public-only'))Object.assign(env,{NODE_OPTIONS:((process.env.NODE_OPTIONS??'')+' --import '+pathToFileURL(resolve('scripts/fixtures/w03-egress-guard.mjs')).href).trim(),W03_EGRESS_LOG:resolve('.w03-evidence/egress.jsonl'),CRON_SECRET:'W03_SYNTHETIC_CRON',CLOUDFLARE_EMAIL_WORKER_SECRET:'W03_SYNTHETIC_INGEST',RESEND_WEBHOOK_SECRET:'whsec_VzAzX1NZTlRIRVRJQw==',RESEND_API_KEY:'W03_SYNTHETIC_DO_NOT_SEND'});
  server=spawn(process.execPath,['node_modules/next/dist/bin/next','dev','--hostname','localhost','--port','3103'],{env,stdio:'ignore'});
  for(let i=0;i<90;i++){try{await fetch(api+'/api/crm/leads');break;}catch{await new Promise(r=>setTimeout(r,1000));}}
  phase='seed';
@@ -71,7 +73,9 @@ try{
   for(const [table,row] of rows){const own=await c.from(table).select('id').eq('id',row.id);record(table,'owner-positive-read',org.key,org.key,!own.error&&own.data?.length===1);}
   const downloaded=await http(org.key+'_owner','/api/crm/documents/'+doc.id);record('files','own-download',org.key,org.key,downloaded.status===200&&(await downloaded.text())==='W03-FILE-'+org.key);
  }
- if(process.argv.includes('--oauth-only')){
+ if(process.argv.includes('--public-only')){
+  phase='public-and-private-boundaries';await publicBoundaryMatrix({b,clients,admin,http,record,unwrap,seeds});
+ }else if(process.argv.includes('--oauth-only')){
   phase='validation-runtime';await validationRuntimeMatrix({b,clients,admin,http,record,unwrap});
   phase='oauth-real-auth-rls';await oauthBoundaryMatrix({b,clients,admin,http,record,unwrap});
  }else if(process.argv.includes('--routes-only')){
