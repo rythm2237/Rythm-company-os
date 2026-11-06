@@ -53,4 +53,21 @@ for (const file of [
   assert.match(candidate, /rollback;/i);
 }
 
+for (const file of [
+  "scripts/w04-staging-booking-token-lifecycle.sql",
+  "scripts/w04-staging-52-rpc-outsider-matrix.sql",
+]) {
+  const script = readFileSync(file, "utf8");
+  assert.match(script, /set local session_replication_role = replica;/i);
+  assert.match(script, /set local role (?:anon|authenticated);/i);
+  assert.match(script, /rollback;/i);
+}
+const lifecycle = readFileSync("scripts/w04-staging-booking-token-lifecycle.sql", "utf8");
+assert.match(lifecycle, /w04-token-expired/i);
+assert.match(lifecycle, /w04-token-valid/i);
+assert.match(lifecycle, /v_cross is distinct from false/i);
+const matrix = readFileSync("scripts/w04-staging-52-rpc-outsider-matrix.sql", "utf8");
+assert.match(matrix, /has_function_privilege\('authenticated',p\.oid,'EXECUTE'\)/i);
+assert.match(matrix, /v_expected<>51 or v_actual<>v_expected/i);
+
 console.log("W04 offline migration contract PASS (staging/runtime unverified).");
