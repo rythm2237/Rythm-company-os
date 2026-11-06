@@ -183,4 +183,40 @@ as $w04_entitlement$
   );
 $w04_entitlement$;
 
+-- Public push registration must honor the booking management-token expiry,
+-- just as nail_2nya_get_booking and nail_2nya_cancel_booking already do.
+-- Preserve public (anon) booking grants and original API parameter/return shape.
+create or replace function public.nail_2nya_subscribe_customer_push(
+  p_appointment_id uuid, p_token text, p_endpoint text, p_p256dh text, p_auth text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $w04_push$
+declare v_valid boolean;
+begin
+  select exists(
+    select 1 from public.nail_2nya_booking_tokens t
+    where t.appointment_id=p_appointment_id
+      and t.token_hash=extensions.digest(coalesce(p_token,'')::bytea,'sha256')
+      and (t.expires_at is null or t.expires_at>now())
+  ) into v_valid;
+  if not v_valid then return false; end if;
+  if nullif(trim(p_endpoint),'') is null
+    or nullif(trim(p_p256dh),'') is null
+    or nullif(trim(p_auth),'') is null then return false;
+  end if;
+  insert into public.nail_2nya_customer_push_subscriptions(
+    appointment_id,endpoint,p256dh,auth,active,updated_at
+  )
+  values(p_appointment_id,trim(p_endpoint),trim(p_p256dh),trim(p_auth),true,now())
+  on conflict(endpoint) do update
+    set appointment_id=excluded.appointment_id,
+        p256dh=excluded.p256dh,auth=excluded.auth,
+        active=true,updated_at=now();
+  return true;
+end;
+$w04_push$;
+
 commit;
