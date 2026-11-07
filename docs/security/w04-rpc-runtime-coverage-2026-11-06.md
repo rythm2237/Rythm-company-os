@@ -81,3 +81,9 @@ A single outsider invocation is insufficient to assert every actor/input combina
 ### Migrations (production not applied)
 
 `20261106150000_w04_rpc_security_definer_hardening.sql` and `20261106180000_w04_explicit_pg_temp_for_definers.sql`. Staging validation reapplications are ledger-only separate versions and **must not be included in the production deployment**.
+
+## 2026-11-07 — subsequent owner exception decision
+
+**Owner-approved:** the exact seven intentionally anonymous booking/contact `nail_2nya_*` RPCs listed in `docs/security/w04-public-rpc-owner-exception-approval-2026-11-07.md`. The owner's confirmation is **not** approval to merge or release to Production. Previous text in this report saying that these seven public exceptions are awaiting owner decision described the state **before 2026-11-07** and is superseded for this gate only.
+
+The release preflight and W01/W02 evidence reconciliation are tracked in `docs/security/w04-dependency-release-gates-2026-11-07.md`: W01 owner-accepted **snapshot scope** and W02's documented stage AC1/AC2/updated-quarantine AC3 results are supported; **exact migration-history parity is still unverified**. PR #441 remains draft; no production migration, deploy or main-branch merge is authorized.
