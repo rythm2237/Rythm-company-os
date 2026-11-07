@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { chunkCompanyDocument, extractCompanyDocument } from "@/lib/company-library-ingestion";
 import { redactSecretText } from "@/lib/security/redaction";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const categories = new Set(["general","brand","people","contact","product","service","process","operations","analytics","finance","sales","legal","website","other"]);
 const confidentialityLevels = new Set(["public","internal","confidential","restricted"]);
@@ -82,7 +83,10 @@ export async function registerCompanyLibraryDocument(input: RegisterCompanyDocum
 
   const knowledgeId = String(knowledge.id);
   try {
-    const { data: storedFile, error: downloadError } = await context.supabase.storage.from("company-knowledge").download(storagePath);
+    const transport = createServerSupabaseClient();
+    if (!transport) throw new Error("Private storage transport unavailable.");
+    // Current active owner/tenant/path were checked before service-role transport.
+    const { data: storedFile, error: downloadError } = await transport.storage.from("company-knowledge").download(storagePath);
     if (downloadError || !storedFile) throw new Error(`Stored document could not be read: ${downloadError?.message ?? "missing file"}`);
     const buffer = Buffer.from(await storedFile.arrayBuffer());
     if (!buffer.length || buffer.length > MAX_FILE_SIZE) throw new Error("Stored document size is outside the allowed Company Library limit.");
