@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { resolveOrganizationContext, isOrganizationEntitlementActive } from "@/lib/auth/organization-context";
 import {
   isOrganizationStoragePath,
@@ -38,9 +39,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .eq("id", id).maybeSingle();
   if (error || !doc || !doc.storage_path || !isOrganizationStoragePath(context.organizationId, doc.storage_path)) return unavailable();
 
-  // Caller JWT is used directly. Never use service_role for a Company Library
-  // download; the private Storage policy independently validates organization ownership.
-  const { data: file, error: downloadError } = await context.supabase.storage
+  // Membership and caller-scoped metadata RLS were checked above on THIS request.
+  // Storage authenticated downloads may be served from CDN after revocation;
+  // use privileged transport only after the fresh authorization checks.
+  const transport = createServerSupabaseClient();
+  if (!transport) return unavailable();
+  const { data: file, error: downloadError } = await transport.storage
     .from("company-knowledge").download(doc.storage_path);
   if (downloadError || !file || !file.size || file.size > MAX) return unavailable();
   if (doc.file_size_bytes != null && Number(doc.file_size_bytes) !== file.size) return unavailable();
