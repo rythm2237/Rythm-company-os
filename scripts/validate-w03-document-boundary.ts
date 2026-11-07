@@ -29,7 +29,7 @@ async function main() {
           "@/lib/crm/access": "export async function canCrm(){return globalThis.w03Fixture.allowed}",
           "@/lib/security/private-file-audit": "export async function logPrivateFileAccess(row){globalThis.w03Fixture.fileAuditCalls.push(row);return !globalThis.w03Fixture.auditDenied}",
         };
-        b.onResolve({ filter: /^@\\/lib\\/(auth\\/organization-context|supabase\\/server|crm\\/access|security\\/private-file-audit)$/ }, a => ({ path: a.path, namespace: "w03w05" }));
+        b.onResolve({ filter: new RegExp("^@/lib/(auth/organization-context|supabase/server|crm/access|security/private-file-audit)$") }, a => ({ path: a.path, namespace: "w03w05" }));
         b.onLoad({ filter: /.*/, namespace: "w03w05" }, a => ({ contents: shims[a.path], loader: "js" }));
       } }],
     });
