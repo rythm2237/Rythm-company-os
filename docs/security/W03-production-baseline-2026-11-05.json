@@ -1,0 +1,13 @@
+{
+  "main": "995888ae6f7077f70527bbc95f74efd584115955",
+  "productionAlias": "rythm-os.com",
+  "deploymentId": "dpl_GqWEucPScpnLAhyc1BFsv1VBDSLR",
+  "deploymentUrl": "rythm-company-60u20efsw-ytalashti-7156s-projects.vercel.app",
+  "deploymentState": "READY",
+  "deploymentCommit": "995888ae6f7077f70527bbc95f74efd584115955",
+  "publicHealthEndpoint": "https://rythm-os.com/api/health",
+  "healthTimestampUtc": "2026-11-05T20:14:34.898Z",
+  "effectivePublicRuntime": {"environment":"production","agentExecution":"enabled","externalActions":"disabled","databaseConfigured":true,"status":"ok"},
+  "managementFlagInventory": "403 permission denied; not retrieved, no alternate identity or bypass attempted",
+  "scope": "Read-only deployment metadata and intentionally public health response; no customer reads, production mutations or active production security tests"
+}

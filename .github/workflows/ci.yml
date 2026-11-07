@@ -22,6 +22,14 @@ jobs:
       - run: npm run test:company-logo
       - run: npm run test:enterprise-crm
       - run: npm run test:crm-sales
+      - run: node --import tsx scripts/validate-w03-document-boundary.ts
+      - run: node --import tsx scripts/validate-w03-workspace-memory.ts
+      - run: node scripts/validate-w03-worker.mjs
+      - run: node scripts/validate-w03-execution-references.mjs
+      - run: node scripts/validate-w03-benchmark-boundary.mjs
+      - run: node scripts/validate-w03-oauth-boundary.mjs
+      - run: node scripts/validate-w03-egress-guard.mjs
+      - run: node scripts/validate-w03-project-relationships.mjs
       - run: npm run test:crm-connected
       - run: npm run test:customers
       - run: npm run test:company-chart

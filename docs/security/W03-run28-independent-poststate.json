@@ -1,0 +1,95 @@
+{
+  "staging": "viqjdgohtxqkrdgwtull",
+  "run": 41892449297,
+  "observation": "Before synthetic-only reference repair; all source and target tenants belong to this run; no provider executed.",
+  "data": [
+    {
+      "reproduction": {
+        "tasks": [
+          {
+            "id": "d2faae24-132e-438f-bfa4-0c1558e7028a",
+            "organization": "w03-synthetic-a-staging-v1-41892449297-1",
+            "foreign_project_id": "a62152f7-c525-4acb-8d01-d4addcf59bdf"
+          },
+          {
+            "id": "059cb11f-a04e-4151-84ac-13218c7cee0c",
+            "organization": "w03-synthetic-a-staging-v1-41892449297-1",
+            "foreign_project_id": "1752c359-4b21-4cce-8f06-5d802bfb04d3"
+          },
+          {
+            "id": "570d6343-72e9-467f-a89d-416b553f461e",
+            "organization": "w03-synthetic-b-staging-v1-41892449297-1",
+            "foreign_project_id": "eb72a386-010c-4f7d-81f3-643ac330f433"
+          },
+          {
+            "id": "de241d4f-0800-4938-b076-8d6051174748",
+            "organization": "w03-synthetic-b-staging-v1-41892449297-1",
+            "foreign_project_id": "1752c359-4b21-4cce-8f06-5d802bfb04d3"
+          },
+          {
+            "id": "b77689f0-9b47-4022-a6d6-523ce184c92e",
+            "organization": "w03-synthetic-c-staging-v1-41892449297-1",
+            "foreign_project_id": "eb72a386-010c-4f7d-81f3-643ac330f433"
+          },
+          {
+            "id": "f8a84de2-a258-4400-93ba-4cf53395d559",
+            "organization": "w03-synthetic-c-staging-v1-41892449297-1",
+            "foreign_project_id": "a62152f7-c525-4acb-8d01-d4addcf59bdf"
+          }
+        ],
+        "memory": [
+          {
+            "id": "00f4f531-b1ef-4389-90c5-11747e4d62f6",
+            "organization": "w03-synthetic-a-staging-v1-41892449297-1",
+            "foreign_project_id": "a62152f7-c525-4acb-8d01-d4addcf59bdf"
+          },
+          {
+            "id": "39269377-9d90-42cf-9c01-f4a61f0f4466",
+            "organization": "w03-synthetic-a-staging-v1-41892449297-1",
+            "foreign_project_id": "1752c359-4b21-4cce-8f06-5d802bfb04d3"
+          },
+          {
+            "id": "934a4930-1009-4909-9df9-60752b7f963c",
+            "organization": "w03-synthetic-b-staging-v1-41892449297-1",
+            "foreign_project_id": "eb72a386-010c-4f7d-81f3-643ac330f433"
+          },
+          {
+            "id": "aae23063-bb1d-4c22-be61-0fb241b4b454",
+            "organization": "w03-synthetic-b-staging-v1-41892449297-1",
+            "foreign_project_id": "1752c359-4b21-4cce-8f06-5d802bfb04d3"
+          },
+          {
+            "id": "5c74f039-e258-4e1b-9668-a49180073b07",
+            "organization": "w03-synthetic-c-staging-v1-41892449297-1",
+            "foreign_project_id": "eb72a386-010c-4f7d-81f3-643ac330f433"
+          },
+          {
+            "id": "319fefdb-ca92-4a2e-9bde-922b14d1e67f",
+            "organization": "w03-synthetic-c-staging-v1-41892449297-1",
+            "foreign_project_id": "a62152f7-c525-4acb-8d01-d4addcf59bdf"
+          }
+        ],
+        "executions": [
+          {
+            "id": "f1ee2c21-16d6-4712-a982-fb4e9f12a523",
+            "status": "denied",
+            "organization": "w03-synthetic-a-staging-v1-41892449297-1",
+            "foreign_project_id": "a62152f7-c525-4acb-8d01-d4addcf59bdf"
+          },
+          {
+            "id": "cca35b98-a99f-4f40-bc31-fc4ec04dc1c8",
+            "status": "denied",
+            "organization": "w03-synthetic-b-staging-v1-41892449297-1",
+            "foreign_project_id": "eb72a386-010c-4f7d-81f3-643ac330f433"
+          },
+          {
+            "id": "0c66ad15-826c-45e8-ae7a-aa6b212c5a85",
+            "status": "denied",
+            "organization": "w03-synthetic-c-staging-v1-41892449297-1",
+            "foreign_project_id": "eb72a386-010c-4f7d-81f3-643ac330f433"
+          }
+        ]
+      }
+    }
+  ]
+}
