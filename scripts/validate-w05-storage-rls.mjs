@@ -7,6 +7,7 @@ const ORG_B = "22222222-2222-4222-8222-222222222222";
 const PROJECT_A = "33333333-3333-4333-8333-333333333333";
 const FILE_ID = "55555555-5555-4555-8555-555555555555";
 const migration = readFileSync(new URL("../supabase/migrations/20261107060000_w05_file_confidentiality.sql",import.meta.url), "utf8");
+const directGetMigration = readFileSync(new URL("../supabase/migrations/20261107070000_w05_block_cached_private_downloads.sql",import.meta.url), "utf8");
 const db = new PGlite();
 
 try {
@@ -47,6 +48,7 @@ try {
   `);
 
   await db.exec(migration);
+  await db.exec(directGetMigration);
   await db.exec(`
     insert into storage.objects(bucket_id,name) values
       ('company-knowledge','${ORG_A}/synthetic-a.pdf'),
@@ -65,12 +67,19 @@ try {
     return rows[0].n;
   };
 
-  await db.exec(`set role authenticated; set app.org='${ORG_A}'; set app.storage_op='object.get_authenticated';`);
+  await db.exec(`set role authenticated; set app.org='${ORG_A}'; set app.storage_op='object.list';`);
   assert.equal(await count("company-knowledge"), 1, "authorized tenant sees own object only");
   assert.equal(await count("project-files"), 0, "no permissive fixture policy for project-files");
   assert.equal(await count("agent-artifacts"), 1, "authorized tenant reads own agent artifacts");
   assert.equal(await count("agent-attachments"), 1, "authorized tenant reads own attachments");
   assert.equal(await count("ai-workspace-private"), 0, "private personal workspace has no direct user policy");
+  // Direct private GET must be unavailable even for a current owner/member:
+  // Supabase CDN may otherwise replay a cached download after revocation.
+  await db.exec("set app.storage_op='object.get_authenticated';");
+  for (const sensitiveBucket of ["project-files","company-knowledge","agent-artifacts","agent-attachments","ai-workspace-private"]) {
+    assert.equal(await count(sensitiveBucket),0,"direct private GET blocked: "+sensitiveBucket);
+  }
+  await db.exec("set app.storage_op='object.list';");
 
   await db.exec(`set app.org='${ORG_B}';`);
   assert.equal(await count("company-knowledge"), 1, "tenant B sees only its own object");
