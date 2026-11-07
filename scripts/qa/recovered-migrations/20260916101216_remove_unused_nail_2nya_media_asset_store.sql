@@ -1,0 +1,1 @@
+drop table if exists public.nail_2nya_media_assets;

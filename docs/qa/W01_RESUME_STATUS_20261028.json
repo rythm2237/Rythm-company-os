@@ -1,0 +1,31 @@
+{
+  "observed_date": "2026-10-28",
+  "w01": "NOT_ACCEPTED",
+  "ai_roadmap": {
+    "status": "ACTIVE_HEALTHY",
+    "select_1": 1
+  },
+  "production": {
+    "status": "ACTIVE_HEALTHY",
+    "w01_promoted": false
+  },
+  "staging": {
+    "status": "INACTIVE",
+    "reason": "Free-plan capacity restored to ai roadmap while browser sign-in is blocked"
+  },
+  "browser": {
+    "previous_tab_absent": true,
+    "owner_test_sessions": 0,
+    "signed_in_business_flows": "NOT_RUN",
+    "temporary_alias_share_revoked": true,
+    "synthetic_organization_retained": 1,
+    "cron_jobs": 0
+  },
+  "diagnostic_replay": {
+    "run": 40652169498,
+    "conclusion": "success",
+    "checks": 1000,
+    "exact_production_catalog_parity": false
+  },
+  "next_required_action": "Owner signs in to the restored staging Preview using the test account email/password through secure browser handoff; password must not be posted in chat."
+}

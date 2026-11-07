@@ -1,0 +1,81 @@
+name: W01 Synthetic Core RLS (no cloud credentials)
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/w01-core-tenant.yml"
+      - "scripts/qa/prepare-w01-local-migrations.mjs"
+      - "scripts/qa/w01-core-tenant-smoke.sql"
+      - "supabase/migrations/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: w01-core-rls-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-synthetic-rbac:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      SUPABASE_ACCESS_TOKEN: ""
+      SUPABASE_DB_PASSWORD: ""
+      SUPABASE_SERVICE_ROLE_KEY: ""
+      SUPABASE_SECRET_KEY: ""
+      W01_ALLOW_LOCAL_TEST: "true"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
+        with:
+          version: 2.84.2
+      - name: Boot temporary schema-only core with no owner or portfolio data
+        run: |
+          set -euo pipefail
+          test -z "$SUPABASE_ACCESS_TOKEN"
+          tmp="$(mktemp -d "$RUNNER_TEMP/w01-core.XXXXXX")"
+          echo "W01_CORE_ROOT=$tmp" >> "$GITHUB_ENV"
+          cd "$tmp"
+          supabase init --yes
+          cd "$GITHUB_WORKSPACE"
+          node scripts/qa/prepare-w01-local-migrations.mjs "$tmp" --core-smoke
+          cd "$tmp"
+          supabase db start
+      - name: Verify synthetic cross-tenant RLS and rollback fixtures
+        run: |
+          set -euo pipefail
+          test -n "$W01_CORE_ROOT"
+          test -z "$SUPABASE_ACCESS_TOKEN"
+          PGPASSWORD=postgres psql -X -v ON_ERROR_STOP=1 -q -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f "$GITHUB_WORKSPACE/scripts/qa/w01-core-tenant-smoke.sql"
+      - name: Store provenance map
+        if: always()
+        run: |
+          set -eu
+          if [ -n "$W01_CORE_ROOT" ] && [ -f "$W01_CORE_ROOT/w01-local-migration-map.json" ]; then
+            cp "$W01_CORE_ROOT/w01-local-migration-map.json" "$GITHUB_WORKSPACE/w01-core-migration-map.json"
+            sha256sum "$GITHUB_WORKSPACE/w01-core-migration-map.json"
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: w01-synthetic-core-provenance
+          path: w01-core-migration-map.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Dispose of temporary local database
+        if: always()
+        run: |
+          set +e
+          if [ -n "$W01_CORE_ROOT" ] && [ -d "$W01_CORE_ROOT" ]; then
+            cd "$W01_CORE_ROOT"
+            supabase stop --no-backup
+            rm -rf -- "$W01_CORE_ROOT"
+          fi
