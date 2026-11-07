@@ -115,3 +115,52 @@ All catalog reads completed. No customer records or file bytes retrieved.
 | AC3 authorized+denied runtime audit evidence | **PARTIAL**. Real Storage HTTP statuses and RPC/CI assertions observed; sanitized app-level positive/negative CRM and Company Library download audit evidence still needed. |
 
 **Must not merge/release** pending app-level logged-in tests, latest SHA CI/build + security review, original Vercel variable-scope and Supabase capacity restoration, W02/W03 draft dependency review, schema migration ledger parity, and explicit Production release authorization.
+
+## 9. Final W05 Staging acceptance — 2026-11-07 (SUPERCEDES earlier incomplete E2E notes)
+
+**Verified application commit:** `c0fbbdeae0e2a13947586bdca64ae718ed15124c`, deployed READY in Preview `dpl_4ceM5HikH5MERu1inNKtJfHNddAD`; configured exclusively against Staging `viqjdgohtxqkrdgwtull`. GitHub CI [run 42365932986](https://github.com/rythm2237/Rythm-company-os/actions/runs/42365932986) passed BOTH `build` and `crm-browser` jobs (including W05 mock HTTP guards, real PGlite policies, typecheck, lint and build).
+
+### Real, live and rerunnable acceptance evidence
+
+The Staging-only acceptance harness exercised **existing** synthetic `@example.test` identities belonging to two tenant organizations. The three selected identities (owner A, operator A, owner B) were temporarily activated, and their previously banned status, active-organization profile settings, memberships and entitlement states were restored afterward. No production identity was touched, no external AI action was executed, and all synthetic test files and document rows were removed.
+
+On the **actual Next.js Vercel Preview**, via real Supabase Auth JWT session cookies and real Storage HTTP:
+
+1. **PASS** CRM authorized owner returns HTTP `200` with original synthetic PDF bytes.
+2. **PASS** CRM authorized bytes exactly match the uploaded test object.
+3. **PASS** Company Library authorized owner returns HTTP `200`.
+4. **PASS** Company Library authorized bytes exactly match the uploaded test object.
+5. **PASS** CRM cross-tenant owner returns HTTP `404`.
+6. **PASS** Company Library cross-tenant owner returns HTTP `404`.
+7. **PASS** Company Library active same-tenant operator returns HTTP `404`.
+8. **PASS** Anonymous CRM access returns HTTP `401`.
+9. **PASS** Anonymous Company Library access returns HTTP `404`.
+10. **PASS** Membership update to `inactive` independently read back from the real database.
+11. **PASS** Previously authorized CRM JWT after membership revocation returns HTTP `401`.
+12. **PASS** Previously authorized Company Library JWT after membership revocation returns HTTP `404`.
+
+**Result:** `12/12 PASS`, including bytes and time-of-check/time-of-use denial. This supersedes the earlier false-negative Company Library test, where the synthetic profile lacked its required active organization. This rerun used existing seeded identities with explicitly set active organization.
+
+### Immutable positive and negative file access audit
+
+W05 now includes `lib/security/private-file-audit.ts` and server-side grant/deny Audit before byte release in both routes. An Audit insert failure for a permitted download **fails closed**. Audit entries omit storage paths, signed URLs and file contents; they contain only tenant, actor, resource, result and a bounded reason code. The real Staging `public.audit_events` table produced **five** minimal immutable events during the final test:
+
+- `private_file.access_granted`: CRM 1, Company Library 1;
+- `private_file.access_denied`: CRM `not_found` 1, Company Library `not_found` 1 and `forbidden` 1.
+
+Unauthenticated requests have no confirmed tenant/user context and deliberately do not create tenant-attributed `audit_events`; their actual HTTP denial status was independently asserted above. Existing confidential CRM resources still use `crm_log_sensitive_access` in addition to the W05 generic file audit.
+
+### Storage, legacy bearer URLs and remaining release constraints
+
+- All five private buckets were tested in real Supabase Storage HTTP with synthetic files across tenant roles. A new restrictive RLS policy blocks new direct authenticated `object.get_authenticated` on the five private buckets and bans user signing, while backend authorized per-request file proxy continues to work. The provider CDN can still serve previously cached objects or previously minted signed bearer URLs until their respective TTL. No retroactive revocation guarantee is claimed.
+- A genuine short-lived signed bearer returned `200` before expiry and `400` after expiry; synthetic content and cleanup verified. Real Staging SQL tested immutable object path identity, tenant filtering, signing denial, and preserved authorized object uploads.
+- The original Staging schema lacked two private buckets; a **Staging-only** private-bucket parity migration added `company-knowledge` and `agent-artifacts` with correct private policies. These buckets already existed in Production. The W05 follow-up schema migration `20261107070000_w05_block_cached_private_downloads.sql` was applied **only to Staging**.
+- **Do not deploy directly to Production:** Staging's Supabase-generated W05 migration timestamps differ from repo filenames. Migrations, W02 PR #438 and W03 PR #440 dependencies require separate human release review. Neither the W05 migration nor branch has been merged/applied on Production. Explicit owner approval is required for Production release.
+
+### Cleanup exception (transparent)
+
+A preliminary test incorrectly attempted the unsupported organization role `member`, then left one synthetic `w05final-…@example.invalid` Auth account. Its `organization.context_selected` audit row is immutable and foreign-keyed to the user, so hard deletion was rejected. Its temporary membership/profile were removed and the account **was banned for 100 years**. It has **zero** active organization memberships and cannot sign in. The final successful 12/12 run used existing synthetic users instead, created **no** new Auth identities and returned all 437 seeded `@example.test` users to banned status. Do not disable audit immutability to erase test evidence. Any permanent soft-deletion policy for the quarantined account is a separate privacy/security governance action.
+
+### W05 decision
+
+**W05 security functionality: STAGING ACCEPTED in the explicitly tested scope — AC1 PASS, AC2 PASS for new authenticated app downloads and expiry test, AC3 PASS with immutable app Audit.** Signed/cached objects already issued before deployment remain a documented TTL-bound residual risk. **Release status: NOT DEPLOYED / requires migration-ledger reconciliation, W02/W03 integration review and explicit Production approval.** It is safe to submit the W05 PR for code review, not to auto-merge it.
