@@ -18,7 +18,7 @@ const unavailable = () => NextResponse.json({ error: "Document unavailable" }, {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await resolveOrganizationContext();
-  if (!context || context.role !== "owner" || !isOrganizationEntitlementActive(context.entitlement)) return unavailable();
+  if (!context) return unavailable();
   const { id } = await params;
   if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)) return unavailable();
   const denied = async (reason: "membership" | "not_found" | "forbidden" | "invalid_file") => {
@@ -29,6 +29,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   // Do not rely on a cached session/JWT or on a previously signed bearer URL:
   // membership, row-level policy and Storage policy are checked at download.
+  if (context.role !== "owner" || !isOrganizationEntitlementActive(context.entitlement)) return denied("forbidden");
+
   const { data: member, error: membershipError } = await context.supabase
     .from("organization_members").select("user_id")
     .eq("organization_id", context.organizationId)
