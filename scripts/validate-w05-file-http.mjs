@@ -28,6 +28,9 @@ tests.w05Client = {
   } }) },
 };
 tests.w05Service = { storage: tests.w05Client.storage };
+// Caller-scoped direct Storage GET is now blocked by W05; only the
+// server transport may fetch bytes after fresh membership/metadata authorization.
+tests.w05Client.storage = { from: () => ({ download: async () => { throw Error("caller Storage.download must not be used"); } }) };
 const authContext = {
   organizationId: orgA, role: "owner", user: { id: fileId },
   entitlement: { status: "active" }, supabase: tests.w05Client,
