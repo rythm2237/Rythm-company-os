@@ -24,7 +24,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .select("id,organization_id,file_name,mime_type,byte_size,storage_path,confidentiality,contract_id,project_id")
     .eq("organization_id", context.organizationId)
     .eq("id", id).maybeSingle();
-  if (error || !doc) return unavailable();
+  if (error || !doc || doc.organization_id !== context.organizationId) return unavailable();
 
   if (!isProjectDocumentStoragePath({
     organizationId: context.organizationId,
