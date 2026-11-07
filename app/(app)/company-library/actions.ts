@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { chunkCompanyDocument, extractCompanyDocument } from "@/lib/company-library-ingestion";
 import { redactSecretText } from "@/lib/security/redaction";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const categories = new Set(["general","brand","people","contact","product","service","process","operations","analytics","finance","sales","legal","website","other"]);
 const confidentialityLevels = new Set(["public","internal","confidential","restricted"]);
@@ -82,7 +83,10 @@ export async function registerCompanyLibraryDocument(input: RegisterCompanyDocum
 
   const knowledgeId = String(knowledge.id);
   try {
-    const { data: storedFile, error: downloadError } = await context.supabase.storage.from("company-knowledge").download(storagePath);
+    const transport = createServerSupabaseClient();
+    if (!transport) throw new Error("Private storage transport unavailable.");
+    // Current active owner/tenant/path were checked before service-role transport.
+    const { data: storedFile, error: downloadError } = await transport.storage.from("company-knowledge").download(storagePath);
     if (downloadError || !storedFile) throw new Error(`Stored document could not be read: ${downloadError?.message ?? "missing file"}`);
     const buffer = Buffer.from(await storedFile.arrayBuffer());
     if (!buffer.length || buffer.length > MAX_FILE_SIZE) throw new Error("Stored document size is outside the allowed Company Library limit.");
@@ -183,15 +187,15 @@ export async function getCompanyLibraryDocumentUrl(knowledgeId: string) {
   const context = await requireActiveOwnerOrganizationContext();
   const { data } = await context.supabase
     .from("company_knowledge")
-    .select("storage_path,source_filename")
+    .select("id")
     .eq("organization_id", context.organizationId)
     .eq("source_type", "file")
     .eq("id", knowledgeId)
     .maybeSingle();
-  if (!data?.storage_path) throw new Error("The original source file is not available.");
-  const { data: signed, error } = await context.supabase.storage.from("company-knowledge").createSignedUrl(String(data.storage_path), 300, { download: data.source_filename ? String(data.source_filename) : true });
-  if (error || !signed?.signedUrl) throw new Error("Could not create a secure link for this document.");
-  return { url: signed.signedUrl };
+  if (!data) throw new Error("The original source file is not available.");
+  // No bearer signed URL: this endpoint reauthorizes membership and Storage
+  // access when the browser requests bytes, including after revocation.
+  return { url: `/api/company-library/documents/${encodeURIComponent(data.id)}` };
 }
 
 export async function updateCompanyLibraryDocumentMetadata(formData: FormData) {

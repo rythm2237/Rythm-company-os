@@ -60,7 +60,8 @@
     "test:enterprise-crm": "node --import tsx scripts/validate-enterprise-crm-sql.ts && node --import tsx scripts/validate-enterprise-crm-ui.tsx",
     "test:crm-sales": "node --import tsx scripts/validate-crm-sales-ui.tsx && node --import tsx scripts/validate-crm-sales-api.ts",
     "test:crm-sales-browser": "node scripts/validate-crm-sales-browser.mjs",
-    "test:crm-connected": "node --import tsx scripts/validate-crm-connected.tsx"
+    "test:crm-connected": "node --import tsx scripts/validate-crm-connected.tsx",
+    "test:w05": "node --experimental-strip-types scripts/validate-w05-file-confidentiality.mjs && node scripts/validate-w05-storage-rls.mjs && node scripts/validate-w05-file-http.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

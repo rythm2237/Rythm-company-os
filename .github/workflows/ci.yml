@@ -18,6 +18,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run test:w05
+      - run: node scripts/w05-inventory-private-storage.mjs
       - run: node --import tsx scripts/validate-logout.ts
       - run: npm run test:company-logo
       - run: npm run test:enterprise-crm
