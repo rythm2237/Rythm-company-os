@@ -118,5 +118,6 @@ assert.equal(await companyOk.text(), await pdf.text());
 assert.match(companyOk.headers.get("Cache-Control") || "", /no-store/);
 tests.w05Context = { ...authContext, role: "member" };
 assert.equal((await companyGet()).status, 404, "nonowner denied");
+resetDoc();
 assert.equal((await crmGet()).status, 200, "CRM grant remains independent of company-owner role");
 console.log("PASS: isolated W05 real HTTP handlers: CRM 401/404/503/200, IDOR, role/capability, audit fail-closed, MIME, revocation, private Library");
