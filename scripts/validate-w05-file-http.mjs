@@ -27,7 +27,17 @@ tests.w05Client = {
     return tests.w05ObjectMissing ? { data: null, error: { code: "not_found" } } : { data: tests.w05Blob || pdf, error: null };
   } }) },
 };
-tests.w05Service = { storage: tests.w05Client.storage };
+const privateFileAuditRows = [];
+tests.w05Service = {
+  storage: tests.w05Client.storage,
+  from(table) {
+    assert.equal(table, "audit_events");
+    return { insert: async (row) => {
+      privateFileAuditRows.push(row);
+      return { error: tests.w05FileAuditError ? { code: "AUDIT_FAILED" } : null };
+    } };
+  },
+};
 // Caller-scoped direct Storage GET is now blocked by W05; only the
 // server transport may fetch bytes after fresh membership/metadata authorization.
 tests.w05Client.storage = { from: () => ({ download: async () => { throw Error("caller Storage.download must not be used"); } }) };
@@ -95,6 +105,9 @@ tests.w05AuditError = true;
 assert.equal((await crmGet()).status, 503, "audit failure fails closed");
 assert.equal(downloadCount, prior, "audit failure prevents file retrieval");
 tests.w05AuditError = false;
+tests.w05FileAuditError = true;
+assert.equal((await crmGet()).status, 503, "persisted file-grant audit failure prevents byte release");
+tests.w05FileAuditError = false;
 const ok = await crmGet();
 assert.equal(ok.status, 200, "authorized synthetic CRM download");
 assert.match(ok.headers.get("Cache-Control") || "", /no-store/);
@@ -123,4 +136,9 @@ tests.w05Context = { ...authContext, role: "member" };
 assert.equal((await companyGet()).status, 404, "nonowner denied");
 resetDoc();
 assert.equal((await crmGet()).status, 200, "CRM grant remains independent of company-owner role");
-console.log("PASS: isolated W05 real HTTP handlers: CRM 401/404/503/200, IDOR, role/capability, audit fail-closed, MIME, revocation, private Library");
+assert(privateFileAuditRows.some((r) => r.event_type === "private_file.access_granted" && r.object_type === "crm_document"), "CRM allowed audit persisted");
+assert(privateFileAuditRows.some((r) => r.event_type === "private_file.access_granted" && r.object_type === "company_library_document"), "Library allowed audit persisted");
+assert(privateFileAuditRows.some((r) => r.event_type === "private_file.access_denied" && r.object_type === "crm_document"), "CRM denied audit persisted");
+assert(privateFileAuditRows.some((r) => r.event_type === "private_file.access_denied" && r.object_type === "company_library_document"), "Library denied audit persisted");
+assert(privateFileAuditRows.every((r) => !JSON.stringify(r).includes("storage_path") && !JSON.stringify(r).includes("signedUrl")), "audit stores no storage path or bearer token");
+console.log("PASS: isolated W05 real HTTP handlers: CRM 401/404/503/200, IDOR, role/capability, immutable granted/denied audit, MIME, revocation, private Library");
