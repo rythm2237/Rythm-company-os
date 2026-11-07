@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireOrganizationContext, requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { requireCrm, CRM_CAPABILITIES } from "@/lib/crm/access";
 import { customProperties } from "@/lib/crm/sales";
+import { privateFileNameMatchesMime, privateFileContentMatchesMime } from "@/lib/security/private-file-validation";
 const text = (fd: FormData, key: string, max = 4000) => String(fd.get(key) ?? "").trim().slice(0, max);
 const uuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 function done(path: string, failed: boolean):never { revalidatePath("/crm", "layout"); revalidatePath("/projects"); revalidatePath("/projects/operating"); revalidatePath("/finance"); redirect(`${path}?${failed ? "error=Unable+to+save.+Check+your+access+and+the+required+fields." : "saved=1"}`); }
@@ -78,8 +79,10 @@ export async function uploadContractDocument(fd:FormData) {
  const file=fd.get("document");
  if(!(file instanceof File)||file.size<=0||file.size>20*1024*1024||!["application/pdf","text/plain","application/vnd.openxmlformats-officedocument.wordprocessingml.document"].includes(file.type))done(`/crm/${contract.customer_id}`,true);
  const {createServerSupabaseClient}=await import("@/lib/supabase/server");const service=createServerSupabaseClient();if(!service)done(`/crm/${contract.customer_id}`,true);
+ const bytes=Buffer.from(await file.arrayBuffer());
+ if(!privateFileNameMatchesMime(file.name,file.type)||!privateFileContentMatchesMime(bytes,file.type))done(`/crm/${contract.customer_id}`,true);
  const path=`${organizationId}/contracts/${contractId}/${crypto.randomUUID()}`;
- const uploaded=await service.storage.from("project-files").upload(path,file,{contentType:file.type,upsert:false});
+ const uploaded=await service.storage.from("project-files").upload(path,bytes,{contentType:file.type,upsert:false});
  if(uploaded.error)done(`/crm/${contract.customer_id}`,true);
  const {error}=await service.from("project_documents").insert({organization_id:organizationId,contract_id:contractId,customer_id:contract.customer_id,category:"contract",confidentiality:"contract",legal_document:true,file_name:file.name.slice(0,240),storage_path:path,mime_type:file.type,byte_size:file.size,uploaded_by_user_id:user.id,extraction_status:"failed",last_ingestion_error:"Confidential documents are excluded from shared Project Knowledge."});
  if(error)await service.storage.from("project-files").remove([path]);

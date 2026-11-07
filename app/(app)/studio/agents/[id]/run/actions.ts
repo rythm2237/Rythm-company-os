@@ -3,6 +3,8 @@
 import OpenAI from "openai";
 import { randomUUID } from "crypto";
 import { requireActiveOwnerOrganizationContext } from "@/lib/auth/organization-context";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { isOrganizationStoragePath } from "@/lib/security/private-file-validation";
 import { runAgent, type AgentAttachmentInput } from "@/lib/ai/agent-provider";
 import { deterministicRequestIntelligence } from "@/lib/ai/request-intelligence";
 import { planContext, renderContextPlan } from "@/lib/ai/context-planner";
@@ -203,7 +205,9 @@ async function loadAttachments(context: ActiveContext, agentId: string, ids: str
   const uniqueIds = Array.from(new Set(ids.filter(Boolean))).slice(0, MAX_FILES_PER_MESSAGE); if (!uniqueIds.length) return [] as AgentAttachmentInput[];
   const { data, error } = await context.supabase.from("agent_attachments").select("id,filename,mime_type,size_bytes,storage_path").eq("organization_id", context.organizationId).eq("agent_id", agentId).eq("status", "active").in("id", uniqueIds); if (error) throw new Error("Attached files could not be loaded.");
   const files: AgentAttachmentInput[] = [];
-  for (const row of (data ?? []) as AttachmentRow[]) { const { data: blob, error: downloadError } = await context.supabase.storage.from("agent-attachments").download(row.storage_path); if (downloadError || !blob) throw new Error(`Could not read ${row.filename}.`); const buffer = Buffer.from(await blob.arrayBuffer()); files.push({ filename: row.filename, mimeType: row.mime_type, base64: buffer.toString("base64") }); }
+  const transport = createServerSupabaseClient();
+  if (!transport) throw new Error("Private attachment transport unavailable.");
+  for (const row of (data ?? []) as AttachmentRow[]) { if (!isOrganizationStoragePath(context.organizationId, row.storage_path) || !row.storage_path.startsWith(`${context.organizationId}/${agentId}/`) || row.storage_path.split("/").length !== 3) throw new Error("Attachment storage identity is invalid."); const { data: blob, error: downloadError } = await transport.storage.from("agent-attachments").download(row.storage_path); if (downloadError || !blob) throw new Error(`Could not read ${row.filename}.`); const buffer = Buffer.from(await blob.arrayBuffer()); files.push({ filename: row.filename, mimeType: row.mime_type, base64: buffer.toString("base64") }); }
   return files;
 }
 async function loadMemoryContext(context: ActiveContext, agentId: string) {

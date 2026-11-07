@@ -7,6 +7,7 @@ import { extractCompanyDocument, chunkCompanyDocument } from "@/lib/company-libr
 import { isOrganizationEntitlementActive, type OrganizationEntitlement } from "@/lib/auth/organization-context";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { redactSecretText } from "@/lib/security/redaction";
+import { isProjectDocumentStoragePath } from "@/lib/security/private-file-validation";
 
 type ClaimedProjectDocument = {
   id:string;
@@ -200,6 +201,7 @@ export async function dispatchProjectKnowledge(supabase:SupabaseClient,options:{
         await supabase.from("project_documents").update({extraction_status:"failed",last_ingestion_error:"Confidential documents require an explicitly authorized workflow.",ingestion_lease_owner:null,ingestion_lease_expires_at:null,next_ingestion_at:null}).eq("id",document.id).eq("organization_id",document.organization_id);
         results.push({id:document.id,status:"restricted"});continue;
       }
+      if(!isProjectDocumentStoragePath({ organizationId:document.organization_id, projectId:document.project_id, contractId:null, storagePath:document.storage_path }))throw new Error("Private project document path is outside its tenant/project boundary.");
       const downloaded=await supabase.storage.from("project-files").download(document.storage_path);
       if(downloaded.error||!downloaded.data)throw new Error(`Private project file could not be read: ${downloaded.error?.message??"missing file"}`);
       const buffer=Buffer.from(await downloaded.data.arrayBuffer());

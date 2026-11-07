@@ -1,4 +1,5 @@
 import { canCrm } from "@/lib/crm/access";
+import { privateFileContentMatchesMime, privateFileNameMatchesMime } from "@/lib/security/private-file-validation";
 import { createHash, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
@@ -37,6 +38,7 @@ export async function POST(request:Request){
     if(file.size<=0||file.size>50*1024*1024)return NextResponse.json({ok:false,error:`${file.name}: file size is outside the 50 MB limit.`},{status:400});
     if(!allowedMimeTypes.has(file.type))return NextResponse.json({ok:false,error:`${file.name}: unsupported file type.`},{status:400});
     const bytes=Buffer.from(await file.arrayBuffer());
+    if(!privateFileNameMatchesMime(file.name,file.type)||!privateFileContentMatchesMime(bytes,file.type))return NextResponse.json({ok:false,error:`${file.name}: file extension or contents do not match the declared type.`},{status:400});
     const checksum=createHash("sha256").update(bytes).digest("hex");
     const storagePath=`${auth.organizationId}/${projectId}/${randomUUID()}-${safeName(file.name)}`;
     const stored=await service.storage.from("project-files").upload(storagePath,bytes,{contentType:file.type,upsert:false});
