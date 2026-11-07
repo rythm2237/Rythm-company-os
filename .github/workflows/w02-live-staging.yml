@@ -1,51 +1,42 @@
-name: W03 Live Tenant Isolation (manual only)
+name: W02 Live Staging Acceptance (manual only)
 
 on:
   workflow_dispatch:
     inputs:
       confirm_staging_only:
-        description: 'Type W03-STAGING-ONLY to authorize disposable fixture tests'
+        description: 'Type W02-STAGING-ONLY to authorize disposable fixture tests'
         required: true
         type: string
-      matrix:
-        description: 'Bounded W03 matrix wave'
-        required: true
-        default: routes
-        type: choice
-        options: [routes, oauth, public, extended]
 
 permissions:
   contents: read
 
 concurrency:
-  group: w03-live-staging
+  group: w02-live-staging
   cancel-in-progress: false
 
 jobs:
   verify-staging:
-    if: ${{ github.event.inputs.confirm_staging_only == 'W03-STAGING-ONLY' && github.ref == 'refs/heads/test/w03-tenant-isolation-evidence' }}
+    if: ${{ github.event.inputs.confirm_staging_only == 'W02-STAGING-ONLY' && github.ref == 'refs/heads/test/w02-isolated-multitenant-fixtures' }}
     environment: w02-staging
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 25
     env:
-      W03_STAGING_REF: ${{ vars.W02_STAGING_REF }}
-      W03_STAGING_SUPABASE_URL: ${{ vars.W02_STAGING_SUPABASE_URL }}
-      W03_STAGING_SERVICE_ROLE_KEY: ${{ secrets.W02_STAGING_SERVICE_ROLE_KEY }}
-      W03_STAGING_ANON_KEY: ${{ secrets.W02_STAGING_ANON_KEY }}
-      W03_TEST_PASSWORD: ${{ secrets.W02_TEST_PASSWORD }}
-      W03_W01_VERIFIED: 'true'
-      RYTHM_AGENT_EXECUTION_ENABLED: 'false'
-      RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
-      NEXT_TELEMETRY_DISABLED: '1'
+      W02_STAGING_REF: ${{ vars.W02_STAGING_REF }}
+      W02_STAGING_SUPABASE_URL: ${{ vars.W02_STAGING_SUPABASE_URL }}
+      W02_STAGING_SERVICE_ROLE_KEY: ${{ secrets.W02_STAGING_SERVICE_ROLE_KEY }}
+      W02_STAGING_ANON_KEY: ${{ secrets.W02_STAGING_ANON_KEY }}
+      W02_TEST_PASSWORD: ${{ secrets.W02_TEST_PASSWORD }}
+      W02_W01_VERIFIED: 'true'
     steps:
       - name: Refuse missing or incorrect staging configuration
         shell: bash
         run: |
-          test "$W03_STAGING_REF" = "viqjdgohtxqkrdgwtull"
-          test "$W03_STAGING_SUPABASE_URL" = "https://viqjdgohtxqkrdgwtull.supabase.co"
-          test -n "$W03_STAGING_SERVICE_ROLE_KEY"
-          test -n "$W03_STAGING_ANON_KEY"
-          test "${#W03_TEST_PASSWORD}" -ge 16
+          test "$W02_STAGING_REF" = "viqjdgohtxqkrdgwtull"
+          test "$W02_STAGING_SUPABASE_URL" = "https://viqjdgohtxqkrdgwtull.supabase.co"
+          test -n "$W02_STAGING_SERVICE_ROLE_KEY"
+          test -n "$W02_STAGING_ANON_KEY"
+          test "${#W02_TEST_PASSWORD}" -ge 16
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -54,39 +45,23 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - name: Wait for restored staging health
+      - name: Offline contract gate
+        run: npm run test:w02
+      - name: Live isolated tenant setup, RLS verification and cleanup — first cycle
+        run: node scripts/fixtures/w02-staging.mjs roundtrip
+      - name: Live isolated tenant setup, RLS verification and cleanup — repeatability cycle
+        run: node scripts/fixtures/w02-staging.mjs roundtrip
+      - name: Verify no fixture tenants remain
         run: |
           node --input-type=module <<'JS'
-          let ready=false,stable=0;
-          for(let i=0;i<120;i++){
-            try {
-              const headers={apikey:process.env.W03_STAGING_SERVICE_ROLE_KEY,Authorization:'Bearer '+process.env.W03_STAGING_SERVICE_ROLE_KEY};
-              const responses=await Promise.all(['/rest/v1/organizations?select=id&limit=0','/auth/v1/admin/users?page=1&per_page=1'].map(path=>fetch(process.env.W03_STAGING_SUPABASE_URL+path,{headers})));
-              stable=responses.every(r=>r.ok)?stable+1:0;
-              if(stable>=3){ready=true;break;}
-            }catch{stable=0;}
-            await new Promise(r=>setTimeout(r,5000));
+          import assert from 'node:assert/strict';
+          import { createClient } from '@supabase/supabase-js';
+          import { buildW02Blueprint } from './scripts/fixtures/w02-blueprint.mjs';
+          const db = createClient(process.env.W02_STAGING_SUPABASE_URL, process.env.W02_STAGING_SERVICE_ROLE_KEY);
+          for (const c of buildW02Blueprint().companies) {
+            const { data, error } = await db.from('organizations').select('id').eq('id', c.id);
+            if (error) throw error;
+            assert.equal(data.length, 0, 'Synthetic organization remains after cleanup');
           }
-          if(!ready)throw Error('Staging did not become healthy');
+          console.log('PASS: zero synthetic organizations remain in staging');
           JS
-      - name: Quarantine identities from interrupted first setup
-        run: |
-          W03_FIXTURE_RUN=41342662942 node scripts/fixtures/w03-staging.mjs quarantine-partial
-          W03_FIXTURE_RUN=41343124808 node scripts/fixtures/w03-staging.mjs quarantine-partial
-      - name: Create fresh W03 identities and fixtures
-        run: node scripts/fixtures/w03-staging.mjs setup
-      - name: Authenticated RLS and HTTP matrix
-        env:
-          W03_MATRIX: ${{ inputs.matrix }}
-        run: |
-          case "$W03_MATRIX" in routes|oauth|public|extended) ;; *) exit 1 ;; esac
-          node scripts/fixtures/w03-live.mjs "--${W03_MATRIX}-only"
-      - name: Quarantine W03 identities preserving audit history
-        if: always()
-        run: node scripts/fixtures/w03-staging.mjs quarantine-partial
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: w03-sanitized-evidence
-          path: .w03-evidence/result.json
-          if-no-files-found: warn
