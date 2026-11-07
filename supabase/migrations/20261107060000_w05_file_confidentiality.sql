@@ -35,7 +35,7 @@ begin
   end if;
 
   if new.storage_path is null or left(new.storage_path, length(org_prefix)) <> org_prefix
-     or position('// ' in new.storage_path) > 0
+     or position('//' in new.storage_path) > 0
      or position('/../' in new.storage_path) > 0
      or position('/./' in new.storage_path) > 0 then
     raise exception 'Invalid tenant-scoped document storage path' using errcode = '23514';
