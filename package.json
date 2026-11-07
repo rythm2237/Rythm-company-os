@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment && npm run test:integration-availability && npm run test:continuous-program && npm run test:google-provider-repair && npm run test:google-business-quota && npm run test:project-details-ux",
+    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment && npm run test:integration-availability && npm run test:continuous-program && npm run test:google-provider-repair && npm run test:google-business-quota && npm run test:project-details-ux && npm run test:w02",
     "build": "next build",
     "postbuild": "npm run test:project-completion",
     "start": "next start",
@@ -60,7 +60,8 @@
     "test:enterprise-crm": "node --import tsx scripts/validate-enterprise-crm-sql.ts && node --import tsx scripts/validate-enterprise-crm-ui.tsx",
     "test:crm-sales": "node --import tsx scripts/validate-crm-sales-ui.tsx && node --import tsx scripts/validate-crm-sales-api.ts",
     "test:crm-sales-browser": "node scripts/validate-crm-sales-browser.mjs",
-    "test:crm-connected": "node --import tsx scripts/validate-crm-connected.tsx"
+    "test:crm-connected": "node --import tsx scripts/validate-crm-connected.tsx",
+    "test:w02": "node scripts/validate-w02-fixtures.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
