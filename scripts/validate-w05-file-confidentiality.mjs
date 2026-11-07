@@ -28,7 +28,7 @@ assert.equal(privateFileContentMatchesMime(new Uint8Array([0x50,0x4b,0x03,0x04,0
 assert.equal(privateFileContentMatchesMime(new Uint8Array([0x00,0x41]),"text/plain"), false);
 assert.equal(privateFileContentMatchesMime(new Uint8Array([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]),"image/png"), true);
 const migration = readFileSync(new URL("../supabase/migrations/20261107060000_w05_file_confidentiality.sql",import.meta.url), "utf8");
-assert.match(migration, /storage\\.allow_any_operation/);
-assert.match(migration, /object\\.sign_many/);
+assert.match(migration, /storage\.allow_any_operation/);
+assert.match(migration, /object\.sign_many/);
 assert.match(migration, /project_document_storage_boundary/);
-console.log("W05 local security guards: 17 assertions PASS (storage key, tenant, contract, MIME, URL-signing policy).");
+console.log("W05 local security guards: assertions PASS (storage key, tenant, contract, MIME, URL-signing policy).");
