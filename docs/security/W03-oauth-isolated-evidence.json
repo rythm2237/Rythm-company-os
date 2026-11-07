@@ -1,0 +1,985 @@
+{
+  "scope": "Isolated actual route handlers; synthetic auth/DB; real signing and cookies; provider intercepted before I/O",
+  "checks": [
+    {
+      "provider": "bing_webmaster",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "bing_webmaster",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "cloudflare",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "github",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "google_ads",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "google_analytics",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "google_business_profile",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "google_drive",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "google_search_console",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "connect-ignores-foreign-id-creates-own",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "callback-expired-cross-company",
+      "ok": true
+    },
+    {
+      "provider": "google_workspace",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "linkedin_marketing",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "microsoft_365",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "supabase",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "vercel",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "connect-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "connect-member",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "connect-foreign-company",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "connect-inactive",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "connect-own-positive",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "callback-anonymous",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "callback-cross-company-same-user",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "callback-different-user",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "callback-role-revoked",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "callback-entitlement-revoked",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "callback-tampered",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "callback-missing-cookie",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "callback-expired-valid-signature",
+      "ok": true
+    },
+    {
+      "provider": "youtube",
+      "operation": "callback-own-provider-intercept",
+      "ok": true
+    }
+  ]
+}

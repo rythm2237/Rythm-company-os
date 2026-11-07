@@ -1,0 +1,15 @@
+{
+  "phase": "seed",
+  "pass": 0,
+  "fail": 1,
+  "error": "seed project_task_runs:P0001",
+  "cause": "W01 schema-only restore has no completion policy reference rows",
+  "provenance": {
+    "runId": 41829527832,
+    "headSha": "83d27a0e3a0994b9f44ee68360903562eba921ee",
+    "artifactId": 13321707396,
+    "artifactDigest": "sha256:214c9813bbd0bc46bfaa1d4377883357f20787e93087df544106b8df40e4c925"
+  },
+  "regression": "Run 41830366705 passed task fixture seeding after tenant-scoped completion policy fixture added; no global policy seed or schema change.",
+  "format": "Sanitized completed-job log summary; source artifact identified in provenance"
+}

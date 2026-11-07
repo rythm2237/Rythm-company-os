@@ -106,8 +106,7 @@ async function loadExistingResult(admin: NonNullable<ReturnType<typeof createEva
   return data;
 }
 
-async function finalizeRun(code: string, runId: string) {
-  const { context, agent } = await getAuthorizedAgent(code);
+async function finalizeRun(runId: string, { context, agent }: Awaited<ReturnType<typeof getAuthorizedAgent>>) {
   const admin = createEvaluationAdminClient();
   if (!admin) throw new Error("Protected evaluation persistence is unavailable.");
   const { data: rows, error } = await admin.from("agent_evaluation_results")
@@ -154,16 +153,22 @@ async function finalizeRun(code: string, runId: string) {
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   let runId = "";
+  let authorizedOrganizationId: string | null = null;
   try {
     const { code } = await params;
     const body = await request.json().catch(() => ({})) as { runId?: string; scenarioId?: string; finalize?: boolean };
     runId = String(body.runId ?? "").trim();
     if (!UUID.test(runId)) return NextResponse.json({ error: "A valid benchmark run identifier is required." }, { status: 400 });
-    if (body.finalize) return NextResponse.json(await finalizeRun(code, runId));
+    if (body.finalize) {
+      const authorized = await getAuthorizedAgent(code);
+      authorizedOrganizationId = authorized.context.organizationId;
+      return NextResponse.json(await finalizeRun(runId, authorized));
+    }
 
     const scenario = getGtmSeniorScenario(String(body.scenarioId ?? ""));
     if (!scenario) return NextResponse.json({ error: "Unknown benchmark scenario." }, { status: 400 });
     const { context, agent } = await getAuthorizedAgent(code);
+    authorizedOrganizationId = context.organizationId;
     const admin = createEvaluationAdminClient();
     await ensureBatch(admin, runId, context.organizationId, context.user.id);
     if (!admin) throw new Error("Protected evaluation persistence is unavailable.");
@@ -297,9 +302,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     return NextResponse.json({ result: persisted, reused: false });
   } catch (error) {
     try {
-      if (UUID.test(runId)) {
+      if (UUID.test(runId) && authorizedOrganizationId) {
         const admin = createEvaluationAdminClient();
-        if (admin) await admin.from("agent_evaluation_batches").update({ status: "failed", completed_at: new Date().toISOString(), error_message: safeError(error) }).eq("id", runId);
+        if (admin) await admin.from("agent_evaluation_batches").update({ status: "failed", completed_at: new Date().toISOString(), error_message: safeError(error) }).eq("id", runId).eq("organization_id", authorizedOrganizationId);
       }
     } catch { /* fail closed without masking the original error */ }
     return NextResponse.json({ error: safeError(error) }, { status: 500 });

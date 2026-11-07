@@ -1,0 +1,51 @@
+{
+  "verifiedDate": "2026-11-05",
+  "states": [
+    {
+      "id": "dezbacyuvsdrlpmmpjht",
+      "name": "Rythm-company-os",
+      "status": "ACTIVE_HEALTHY"
+    },
+    {
+      "id": "viqjdgohtxqkrdgwtull",
+      "name": "rythm-phase3-staging",
+      "status": "INACTIVE"
+    },
+    {
+      "id": "dqpdyschjpbdhhotmojs",
+      "name": "ai roadmap",
+      "status": "ACTIVE_HEALTHY"
+    }
+  ],
+  "aiRoadmapDatabaseHealth": [
+    {
+      "health": 1
+    }
+  ],
+  "freshFixtureQuarantine": [
+    {
+      "evidence": {
+        "users": 19,
+        "banned": 19,
+        "liveGrants": 0,
+        "memberships": 20,
+        "replayCostMicros": 0,
+        "activeMemberships": 0,
+        "cancelledProjects": 3
+      }
+    }
+  ],
+  "allW03Quarantine": [
+    {
+      "evidence": {
+        "w03Users": 228,
+        "w03UsersBanned": 228,
+        "tenantConstraints": 9,
+        "w03ActiveMemberships": 0,
+        "validatedTenantConstraints": 9
+      }
+    }
+  ],
+  "productionMutations": false,
+  "stagingOnlySchemaChanges": true
+}

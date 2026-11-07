@@ -1,0 +1,1058 @@
+{
+  "date": "2026-11-04",
+  "stagingRef": "viqjdgohtxqkrdgwtull",
+  "runId": 41831048886,
+  "attempt": 1,
+  "transaction": "ROLLBACK",
+  "claims": "SQL assigned authenticated subject claims; not password-authenticated HTTP",
+  "scope": "146 organization_id tables and 3 views; READ only. 27 relations have same-tenant positive rows; 122 have no positive fixture evidence and are not proven by empty results.",
+  "relations": 149,
+  "cases": 8493,
+  "foreignCases": 5513,
+  "foreignRows": 0,
+  "coverage": [
+    {
+      "relation": "action_items",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "agency_seo_provider_bindings",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agency_seo_sites",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agency_seo_snapshots",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_artifacts",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_asset_profiles",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_attachments",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_autonomy_profiles",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_certification_requests",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_commercial_contracts",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 37,
+      "foreign_max_rows": null,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_cost_history",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_evaluation_batches",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 37,
+      "foreign_max_rows": null,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_evaluation_results",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 37,
+      "foreign_max_rows": null,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_experience_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_integration_grants",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_knowledge_provisioning_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_level_history",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_mastery_assessments",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_memories",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_position_contracts",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_professional_standing",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_promotion_assessments",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_role_foundation_bindings",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_runs",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_specialization_bindings",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_trials",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 37,
+      "foreign_max_rows": null,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_valuation_snapshots",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_work_assignment_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agent_work_assignments",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "agents",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "ai_routing_decisions",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "ai_routing_feature_rollout_config",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "ai_routing_rollout_config",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "ai_usage_requests",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 37,
+      "foreign_max_rows": null,
+      "positive_cases": 0
+    },
+    {
+      "relation": "aiw_company_member_access",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 37,
+      "foreign_max_rows": null,
+      "positive_cases": 0
+    },
+    {
+      "relation": "aiw_company_member_invitations",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 37,
+      "foreign_max_rows": null,
+      "positive_cases": 0
+    },
+    {
+      "relation": "aiw_guest_codes",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 37,
+      "foreign_max_rows": null,
+      "positive_cases": 0
+    },
+    {
+      "relation": "aiw_workspaces",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 37,
+      "foreign_max_rows": null,
+      "positive_cases": 0
+    },
+    {
+      "relation": "approval_requests",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "audit_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "billing_accounts",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "billing_checkout_sessions",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "billing_payments",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "billing_subscription_items",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "billing_subscriptions",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "billing_webhook_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "calendar_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "calendar_provider_connections",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "communication_forwarding_rules",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "communication_mailboxes",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "communication_messages",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "communication_provider_connections",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "communication_settings",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "communication_threads",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "company_bootstrap_runs",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "company_builder_drafts",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "company_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "company_knowledge",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 3
+    },
+    {
+      "relation": "company_knowledge_chunks",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "company_memory",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "connection_setup_session_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "continuous_program_review_cycles",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "continuous_programs",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "crm_access_grants",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 6
+    },
+    {
+      "relation": "crm_accounts",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "crm_activities",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "crm_audit_log",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "crm_contacts",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "crm_leads",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "crm_opportunities",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "crm_pipeline_stages",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "crm_preferences",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "decisions",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "departments",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "entity_relationships",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "execution_rollout_config",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "execution_validation_records",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "finance_budgets",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "finance_invoice_lines",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "finance_invoices",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 6
+    },
+    {
+      "relation": "finance_transactions",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "intake_items",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "integration_resources",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "integration_setup_sessions",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "meeting_agent_messages",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "meeting_agent_participants",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "meeting_agent_sessions",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "meeting_legal_reviews",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "meeting_participants",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "meetings",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "notification_preferences",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "notifications",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 3
+    },
+    {
+      "relation": "operational_incidents",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "organization_branding",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "organization_entitlements",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 3
+    },
+    {
+      "relation": "organization_integrations",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "organization_invitations",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "organization_members",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 3
+    },
+    {
+      "relation": "organization_setup_dependencies",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "organization_support_access",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "organization_template_installations",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "privacy_requests",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_activity_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "project_agent_capacity",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_agents",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_approval_discussion_messages",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_autonomous_meeting_jobs",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_clarification_requests",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_clients",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_closeout_reports",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_completion_criteria",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_completion_evaluations",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "project_completion_evidence",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_completion_policies",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "project_connection_bindings",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_context_documents",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_contract_links",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_contracts",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 3
+    },
+    {
+      "relation": "project_decision_memory",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "project_document_chunks",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_documents",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "project_execution_health_v1",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "project_executions",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "project_health_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_kpis",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_manager_history",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "project_metric_measurements",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_milestones",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_observation_windows",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_operating_timeline",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_progress_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_progress_nodes",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_proposals",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_readiness_assessments",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_resources",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_roadmap_phases",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_roadmaps",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_scope_versions",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_strategy_analyses",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_strategy_briefs",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "project_task_runs",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "projects",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 20
+    },
+    {
+      "relation": "runtime_policies",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "strategy_work_requests",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "teams",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "tool_execution_attempts",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "tool_execution_events",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "tool_execution_requests",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 0,
+      "foreign_max_rows": 0,
+      "positive_cases": 0
+    },
+    {
+      "relation": "usage_wallets",
+      "foreign_cases": 37,
+      "foreign_permission_denied": 37,
+      "foreign_max_rows": null,
+      "positive_cases": 0
+    }
+  ]
+}

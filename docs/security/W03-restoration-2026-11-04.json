@@ -1,0 +1,20 @@
+{
+  "verifiedAt": "2026-11-04T13:07:55Z",
+  "states": [
+    {
+      "projectId": "dezbacyuvsdrlpmmpjht",
+      "status": "ACTIVE_HEALTHY"
+    },
+    {
+      "projectId": "viqjdgohtxqkrdgwtull",
+      "status": "INACTIVE"
+    },
+    {
+      "projectId": "dqpdyschjpbdhhotmojs",
+      "status": "ACTIVE_HEALTHY"
+    }
+  ],
+  "aiRoadmapDatabaseReadySelect1": true,
+  "productionPaused": false,
+  "productionSchemaOrRlsChanged": false
+}

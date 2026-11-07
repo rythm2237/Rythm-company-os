@@ -260,6 +260,24 @@ export async function requestToolExecution(
   ])) as any[];
   if (!integration)
     throw new Error("Integration is not available to this company.");
+  // The service client bypasses RLS. Resolve every caller-supplied parent in
+  // this company before recording even a denied execution proposal.
+  if (intent.agentId && !agent)
+    throw new Error("Execution context is not available to this company.");
+  for (const [table, id] of [
+    ["projects", intent.projectId],
+    ["meetings", intent.meetingId],
+    ["meeting_agent_sessions", intent.sessionId],
+  ] as const) {
+    if (!id) continue;
+    let query = supabase.from(table).select(table === "projects" ? "id" : table === "meetings" ? "id,project_id" : "id,project_id,meeting_id")
+      .eq("id", id).eq("organization_id", intent.organizationId);
+    if (table !== "projects" && intent.projectId) query = query.eq("project_id", intent.projectId);
+    if (table === "meeting_agent_sessions" && intent.meetingId) query = query.eq("meeting_id", intent.meetingId);
+    const reference = await query.maybeSingle();
+    if (reference.error || !reference.data)
+      throw new Error("Execution context is not available to this company.");
+  }
 
   const toolId =
     intent.toolId ??

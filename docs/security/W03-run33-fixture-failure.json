@@ -1,0 +1,1427 @@
+{
+  "provenance": {
+    "runId": 42182554295,
+    "sha": "e8223bb496522ff8ecc3ab273f700f59dd2b5ae1",
+    "artifactId": 13485599366,
+    "archiveSha256": "b3a8082583157058c11ba9df80cac4cbd9f23a815831f9a3aae0e34f02bb22d3"
+  },
+  "phase": "public-and-private-boundaries",
+  "checks": [
+    {
+      "surface": "files",
+      "operation": "own-upload",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": "status-200"
+    },
+    {
+      "surface": "projects",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_executions",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_task_runs",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "crm_accounts",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_contracts",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "finance_invoices",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "company_memory",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "company_knowledge",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_decision_memory",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "action_items",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "notifications",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_documents",
+      "operation": "owner-positive-read",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "files",
+      "operation": "own-download",
+      "actor": "A",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "files",
+      "operation": "own-upload",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": "status-200"
+    },
+    {
+      "surface": "projects",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_executions",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_task_runs",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "crm_accounts",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_contracts",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "finance_invoices",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "company_memory",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "company_knowledge",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_decision_memory",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "action_items",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "notifications",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_documents",
+      "operation": "owner-positive-read",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "files",
+      "operation": "own-download",
+      "actor": "B",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "files",
+      "operation": "own-upload",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": "status-200"
+    },
+    {
+      "surface": "projects",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_executions",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_task_runs",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "crm_accounts",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_contracts",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "finance_invoices",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "company_memory",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "company_knowledge",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_decision_memory",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "action_items",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "notifications",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "project_documents",
+      "operation": "owner-positive-read",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "files",
+      "operation": "own-download",
+      "actor": "C",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_owner",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_owner",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_owner",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_owner",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "A_owner",
+      "target": "A",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "owner-positive-transition",
+      "actor": "A_owner",
+      "target": "A",
+      "ok": true,
+      "detail": "status-200"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "own-unapproved-draft-denied",
+      "actor": "A_owner",
+      "target": "A",
+      "ok": true,
+      "detail": "Human approval gate retained"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_admin",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_admin",
+      "target": "B",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_admin",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_admin",
+      "target": "C",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "A_admin",
+      "target": "A",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_project_manager",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_project_manager",
+      "target": "B",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_project_manager",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_project_manager",
+      "target": "C",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "A_project_manager",
+      "target": "A",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_member",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_member",
+      "target": "B",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_member",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_member",
+      "target": "C",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "A_member",
+      "target": "A",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_finance_restricted",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_finance_restricted",
+      "target": "B",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_finance_restricted",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_finance_restricted",
+      "target": "C",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "A_finance_restricted",
+      "target": "A",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_finance_authorized",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_finance_authorized",
+      "target": "B",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "A_finance_authorized",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "A_finance_authorized",
+      "target": "C",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "A_finance_authorized",
+      "target": "A",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_owner",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_owner",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_owner",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_owner",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "B_owner",
+      "target": "B",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "owner-positive-transition",
+      "actor": "B_owner",
+      "target": "B",
+      "ok": true,
+      "detail": "status-200"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "own-unapproved-draft-denied",
+      "actor": "B_owner",
+      "target": "B",
+      "ok": true,
+      "detail": "Human approval gate retained"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_admin",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_admin",
+      "target": "A",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_admin",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_admin",
+      "target": "C",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "B_admin",
+      "target": "B",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_project_manager",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_project_manager",
+      "target": "A",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_project_manager",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_project_manager",
+      "target": "C",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "B_project_manager",
+      "target": "B",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_member",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_member",
+      "target": "A",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_member",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_member",
+      "target": "C",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "B_member",
+      "target": "B",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_finance_restricted",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_finance_restricted",
+      "target": "A",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_finance_restricted",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_finance_restricted",
+      "target": "C",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "B_finance_restricted",
+      "target": "B",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_finance_authorized",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_finance_authorized",
+      "target": "A",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "B_finance_authorized",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "B_finance_authorized",
+      "target": "C",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "B_finance_authorized",
+      "target": "B",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_owner",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_owner",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_owner",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_owner",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "C_owner",
+      "target": "C",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "owner-positive-transition",
+      "actor": "C_owner",
+      "target": "C",
+      "ok": true,
+      "detail": "status-200"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "own-unapproved-draft-denied",
+      "actor": "C_owner",
+      "target": "C",
+      "ok": true,
+      "detail": "Human approval gate retained"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_admin",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_admin",
+      "target": "A",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_admin",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_admin",
+      "target": "B",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "C_admin",
+      "target": "C",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_project_manager",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_project_manager",
+      "target": "A",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_project_manager",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_project_manager",
+      "target": "B",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "C_project_manager",
+      "target": "C",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_member",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_member",
+      "target": "A",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_member",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_member",
+      "target": "B",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "C_member",
+      "target": "C",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_finance_restricted",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_finance_restricted",
+      "target": "A",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_finance_restricted",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_finance_restricted",
+      "target": "B",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "C_finance_restricted",
+      "target": "C",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_finance_authorized",
+      "target": "A",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_finance_authorized",
+      "target": "A",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "C_finance_authorized",
+      "target": "B",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "C_finance_authorized",
+      "target": "B",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "C_finance_authorized",
+      "target": "C",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "foreign-id-denied",
+      "actor": "shared",
+      "target": "C",
+      "ok": true,
+      "detail": "status-404"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "foreign-id-or-role-denied",
+      "actor": "shared",
+      "target": "C",
+      "ok": true,
+      "detail": "status-307"
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "queue-role-and-company",
+      "actor": "shared",
+      "target": "A",
+      "ok": true,
+      "detail": "draft fixtures never enter delivery queue"
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "only-own-transition-persisted",
+      "actor": "all",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "no-delivery",
+      "actor": "all",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "only-own-transition-persisted",
+      "actor": "all",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "no-delivery",
+      "actor": "all",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "opportunity-stage-http",
+      "operation": "only-own-transition-persisted",
+      "actor": "all",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "outbound-email-http",
+      "operation": "no-delivery",
+      "actor": "all",
+      "target": "C",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/health status-200"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/status status-200"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/system/deployment-version status-200"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/bootstrap status-200"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/portfolio status-200"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/page status-200"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/admin-page status-200"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/site status-200"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/logo status-200"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/media/portfolio-01.webp status-200"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/availability status-400"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "declared-public-or-capability-contract",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/manage status-404"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "input-or-capability-validation",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/book status-400"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "input-or-capability-validation",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/contact-message status-400"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "input-or-capability-validation",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/manage status-400"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "input-or-capability-validation",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/admin/login status-400"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "input-or-capability-validation",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/2nya-nailart/admin/logout status-200"
+    },
+    {
+      "surface": "public-contract",
+      "operation": "input-or-capability-validation",
+      "actor": "anonymous",
+      "target": "public",
+      "ok": true,
+      "detail": "/api/analytics/public-events status-400"
+    },
+    {
+      "surface": "public-egress-sandbox",
+      "operation": "provider-unavailable-contract",
+      "actor": "anonymous",
+      "target": "sandbox",
+      "ok": true,
+      "detail": "/api/2nya-nailart/media-health;production-read-blocked;not-provider-success"
+    },
+    {
+      "surface": "public-egress-sandbox",
+      "operation": "provider-unavailable-contract",
+      "actor": "anonymous",
+      "target": "sandbox",
+      "ok": true,
+      "detail": "/api/2nya-nailart/push-key;production-read-blocked;not-provider-success"
+    },
+    {
+      "surface": "public-intake",
+      "operation": "synthetic-positive",
+      "actor": "A_owner",
+      "target": "synthetic",
+      "ok": true,
+      "detail": "status-201"
+    },
+    {
+      "surface": "public-intake",
+      "operation": "requester-derived-from-session",
+      "actor": "A_owner",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "company-invite",
+      "operation": "existing-own-member-positive",
+      "actor": "A_owner",
+      "target": "A",
+      "ok": true,
+      "detail": "existing synthetic account only; no invitation email"
+    },
+    {
+      "surface": "company-invite",
+      "operation": "forged-company-ignored",
+      "actor": "A_owner",
+      "target": "B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "company-invite",
+      "operation": "existing-own-member-positive",
+      "actor": "B_owner",
+      "target": "B",
+      "ok": true,
+      "detail": "existing synthetic account only; no invitation email"
+    },
+    {
+      "surface": "company-invite",
+      "operation": "forged-company-ignored",
+      "actor": "B_owner",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "company-invite",
+      "operation": "existing-own-member-positive",
+      "actor": "C_owner",
+      "target": "C",
+      "ok": true,
+      "detail": "existing synthetic account only; no invitation email"
+    },
+    {
+      "surface": "company-invite",
+      "operation": "forged-company-ignored",
+      "actor": "C_owner",
+      "target": "A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "surface": "disabled-runtime-http",
+      "operation": "environment-switch",
+      "actor": "anonymous",
+      "target": "disabled",
+      "ok": false,
+      "detail": "/api/meetings/deliberate;auth-tested-separately-in-governed-handler-matrix"
+    },
+    {
+      "phase": "public-and-private-boundaries",
+      "ok": false,
+      "error": "disabled-runtime-http/environment-switch/anonymous/disabled//api/meetings/deliberate;auth-tested-separately-in-governed-handler-matrix"
+    }
+  ],
+  "pass": 175,
+  "fail": 2,
+  "scope": "Real staging REST RLS and local Next HTTP; not published preview parity or complete API inventory"
+}

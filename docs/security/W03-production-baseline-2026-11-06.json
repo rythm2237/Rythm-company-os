@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-06",
+  "mainSha": "995888ae6f7077f70527bbc95f74efd584115955",
+  "productionDeployment": "dpl_GqWEucPScpnLAhyc1BFsv1VBDSLR",
+  "productionSupabase": "dezbacyuvsdrlpmmpjht",
+  "productionLatestMigration": {
+    "version": "20261023125317",
+    "name": "crm_connected_records"
+  },
+  "publicHealth": {
+    "timestamp": "2026-11-06T07:46:02.818Z",
+    "status": "ok",
+    "agentExecution": "enabled",
+    "externalActions": "disabled"
+  },
+  "managementFlagInventory": "Previously denied 403; not retried or bypassed"
+}

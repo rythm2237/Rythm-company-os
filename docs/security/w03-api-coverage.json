@@ -1,0 +1,1512 @@
+{
+  "baseline": "995888ae6f7077f70527bbc95f74efd584115955",
+  "status": "EXECUTED_HTTP_INVENTORY_WITH_EXPLICIT_DEPTH",
+  "note": "All 101 route files have at least one executed HTTP case (29 earlier, 46 run31, 26 run39). Only listed methods, inputs and states are verified. Public/disabled/state-only HTTP contracts are distinguished from tenant-object proof. OAuth and runtime active branches additionally use real staging Auth/RLS with explicitly adapted context/configuration and provider interception (run40); four governed meeting handlers retain run30 adapted coverage. Not exhaustive or published-preview/production security certification.",
+  "routes": [
+    {
+      "path": "app/api/2nya-nailart/admin/gallery/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/admin/login/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/admin/logout/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/admin/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/admin-messages/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/admin-page/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/availability/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/book/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/bootstrap/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/contact-message/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/logo/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/manage/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/media/[...path]/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/media-health/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "503 provider-unavailable contract; production media/push-key fetches demonstrably blocked by egress guard. Provider-success branch NOT_RUN."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/page/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/portfolio/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/push-key/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "503 provider-unavailable contract; production media/push-key fetches demonstrably blocked by egress guard. Provider-success branch NOT_RUN."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/2nya-nailart/site/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/admin/ai-workspace/guest-codes/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/admin/automation/dispatch/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/admin/integrations/google-search-console/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/agent-avatar/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Anonymous SSRF-host or invalid guest-capability/session contract; no valid guest issuance."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/agents/[code]/benchmark/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/ai-workspace/chat/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/ai-workspace/company/invite/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/ai-workspace/files/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/ai-workspace/guest/activate/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Anonymous SSRF-host or invalid guest-capability/session contract; no valid guest issuance."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/ai-workspace/guest/logout/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Anonymous SSRF-host or invalid guest-capability/session contract; no valid guest issuance."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/ai-workspace/resources/[kind]/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS_W03_MEMORY_PROJECT_BOUNDARY",
+      "testedMethods": [
+        "GET",
+        "POST",
+        "DELETE"
+      ],
+      "testedKinds": {
+        "projects": [
+          "GET"
+        ],
+        "memories": [
+          "GET",
+          "POST",
+          "DELETE"
+        ]
+      },
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/ai-workspace/session/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/analytics/public-events/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/billing/checkout/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Disabled assisted-billing contract returns 409 before tenant mutation; not positive authorization proof."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/billing/portal/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Disabled assisted-billing contract returns 409 before tenant mutation; not positive authorization proof."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/billing/webhook/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/bootstrap-status/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/communication/inbound/cloudflare/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/communication/inbound/resend/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/communication/outbound/resend/route.ts",
+      "liveAuthenticatedHttp": "PASS_REAL_OBJECT_ROLE_AND_POSTSTATE",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Real seeded foreign object IDs, role checks, positive own transition or own draft approval guard, and independent unchanged/no-delivery poststate."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/company-logo/[id]/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/consumer/withdrawal/route.ts",
+      "liveAuthenticatedHttp": "PASS_PUBLIC_INTAKE_SESSION_BINDING",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Synthetic positive public intake; forged requester/organization fields ignored and actual session requester verified by SQL."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/crm/customers/export/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS_EXISTING_REGRESSION",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/crm/documents/[id]/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/crm/leads/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS_EXISTING_REGRESSION",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/crm/opportunities/[id]/stage/route.ts",
+      "liveAuthenticatedHttp": "PASS_REAL_OBJECT_ROLE_AND_POSTSTATE",
+      "isolatedHandler": "PASS_EXISTING_REGRESSION",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Real seeded foreign object IDs, role checks, positive own transition or own draft approval guard, and independent unchanged/no-delivery poststate."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/executions/[id]/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/executions/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/health/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/bing-webmaster/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/bing-webmaster/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/cloudflare/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/cloudflare/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/connection-agent/status/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Listed real-token role/object/authority checks only."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/github/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/github/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-ads/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-ads/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-analytics/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-analytics/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-business-profile/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-business-profile/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-drive/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-drive/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-search-console/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-search-console/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-workspace/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/google-workspace/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/linkedin-marketing/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/linkedin-marketing/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/microsoft-365/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/microsoft-365/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/supabase/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/supabase/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/vercel/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/vercel/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/youtube/callback/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/integrations/youtube/connect/route.ts",
+      "liveAuthenticatedHttp": "PASS_STATE_OR_ENTITLEMENT_DENIAL_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_CONTEXT_PROVIDER_INTERCEPT",
+      "httpEvidence": {
+        "runIds": [
+          42180458687
+        ],
+        "depth": "Real-token HTTP connect entitlement/role denials and invalid-state callback; active signed-state path is separate adapted-handler coverage."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "standaloneCases": 196,
+        "note": "Real staging identities, selected companies and caller RLS; in-memory entitlement/context adapter; provider exchange intercepted before I/O. No real provider credentials."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/meetings/ceo-contribute/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/meetings/close/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/meetings/continue-detached/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/meetings/deliberate/route.ts",
+      "liveAuthenticatedHttp": "PASS_DISABLED_RUNTIME_CONTRACT_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_MOCK_RUNTIME_PROVIDER",
+      "isolatedEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Owner HTTP 503 with execution disabled; anonymous meeting 401 from middleware. Object boundary is separately tested through real-Auth/RLS adapted handlers."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/meetings/legal-review/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_MOCK_RUNTIME_PROVIDER",
+      "liveEvidenceRun": 42100571332,
+      "isolatedEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/meetings/legal-triage/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_MOCK_RUNTIME_PROVIDER",
+      "liveEvidenceRun": 42100571332,
+      "isolatedEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/meetings/summarize/route.ts",
+      "liveAuthenticatedHttp": "PASS_DISABLED_RUNTIME_CONTRACT_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_MOCK_RUNTIME_PROVIDER",
+      "isolatedEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Owner HTTP 503 with execution disabled; anonymous meeting 401 from middleware. Object boundary is separately tested through real-Auth/RLS adapted handlers."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/privacy/export/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/privacy/requests/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/project-pulse/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "liveEvidenceRun": 42100571332,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/projects/analyze/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/projects/approval-advice/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/projects/approval-discussion/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/projects/completion/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "GET",
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/projects/connections/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/projects/control/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/projects/dispatch/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/projects/files/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/projects/live/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "GET"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/projects/roadmap/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "GET",
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/projects/run/route.ts",
+      "liveAuthenticatedHttp": "PASS_LISTED_CASES_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "testedMethods": [
+        "POST"
+      ],
+      "runId": 41831048886,
+      "attempt": 1,
+      "httpEvidence": {
+        "runIds": [
+          41831048886,
+          42100571332
+        ],
+        "depth": "Listed high-risk positive/negative cases only; earlier report has exact methods and evidence."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/runtime/execute-validation/route.ts",
+      "liveAuthenticatedHttp": "PASS_DISABLED_RUNTIME_CONTRACT_ONLY",
+      "isolatedHandler": "PASS_REAL_AUTH_RLS_ADAPTED_RUNTIME",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Owner HTTP 503 with execution disabled; anonymous meeting 401 from middleware. Object boundary is separately tested through real-Auth/RLS adapted handlers."
+      },
+      "adaptedHandlerEvidence": {
+        "runId": 42186490762,
+        "cases": 60,
+        "note": "Actual tokens/DB; in-memory enabled configuration; blocked zero-budget runs; provider constructor intercepted; no enabled database execution."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/seo/indexnow/submit/route.ts",
+      "liveAuthenticatedHttp": "PASS_NONOWNER_DENIAL_ONLY",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Actual nonowner 403; provider submission success not executed."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/status/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    },
+    {
+      "path": "app/api/system/deployment-version/route.ts",
+      "liveAuthenticatedHttp": "NOT_APPLICABLE_PUBLIC_CONTRACT",
+      "isolatedHandler": "NOT_RUN",
+      "httpEvidence": {
+        "runIds": [
+          42185764245
+        ],
+        "depth": "Listed public input/asset/capability contract only; not a claim of tenant authorization."
+      },
+      "httpCaseStatus": "PASS_LISTED_CASES_ONLY"
+    }
+  ],
+  "testedSha": "2724e6c99a86fb026b212952665f071361d7bd88",
+  "counts": {
+    "liveHttpRouteFiles": 29,
+    "routeFiles": 101,
+    "noLiveHttpRouteFiles": 72
+  },
+  "httpRouteFilesExercised": 101,
+  "finalAdaptedHandlerRunId": 42186490762
+}
