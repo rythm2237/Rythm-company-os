@@ -33,6 +33,10 @@ try {
         or (bucket_id='company-knowledge'
           and split_part(name,'/',1)=current_setting('app.org',true))
       );
+    create policy synthetic_agent_member_read on storage.objects
+      for select to authenticated
+      using (bucket_id in ('agent-artifacts','agent-attachments')
+        and split_part(name,'/',1)=current_setting('app.org',true));
     grant usage on schema storage to authenticated;
     grant select on storage.objects to authenticated;
 
@@ -47,6 +51,11 @@ try {
     insert into storage.objects(bucket_id,name) values
       ('company-knowledge','${ORG_A}/synthetic-a.pdf'),
       ('company-knowledge','${ORG_B}/synthetic-b.pdf'),
+      ('agent-artifacts','${ORG_A}/artifact-a.txt'),
+      ('agent-artifacts','${ORG_B}/artifact-b.txt'),
+      ('agent-attachments','${ORG_A}/attachment-a.txt'),
+      ('agent-attachments','${ORG_B}/attachment-b.txt'),
+      ('ai-workspace-private','${ORG_A}/personal-only.txt'),
       ('nail-2nya-media','public-thumbnail.webp'),
       ('project-files','${ORG_A}/${PROJECT_A}/${FILE_ID}-fixture.pdf');
   `);
@@ -59,20 +68,30 @@ try {
   await db.exec(`set role authenticated; set app.org='${ORG_A}'; set app.storage_op='object.get_authenticated';`);
   assert.equal(await count("company-knowledge"), 1, "authorized tenant sees own object only");
   assert.equal(await count("project-files"), 0, "no permissive fixture policy for project-files");
+  assert.equal(await count("agent-artifacts"), 1, "authorized tenant reads own agent artifacts");
+  assert.equal(await count("agent-attachments"), 1, "authorized tenant reads own attachments");
+  assert.equal(await count("ai-workspace-private"), 0, "private personal workspace has no direct user policy");
 
   await db.exec(`set app.org='${ORG_B}';`);
   assert.equal(await count("company-knowledge"), 1, "tenant B sees only its own object");
   const {rows:foreignRows} = await db.query("select name from storage.objects where bucket_id='company-knowledge'");
   assert.equal(foreignRows[0].name, `${ORG_B}/synthetic-b.pdf`);
+  const {rows:agentRows} = await db.query("select name from storage.objects where bucket_id='agent-artifacts'");
+  assert.equal(agentRows.length, 1);
+  assert.equal(agentRows[0].name, `${ORG_B}/artifact-b.txt`, "agent cross-tenant row denied");
 
   await db.exec(`set app.org='${ORG_A}'; set app.storage_op='object.sign';`);
   assert.equal(await count("company-knowledge"), 0, "deny signing a new private URL");
   await db.exec(`set app.storage_op='object.sign_many';`);
   assert.equal(await count("company-knowledge"), 0, "deny batch signing");
+  assert.equal(await count("agent-artifacts"), 0, "deny signing agent artifacts");
+  assert.equal(await count("agent-attachments"), 0, "deny signing attachments");
   assert.equal(await count("nail-2nya-media"), 1, "unrelated public media policy unaffected");
 
   await db.exec(`set app.storage_op='object.get_authenticated'; set app.org='revoked';`);
   assert.equal(await count("company-knowledge"), 0, "revocation denies future authenticated reads");
+  assert.equal(await count("agent-artifacts"), 0, "revocation denies future agent artifacts");
+  assert.equal(await count("agent-attachments"), 0, "revocation denies future agent attachments");
 
   await db.exec("reset role");
   await db.exec(`
