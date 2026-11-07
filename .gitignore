@@ -12,3 +12,6 @@ supabase/.temp/
 
 # Isolated browser QA artifacts
 test-results/
+
+# Disposable W02 staging fixtures; never commit UUID/session manifests
+.w02-fixtures/
