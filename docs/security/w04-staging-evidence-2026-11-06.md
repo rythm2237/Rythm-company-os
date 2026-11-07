@@ -81,3 +81,9 @@ The Security Advisor still reports `anon_security_definer_function_executable: 7
 **Detailed 52-row evidence matrix:** `docs/security/w04-rpc-runtime-coverage-2026-11-06.md`. This documents the exact covered caller/input vectors without claiming every imaginable negative case.
 
 **Still requires owner action before release:** explicit acceptance of seven justified public booking/contact exceptions; reconciliation of W01/W02 acceptance and staging/production migration histories; separate approval to merge/deploy/apply production schema. W04 technical staged vectors PASS, but **W04 official launch status remains NOT ACCEPTED** pending those gates. GitHub CI for the latest branch head and project restore status must be confirmed after the last documentation/checker commits.
+
+## 2026-11-07 — subsequent owner exception decision
+
+**Owner-approved:** the exact seven intentionally anonymous booking/contact `nail_2nya_*` RPCs listed in `docs/security/w04-public-rpc-owner-exception-approval-2026-11-07.md`. The owner's confirmation is **not** approval to merge or release to Production. Previous text in this report saying that these seven public exceptions are awaiting owner decision described the state **before 2026-11-07** and is superseded for this gate only.
+
+The release preflight and W01/W02 evidence reconciliation are tracked in `docs/security/w04-dependency-release-gates-2026-11-07.md`: W01 owner-accepted **snapshot scope** and W02's documented stage AC1/AC2/updated-quarantine AC3 results are supported; **exact migration-history parity is still unverified**. PR #441 remains draft; no production migration, deploy or main-branch merge is authorized.
