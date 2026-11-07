@@ -82,3 +82,36 @@ All catalog reads completed. No customer records or file bytes retrieved.
 - [ ] Review `npm ci` dependency audit warning independently; dependency remediation is outside W05.
 - [ ] CI, lint, typecheck, build and browser tests pass on **final head**.
 - [ ] Owner separately authorizes merge, migration and Production deployment (none implied).
+
+## 8. Staging provider execution, CDN revocation finding and response — 2026-11-07
+
+> This section **supersedes the earlier inactive-Staging / no-live-evidence status** in sections 1–4. W05 remains **NOT ACCEPTED**, pending the final live authenticated application/preview matrix and independent human review.
+
+### Environment, scope and new implementation
+
+- Verified FREE Supabase plan; reused an existing active-project slot by temporarily pausing `ai roadmap` and restoring Staging `viqjdgohtxqkrdgwtull`. No new billed project/branch or external model-provider call.
+- Re-scoped the existing 22 W01-specific Vercel Preview variables **temporarily** to `security/w05-file-confidentiality`, including encrypted Staging-only Supabase service credentials. Explicit Staging URL verified; agent execution/external actions disabled and AI budget zero. Production variables/deployment unchanged. **All variables must be scoped back to W01 before acceptance**.
+- Real Staging W05 migration: `20261107063748_w05_file_confidentiality_staging`; Staging-only private-bucket parity migration added missing `company-knowledge` and `agent-artifacts` buckets/policies with matching Production limits (all five private). New follow-up migration `20261107070000_w05_block_cached_private_downloads.sql` applied **only on Staging** as `w05_block_cached_private_downloads_staging`. Supabase-generated migration versions are not aligned with repository migration names; reconcile before Production deployment.
+- Added `w05_no_private_authenticated_direct_get` RESTRICTIVE SELECT RLS policy to block `object.get_authenticated` on all five sensitive buckets in addition to the previous sign/sign_many prohibition. This prevents a caller from establishing **new** cached direct private downloads; cannot invalidate already populated CDN objects by itself.
+- Refactored four private backend fetch paths: Company Library GET, Company Library ingestion, agent knowledge retrieval, and agent attachment loader. They retain request-time owner/tenant/agent ACL and use service-role **transport only after** checking metadata and object key. Alternative CRM customer-profile extraction now validates the document's organization/project/contract path and MIME signature before privileged download.
+- Real CI inventory `scripts/w05-inventory-private-storage.mjs` found **70 source matches** (including tests and public media). Relevant direct company-knowledge and agent-attachment server download sites were individually reviewed. No new direct authenticated private object GETs should be introduced.
+
+### Genuine Staging REST/Storage and DB evidence
+
+- An isolated **real Supabase Auth/Storage** run created three temporary verified synthetic JWT users and ten synthetic text/PDF objects, spanning three roles and two of the existing synthetic tenant organizations; exercised all five private buckets via real HTTP APIs. Real own-object authorized bytes, foreign-tenant denials, member vs owner restrictions, and authenticated signed-URL issuance denials **PASS across all five buckets** in the executed scenarios. Real authenticated direct GET to project-files and ai-workspace-private was denied even before the new policy.
+- **Found a critical negative case before fix:** The test reported that a previously authenticated `agent-attachments` download still succeeded immediately after a membership update request. The test did **not** independently re-read the update poststate, so this is a failing revocation assertion and consistent with Supabase's documented private CDN caching behavior, **not proof of a confirmed verified post-revocation leak**. Official context: https://supabase.com/docs/guides/storage/cdn/smart-cdn and Supabase's private bucket revocation troubleshooting article. The test did not reach post-revoke signed-link checks, and must not be represented as fully passed.
+- Subsequent **real PostgreSQL** checks on Staging PASS: `object.get_authenticated` returns **zero** objects in all five sensitive buckets for a temporarily activated owner; owner `object.list` continues to see only own attachment metadata; cross-tenant list denied; `object.sign` denied; owner `storage.objects` INSERT to agent-artifacts still succeeds (rolled back). Other W05 document identity trigger tests previously passed.
+- A separate *genuine Supabase HTTP expiry test* created one synthetic text object, minted a short-lived service-side signed URL and retrieved its original bytes with HTTP **200**, then after expiry observed HTTP **400**, byte equality **true** and cleanup **true**. This validates expiration under that tested TTL, not instant revocation of earlier bearer links.
+- Observed sanitized real Storage runtime log aggregates on Staging, including successful/denied GET operations and blocked signing POSTs. No private document bytes, raw credentials or tokens were included in the report.
+- A W05 Vercel Preview branch alias was temporarily permitted for anonymous negative API probes: CRM GET returned **401/no-store**, Company Library GET **404/no-store**, AI Workspace GET **401**. The temporary alias bypass and share link were revoked and SSO protection was verified restored.
+- Both temporary Staging Edge QA endpoints were redeployed to inert, JWT-required handlers (`w05-staging-acceptance` v3; `w05-staging-expiration` v2); first endpoint anonymous invocation verified HTTP 401. No provider calls/paid browser runs.
+
+### Status / mandatory release gates
+
+| Acceptance | Current interpretation |
+|---|---|
+| AC1 unauthorized private bytes/metadata | **STRONG PARTIAL; NOT VERIFIED END-TO-END**. Real all-five-bucket REST Storage/tenant matrix and new PostgreSQL RLS gates pass. New updated app/server endpoints lack a positive+negative current-preview real-authenticated browser/HTTP test after final code commit. |
+| AC2 revoked/expired behavior | **STRONG PARTIAL; NOT VERIFIED END-TO-END**. Real short-lived signed URL expiry passes; SQL revocation denies metadata; caller-direct GET blocked by updated RLS; reauthorized app proxy revoked-session E2E and already-cached legacy URL behavior remain unverified. |
+| AC3 authorized+denied runtime audit evidence | **PARTIAL**. Real Storage HTTP statuses and RPC/CI assertions observed; sanitized app-level positive/negative CRM and Company Library download audit evidence still needed. |
+
+**Must not merge/release** pending app-level logged-in tests, latest SHA CI/build + security review, original Vercel variable-scope and Supabase capacity restoration, W02/W03 draft dependency review, schema migration ledger parity, and explicit Production release authorization.
