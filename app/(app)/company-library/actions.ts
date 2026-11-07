@@ -183,15 +183,15 @@ export async function getCompanyLibraryDocumentUrl(knowledgeId: string) {
   const context = await requireActiveOwnerOrganizationContext();
   const { data } = await context.supabase
     .from("company_knowledge")
-    .select("storage_path,source_filename")
+    .select("id")
     .eq("organization_id", context.organizationId)
     .eq("source_type", "file")
     .eq("id", knowledgeId)
     .maybeSingle();
-  if (!data?.storage_path) throw new Error("The original source file is not available.");
-  const { data: signed, error } = await context.supabase.storage.from("company-knowledge").createSignedUrl(String(data.storage_path), 300, { download: data.source_filename ? String(data.source_filename) : true });
-  if (error || !signed?.signedUrl) throw new Error("Could not create a secure link for this document.");
-  return { url: signed.signedUrl };
+  if (!data) throw new Error("The original source file is not available.");
+  // No bearer signed URL: this endpoint reauthorizes membership and Storage
+  // access when the browser requests bytes, including after revocation.
+  return { url: `/api/company-library/documents/${encodeURIComponent(data.id)}` };
 }
 
 export async function updateCompanyLibraryDocumentMetadata(formData: FormData) {
