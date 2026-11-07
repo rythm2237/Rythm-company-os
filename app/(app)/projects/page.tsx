@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOrganizationContext } from "@/lib/auth/organization-context";
 import { canCrm, requireCrm } from "@/lib/crm/access";
+import { privateFileNameMatchesMime, privateFileContentMatchesMime } from "@/lib/security/private-file-validation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { calculateProjectProgressSnapshot, getProjectProgressSnapshots } from "@/lib/projects/project-progress";
 
@@ -67,7 +68,7 @@ async function createProject(formData:FormData){
   const files=formData.getAll("files").filter((item):item is File=>item instanceof File&&item.size>0).slice(0,20);
   if(files.length){
     const service=createServerSupabaseClient();
-    if(service){for(const file of files){if(file.size>50*1024*1024)continue;const bytes=Buffer.from(await file.arrayBuffer());const storagePath=`${organizationId}/${project.id}/${randomUUID()}-${safeName(file.name)}`;const uploaded=await service.storage.from("project-files").upload(storagePath,bytes,{contentType:file.type||"application/octet-stream",upsert:false});if(!uploaded.error){const category=text(formData,"fileCategory",80)||"other";await service.from("project_documents").insert({organization_id:organizationId,project_id:project.id,category,file_name:file.name,storage_path:storagePath,mime_type:file.type,byte_size:file.size,checksum:createHash("sha256").update(bytes).digest("hex"),legal_document:["contract","amendment","nda","statement_of_work"].includes(category),uploaded_by_user_id:user.id});}}}
+    if(service){for(const file of files){if(file.size>50*1024*1024||!privateFileNameMatchesMime(file.name,file.type))continue;const bytes=Buffer.from(await file.arrayBuffer());if(!privateFileContentMatchesMime(bytes,file.type))continue;const storagePath=`${organizationId}/${project.id}/${randomUUID()}-${safeName(file.name)}`;const uploaded=await service.storage.from("project-files").upload(storagePath,bytes,{contentType:file.type,upsert:false});if(!uploaded.error){const category=text(formData,"fileCategory",80)||"other";const row=await service.from("project_documents").insert({organization_id:organizationId,project_id:project.id,category,file_name:file.name,storage_path:storagePath,mime_type:file.type,byte_size:file.size,checksum:createHash("sha256").update(bytes).digest("hex"),legal_document:["contract","amendment","nda","statement_of_work"].includes(category),uploaded_by_user_id:user.id});if(row.error)await service.storage.from("project-files").remove([storagePath]);}}}
   }
   await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"project.created",object_type:"project",object_id:project.id,risk_level:"low",payload:{project_code:projectCode,name,human_authority:"Human CEO / Owner",autonomy_mode:autonomyMode,files:files.length}});
   revalidatePath("/projects");revalidatePath("/crm","layout");redirect(`/projects/operating?project=${project.id}`);
