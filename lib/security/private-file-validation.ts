@@ -13,6 +13,10 @@ const MIME_EXTENSIONS: Record<string, string[]> = {
   "application/vnd.ms-excel": [".xls"],
   "text/csv": [".csv"],
   "text/plain": [".txt"],
+  "text/markdown": [".md"],
+  "application/json": [".json"],
+  "application/xml": [".xml"],
+  "text/xml": [".xml"],
   "image/png": [".png"],
   "image/jpeg": [".jpg", ".jpeg"],
   "image/webp": [".webp"],
@@ -64,6 +68,10 @@ export function privateFileContentMatchesMime(bytes: Uint8Array, mimeType: strin
     case "application/vnd.ms-excel": return starts(0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1);
     case "text/plain":
     case "text/csv":
+    case "text/markdown":
+    case "application/json":
+    case "application/xml":
+    case "text/xml":
       try {
         const sample = bytes.subarray(0, 8192);
         new TextDecoder("utf-8", { fatal: true }).decode(sample);
