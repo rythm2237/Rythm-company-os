@@ -42,7 +42,7 @@ const plugins = [{
       "@/lib/crm/access": "export async function canCrm(){return globalThis.w05Allowed!==false}",
       "@/lib/supabase/server": "export function createServerSupabaseClient(){return globalThis.w05Service}",
     };
-    b.onResolve({ filter: /^@\\/lib\\/(auth\\/organization-context|crm\\/access|supabase\\/server)$/ },
+    b.onResolve({ filter: /^@\/lib\/(auth\/organization-context|crm\/access|supabase\/server)$/ },
       (args) => ({ path: args.path, namespace: "w05shim" }));
     b.onLoad({ filter: /.*/, namespace: "w05shim" },
       (args) => ({ contents: shim[args.path], loader: "js" }));
