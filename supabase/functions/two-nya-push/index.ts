@@ -14,6 +14,7 @@ Deno.serve(async (req: Request) => {
     // authenticated with a short-lived HMAC signed by our server-only caller.
     // Authenticate before creating a service-role client or reading private keys.
     let verifiedBody: Record<string, unknown> | null = null;
+    let eventType = "", target = "";
     if (req.method === "POST") {
       // A dedicated server-only secret is preferred. When not provisioned,
       // derive a purpose-bound HMAC key from the existing server-only Supabase
@@ -59,6 +60,15 @@ Deno.serve(async (req: Request) => {
       } catch {
         return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
       }
+      // Reject unsupported event types before opening ANY privileged client.
+      // Authenticated invalid probes can therefore prove HMAC parity without
+      // querying customers, changing state, or invoking an external provider.
+      eventType = String(verifiedBody?.event_type ?? "booking_requested");
+      target = String(verifiedBody?.target ??
+        (eventType === "booking_requested" || eventType === "contact_message" ? "admin" : "customer"));
+      if (!allowed.has(eventType) || !["admin", "customer"].includes(target)) {
+        return Response.json({ ok: false, error: "invalid_request" }, { status: 400 });
+      }
     }
 
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -99,8 +109,6 @@ Deno.serve(async (req: Request) => {
     webpush.setVapidDetails("mailto:admin@rythm-os.com", keyRow.public_key, keyRow.private_key);
 
     const body = verifiedBody;
-    const eventType=String(body?.event_type??"booking_requested"),target=String(body?.target??(eventType==="booking_requested"||eventType==="contact_message"?"admin":"customer"));
-    if(!allowed.has(eventType)||!["admin","customer"].includes(target))return Response.json({ok:false,error:"invalid_request"},{status:400});
 
     if(eventType==="contact_message"){
       const messageId=String(body?.message_id??"");
