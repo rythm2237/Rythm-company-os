@@ -26,5 +26,5 @@ export async function POST(request:NextRequest){
     const managementUrl=`/booking/${encodeURIComponent(data.appointment_id)}?token=${encodeURIComponent(data.management_token)}`;
     await dispatchNailPush({appointment_id:data.appointment_id,event_type:'booking_requested',target:'admin'});
     return NextResponse.json({...data,management_url:managementUrl},{status:201,headers:{'Cache-Control':'no-store'}});
-  }catch(error){console.error('2nya_booking_failed',{message:error instanceof Error?error.message:'unknown'});return NextResponse.json({ok:false,error:'ثبت درخواست وقت انجام نشد. لطفاً دوباره تلاش کنید.'},{status:503});}
+  }catch{console.error('2nya_booking_failed');return NextResponse.json({ok:false,error:'ثبت درخواست وقت انجام نشد. لطفاً دوباره تلاش کنید.'},{status:503});}
 }
