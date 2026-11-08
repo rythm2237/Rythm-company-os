@@ -2,12 +2,12 @@
 
 **Scope:** P0 foundation / SEC-01, SEC-02, SEC-05.  
 **Branch:** `security/w06-service-role-backend-boundaries` · **PR:** [#447](https://github.com/rythm2237/Rythm-company-os/pull/447) (draft, not merged).  
-**State:** Code fixes + isolated CI coverage; **NOT ACCEPTED for production** until live disposable staging proof, full manual callsite signoff, and owner release approvals.
+**State:** Code fixes + isolated CI + real disposable Staging HTTP/JWT matrix PASS; **NOT ACCEPTED for production** until full manual callsite signoff, policy parity and explicit owner release authorization.
 
 ## Actual environment and dependency evidence (read-only)
 
 - Production source baseline at W06 branch creation: `main=0dd9ed485f409abbb29556780a0c2c34b1a06efd`; production deployment was READY at that source revision. Never assume the historical Oct 24 SHA is current.
-- Supabase Production project: `dezbacyuvsdrlpmmpjht`, ACTIVE_HEALTHY, ledger includes W03 and W05 production migrations. Supabase staging `viqjdgohtxqkrdgwtull` is **INACTIVE**. It was **not** restarted or billed.
+- Supabase Production project: `dezbacyuvsdrlpmmpjht`, ACTIVE_HEALTHY. Dedicated Supabase staging `viqjdgohtxqkrdgwtull` was temporarily restored using a Free Plan active-project slot vacated by explicitly authorized pause of `ai roadmap`, then returned to **INACTIVE**. No paid plan upgrade or production database write.
 - W03 [PR #440](https://github.com/rythm2237/Rythm-company-os/pull/440) and W04 [PR #443](https://github.com/rythm2237/Rythm-company-os/pull/443) are **merged**; this confirms code integration, not that each W06 privileged access case has been live-tested. W02 historical PR #438 is closed without merge.
 - Supabase Production read-only SQL: 7 `anon`-executable SECURITY DEFINER procedures, all `nail_2nya_*` (booking, availability, customer-token management); all include explicit `search_path` settings. 51 `authenticated`-executable SECURITY DEFINER procedures, requiring separate W04 function-level assessment. No schema or customer data modified.
 - Vercel project environment variable names can be inspected, but `TWO_NYA_PUSH_DISPATCH_SECRET` is **absent**. Do not log, display, or store its value. Feature flags API returned 403 (parity remains unverified).
@@ -61,18 +61,63 @@ The full CI workflow additionally executes all existing CRM, W03, Phase 0–5, A
 ## W06 acceptance verdict
 
 1. **All service-role paths inventoried and triaged:** **PARTIAL**. Complete automated line-level inventory; human signoff for all 100+ unique privileged files and 60+ entrypoint candidates incomplete.
-2. **High-impact caller-tenant authorization before privileged access:** **PARTIAL/NOT ACCEPTED**. Reproducible synthetic negative+positive handler tests for high-impact paths; disposable staging JWT/HTTP/worker integration matrix missing.
-3. **Secrets/customer content absent from diagnostic logs:** **PARTIAL/NOT ACCEPTED**. Several high-impact logs and stored provider errors hardened; holistic synthetic canary test through all worker/log sinks and production deployment parity not evidenced.
+2. **High-impact caller-tenant authorization before privileged access:** **PARTIAL/NOT ACCEPTED**. Reproducible synthetic negative+positive handler tests and two real signed-in A/B/C staging routes matrices (981/981 each); not every privileged entrypoint, Edge signed POST, or deployed-preview runtime was exercised.
+3. **Secrets/customer content absent from diagnostic logs:** **PARTIAL/NOT ACCEPTED**. Multiple privileged routes, error ledger, benchmark, Company Library and AI Workspace file errors hardened; CI customer-canary regressions PASS; holistic canary review of all worker/log sinks and production deployment parity still unproven.
 
 ## Required final acceptance work / human signoff
 
-- [ ] Obtain **cost authorization** for any paused/extra Supabase project compute before resuming Staging. Do not run against Production or real customers.
+- [x] Obtain owner permission to temporarily pause `ai roadmap`, restore dedicated Staging without a paid-plan upgrade, run isolated tests and pause Staging again. Reinstate original active project as a separately verified final operation.
 - [ ] Complete source-to-runtime triage of every inventory row; persist per-callsite decision, caller, tenant gate, evidence, permissible result fields and redaction policy.
-- [ ] With disposable A/B/C orgs and signed-in JWTs, run unauthenticated, owner-A/B, member-A, revoked member and guest negatives for every P0/P1 privileged handler; confirm B data never returned/read/written by A.
+- [x] Run bounded W03 routes JWT/HTTP/RLS matrices on dedicated Staging with synthetic A/B/C actors; 981/981 twice. [ ] Extend to every W06 P0/P1 endpoint, including live Edge signed POST and preview deployment parity.
 - [ ] Execute signed/expired/tampered/replay webhook and cron tests with staging resources; suppress real external notifications.
 - [ ] Provision and verify equal server-only `TWO_NYA_PUSH_DISPATCH_SECRET` in Supabase Edge and Vercel, with no secret values included in the repo/chat/report/log.
 - [ ] Test synthetic customer-content canaries against server diagnostics and DB execution/audit records; inspect and scrub only disposable test data.
-- [ ] Reconcile CI, merged W03/W04 proof, active flags, staging migration/schema parity and rollback readiness.
+- [x] Verify W03/W04 merged, Stage/Production 214 public tables, 234 public functions, 148 SECURITY DEFINER, 214 RLS tables, 338 public policies and matching function-body/column hashes. [ ] Resolve two contract-policy differences; feature flags API still unreadable (403), and full preview parity still absent.
 - [ ] Obtain **separate explicit approval** to merge `main` and to deploy the Production Edge and Next.js runtime. The active unsigned Production Edge endpoint must be hardened; a green PR is not deployment or resolution.
 
 **Rollback:** Before merge, revert commits in this feature branch or close PR #447. After a future approved release, never restore unsigned Edge POST as a rollback; keep unsigned delivery blocked and fix forward. Production data/schema were not modified as part of W06.
+
+## 2026-11-08 live staging validation: 2 independent workflow executions
+
+| Evidence | Historical W03 routes | W06 branch routes |
+| --- | --- | --- |
+| Run | [42460590206](https://github.com/rythm2237/Rythm-company-os/actions/runs/42460590206) | [42460837067](https://github.com/rythm2237/Rythm-company-os/actions/runs/42460837067) |
+| Exact workflow source SHA | `80c54434d6d9d193ee6f308322b578fc8dc71809` | `51ff1cd954c02fe2744238dbb10125b8670e21b8` |
+| Result | SUCCESS | SUCCESS |
+| Sanitized proof | [Artifact 13610145682](https://github.com/rythm2237/Rythm-company-os/actions/runs/42460590206/artifacts/13610145682) | [Artifact 13609029937](https://github.com/rythm2237/Rythm-company-os/actions/runs/42460837067/artifacts/13609029937) |
+| Recorded assertions | `981 PASS / 0 FAIL` | `981 PASS / 0 FAIL` |
+| W06 isolated real-handler test gate | Not included on historical W03 branch | PASS before real HTTP matrix |
+| Fake-provider / external execution flags | Disabled | Disabled |
+| Synthetic identity quarantine | SUCCESS | SUCCESS |
+
+Sanitized artifact scope: **Real staging REST RLS and local Next HTTP; not published-preview parity or complete API inventory.** W06 run was pinned to commit `51ff1cd`; subsequent PR commits contain additional error redaction and are validated by separate [CI run 42461777835](https://github.com/rythm2237/Rythm-company-os/actions/runs/42461777835) (build and crm-browser jobs PASS). Do not misrepresent that later source as the exact code exercised in the live runner.
+
+### Read-only Supabase Stage/Prod parity measurements
+
+| Check | Staging | Production | Assessment |
+| --- | --- | --- | --- |
+| Public tables | 214 | 214 | Match |
+| Public functions | 234 | 234 | Match |
+| SECURITY DEFINER functions | 148 | 148 | Match |
+| `anon` executable definers | 7 | 7 | Match |
+| `authenticated` executable definers | 51 | 51 | Match |
+| Public RLS enabled tables | 214 | 214 | Match |
+| Public RLS policies | 338 | 338 | Same count, not byte-identical |
+| Public column layout and function body DDL hashes | Same | Same | Match |
+| Public RLS policy body hashes | DIFFER | DIFFER | Exactly two mismatches |
+
+Two differing policies, table `public.project_contracts`:
+1. `crm_create`: Staging permits `contract.create` by contract id OR by its customer id, while Production permits the contract-id capability only.
+2. `crm_read`: Staging permits `contract.read` by contract id OR by its customer id, while Production permits the contract-id capability only.
+
+Both production variants are **stricter**. No policies were edited during this audit; the mismatch is a deployment-parity and functional-acceptance gap, not a proven cross-tenant access exploit in Production. Recorded migration ledger entries differ between restored Staging (22) and Production (210) although compared object signatures match aside from the two policies. A dedicated staging-policy reconciliation decision is required.
+
+### Additional raw-exception hardening after staged run
+
+- `app/(app)/company-library/actions.ts`: store a stable `last_ingestion_error` instead of raw SQL or extracted customer text.
+- `app/api/agents/[code]/benchmark/route.ts`: stable benchmark failure code instead of provider exception.
+- `app/api/executions/route.ts`, `app/(app)/home/actions.ts`, `app/(app)/admin/seo/actions.ts`: suppress raw service/provider exception reflection and logging.
+- `app/api/ai-workspace/files/route.ts`: do not log raw file ingestion exception object.
+- `scripts/w06-audit-privileged-boundaries.mjs`: fail CI on reintroduction of these specific sensitive patterns.
+
+No W06 branch code was merged into `main`; active Production `two-nya-push` remains in its original unauthenticated POST state. The owner authorized only disposable staging / temporary Free Plan project swap for this step, **not** release to Production.
