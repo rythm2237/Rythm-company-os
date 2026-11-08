@@ -128,6 +128,19 @@ try {
     assert.equal(state.dbClientCount,0,label+" must fail before service-role client");
     assert.equal(state.reads.length,0,label+" must fail before all privileged queries");
   }
+  // Valid HMAC with a deliberately unsupported event is a harmless
+  // production handshake: 400 AFTER cryptographic validation, BEFORE any
+  // database client, customer lookup, external push or write.
+  reset();
+  const unsignedBusinessProbe = JSON.stringify({event_type:"__w06_nonexistent_event__",target:"none"});
+  r=await state.handler(signed(unsignedBusinessProbe));
+  assert.equal(r.status,400,"authenticated no-op probe must reach validation gate");
+  assert.deepEqual(await r.json(),{ok:false,error:"invalid_request"});
+  assert.equal(state.dbClientCount,0,"signed invalid event must not construct service-role client");
+  assert.equal(state.reads.length,0);
+  assert.equal(state.writes.length,0);
+  assert.equal(state.notifications,0);
+
   reset();
   r=await state.handler(signed(body));
   assert.equal(r.status,200,"valid HMAC must preserve contact message notification");

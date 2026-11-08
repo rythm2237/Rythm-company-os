@@ -6,7 +6,7 @@
     "dev": "next dev",
     "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment && npm run test:integration-availability && npm run test:continuous-program && npm run test:google-provider-repair && npm run test:google-business-quota && npm run test:project-details-ux && npm run test:w02",
     "build": "next build",
-    "postbuild": "npm run test:project-completion",
+    "postbuild": "npm run test:project-completion && node scripts/w06-production-signed-transport-smoke.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
