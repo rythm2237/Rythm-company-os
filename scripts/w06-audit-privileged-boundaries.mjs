@@ -8,14 +8,15 @@ function visit(path) {
   let entries;
   try { entries = readdirSync(path, { withFileTypes: true }); } catch { return; }
   for (const entry of entries) {
-    if (entry.name === "node_modules" || entry.name === ".next") continue;
+    if (["node_modules", ".next", ".git", ".vercel", "coverage", "dist", "test-results"].includes(entry.name)) continue;
     const child = join(path, entry.name);
     if (entry.isDirectory()) visit(child);
     else if (/\.(ts|tsx|mjs|js)$/.test(entry.name))
       files.push(child.replaceAll("\\", "/"));
   }
 }
-for (const root of ["app", "lib", "supabase/functions"]) visit(root);
+// Scan the whole checkout, including scripts, server actions and public bundles.
+visit(".");
 files.sort();
 const symbols = [
   "createServerSupabaseClient", "createBillingAdminClient",
@@ -48,8 +49,16 @@ for (const path of files) {
   const action = path.startsWith("app/") && /\/(?:actions|[\w-]+-actions)\.ts$/.test(path);
   const guards = gateMarkers.filter(([, regex]) => regex.test(source)).map(([label]) => label);
   const directRead = /\.from\s*\(\s*["'][\w.-]+["']\s*\)[\s\S]{0,180}\.select\s*\(/.test(source);
-  rows.push({ path, hits, type: api ? "api" : action ? "server-action" : "module", guards, directReadCandidate: directRead });
-  if (/^\s*["']use client["'];?/m.test(lines.slice(0, 8).join("\n")))
+  const type = api ? "api" : action ? "server-action" :
+    path.startsWith("supabase/functions/") ? "edge" :
+    path.startsWith("scripts/") ? "script-or-test" :
+    path.startsWith("public/") ? "public-asset" : "module";
+  const priority = /(?:webhook|inbound|dispatch|cron|server\/|service-runner|billing)/i.test(path) ? "P0" :
+    (api || action || type === "edge" ? "P1" : "P2");
+  const triage = guards.length ? "AUTH_MARKER_REQUIRES_RUNTIME_EVIDENCE" :
+    (type === "script-or-test" ? "SCRIPT_FIXTURE_REVIEW" : "CALLER_AUTH_REVIEW");
+  rows.push({ path, hits, type, priority, triage, guards, directReadCandidate: directRead });
+  if (path.startsWith("public/") || /^\s*["']use client["'];?/m.test(lines.slice(0, 8).join("\n")))
     browserLeaks.push(path);
   if ((api || action) && directRead && !guards.length)
     missingGate.push(path);
@@ -95,7 +104,7 @@ const manifest = {
   version: "W06-v1", scannedFiles: files.length, privilegedFiles: rows.length,
   references: rows.reduce((sum, row) => sum + row.hits.length, 0),
   entrypoints: rows.filter(x => x.type !== "module").length,
-  schedulerWebhooks: files.filter(p => /^app\/api\/.*(?:webhook|inbound|dispatch)\/route\.ts$/.test(p)),
+  schedulerWebhooks: files.filter(p => p.startsWith("app/api/") && p.endsWith("/route.ts") && /(?:^|\/)(?:webhook|webhooks|inbound|dispatch|cron)(?:\/|$)/.test(p)),
   rows, missingGate, browserLeaks, failures,
   limitations: [
     "Text-based callsite inventory, not interprocedural dataflow.",
