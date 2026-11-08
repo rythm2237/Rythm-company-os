@@ -51,7 +51,7 @@ export async function POST(request:Request){
 
   if(action==="evaluate"){
     const evaluated=await service.rpc("evaluate_project_completion_v1",{p_project_id:projectId,p_trigger_event:"owner_requested_evaluation",p_source_type:"user",p_source_id:auth.user.id});
-    if(evaluated.error)return NextResponse.json({ok:false,error:evaluated.error.message},{status:409});
+    if(evaluated.error)return NextResponse.json({ok:false,error:"Project completion operation could not be completed."},{status:409});
     await service.rpc("ensure_project_final_acceptance_v1",{p_project_id:projectId});
     return NextResponse.json({ok:true,explanation:evaluated.data});
   }
@@ -70,7 +70,7 @@ export async function POST(request:Request){
       p_note:String(body.acceptanceNote??"").trim().slice(0,4000)||null,
       p_actor_user_id:auth.user.id,
     });
-    if(recorded.error)return NextResponse.json({ok:false,error:recorded.error.message},{status:409});
+    if(recorded.error)return NextResponse.json({ok:false,error:"Project completion operation could not be completed."},{status:409});
     return NextResponse.json({ok:true,explanation:recorded.data});
   }
 
@@ -79,7 +79,7 @@ export async function POST(request:Request){
     const existing=await service.from("project_closeout_reports").select("id,status").eq("project_id",projectId).in("status",["draft","review","final","accepted"]).order("generated_at",{ascending:false}).limit(1).maybeSingle();
     if(existing.data)return NextResponse.json({ok:true,reportId:existing.data.id,status:existing.data.status});
     const generated=await service.rpc("generate_project_closeout_report_v1",{p_project_id:projectId});
-    if(generated.error)return NextResponse.json({ok:false,error:generated.error.message},{status:409});
+    if(generated.error)return NextResponse.json({ok:false,error:"Project completion operation could not be completed."},{status:409});
     await service.rpc("evaluate_project_completion_v1",{p_project_id:projectId,p_trigger_event:"closeout_report_generated",p_source_type:"project_closeout_report",p_source_id:generated.data});
     return NextResponse.json({ok:true,reportId:generated.data,status:"draft"});
   }
@@ -89,7 +89,7 @@ export async function POST(request:Request){
     const report=await service.from("project_closeout_reports").select("id,organization_id,project_id,status").eq("id",reportId).eq("project_id",projectId).eq("organization_id",auth.organizationId).maybeSingle();
     if(!report.data)return NextResponse.json({ok:false,error:"Closeout report not found."},{status:404});
     const finalized=await service.rpc("finalize_project_closeout_report_v1",{p_report_id:reportId});
-    if(finalized.error)return NextResponse.json({ok:false,error:finalized.error.message},{status:409});
+    if(finalized.error)return NextResponse.json({ok:false,error:"Project completion operation could not be completed."},{status:409});
     return NextResponse.json({ok:true,explanation:finalized.data});
   }
 
@@ -103,7 +103,7 @@ export async function POST(request:Request){
       value:typeof body.value==="number"?body.value:null,value_text:String(body.valueText??"").trim()||null,unit:String(body.unit??"").trim()||null,
       segmentation:body.segmentation??{},confidence,
     }).select("id").single();
-    if(inserted.error)return NextResponse.json({ok:false,error:inserted.error.message},{status:409});
+    if(inserted.error)return NextResponse.json({ok:false,error:"Project completion operation could not be completed."},{status:409});
     await service.rpc("evaluate_project_completion_v1",{p_project_id:projectId,p_trigger_event:"metric_recorded",p_source_type:"project_metric_measurement",p_source_id:inserted.data.id});
     return NextResponse.json({ok:true,metricId:inserted.data.id});
   }
