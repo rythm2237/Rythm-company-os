@@ -1,0 +1,82 @@
+name: W06 Production Edge Trust Boundary (manual, read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_read_only:
+        description: "Type W06-PROD-READONLY to authorize safe GET and rejected POST checks"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: w06-production-edge-readonly-smoke
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    if: ${{ github.ref == 'refs/heads/main' && inputs.confirm_read_only == 'W06-PROD-READONLY' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify public-key read and reject all unsigned/forged push dispatches
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+
+          const endpoint = new URL('https://dezbacyuvsdrlpmmpjht.supabase.co/functions/v1/two-nya-push');
+          assert.equal(endpoint.protocol, 'https:');
+          assert.equal(endpoint.hostname, 'dezbacyuvsdrlpmmpjht.supabase.co');
+          const body = JSON.stringify({
+            event_type: 'contact_message',
+            target: 'admin',
+            message_id: '00000000-0000-4000-8000-000000000000',
+          });
+          const call = (init = {}) => fetch(endpoint, {
+            ...init,
+            redirect: 'error',
+            cache: 'no-store',
+            signal: AbortSignal.timeout(15000),
+          });
+
+          const get = await call();
+          assert.equal(get.status, 200, 'VAPID public-key GET must work');
+          assert.match(get.headers.get('cache-control') ?? '', /no-store/i,
+            'STOP BEFORE POST: hardened W06 GET fingerprint absent');
+          const data = await get.json();
+          assert.equal(data.ok, true);
+          assert.equal(typeof data.public_key, 'string');
+          assert.ok(data.public_key.length > 40);
+          assert.equal(data.private_key, undefined);
+          console.log('PASS W06 anonymous public-key GET: 200, no-store, private key absent');
+
+          const timestamp = String(Math.floor(Date.now() / 1000));
+          const tests = [
+            ['missing-signature', {}],
+            ['expired-signature', {
+              'x-rythm-push-timestamp': String(Number(timestamp) - 7200),
+              'x-rythm-push-signature': '0'.repeat(64),
+            }],
+            ['forged-signature', {
+              'x-rythm-push-timestamp': timestamp,
+              'x-rythm-push-signature': '0'.repeat(64),
+            }],
+          ];
+          for (const [label, headers] of tests) {
+            const res = await call({
+              method: 'POST',
+              headers: { 'content-type': 'application/json', ...headers },
+              body,
+            });
+            assert.equal(res.status, 401, label + ': Edge must fail closed');
+            const response = await res.json();
+            assert.equal(response.error, 'unauthorized');
+            console.log('PASS W06 ' + label + ': 401 before any privileged lookup');
+          }
+          const other = await call({method: 'DELETE'});
+          assert.equal(other.status, 405);
+          console.log('PASS W06 method allowlist: DELETE 405; no valid signed business requests or external notifications were sent');
+          JS
