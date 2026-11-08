@@ -69,7 +69,7 @@ const db = {
   },
 };
 const fakeWebpush = "export default {setVapidDetails(){},generateVAPIDKeys(){throw Error('UNEXPECTED_ANONYMOUS_KEY_CREATE')},async sendNotification(){globalThis.w06Edge.notifications++;if(globalThis.w06Edge.failSend)throw Error('TENANT_B_PRIVATE_CUSTOMER_CONTENT')}};";
-async function compile(file, edge=false) {
+async function compile(file) {
   const built = await build({
     entryPoints:[file],bundle:true,write:false,platform:"node",format:"cjs",
     packages:"external",logLevel:"silent",
@@ -100,7 +100,7 @@ const signed = (raw, timestamp=String(Math.floor(Date.now()/1000)), signingSecre
 });
 const notSigned = new Request("https://w06fixture.supabase.co/functions/v1/two-nya-push",{method:"POST",body});
 try {
-  await compile("supabase/functions/two-nya-push/index.ts",true);
+  await compile("supabase/functions/two-nya-push/index.ts");
   assert.equal(typeof state.handler,"function");
   reset();
   let r=await state.handler(new Request("https://w06fixture.supabase.co/functions/v1/two-nya-push"));
