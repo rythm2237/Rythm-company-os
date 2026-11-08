@@ -104,6 +104,18 @@ const contracts = [
     "app/api/" + name + "/route.ts",
     source => { assert.doesNotMatch(source,/error:\s*(?:error\s+instanceof\s+Error\s*\?\s*error\.message|\w+\.error\.message)/); },
   ]),
+  ["app/(app)/company-library/actions.ts", source => {
+    assert.match(source,/last_ingestion_error: message/);
+    assert.match(source,/const message = "Company Library ingestion failed\."/);
+    assert.doesNotMatch(source,/redactSecretText\(error/);
+  }],
+  ["app/api/agents/[code]/benchmark/route.ts", source => {
+    assert.match(source,/return "Benchmark execution failed\.";/);
+    assert.doesNotMatch(source,/error\.message\.slice\(/);
+  }],
+  ["app/api/executions/route.ts", source => assert.doesNotMatch(source,/error instanceof Error \? error\.message/)],
+  ["app/(app)/admin/seo/actions.ts", source => assert.doesNotMatch(source,/redactSecretText\(error|organizationError\.message/)],
+  ["app/(app)/home/actions.ts", source => assert.doesNotMatch(source,/console\.error\("home_project_planning_failed",\s*\{/)],
   ["app/api/billing/webhook/route.ts", source => assert.match(source, /verify\(body,signature,secret\)/)],
   ["app/api/communication/inbound/resend/route.ts", source => assert.match(source, /verifySvixSignature\(rawBody,\s*request,\s*webhookSecret\)/)],
   ["app/api/communication/inbound/cloudflare/route.ts", source => assert.match(source, /safeEqualText\(suppliedSecret,\s*expectedSecret\)/)],
