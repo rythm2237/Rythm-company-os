@@ -15,7 +15,24 @@ Deno.serve(async (req: Request) => {
     // Authenticate before creating a service-role client or reading private keys.
     let verifiedBody: Record<string, unknown> | null = null;
     if (req.method === "POST") {
-      const secret = Deno.env.get("TWO_NYA_PUSH_DISPATCH_SECRET") || "";
+      // A dedicated server-only secret is preferred. When not provisioned,
+      // derive a purpose-bound HMAC key from the existing server-only Supabase
+      // service role credential that is already available on BOTH platforms.
+      // No service role token is ever transmitted to this public endpoint.
+      const configuredSecret = Deno.env.get("TWO_NYA_PUSH_DISPATCH_SECRET");
+      const serviceCredential = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+      let secret = configuredSecret ?? "";
+      if (configuredSecret === undefined && serviceCredential.length >= 32) {
+        const derivationKey = await crypto.subtle.importKey(
+          "raw", new TextEncoder().encode(serviceCredential),
+          { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+        );
+        const derived = new Uint8Array(await crypto.subtle.sign(
+          "HMAC", derivationKey,
+          new TextEncoder().encode("RYTHM/W06/two-nya-push/dispatch/v1"),
+        ));
+        secret = Array.from(derived, (byte) => byte.toString(16).padStart(2, "0")).join("");
+      }
       if (secret.length < 32) return Response.json({ ok: false, error: "dispatch_not_configured" }, { status: 503 });
       const timestamp = req.headers.get("x-rythm-push-timestamp") || "";
       const signature = req.headers.get("x-rythm-push-signature") || "";
