@@ -1,136 +1,175 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { createRequire } from "node:module";
 import { build } from "esbuild";
 
-// Compile and invoke the real Deno edge handler, replacing only Deno env, DB,
-// and web-push transport. No production/customer data, secrets, or push sends.
-const state = { reads: [], writes: [], notifications: 0, user: null, failSend: false, initialized: true, throws: false };
-globalThis.w06Edge = state;
-const savedDeno = globalThis.Deno;
-globalThis.Deno = {
-  env: { get: name => name === "SUPABASE_SERVICE_ROLE_KEY" ? "synthetic-secret" :
-    name === "SUPABASE_URL" ? "http://127.0.0.1:54321" : undefined },
-  serve: callback => { state.handler = callback; },
+// Execute the real production-reconciled Edge handler and server sender with
+// fully synthetic DB, browser identities and push provider. No network egress.
+const secret = "W06_SYNTHETIC_SHARED_SIGNING_KEY_abcdefghijklmnopqrstuvwxyz";
+const state = {
+  reads: [], writes: [], notifications: 0, dbClientCount: 0,
+  initialized: true, failSend: false, forceDbError: false, handler: null,
 };
+globalThis.w06Edge = state;
+const oldDeno = globalThis.Deno, oldFetch = globalThis.fetch;
+const oldEnv = {
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  TWO_NYA_PUSH_DISPATCH_SECRET: process.env.TWO_NYA_PUSH_DISPATCH_SECRET,
+};
+globalThis.Deno = {
+  env: { get: name => name === "SUPABASE_SERVICE_ROLE_KEY" ? "W06_FAKE_SERVICE_KEY" :
+    name === "SUPABASE_URL" ? "https://w06fixture.supabase.co" :
+    name === "TWO_NYA_PUSH_DISPATCH_SECRET" ? secret : undefined },
+  serve: handler => { state.handler = handler; },
+};
+process.env.NEXT_PUBLIC_SUPABASE_URL = "https://w06fixture.supabase.co";
+process.env.TWO_NYA_PUSH_DISPATCH_SECRET = secret;
+
+const fixtureMessage = "11111111-1111-4111-8111-111111111111";
+const fixtureAppointment = "22222222-2222-4222-8222-222222222222";
+const sub = { id:"sub-fixture", endpoint:"https://synthetic.invalid", p256dh:"SYNTHETIC", auth:"SYNTHETIC" };
 const db = {
-  auth: { getUser: async token => ({
-    data: { user: token === "valid-admin" ? { id: "admin" } :
-      token === "valid-other" ? { id: "other" } : null },
-    error: null,
-  }) },
   from(table) {
     const filters = [];
-    let selected = "";
+    let selected="", mutation=null;
     const q = {
-      select(fields) { selected = fields; state.reads.push({ table, fields }); return q; },
-      eq(k, v) { filters.push([k,v]); return q; },
-      async maybeSingle() {
-        if (state.throws) throw Error("TENANT_B_PRIVATE_CUSTOMER_CONTENT");
-        if (table === "nail_2nya_admin_users") return {
-          data: filters.some(([k,v]) => k === "user_id" && v === "admin") ? { user_id: "admin" } : null,
-          error: null,
-        };
-        if (table === "nail_2nya_push_keys") return {
-          data: state.initialized ? (selected === "public_key" ?
-            { public_key: "W06_PUBLIC_VAPID" } : { public_key: "W06_PUBLIC_VAPID", private_key: "W06_FAKE_PRIVATE" }) : null,
-          error: null,
-        };
-        throw Error("UNEXPECTED_QUERY_" + table);
+      select(fields){ selected=fields;state.reads.push({table,fields});return q; },
+      eq(k,v){filters.push([k,v]);return q;},
+      is(){return q;},limit(){return q;},
+      update(row){mutation={operation:"update",row};state.writes.push({table,...mutation});return q;},
+      delete(){mutation={operation:"delete"};state.writes.push({table,...mutation});return q;},
+      insert(row){mutation={operation:"insert",row};state.writes.push({table,...mutation});return q;},
+      upsert(row){mutation={operation:"upsert",row};state.writes.push({table,...mutation});return q;},
+      async single(){
+        if(table === "nail_2nya_notification_deliveries" && mutation?.operation==="insert") return {data:{id:"claim-fixture"},error:null};
+        if(table === "nail_2nya_push_keys" && state.initialized) return {data:{public_key:"W06_PUBLIC_VAPID",private_key:"W06_FAKE_PRIVATE"},error:null};
+        return {data:null,error:{code:"FIXTURE_MISSING"}};
       },
-      async single() { return { data: null, error: {code:"UNEXPECTED_KEY_BOOTSTRAP"} }; },
-      insert(row) {
-        state.writes.push({table,row});
-        return { select() { return this; }, single: async () => ({ data:null,error:{code:"NO_BOOTSTRAP"} }),
-          then(resolve) { return Promise.resolve({error:null}).then(resolve); } };
+      async maybeSingle(){
+        if(state.forceDbError)throw Error("TENANT_B_PRIVATE_CUSTOMER_CONTENT");
+        switch(table){
+          case "nail_2nya_push_keys":
+            return {data:state.initialized?(selected==="public_key"?{public_key:"W06_PUBLIC_VAPID"}:{public_key:"W06_PUBLIC_VAPID",private_key:"W06_FAKE_PRIVATE"}):null,error:null};
+          case "nail_2nya_contact_messages":
+            return {data:mutation?.operation==="update"?{id:fixtureMessage}:
+              {id:fixtureMessage,name:"synthetic",subject:"synthetic",status:"new",push_notified_at:null},error:null};
+          case "nail_2nya_appointments":
+            return {data:{id:fixtureAppointment,booking_reference:"fixture",start_at:"2026-11-09T11:00:00Z",status:"pending",
+              nail_2nya_services:{name:"Synthetic service"},nail_2nya_customers:{name:"Synthetic customer"}},error:null};
+          case "nail_2nya_business_profile":return {data:{timezone:"UTC"},error:null};
+          default:throw Error("UNEXPECTED_MAYBE_SINGLE_"+table);
+        }
       },
-      upsert(row) { state.writes.push({table,row}); return Promise.resolve({ error:null }); },
-      update(row) { state.writes.push({table,row}); return q; },
-      then(resolve) {
-        if (table === "nail_2nya_customer_push_subscriptions")
-          return Promise.resolve({ data: [{id:"sub-synthetic",endpoint:"https://fixture.invalid",p256dh:"synthetic",auth:"synthetic"}], error:null }).then(resolve);
-        return Promise.resolve({data:[],error:null}).then(resolve);
+      then(resolve,reject) {
+        const data = ["nail_2nya_push_subscriptions","nail_2nya_customer_push_subscriptions"].includes(table)?[sub]:[];
+        return Promise.resolve({data,error:null}).then(resolve,reject);
       },
     };
     return q;
   },
 };
+const fakeWebpush = "export default {setVapidDetails(){},generateVAPIDKeys(){throw Error('UNEXPECTED_ANONYMOUS_KEY_CREATE')},async sendNotification(){globalThis.w06Edge.notifications++;if(globalThis.w06Edge.failSend)throw Error('TENANT_B_PRIVATE_CUSTOMER_CONTENT')}};";
+async function compile(file, edge=false) {
+  const built = await build({
+    entryPoints:[file],bundle:true,write:false,platform:"node",format:"cjs",
+    packages:"external",logLevel:"silent",
+    plugins:[{name:"w06-no-network-external-shims",setup(b){
+      b.onResolve({filter:/^jsr:/},()=>({path:"empty",namespace:"w06-stub"}));
+      b.onResolve({filter:/^npm:@supabase\/supabase-js/},()=>({path:"db",namespace:"w06-stub"}));
+      b.onResolve({filter:/^npm:web-push/},()=>({path:"push",namespace:"w06-stub"}));
+      b.onResolve({filter:/^server-only$/},()=>({path:"empty",namespace:"w06-stub"}));
+      b.onLoad({filter:/.*/,namespace:"w06-stub"},args=>({
+        contents:args.path==="db"?"export function createClient(){globalThis.w06Edge.dbClientCount++;return globalThis.w06Edge.db;}":
+          args.path==="push"?fakeWebpush:"export {};",loader:"js",
+      }));
+    }}],
+  });
+  const mod={exports:{}};
+  new Function("require","module","exports",built.outputFiles[0].text)(
+    createRequire(process.cwd()+"/package.json"),mod,mod.exports);
+  return mod.exports;
+}
 state.db = db;
-const stub = {
-  "@supabase": "export function createClient(){return globalThis.w06Edge.db;}",
-  "webpush": "export default {setVapidDetails(){},generateVAPIDKeys(){throw Error('UNEXPECTED_KEY_BOOTSTRAP')},async sendNotification(){globalThis.w06Edge.notifications++;if(globalThis.w06Edge.failSend)throw Error('TENANT_B_PRIVATE_CUSTOMER_CONTENT');}};",
-};
+const reset=()=>{state.reads=[];state.writes=[];state.notifications=0;state.dbClientCount=0;state.initialized=true;state.failSend=false;state.forceDbError=false;};
+const body = JSON.stringify({event_type:"contact_message",target:"admin",message_id:fixtureMessage});
+const signed = (raw, timestamp=String(Math.floor(Date.now()/1000)), signingSecret=secret) => new Request("https://w06fixture.supabase.co/functions/v1/two-nya-push",{
+  method:"POST",body:raw,headers:{
+    "x-rythm-push-timestamp":timestamp,
+    "x-rythm-push-signature":createHmac("sha256",signingSecret).update(timestamp+"."+raw).digest("hex"),
+  },
+});
+const notSigned = new Request("https://w06fixture.supabase.co/functions/v1/two-nya-push",{method:"POST",body});
 try {
-  const result = await build({
-    entryPoints: ["supabase/functions/two-nya-push/index.ts"],
-    bundle: true, platform: "node", format: "cjs", write:false, logLevel:"silent",
-    packages:"external",
-    plugins:[{
-      name:"mock-deno-edge-dependencies",
-      setup(b) {
-        b.onResolve({filter:/^jsr:/}, () => ({ path: "empty", namespace:"w06-edge" }));
-        b.onResolve({filter:/^npm:@supabase\/supabase-js/}, () => ({ path: "supabase", namespace:"w06-edge" }));
-        b.onResolve({filter:/^npm:web-push/}, () => ({ path: "webpush", namespace:"w06-edge" }));
-        b.onLoad({filter:/.*/,namespace:"w06-edge"}, args => ({
-          loader:"js",contents: args.path === "supabase" ? stub["@supabase"] :
-            args.path === "webpush" ? stub.webpush : "export {};"
-        }));
-      },
-    }],
-  });
-  const mod = { exports:{} };
-  new Function("require","module","exports", result.outputFiles[0].text)(
-    createRequire(process.cwd() + "/package.json"), mod, mod.exports);
-  const req = (method, token) => new Request("http://127.0.0.1/functions/v1/two-nya-push", {
-    method,
-    headers: token ? { authorization:"Bearer "+token } : {},
-    ...(method === "POST" ? { body: JSON.stringify({event_type:"booking_requested",customer_id:"customer-synthetic",message:"W06 test"}) } : {}),
-  });
-  const reset = () => {state.reads=[];state.writes=[];state.notifications=0;state.failSend=false;state.throws=false;state.initialized=true;};
+  await compile("supabase/functions/two-nya-push/index.ts",true);
+  assert.equal(typeof state.handler,"function");
   reset();
-  let response = await state.handler(req("GET"));
-  assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), {ok:true,public_key:"W06_PUBLIC_VAPID"});
-  assert.deepEqual(state.reads.map(x=>x.fields), ["public_key"], "anonymous GET must never select private VAPID key");
-  assert.equal(state.writes.length,0,"anonymous GET must never create or mutate VAPID keys");
-
-  reset(); state.initialized=false;
-  response = await state.handler(req("GET"));
-  assert.equal(response.status,503,"unprovisioned public key is a safe failure, not unauthenticated provisioning");
-  assert.equal(state.writes.length,0);
-  reset();
-  response = await state.handler(req("POST"));
-  assert.equal(response.status,401);
-  assert.equal(state.reads.length,0,"missing JWT cannot query any tenant or private key");
-
-  reset();
-  response = await state.handler(req("POST","invalid-token"));
-  assert.equal(response.status,401);
-  assert.equal(state.reads.length,0,"invalid JWT cannot query private DB");
-  reset();
-  response = await state.handler(req("POST","valid-other"));
-  assert.equal(response.status,403);
-  assert.deepEqual(state.reads.map(x=>x.table),["nail_2nya_admin_users"],"nonadmin JWT cannot touch VAPID or subscriptions");
+  let r=await state.handler(new Request("https://w06fixture.supabase.co/functions/v1/two-nya-push"));
+  assert.equal(r.status,200);
+  assert.deepEqual(await r.json(),{ok:true,public_key:"W06_PUBLIC_VAPID"});
+  assert.deepEqual(state.reads.map(x=>x.fields),["public_key"]);
+  assert.equal(state.writes.length,0,"public GET cannot create private credentials");
+  reset();state.initialized=false;
+  r=await state.handler(new Request("https://w06fixture.supabase.co/functions/v1/two-nya-push"));
+  assert.equal(r.status,503,"uninitialized public key fails closed");
   assert.equal(state.writes.length,0);
 
+  for(const [label,request] of [
+    ["missing-signature",notSigned],
+    ["bad-hmac",signed(body,undefined,"WRONG_SYNTHETIC_SIGNER_abcdefghijklmnopqrstuvwxyz")],
+    ["modified-body",new Request(signed(body).url,{method:"POST",headers:signed(body).headers,body:body+" "})],
+    ["expired-hmac",signed(body,"1")],
+  ]){
+    reset();
+    r=await state.handler(request);
+    assert.equal(r.status,401,label);
+    assert.equal(state.dbClientCount,0,label+" must fail before service-role client");
+    assert.equal(state.reads.length,0,label+" must fail before all privileged queries");
+  }
   reset();
-  response = await state.handler(req("POST","valid-admin"));
-  assert.equal(response.status,200);
-  assert.deepEqual(await response.json(),{ok:true,sent:1,failed:0});
-  assert.equal(state.notifications,1);
-  assert(state.reads.some(x=>x.table==="nail_2nya_push_keys"&&x.fields.includes("private_key")),"only admin can retrieve private key");
+  r=await state.handler(signed(body));
+  assert.equal(r.status,200,"valid HMAC must preserve contact message notification");
+  assert.deepEqual(await r.json(),{ok:true,delivered:1});
+  assert.equal(state.notifications,1,"only fake webpush adapter called");
+  assert(state.reads.some(x=>x.table==="nail_2nya_push_keys"&&x.fields.includes("private_key")));
+  assert(state.writes.some(x=>x.table==="nail_2nya_contact_messages"&&x.operation==="update"));
+
   reset();state.failSend=true;
-  response = await state.handler(req("POST","valid-admin"));
-  assert.equal(response.status,200);
-  assert.equal(state.writes.filter(x=>x.table==="nail_2nya_notification_deliveries")[0].row.error_message,"push_failed");
-  assert.doesNotMatch(JSON.stringify(state.writes),/TENANT_B_PRIVATE_CUSTOMER_CONTENT/,"provider exception details must not persist");
+  r=await state.handler(signed(body));
+  assert.equal(r.status,200);
+  assert.doesNotMatch(await r.text(),/TENANT_B_PRIVATE_CUSTOMER_CONTENT/);
+  assert.doesNotMatch(JSON.stringify(state.writes),/TENANT_B_PRIVATE_CUSTOMER_CONTENT/);
 
-  reset();state.throws=true;
-  response = await state.handler(req("POST","valid-admin"));
-  assert.equal(response.status,500);
-  assert.doesNotMatch(await response.text(),/TENANT_B_PRIVATE_CUSTOMER_CONTENT/);
-  console.log("PASS W06 actual Edge: anonymous public-only GET; unknown/missing user 401; nonadmin 403 before private DB; admin 200; provider/private error redaction; no external notifications.");
+  reset();state.forceDbError=true;
+  const savedConsole=console.error, logs=[];
+  console.error=(...args)=>logs.push(args.map(String).join(" "));
+  try {
+    r=await state.handler(signed(body));
+    assert.equal(r.status,500);
+    assert.doesNotMatch(await r.text(),/TENANT_B_PRIVATE_CUSTOMER_CONTENT/);
+    assert.doesNotMatch(logs.join("\n"),/TENANT_B_PRIVATE_CUSTOMER_CONTENT/);
+  } finally { console.error=savedConsole; }
+
+  // Test the REAL Next.js backend HMAC sender against the REAL Edge handler;
+  // route network calls are intercepted in memory, no outbound request occurs.
+  reset();
+  const sender=await compile("lib/2nya-nailart/push-dispatch.ts");
+  const calls=[];
+  globalThis.fetch=async(input,init)=>{
+    const url=String(input);
+    assert.equal(new URL(url).hostname,"w06fixture.supabase.co");
+    calls.push({url,init});
+    return state.handler(new Request(url,init));
+  };
+  assert.equal(await sender.dispatchNailPush({event_type:"contact_message",target:"admin",message_id:fixtureMessage}),true);
+  assert.equal(calls.length,1);
+  assert.equal(state.notifications,1);
+  assert.equal(calls[0].init.headers["x-rythm-push-signature"].length,64);
+  console.log("PASS W06 Edge/Backend HMAC: anonymous GET public-only; invalid, tampered, stale POST rejected before service; valid signed contact delivered via mocked push; errors redacted; real backend sender interoperates without I/O.");
 } finally {
-  if (savedDeno === undefined) delete globalThis.Deno;
-  else globalThis.Deno = savedDeno;
+  globalThis.fetch=oldFetch;
+  if(oldDeno===undefined) delete globalThis.Deno; else globalThis.Deno=oldDeno;
+  for(const [key,value] of Object.entries(oldEnv)){
+    if(value===undefined)delete process.env[key];else process.env[key]=value;
+  }
   delete globalThis.w06Edge;
 }
