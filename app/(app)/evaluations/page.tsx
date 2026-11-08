@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/ui/Button";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createAuthServerClient } from "@/lib/supabase/auth-server";
+import { requireOwnerOrganizationContext } from "@/lib/auth/organization-context";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { runAgentEvaluationFleet } from "@/lib/evaluation/runtime";
 import { runSeniorPromotionEvaluation } from "@/lib/evaluation/promotion";
@@ -12,36 +12,29 @@ export const dynamic = "force-dynamic";
 type Props = { searchParams: Promise<{ message?: string; error?: string }> };
 
 async function ownerContext() {
-  const auth = await createAuthServerClient();
-  const { data: { user } } = await auth.auth.getUser();
-  if (!user) redirect("/login");
-  const { data: membership } = await auth.from("organization_members").select("organization_id").eq("user_id", user.id).eq("role", "owner").maybeSingle();
-  if (!membership) redirect("/login?error=Owner%20authorization%20required.");
-  return { user, organizationId: membership.organization_id as string };
+  // Fresh membership/active-organization context is authoritative.
+  const { user, organizationId } = await requireOwnerOrganizationContext();
+  return { user, organizationId };
 }
 
-async function resolveCanonicalEvaluationOrganizationId(preferredOrganizationId: string) {
+async function resolveCanonicalEvaluationOrganizationId(organizationId: string) {
   const server = createServerSupabaseClient();
   if (!server) throw new Error("Server Supabase client is not configured.");
   const requiredCodes = Array.from(new Set(BASE_EVALUATION_SCENARIOS.map((scenario) => scenario.agentCode)));
-  const { data: rows, error } = await server.from("agents").select("organization_id,agent_code").in("agent_code", requiredCodes);
-  if (error) throw new Error(`Canonical Agent Fleet lookup failed: ${error.message}`);
-  const codesByOrganization = new Map<string, Set<string>>();
-  for (const row of rows ?? []) {
-    const organizationId = String(row.organization_id);
-    const codes = codesByOrganization.get(organizationId) ?? new Set<string>();
-    codes.add(String(row.agent_code));
-    codesByOrganization.set(organizationId, codes);
+
+  // A platform-wide canonical Fleet lookup used to redirect an owner to
+  // another company's agents. Service role bypasses RLS, so only resolve
+  // the caller's explicitly authorized active organization.
+  const { data: rows, error } = await server.from("agents")
+    .select("agent_code")
+    .eq("organization_id", organizationId)
+    .in("agent_code", requiredCodes);
+  if (error) throw new Error("Evaluation fleet unavailable.");
+  const presentCodes = new Set((rows ?? []).map((row) => String(row.agent_code)));
+  if (requiredCodes.some((code) => !presentCodes.has(code))) {
+    throw new Error("Evaluation blocked: your company does not have a complete 8-Agent Fleet.");
   }
-  const completeOrganizations = Array.from(codesByOrganization.entries()).filter(([, codes]) => requiredCodes.every((code) => codes.has(code))).map(([organizationId]) => organizationId);
-  if (completeOrganizations.includes(preferredOrganizationId)) return preferredOrganizationId;
-  if (!completeOrganizations.length) throw new Error("Evaluation blocked: no complete canonical 8-Agent Fleet exists.");
-  const { data: organizations, error: organizationsError } = await server.from("organizations").select("id,name").in("id", completeOrganizations);
-  if (organizationsError) throw new Error(`Canonical organization lookup failed: ${organizationsError.message}`);
-  const namedRythm = (organizations ?? []).filter((organization: any) => String(organization.name).trim().toUpperCase() === "RYTHM");
-  if (namedRythm.length === 1) return String(namedRythm[0].id);
-  if (completeOrganizations.length === 1) return completeOrganizations[0];
-  throw new Error("Evaluation blocked: multiple complete Agent Fleets exist and no unique canonical RYTHM Fleet could be selected safely.");
+  return organizationId;
 }
 
 async function runEvaluation() {
@@ -51,8 +44,8 @@ async function runEvaluation() {
   try {
     const evaluationOrganizationId = await resolveCanonicalEvaluationOrganizationId(organizationId);
     result = await runAgentEvaluationFleet({ organizationId: evaluationOrganizationId, requestedBy: user.id });
-  } catch (error) {
-    redirect(`/evaluations?error=${encodeURIComponent(error instanceof Error ? error.message : String(error))}`);
+  } catch {
+    redirect("/evaluations?error=Evaluation%20request%20failed.");
   }
   revalidatePath("/evaluations");
   redirect(`/evaluations?message=${encodeURIComponent(`Evaluation completed: ${result.summary.pass} PASS, ${result.summary.conditional_pass} conditional, ${result.summary.fail} FAIL.`)}`);
@@ -71,8 +64,8 @@ async function runSeniorAssessment(formData: FormData) {
     revalidatePath(`/agents/${agentCode.toLowerCase()}`);
     const note = result.status === "eligible" ? `${agentCode} reached Senior evidence threshold and now requires human certification review.` : `${agentCode} assessment completed but remains blocked from Senior until all evidence thresholds are satisfied.`;
     redirect(`/evaluations?message=${encodeURIComponent(note)}`);
-  } catch (error) {
-    redirect(`/evaluations?error=${encodeURIComponent(error instanceof Error ? error.message : String(error))}`);
+  } catch {
+    redirect("/evaluations?error=Evaluation%20request%20failed.");
   }
 }
 
