@@ -116,6 +116,7 @@ const contracts = [
   ["app/api/executions/route.ts", source => assert.doesNotMatch(source,/error instanceof Error \? error\.message/)],
   ["app/(app)/admin/seo/actions.ts", source => assert.doesNotMatch(source,/redactSecretText\(error|organizationError\.message/)],
   ["app/(app)/home/actions.ts", source => assert.doesNotMatch(source,/console\.error\("home_project_planning_failed",\s*\{/)],
+  ["app/api/ai-workspace/files/route.ts", source => assert.doesNotMatch(source, /console\.error\("ai_workspace_file_ingestion_failed",\s*\{code,\s*error\}/)],
   ["app/api/billing/webhook/route.ts", source => assert.match(source, /verify\(body,signature,secret\)/)],
   ["app/api/communication/inbound/resend/route.ts", source => assert.match(source, /verifySvixSignature\(rawBody,\s*request,\s*webhookSecret\)/)],
   ["app/api/communication/inbound/cloudflare/route.ts", source => assert.match(source, /safeEqualText\(suppliedSecret,\s*expectedSecret\)/)],
