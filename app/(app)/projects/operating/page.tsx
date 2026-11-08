@@ -39,7 +39,7 @@ async function submitContinuousProposalForApproval(formData:FormData) {
     p_requested_by_user_id:user.id
   });
   if(error){
-    console.error("continuous_program_approval_submission_failed",{projectId,proposalId,error:error.message});
+    console.error("continuous_program_approval_submission_failed",{errorCode:error.code??"UNKNOWN"});
     redirect(target+"&programError=Approval+submission+failed.+Review+governance+and+try+again");
   }
   revalidatePath("/projects/operating");
@@ -62,7 +62,7 @@ async function saveContinuousProgram(formData:FormData) {
     p_seo_site_id:seoSiteId||null,p_cadence:cadence,p_enabled:enabled
   });
   if(error){
-    console.error("continuous_program_configuration_failed",{projectId,message:error.message});
+    console.error("continuous_program_configuration_failed",{errorCode:error.code??"UNKNOWN"});
     redirect(destination+"&programError=Configuration+could+not+be+saved.+Check+the+project+governance+and+data+source");
   }
   revalidatePath("/projects/operating");
