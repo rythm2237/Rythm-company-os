@@ -1,4 +1,3 @@
-import "server-only";
 import { createHmac } from "node:crypto";
 
 // This server-to-Edge capability is neither a customer JWT nor a service-role key.
@@ -16,6 +15,7 @@ export type NailPushDispatch =
     };
 
 export async function dispatchNailPush(payload: NailPushDispatch): Promise<boolean> {
+  if (typeof window !== "undefined") throw new Error("Push dispatch is server-only.");
   const secret = process.env.TWO_NYA_PUSH_DISPATCH_SECRET || "";
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "") || "";
 
