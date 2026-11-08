@@ -37,11 +37,13 @@ const database = {
         maybeSingle: async () => ({ data: null, error: null }) };
     }
     if (table === "billing_webhook_events") {
-      return {
+      const q = {
         insert: async () => { state.webhookWrites++; return { error: null }; },
-        update() { return this; },
-        eq() { return Promise.resolve({ error: null }); },
+        update() { return q; },
+        eq() { return q; },
+        then(resolve, reject) { return Promise.resolve({ error: null }).then(resolve, reject); },
       };
+      return q;
     }
     throw Error("UNEXPECTED_DB_TABLE_" + table);
   },
