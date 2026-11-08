@@ -126,8 +126,8 @@ async function resolveOrganizationContextUncached(): Promise<OrganizationContext
     supabase.from("organizations").select(organizationProfileFields).eq("id", selectedMembership.organization_id).maybeSingle(),
     supabase.from("organization_entitlements").select(organizationEntitlementFields).eq("organization_id", selectedMembership.organization_id).maybeSingle(),
   ]);
-  if (profileError && !organizationListError) console.error("organization_context_profile_query_failed", profileError);
-  if (entitlementError && !organizationListError) console.error("organization_context_entitlement_query_failed", entitlementError);
+  if (profileError && !organizationListError) console.error("organization_context_profile_query_failed", profileError?.code);
+  if (entitlementError && !organizationListError) console.error("organization_context_entitlement_query_failed", entitlementError?.code);
   const { data: customerProfile } = await supabase.from("customer_profiles").select("full_name").eq("user_id", user.id).maybeSingle();
   const organization = (profileData as OrganizationRow | null) ?? selectedMembership.organization;
   const { data: branding } = await supabase.from("organization_branding").select("logo_path,updated_at").eq("organization_id", selectedMembership.organization_id).maybeSingle();
