@@ -49,6 +49,7 @@ const fetchBoundaries=new Set([
   "components/projects/ProjectExecutiveSignalEnhancer.tsx",
   "components/projects/approval-decision-discussion.tsx",
   ...sameOriginUiBoundaries,
+  "lib/2nya-nailart/push-dispatch.ts",
   "lib/ai/agent-provider.ts",
   "lib/analytics/public-events.ts",
   "lib/billing/stripe-rest.ts",
@@ -75,15 +76,24 @@ for(const path of sameOriginUiBoundaries){
   assert.doesNotMatch(source,/(api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|api\.stripe\.com)/i,`${path} must never call providers directly.`);
 }
 
-// These existing 2nya server routes call one fixed RYTHM-owned Supabase Edge Function
-// for booking/contact push transport. Keep the boundary explicit and fail if another
-// direct external target is introduced here without a new Phase 2 review.
+// W06: only the public VAPID-key read is unsigned; all push POST traffic
+// is centralized in a dedicated server-only signed HMAC transport.
 for(const path of nailArtPushBoundaries){
   const source=readFileSync(path,"utf8");
-  const targets=[...source.matchAll(/fetch\s*\(\s*["'`](https:\/\/[^"'`]+)/g)].map(match=>match[1]);
-  assert.ok(targets.length>=1,`${path} must retain an explicit reviewed push transport target.`);
-  assert.deepEqual([...new Set(targets)],[nailArtPushTarget],`${path} introduced an unreviewed direct external fetch target.`);
+  if(path==="app/api/2nya-nailart/push-key/route.ts"){
+    const targets=[...source.matchAll(/fetch\s*\(\s*["'`](https:\/\/[^"'`]+)/g)].map(match=>match[1]);
+    assert.deepEqual([...new Set(targets)],[nailArtPushTarget],"Public GET target must remain pinned to trusted Supabase.");
+  }else{
+    assert.match(source,/dispatchNailPush\(/,path+" must sign privileged outbound push");
+    assert.doesNotMatch(source,/\bfetch\s*\(/,path+" must not bypass the signed sender");
+  }
 }
+const signedPush=readFileSync("lib/2nya-nailart/push-dispatch.ts","utf8");
+assert.match(signedPush,/createHmac\("sha256", secret\)/);
+assert.match(signedPush,/x-rythm-push-signature/);
+assert.match(signedPush,/typeof window !== "undefined"/);
+assert.match(signedPush,/fetch\(supabaseUrl \+ "\/functions\/v1\/two-nya-push"/);
+assert.doesNotMatch(signedPush,/\bfetch\s*\(\s*["'`]https?:\/\//, "Signed sender may not use an unreviewed hardcoded provider target.");
 
 assert.match(readFileSync("components/ai-workspace/AIWorkspaceClient.tsx","utf8"),/fetch\(\"\/api\/ai-workspace\//);
 assert.match(readFileSync("components/ai-workspace/GuestAIClient.tsx","utf8"),/fetch\(\"\/api\/ai-workspace\//);
