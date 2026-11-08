@@ -90,6 +90,20 @@ const contracts = [
     "app/api/2nya-nailart/" + name + "/route.ts",
     source => { assert.match(source,/dispatchNailPush\(/); assert.doesNotMatch(source,/fetch\([^)]*two-nya-push/); },
   ]),
+  ["app/(app)/evaluations/page.tsx", source => {
+    assert.match(source, /await requireOwnerOrganizationContext\(\)/);
+    assert.match(source, /\.eq\("organization_id", organizationId\)/);
+    assert.doesNotMatch(source, /\.from\("organizations"\)|completeOrganizations|namedRythm/);
+  }],
+  ["lib/integrations/error-normalization.ts", source => {
+    assert.match(source, /sanitizedError: "EXECUTION_UNKNOWN"/);
+    assert.match(source, /sanitizedError: "EXECUTION_TIMEOUT"/);
+    assert.doesNotMatch(source, /sanitizedError:\s*(?:message|redactSecretText\(error\.message\))/);
+  }],
+  ...["projects/analyze", "projects/completion", "projects/roadmap"].map(name => [
+    "app/api/" + name + "/route.ts",
+    source => { assert.doesNotMatch(source,/error:\s*(?:error\s+instanceof\s+Error\s*\?\s*error\.message|\w+\.error\.message)/); },
+  ]),
   ["app/api/billing/webhook/route.ts", source => assert.match(source, /verify\(body,signature,secret\)/)],
   ["app/api/communication/inbound/resend/route.ts", source => assert.match(source, /verifySvixSignature\(rawBody,\s*request,\s*webhookSecret\)/)],
   ["app/api/communication/inbound/cloudflare/route.ts", source => assert.match(source, /safeEqualText\(suppliedSecret,\s*expectedSecret\)/)],
