@@ -71,6 +71,12 @@ const shims = {
   "@/lib/supabase/billing-admin":
     "export function createBillingAdminClient(){return globalThis.w06Boundary.service;}",
   "@/lib/commercial/activation-policy": "export const ONLINE_CHECKOUT_ENABLED = true;",
+  "@/lib/auth/api-organization-context":
+    "export async function resolveOwnerApiOrganizationContext(){return globalThis.w06Boundary.ownerContext;}",
+  "@/lib/projects/project-roadmap":
+    "export async function getApprovedProjectRoadmap(){return {id:'roadmap-A',version:1,status:'approved'};} export async function getLatestProjectRoadmap(){throw Error('UNEXPECTED_ROADMAP_FALLBACK');} export async function createProjectRoadmapDraft(){throw Error('UNEXPECTED_ROADMAP_CREATE');}",
+  "@/lib/projects/project-execution-start":
+    "export async function startProjectExecutionWithoutGlobalGate(){throw Error('UNEXPECTED_PROJECT_START');}",
   "@supabase/supabase-js":
     "export function createClient(){return globalThis.w06Boundary.service;}",
   "@/lib/integrations/connection-setup-agent":
@@ -142,6 +148,49 @@ try {
   const degraded = await project.GET(get(testSecret));
   assert.doesNotMatch(await degraded.text(), /TENANT_B|PRIVATE_CUSTOMER/);
   state.failProject = false;
+
+  // Real user-route boundary with caller-scoped RLS and foreign-project ID.
+  const callerDb = {
+    from(table) {
+      assert.equal(table,"projects");
+      const filters = [];
+      const q = {
+        select(){return q;},
+        eq(k,v){filters.push([k,v]);return q;},
+        async maybeSingle(){
+          return {data:filters.some(([k,v])=>k==="organization_id"&&v==="org-A") &&
+            filters.some(([k,v])=>k==="id"&&v==="project-A") ? {id:"project-A"} : null,error:null};
+        },
+      };
+      return q;
+    },
+  };
+  state.ownerContext = {ok:false,status:401,error:"Authentication required."};
+  const projectRun = await route("app/api/projects/run/route.ts");
+  const invokeProject = id => projectRun.POST(new Request("http://localhost/api/projects/run",{
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({projectId:id}),
+  }));
+  state.projectOperations=0;
+  assert.equal((await invokeProject("project-A")).status,401,"anonymous project execution denied");
+  state.ownerContext = {ok:true,organizationId:"org-A",user:{id:"owner-A"},supabase:callerDb};
+  assert.equal((await invokeProject("project-B")).status,404,"owner-A cannot start foreign project");
+  assert.equal(state.projectOperations,0,"foreign project blocked before privileged query");
+  // Existing synthetic own execution serves as a positive control.
+  state.service = {
+    ...database,
+    from(table){
+      if(table==="project_executions"){
+        const filters=[];
+        const q={select(){return q;},eq(k,v){filters.push([k,v]);return q;},
+          in(){return q;},order(){return q;},limit(){return q;},
+          async maybeSingle(){assert(filters.some(([k,v])=>k==="organization_id"&&v==="org-A"));assert(filters.some(([k,v])=>k==="project_id"&&v==="project-A"));return {data:{id:"execution-A",execution_no:1,status:"running",roadmap_id:"roadmap-A"},error:null};}};
+        return q;
+      }
+      return database.from(table);
+    },
+  };
+  assert.equal((await invokeProject("project-A")).status,200,"owner-A own project succeeds");
+  state.service=database;
 
   const billing = await route("app/api/billing/webhook/route.ts");
   const event = JSON.stringify({ id: "evt_w06_synthetic", type: "w06.ping", created: 1, data: { object: {} } });
