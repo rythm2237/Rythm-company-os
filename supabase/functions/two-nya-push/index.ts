@@ -20,7 +20,7 @@ Deno.serve(async (req: Request) => {
       const timestamp = req.headers.get("x-rythm-push-timestamp") || "";
       const signature = req.headers.get("x-rythm-push-signature") || "";
       const now = Math.floor(Date.now() / 1000);
-      if (!/^\\d{10}$/.test(timestamp) || Math.abs(now - Number(timestamp)) > 300 || !/^[a-f0-9]{64}$/i.test(signature)) {
+      if (!/^\d{10}$/.test(timestamp) || Math.abs(now - Number(timestamp)) > 300 || !/^[a-f0-9]{64}$/i.test(signature)) {
         return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
       }
       const rawBody = await req.text();
