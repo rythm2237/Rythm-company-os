@@ -88,8 +88,8 @@ export async function POST(request:Request){
       payload:{readiness:result.readiness,correlation_id:result.correlationId,knowledge_ingestions:knowledge.length,team_recommendations:recommendations.length,new_team_assignments:assigned},
     });
     return NextResponse.json({ok:true,...result,knowledgeIngested:knowledge.filter(item=>item.status==="completed").length,teamAssigned:assigned});
-  }catch(error){
-    console.error("project_analysis_failed",{projectId,error:error instanceof Error?error.message:"unknown"});
-    return NextResponse.json({ok:false,error:error instanceof Error?error.message:"Project analysis failed."},{status:500});
+  }catch{
+    console.error("project_analysis_failed");
+    return NextResponse.json({ok:false,error:"Project analysis failed."},{status:500});
   }
 }
