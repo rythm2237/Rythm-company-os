@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { publicClient } from '@/lib/2nya-nailart/server';
+import { dispatchNailPush } from '@/lib/2nya-nailart/push-dispatch';
 
 export const dynamic = 'force-dynamic';
 
 async function dispatchStatusPush(appointmentId:string,status:string){
   const eventType=status==='confirmed'?'request_approved':status==='cancelled'?'request_rejected':null;
   if(!eventType)return;
-  try{await fetch('https://dezbacyuvsdrlpmmpjht.supabase.co/functions/v1/two-nya-push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({appointment_id:appointmentId,event_type:eventType,target:'customer'}),cache:'no-store'});}catch(error){console.error('2nya_customer_push_failed',{message:error instanceof Error?error.message:'unknown'});}
+  await dispatchNailPush({appointment_id:appointmentId,event_type:eventType,target:'customer'});
 }
 
 export async function GET(request: NextRequest) {
