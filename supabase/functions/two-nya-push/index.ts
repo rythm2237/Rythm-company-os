@@ -11,30 +11,49 @@ Deno.serve(async (req: Request) => {
     if (!serviceKey || !url) return Response.json({ ok: false, error: "server_config" }, { status: 500 });
     const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 
-    const { data: initialKeyRow, error: keyError } = await db.from("nail_2nya_push_keys").select("public_key,private_key").eq("singleton", true).maybeSingle();
+
+    // Public subscription setup needs the public VAPID key, never the private key.
+    // Initializing a private key is an administrative action, not an anonymous GET.
+    if (req.method === "GET") {
+      const { data: publicKey, error: publicKeyError } = await db.from("nail_2nya_push_keys")
+        .select("public_key").eq("singleton", true).maybeSingle();
+      if (publicKeyError) return Response.json({ ok: false, error: "push_key_lookup_failed" }, { status: 500 });
+      if (!publicKey?.public_key) return Response.json({ ok: false, error: "push_not_initialized" }, { status: 503 });
+      return Response.json({ ok: true, public_key: publicKey.public_key }, { headers: { "Cache-Control": "no-store" } });
+    }
+    if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+
+    // The Edge Function is configured with verify_jwt=false; fail closed here
+    // before any private VAPID key lookup or notification-delivery database access.
+    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
+    if (!token) return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    const { data: authData, error: authError } = await db.auth.getUser(token);
+    if (authError || !authData?.user) return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    const { data: admin, error: adminError } = await db.from("nail_2nya_admin_users")
+      .select("user_id").eq("user_id", authData.user.id).maybeSingle();
+    if (adminError || !admin) return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
+
+    // Existing VAPID lazy provisioning is preserved only for an authenticated admin.
+    const { data: initialKeyRow, error: keyError } = await db.from("nail_2nya_push_keys")
+      .select("public_key,private_key").eq("singleton", true).maybeSingle();
     let keyRow = initialKeyRow;
     if (keyError) return Response.json({ ok: false, error: "push_key_lookup_failed" }, { status: 500 });
     if (!keyRow) {
       const generated = webpush.generateVAPIDKeys();
-      const inserted = await db.from("nail_2nya_push_keys").insert({ singleton: true, public_key: generated.publicKey, private_key: generated.privateKey }).select("public_key,private_key").single();
+      const inserted = await db.from("nail_2nya_push_keys").insert({
+        singleton: true, public_key: generated.publicKey, private_key: generated.privateKey,
+      }).select("public_key,private_key").single();
       if (inserted.error) {
-        const fallback = await db.from("nail_2nya_push_keys").select("public_key,private_key").eq("singleton", true).single();
+        const fallback = await db.from("nail_2nya_push_keys").select("public_key,private_key")
+          .eq("singleton", true).single();
         if (fallback.error || !fallback.data) return Response.json({ ok: false, error: "push_key_init_failed" }, { status: 500 });
         keyRow = fallback.data;
       } else keyRow = inserted.data;
-      await db.from("nail_2nya_site_settings").upsert({ key: "push_vapid_public", value: { key: keyRow.public_key } }, { onConflict: "key" });
+      await db.from("nail_2nya_site_settings").upsert({
+        key: "push_vapid_public", value: { key: keyRow.public_key },
+      }, { onConflict: "key" });
     }
-
-    if (req.method === "GET") return Response.json({ ok: true, public_key: keyRow.public_key });
-    if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
     webpush.setVapidDetails("mailto:admin@rythm-os.com", keyRow.public_key, keyRow.private_key);
-
-    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
-    if (!token) return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
-    const { data: authData } = await db.auth.getUser(token);
-    if (!authData.user) return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
-    const admin = await db.from("nail_2nya_admin_users").select("user_id").eq("user_id", authData.user.id).maybeSingle();
-    if (!admin.data) return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
 
     const body = await req.json().catch(() => ({}));
     const eventType = String(body?.event_type || "");
@@ -59,12 +78,12 @@ Deno.serve(async (req: Request) => {
       } catch (error) {
         failed += 1;
         const statusCode = Number((error as { statusCode?: number })?.statusCode || 0);
-        await db.from("nail_2nya_notification_deliveries").insert({ customer_id: customerId, event_type: eventType, channel: "push", status: "failed", subscription_id: sub.id, error_message: String((error as Error)?.message || "push_failed") });
+        await db.from("nail_2nya_notification_deliveries").insert({ customer_id: customerId, event_type: eventType, channel: "push", status: "failed", subscription_id: sub.id, error_message: "push_failed" });
         if (statusCode === 404 || statusCode === 410) await db.from("nail_2nya_customer_push_subscriptions").update({ enabled: false }).eq("id", sub.id);
       }
     }
     return Response.json({ ok: true, sent, failed });
-  } catch (error) {
-    return Response.json({ ok: false, error: String((error as Error)?.message || "unknown_error") }, { status: 500 });
+  } catch {
+    return Response.json({ ok: false, error: "push_failed" }, { status: 500 });
   }
 });
