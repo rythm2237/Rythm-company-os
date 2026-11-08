@@ -89,12 +89,11 @@ export async function POST(request: Request) {
       { ok: true, ...result },
       { status: result.status === "waiting_approval" ? 202 : 200 },
     );
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         ok: false,
-        error:
-          error instanceof Error ? error.message : "Execution proposal failed.",
+        error: "Execution proposal failed.",
       },
       { status: 400 },
     );
