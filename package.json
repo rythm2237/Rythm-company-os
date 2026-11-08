@@ -63,7 +63,7 @@
     "test:crm-connected": "node --import tsx scripts/validate-crm-connected.tsx",
     "test:w02": "node scripts/validate-w02-fixtures.mjs",
     "test:w05": "node --experimental-strip-types scripts/validate-w05-file-confidentiality.mjs && node scripts/validate-w05-storage-rls.mjs && node scripts/validate-w05-file-http.mjs",
-    "test:w06": "node scripts/w06-audit-privileged-boundaries.mjs && node scripts/validate-w06-backend-boundaries.mjs && node scripts/validate-w06-edge-push.mjs"
+    "test:w06": "node scripts/w06-audit-privileged-boundaries.mjs && node scripts/validate-w06-backend-boundaries.mjs && node scripts/validate-w06-edge-push.mjs && node scripts/validate-w06-evaluation-tenant.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
