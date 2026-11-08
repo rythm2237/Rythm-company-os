@@ -57,7 +57,6 @@ export async function GET(request: NextRequest) {
     console.error("auth_callback_exchange_failed", {
       status: error.status,
       code: error.code,
-      code: error.code,
       flow,
     });
     return NextResponse.redirect(authFailureUrl(origin, next, flow));
