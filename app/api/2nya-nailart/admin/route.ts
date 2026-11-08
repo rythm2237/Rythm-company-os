@@ -1,10 +1,11 @@
 import { NextRequest,NextResponse } from 'next/server';
 import { requireNailAdmin } from '@/lib/2nya-nailart/server';
+import { dispatchNailPush } from '@/lib/2nya-nailart/push-dispatch';
 export const dynamic='force-dynamic';
 
 function fail(error:string,status=400){return NextResponse.json({ok:false,error},{status,headers:{'Cache-Control':'no-store'}})}
-async function sendBookingPush(appointmentId:string,eventType:string,target:'admin'|'customer'){
-  try{await fetch('https://dezbacyuvsdrlpmmpjht.supabase.co/functions/v1/two-nya-push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({appointment_id:appointmentId,event_type:eventType,target}),cache:'no-store'});}catch(error){console.error('2nya_push_dispatch_failed',{eventType,target,message:error instanceof Error?error.message:'unknown'});}
+async function sendBookingPush(appointmentId:string,eventType:'request_approved'|'request_rejected',target:'admin'|'customer'){
+  await dispatchNailPush({appointment_id:appointmentId,event_type:eventType,target});
 }
 
 export async function GET(request:NextRequest){
@@ -75,5 +76,5 @@ export async function POST(request:NextRequest){
     }else return fail('عملیات ناشناخته است.');
     if(result?.error){console.error('2nya_admin_action_failed',{action,code:result.error.code});const conflict=result.error.code==='23P01';return fail(conflict?'این زمان با یک رزرو دیگر تداخل دارد.':'تغییر ذخیره نشد.',conflict?409:400)}
     return NextResponse.json({ok:true,data:result?.data??null},{headers:{'Cache-Control':'no-store'}});
-  }catch(error){console.error('2nya_admin_action_exception',{message:error instanceof Error?error.message:'unknown'});return fail('تغییر ذخیره نشد.')}
+  }catch{console.error('2nya_admin_action_exception');return fail('تغییر ذخیره نشد.')}
 }

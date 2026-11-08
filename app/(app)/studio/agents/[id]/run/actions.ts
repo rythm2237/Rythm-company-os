@@ -55,8 +55,12 @@ const VISUAL_QA_VERSION = "designer-visual-qa-v1";
 const AGENT_RUNTIME_FIELDS = "id,name,role_title,department,agent_status,provisioning_status,external_actions_allowed,system_instructions,runtime_provider,runtime_model,model_policy,language_policy,routing_policy_key,allowed_tools,risk_ceiling,language,authority_level";
 
 function safeMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : "Agent execution failed.";
-  if (/not configured|empty Agent response|request failed|timed out|timeout|not available|image generation|file|attachment|provider|knowledge|credit|quota|billing|429|provision|budget|restricted handling/i.test(message)) return message;
+  // Never reflect arbitrary provider, storage, SQL, or customer-content messages.
+  const message = error instanceof Error ? error.message : "";
+  if (/quota|credit|budget|billing|429/i.test(message)) return "Usage or budget limits prevent this execution.";
+  if (/timed out|timeout/i.test(message)) return "Execution timed out. Please retry.";
+  if (/file|attachment|image generation/i.test(message)) return "The attachment or image operation could not be completed.";
+  if (/not configured|not available|provision/i.test(message)) return "The execution service is not available.";
   return "Agent execution failed. Refresh and try again.";
 }
 function transcript(messages: ConsoleMessage[] = []) { return messages.slice(-10).map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.content.slice(0, 6000)}`).join("\n\n").slice(0, 30000); }
@@ -193,7 +197,7 @@ export async function uploadAgentAttachment(formData: FormData) {
     if (file.size > MAX_FILE_BYTES) return { ok: false as const, error: "Each file must be 12 MB or smaller." };
     const { context, agent } = await getAgent(agentId); if (agent.provisioning_status !== "ready") return { ok: false as const, error: "This Agent is not professionally provisioned yet." };
     const filename = safeFilename(file.name); const mimeType = file.type || "application/octet-stream"; const storagePath = `${context.organizationId}/${agentId}/${randomUUID()}-${filename}`; const bytes = Buffer.from(await file.arrayBuffer());
-    const { error: storageError } = await context.supabase.storage.from("agent-attachments").upload(storagePath, bytes, { contentType: mimeType, upsert: false }); if (storageError) throw new Error(`File upload failed: ${storageError.message}`);
+    const { error: storageError } = await context.supabase.storage.from("agent-attachments").upload(storagePath, bytes, { contentType: mimeType, upsert: false }); if (storageError) throw new Error("File upload failed.");
     const { data, error } = await context.supabase.from("agent_attachments").insert({ organization_id: context.organizationId, agent_id: agentId, filename: file.name.slice(0, 240), mime_type: mimeType, size_bytes: file.size, storage_path: storagePath, source_company_id: context.organizationId, transferable: false }).select("id,filename,mime_type,size_bytes").single();
     if (error || !data) { await context.supabase.storage.from("agent-attachments").remove([storagePath]); throw new Error("File metadata could not be saved."); }
     await context.supabase.from("agent_memories").insert({ organization_id: context.organizationId, agent_id: agentId, source_attachment_id: data.id, memory_type: "file", learning_scope: "company_specific_memory", title: `Reference file: ${data.filename}`, content: `A user supplied ${data.filename} (${data.mime_type}, ${data.size_bytes} bytes) as a reference for this Agent. The original file remains available in the Agent attachment library.`, source_company_id: context.organizationId, confidentiality_level: "internal", transferable: false });

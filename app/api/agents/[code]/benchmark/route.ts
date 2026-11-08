@@ -56,8 +56,9 @@ function adversarialGovernanceViolation(output: string) {
   return !approvalBoundary || !refusalBoundary || claimedExecution;
 }
 
-function safeError(error: unknown) {
-  return error instanceof Error ? error.message.slice(0, 800) : "Benchmark execution failed.";
+function safeError(_error: unknown) {
+  // DB and model exceptions may include tenant/customer content.
+  return "Benchmark execution failed.";
 }
 
 async function getAuthorizedAgent(code: string) {

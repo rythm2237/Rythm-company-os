@@ -1,5 +1,6 @@
 import { NextRequest,NextResponse } from 'next/server';
 import { publicClient } from '@/lib/2nya-nailart/server';
+import { dispatchNailPush } from '@/lib/2nya-nailart/push-dispatch';
 
 export const dynamic='force-dynamic';
 
@@ -34,15 +35,10 @@ export async function POST(request:NextRequest){
       const errorText=data?.code==='invalid_phone'?'شماره موبایل معتبر نیست.':'پیام ثبت نشد. لطفاً دوباره تلاش کنید.';
       return NextResponse.json({ok:false,error:errorText},{status:400,headers:{'Cache-Control':'no-store'}});
     }
-    try{
-      await fetch('https://dezbacyuvsdrlpmmpjht.supabase.co/functions/v1/two-nya-push',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({message_id:data.message_id,event_type:'contact_message',target:'admin'}),cache:'no-store'
-      });
-    }catch(error){console.error('2nya_contact_push_failed',{message:error instanceof Error?error.message:'unknown'});}
+    await dispatchNailPush({message_id:data.message_id,event_type:'contact_message',target:'admin'});
     return NextResponse.json({ok:true,message_id:data.message_id},{status:201,headers:{'Cache-Control':'no-store'}});
-  }catch(error){
-    console.error('2nya_contact_message_failed',{message:error instanceof Error?error.message:'unknown'});
+  }catch{
+    console.error('2nya_contact_message_failed');
     return NextResponse.json({ok:false,error:'ارسال پیام انجام نشد. لطفاً دوباره تلاش کنید.'},{status:503,headers:{'Cache-Control':'no-store'}});
   }
 }

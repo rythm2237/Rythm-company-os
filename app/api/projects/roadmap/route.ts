@@ -24,7 +24,7 @@ export async function GET(request:Request){
     const verified=new Set((bindings.data??[]).filter(row=>row.verified_at).flatMap(row=>[row.provider_key,row.resource_type].filter(Boolean).map(String)));
     const connectionDependencies=(roadmap?.phases??[]).flatMap(phase=>(phase.requiredConnections??[]).map((raw,index)=>{const item=raw&&typeof raw==="object"?raw as Record<string,unknown>:{};const provider=String(item.provider??item.provider_key??item.resource_type??raw??"");return{phase_key:phase.key,index,provider,status:verified.has(provider)?"completed":"waiting_for_user",completion_requires:"verified_provider_and_bound_resource"};}));
     return NextResponse.json({ok:true,roadmap,progress,connectionDependencies});
-  }catch(error){return NextResponse.json({ok:false,error:error instanceof Error?error.message:"Unable to load roadmap."},{status:500});}
+  }catch{return NextResponse.json({ok:false,error:"Unable to load roadmap."},{status:500});}
 }
 
 export async function POST(request:Request){
@@ -62,5 +62,5 @@ export async function POST(request:Request){
     const execution=await startProjectExecutionWithoutGlobalGate(service,auth.organizationId,projectId,auth.user.id);
     await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.roadmap.approved_and_execution_started",object_type:"project",object_id:projectId,risk_level:"medium",payload:{roadmap_id:roadmap.id,roadmap_version:roadmap.version,execution_id:execution.id,execution_no:execution.execution_no,prior_execution_rebaselined:Boolean(supersededExecution)}});
     return NextResponse.json({ok:true,mode:"execution_started",roadmap:{id:roadmap.id,version:roadmap.version,status:roadmap.status},execution});
-  }catch(error){return NextResponse.json({ok:false,error:error instanceof Error?error.message:"Unable to update roadmap."},{status:500});}
+  }catch{return NextResponse.json({ok:false,error:"Unable to update roadmap."},{status:500});}
 }

@@ -111,7 +111,7 @@ export async function runAgentTask(_previous: AgentTaskState, formData: FormData
         acceptance_criteria: assignment.acceptance_criteria,
       },
     });
-    if (outcomeError) throw new Error(`Task completed, but its work outcome could not be attached to the evidence ledger: ${outcomeError.message}`);
+    if (outcomeError) throw new Error(`Task completed, but its work outcome could not be attached to the evidence ledger: (see server audit)`);
     revalidatePath(`/agents/${agent.agent_code.toLowerCase()}`);
     revalidatePath(`/agents/${agent.agent_code.toLowerCase()}/task`);
 
@@ -134,6 +134,6 @@ export async function runAgentTask(_previous: AgentTaskState, formData: FormData
       risk_level: "low",
       payload: { agent_code: agent.agent_code, assignment_id: assignment.id, execution_completed: executionCompleted, external_actions_allowed: false },
     });
-    return { status: "error", error: error instanceof Error ? error.message : "Agent task failed." };
+    return { status: "error", error: "Agent task failed." };
   }
 }

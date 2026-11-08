@@ -165,7 +165,7 @@ async function processOneReview(service:SupabaseClient,cycle:ClaimedCycle):Promi
     try{
       await markCycle(service,cycle.cycle_id,cycle.organization_id,"failed",reason,
         {analyzer:"continuous-program-evidence-v1",reason:"processing_failed"});
-    }catch(persistenceError){console.error("continuous_review_error_persistence_failed",persistenceError);}
+    }catch{console.error("continuous_review_error_persistence_failed");}
     return {cycleId:cycle.cycle_id,projectId,status:"failed",reason};
   }
 }

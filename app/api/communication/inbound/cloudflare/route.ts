@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (mailboxError) {
-    console.error("Cloudflare inbound mailbox resolution failed", mailboxError);
+    console.error("cloudflare_inbound_mailbox_resolution_failed", mailboxError.code);
     return NextResponse.json({ error: "mailbox_resolution_failed" }, { status: 500 });
   }
 
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (threadError || !thread) {
-    console.error("Cloudflare inbound thread creation failed", threadError);
+    console.error("cloudflare_inbound_thread_creation_failed", threadError.code);
     return NextResponse.json({ error: "thread_creation_failed" }, { status: 500 });
   }
 
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
       .delete()
       .eq("organization_id", mailbox.organization_id)
       .eq("id", thread.id);
-    console.error("Cloudflare inbound message creation failed", messageError);
+    console.error("cloudflare_inbound_message_creation_failed", messageError.code);
     return NextResponse.json({ error: "message_creation_failed" }, { status: 500 });
   }
 

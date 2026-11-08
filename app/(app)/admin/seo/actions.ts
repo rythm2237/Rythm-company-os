@@ -6,7 +6,6 @@ import { requirePlatformAdmin } from "@/lib/admin/authorization";
 import { collectSeoProviderEvidence } from "@/lib/integrations/adapters/seo-provider-analytics";
 import { runSeoAiReasoning, runSeoIntelligenceAgent } from "@/lib/seo/intelligence-agent";
 import { runSeoMonitoringEngine } from "@/lib/seo/monitoring-engine";
-import { redactSecretText } from "@/lib/security/redaction";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const SEO_ADMIN_PATH = "/admin/seo";
@@ -25,13 +24,13 @@ export async function runSeoMonitoringFromAdmin() {
     let aiReasoningError: string | null = null;
     const { data: rythmOrganization, error: organizationError } = await adminSupabase.from("organizations").select("id").eq("slug", "rythm").maybeSingle();
 
-    if (organizationError) aiReasoningError = redactSecretText(`RYTHM organization lookup failed: ${organizationError.message}`);
+    if (organizationError) aiReasoningError = "RYTHM organization lookup failed.";
     else if (!rythmOrganization?.id) aiReasoningError = "RYTHM organization context is unavailable; deterministic intelligence completed without AI enrichment.";
     else {
       try {
         aiReasoning = await runSeoAiReasoning({ organizationId: rythmOrganization.id, actorUserId: user.id, snapshot, deterministicReport: intelligence, providerEvidence });
       } catch (error) {
-        aiReasoningError = redactSecretText(error instanceof Error ? error.message : "AI reasoning was unavailable.");
+        aiReasoningError = "AI reasoning was unavailable.";
       }
     }
 
@@ -72,7 +71,7 @@ export async function runSeoMonitoringFromAdmin() {
     const suffix = aiReasoning ? " AI reasoning completed." : " Deterministic intelligence completed; AI enrichment was unavailable.";
     destination = `${SEO_ADMIN_PATH}?message=${encodeURIComponent(`SEO monitoring completed with health score ${snapshot.score}/100 and ${providers} evidence.${suffix}`)}`;
   } catch (error) {
-    const message = redactSecretText(error instanceof Error ? error.message : "SEO monitoring failed.");
+    const message = "SEO monitoring failed.";
     destination = `${SEO_ADMIN_PATH}?error=${encodeURIComponent(message)}`;
   }
 

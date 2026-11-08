@@ -1,5 +1,6 @@
 import { NextRequest,NextResponse } from 'next/server';
 import { publicClient } from '@/lib/2nya-nailart/server';
+import { dispatchNailPush } from '@/lib/2nya-nailart/push-dispatch';
 export const dynamic='force-dynamic';
 
 function normalizeIranMobile(value:unknown){
@@ -23,9 +24,7 @@ export async function POST(request:NextRequest){
     if(error)throw error;
     if(!data?.ok){const code=data?.code||'booking_failed';const status=code==='slot_taken'?409:400;return NextResponse.json({ok:false,code,error:code==='slot_taken'?'این زمان همین الان توسط مشتری دیگری رزرو شده است.':'درخواست وقت ثبت نشد.'},{status});}
     const managementUrl=`/booking/${encodeURIComponent(data.appointment_id)}?token=${encodeURIComponent(data.management_token)}`;
-    try{
-      await fetch('https://dezbacyuvsdrlpmmpjht.supabase.co/functions/v1/two-nya-push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({appointment_id:data.appointment_id,event_type:'booking_requested',target:'admin'}),cache:'no-store'});
-    }catch(error){console.error('2nya_admin_push_failed',{message:error instanceof Error?error.message:'unknown'});}
+    await dispatchNailPush({appointment_id:data.appointment_id,event_type:'booking_requested',target:'admin'});
     return NextResponse.json({...data,management_url:managementUrl},{status:201,headers:{'Cache-Control':'no-store'}});
-  }catch(error){console.error('2nya_booking_failed',{message:error instanceof Error?error.message:'unknown'});return NextResponse.json({ok:false,error:'ثبت درخواست وقت انجام نشد. لطفاً دوباره تلاش کنید.'},{status:503});}
+  }catch{console.error('2nya_booking_failed');return NextResponse.json({ok:false,error:'ثبت درخواست وقت انجام نشد. لطفاً دوباره تلاش کنید.'},{status:503});}
 }

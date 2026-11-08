@@ -52,7 +52,7 @@ async function updateCompanyProfile(formData: FormData) {
     timezone,
     updated_at: new Date().toISOString(),
   }).eq("id", organizationId);
-  if (error) redirect(`/company?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/company?error=${encodeURIComponent("Unable to save changes.")}`);
 
   await supabase.from("audit_events").insert({
     organization_id: organizationId,
@@ -97,7 +97,7 @@ async function updateDepartmentManager(formData: FormData) {
     if (!agent) redirect("/company?error=Manager%20must%20be%20an%20active%20agent%20in%20this%20department.");
   }
   const { error } = await supabase.from("departments").update({ manager_agent_id: managerId }).eq("organization_id", organizationId).eq("id", departmentId);
-  if (error) redirect(`/company?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/company?error=${encodeURIComponent("Unable to save changes.")}`);
   await supabase.from("audit_events").insert({ organization_id: organizationId, actor_type: "user", actor_user_id: user.id, event_type: "organization.department_manager_updated", object_type: "department", object_id: departmentId, risk_level: "medium", payload: { manager_agent_id: managerId } });
   revalidatePath("/company");
   redirect("/company?message=Department%20manager%20updated.");
@@ -162,7 +162,7 @@ async function updateMember(formData: FormData) {
     department_id: nullable(formData, "departmentId"),
     deactivated_at: status === "active" ? null : new Date().toISOString(),
   }).eq("organization_id", organizationId).eq("user_id", userId);
-  if (error) redirect(`/company?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/company?error=${encodeURIComponent("Unable to save changes.")}`);
   await supabase.from("audit_events").insert({ organization_id: organizationId, actor_type: "user", actor_user_id: user.id, event_type: "organization.member_updated", object_type: "organization_member", object_id: userId, risk_level: "medium", payload: { role, status } });
   revalidatePath("/company");
 }
@@ -175,7 +175,7 @@ async function updateAgentStructure(formData: FormData) {
     department_id: nullable(formData, "departmentId"),
     reports_to_agent_id: nullable(formData, "reportsToAgentId"),
   }).eq("organization_id", organizationId).eq("id", agentId);
-  if (error) redirect(`/company?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/company?error=${encodeURIComponent("Unable to save changes.")}`);
   await supabase.from("audit_events").insert({ organization_id: organizationId, actor_type: "user", actor_user_id: user.id, event_type: "organization.agent_structure_updated", object_type: "agent", object_id: agentId, risk_level: "low", payload: {} });
   revalidatePath("/company");
 }
@@ -192,7 +192,7 @@ async function updateAgentCost(formData: FormData) {
   const currency = text(formData, "currency").toUpperCase().slice(0, 3) || "EUR";
   const usageCostUnit = nullable(formData, "usageCostUnit");
   const { error } = await supabase.from("agents").update({ cost_model: costModel, monthly_company_cost: monthlyCompanyCost, usage_cost_rate: usageCostRate, usage_cost_unit: usageCostUnit, sale_price_monthly: salePriceMonthly, cost_currency: currency }).eq("organization_id", organizationId).eq("id", agentId);
-  if (error) redirect(`/company?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/company?error=${encodeURIComponent("Unable to save changes.")}`);
   await supabase.from("agent_cost_history").insert({ organization_id: organizationId, agent_id: agentId, cost_model: costModel, monthly_company_cost: monthlyCompanyCost, usage_cost_rate: usageCostRate, usage_cost_unit: usageCostUnit, sale_price_monthly: salePriceMonthly, currency, changed_by_user_id: user.id });
   await supabase.from("audit_events").insert({ organization_id: organizationId, actor_type: "user", actor_user_id: user.id, event_type: "workforce.agent_cost_updated", object_type: "agent", object_id: agentId, risk_level: "medium", payload: { cost_model: costModel, monthly_company_cost: monthlyCompanyCost, sale_price_monthly: salePriceMonthly, currency } });
   revalidatePath("/company");

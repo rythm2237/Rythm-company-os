@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   verify-staging:
-    if: ${{ github.event.inputs.confirm_staging_only == 'W03-STAGING-ONLY' && github.ref == 'refs/heads/test/w03-tenant-isolation-evidence' }}
+    if: ${{ github.event.inputs.confirm_staging_only == 'W03-STAGING-ONLY' && (github.ref == 'refs/heads/test/w03-tenant-isolation-evidence' || github.ref == 'refs/heads/security/w06-service-role-backend-boundaries') }}
     environment: w02-staging
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -54,6 +54,9 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Run W06 privileged-boundary regressions on the reviewed branch
+        if: ${{ github.ref == 'refs/heads/security/w06-service-role-backend-boundaries' }}
+        run: npm run test:w06
       - name: Wait for restored staging health
         run: |
           node --input-type=module <<'JS'
