@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     .eq("is_active", true);
 
   if (mailboxError) {
-    console.error("Inbound mailbox resolution failed", mailboxError);
+    console.error("inbound_mailbox_resolution_failed", mailboxError.code);
     return NextResponse.json({ error: "mailbox_resolution_failed" }, { status: 500 });
   }
 
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (threadError || !thread) {
-      console.error("Inbound thread creation failed", threadError);
+      console.error("inbound_thread_creation_failed", threadError.code);
       return NextResponse.json({ error: "thread_creation_failed" }, { status: 500 });
     }
 
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
         .delete()
         .eq("organization_id", mailbox.organization_id)
         .eq("id", thread.id);
-      console.error("Inbound message creation failed", messageError);
+      console.error("inbound_message_creation_failed", messageError.code);
       return NextResponse.json({ error: "message_creation_failed" }, { status: 500 });
     }
 
