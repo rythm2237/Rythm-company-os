@@ -26,7 +26,7 @@ const symbols = [
 ];
 const privileged = new RegExp("\\b(?:" + symbols.join("|") + ")\\b", "g");
 const gateMarkers = [
-  ["owner", /\b(resolveOwnerApiOrganizationContext|requireOwnerOrganizationContext|requireActiveOwnerOrganizationContext|resolveOrganizationContext)\s*\(/],
+  ["owner", /\b(resolveOwnerApiOrganizationContext|requireOrganizationContext|requireOwnerOrganizationContext|requireActiveOwnerOrganizationContext|resolveOrganizationContext)\s*\(/],
   ["authenticated", /\b(createAuthServerClient|auth\.getUser|supabase\.auth\.getUser)\s*\(/],
   ["platform-admin", /\b(getPlatformAdminContext|requirePlatformAdmin)\s*\(/],
   ["cron", /\b(authorizeDispatcher|CRON_SECRET|dispatcher_secret_hash)\b/],
@@ -56,6 +56,7 @@ for (const path of files) {
 }
 const contracts = [
   ["lib/supabase/server.ts", source => assert.match(source, /^import ["']server-only["'];/)],
+  ["app/(app)/crm/profile-actions.ts", source => { assert.match(source, /await requireOrganizationContext\(/); assert.match(source, /await requireCrm\(/); assert.ok(source.indexOf("await requireCrm(") < source.indexOf("await import(\"@/lib/supabase/server\")")); }],
   ["app/api/admin/automation/dispatch/route.ts", source => {
     assert.match(source, /timingSafeEqual\(/);
     assert.doesNotMatch(source, /dispatched:\s*results\.length,\s*results\b|error:\s*error\s+instanceof/);
