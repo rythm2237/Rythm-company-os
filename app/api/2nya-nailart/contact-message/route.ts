@@ -37,8 +37,8 @@ export async function POST(request:NextRequest){
     }
     await dispatchNailPush({message_id:data.message_id,event_type:'contact_message',target:'admin'});
     return NextResponse.json({ok:true,message_id:data.message_id},{status:201,headers:{'Cache-Control':'no-store'}});
-  }catch(error){
-    console.error('2nya_contact_message_failed',{message:error instanceof Error?error.message:'unknown'});
+  }catch{
+    console.error('2nya_contact_message_failed');
     return NextResponse.json({ok:false,error:'ارسال پیام انجام نشد. لطفاً دوباره تلاش کنید.'},{status:503,headers:{'Cache-Control':'no-store'}});
   }
 }
