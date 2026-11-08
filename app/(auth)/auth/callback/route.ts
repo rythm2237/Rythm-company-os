@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     console.error("auth_callback_exchange_failed", {
       status: error.status,
       code: error.code,
-      message: error.message,
+      code: error.code,
       flow,
     });
     return NextResponse.redirect(authFailureUrl(origin, next, flow));
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       p_email: user.email,
     });
     if (accepted.error) {
-      console.error("company_invitation_accept_failed", { message: accepted.error.message });
+      console.error("company_invitation_accept_failed", { code: accepted.error.code });
       return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("This company invitation is invalid, expired, or does not match this email.")}`);
     }
 
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
       updated_at: new Date().toISOString(),
     });
     if (profileError) {
-      console.error("oauth_profile_upsert_failed", { code: profileError.code, message: profileError.message });
+      console.error("oauth_profile_upsert_failed", { code: profileError.code });
     }
 
     if (flow === "oauth_signup") {
