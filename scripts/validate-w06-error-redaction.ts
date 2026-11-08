@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { IntegrationExecutionError, normalizeExecutionError, normalizeHttpError } from "../lib/integrations/error-normalization";
 
-const canary = "W06_PRIVATE_CUSTOMER_CANARY_example_AT_example.invalid";
+const canary = "W06_PRIVATE_CUSTOMER_CANARY_example_AT_example.test";
 const samples: Array<{ error: unknown; expected: string; kind: string }> = [
   { error: Error("Database rejected "+canary), expected: "EXECUTION_UNKNOWN", kind: "unknown" },
   { error: Error("Socket aborted for "+canary), expected: "EXECUTION_TIMEOUT", kind: "timeout" },
