@@ -67,10 +67,20 @@ const contracts = [
     assert.doesNotMatch(source, /error:\s*error\s+instanceof|error:\s*\w+\.error\.message/);
   }],
   ["supabase/functions/two-nya-push/index.ts", source => {
-    assert.ok(source.indexOf("await db.auth.getUser(token)") < source.indexOf('.select("public_key,private_key")'), "private VAPID read must follow JWT verification");
-    assert.ok(source.indexOf('.select("user_id")') < source.indexOf('.select("public_key,private_key")'), "private VAPID read must follow admin gate");
-    assert.doesNotMatch(source, /error_message:\s*String\(|error:\s*String\(\(error as Error\)/);
+    assert.ok(source.indexOf("const validSignature = await crypto.subtle.verify(") >= 0);
+    assert.ok(source.indexOf("if (!validSignature) return") < source.indexOf("const db = createClient("), "unsigned requests cannot construct privileged client");
+    assert.ok(source.indexOf("if (!validSignature) return") < source.indexOf('.select("public_key,private_key")'), "private VAPID read must follow signed POST authorization");
+    assert.match(source, /\.select\("public_key"\)\.eq\("singleton", true\)/);
+    assert.doesNotMatch(source, /error_message:\s*String\(|console\.error\("two_nya_push_exception",\s*error/);
   }],
+  ["lib/2nya-nailart/push-dispatch.ts", source => {
+    assert.match(source,/^import "server-only";/);
+    assert.match(source,/createHmac\("sha256", secret\)/);
+  }],
+  ...["admin","book","contact-message","manage"].map(name => [
+    "app/api/2nya-nailart/" + name + "/route.ts",
+    source => { assert.match(source,/dispatchNailPush\(/); assert.doesNotMatch(source,/fetch\([^)]*two-nya-push/); },
+  ]),
   ["app/api/billing/webhook/route.ts", source => assert.match(source, /verify\(body,signature,secret\)/)],
   ["app/api/communication/inbound/resend/route.ts", source => assert.match(source, /verifySvixSignature\(rawBody,\s*request,\s*webhookSecret\)/)],
   ["app/api/communication/inbound/cloudflare/route.ts", source => assert.match(source, /safeEqualText\(suppliedSecret,\s*expectedSecret\)/)],
