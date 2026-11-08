@@ -66,6 +66,11 @@ const contracts = [
     assert.match(source, /Cache-Control["']\s*:\s*["']no-store/);
     assert.doesNotMatch(source, /error:\s*error\s+instanceof|error:\s*\w+\.error\.message/);
   }],
+  ["supabase/functions/two-nya-push/index.ts", source => {
+    assert.ok(source.indexOf("await db.auth.getUser(token)") < source.indexOf('.select("public_key,private_key")'), "private VAPID read must follow JWT verification");
+    assert.ok(source.indexOf('.select("user_id")') < source.indexOf('.select("public_key,private_key")'), "private VAPID read must follow admin gate");
+    assert.doesNotMatch(source, /error_message:\s*String\(|error:\s*String\(\(error as Error\)/);
+  }],
   ["app/api/billing/webhook/route.ts", source => assert.match(source, /verify\(body,signature,secret\)/)],
   ["app/api/communication/inbound/resend/route.ts", source => assert.match(source, /verifySvixSignature\(rawBody,\s*request,\s*webhookSecret\)/)],
   ["app/api/communication/inbound/cloudflare/route.ts", source => assert.match(source, /safeEqualText\(suppliedSecret,\s*expectedSecret\)/)],
