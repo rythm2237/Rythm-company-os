@@ -67,4 +67,4 @@ export async function POST(req:NextRequest){
   const session=await stripePost("/checkout/sessions",p,`checkout:${organizationId}:${offer.offer_code}:${user.id}:${Date.now()}`);
   await supabase.from("billing_checkout_sessions").insert({organization_id:organizationId,requested_by_user_id:user.id,offer_code:offer.offer_code,provider_session_id:session.id,mode:"subscription",status:"open",success_url:`${origin}/billing?checkout=success`,cancel_url:`${origin}/billing?checkout=cancelled`,expires_at:session.expires_at?new Date(session.expires_at*1000).toISOString():null});
   return NextResponse.redirect(session.url,303);
-}catch(e){const msg=e instanceof Error?e.message:"Checkout could not be created.";return NextResponse.redirect(new URL(`/billing?error=${encodeURIComponent(msg)}`,req.url),303);}}
+}catch{console.error("billing_checkout_failed");return NextResponse.redirect(new URL("/billing?error=Checkout%20could%20not%20be%20created.",req.url),303);}}
