@@ -42,8 +42,8 @@ export async function POST(request:Request){
     const execution=await startProjectExecutionWithoutGlobalGate(service,auth.organizationId,projectId,auth.user.id);
     await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.execution.authorized",object_type:"project",object_id:projectId,risk_level:"medium",payload:{execution_id:execution.id,execution_no:execution.execution_no,task_count:"taskCount" in execution?execution.taskCount:null,roadmap_id:approved.id,roadmap_version:approved.version,global_readiness_gate:false}});
     return NextResponse.json({ok:true,mode:"execution_started",execution,roadmap:{id:approved.id,version:approved.version,status:approved.status}});
-  }catch(error){
-    const message=error instanceof Error?error.message:"Unable to run project.";
-    return NextResponse.json({ok:false,error:message},{status:500});
+  }catch{
+    console.error("project_run_failed");
+    return NextResponse.json({ok:false,error:"Unable to run project."},{status:500,headers:{"Cache-Control":"no-store"}});
   }
 }
