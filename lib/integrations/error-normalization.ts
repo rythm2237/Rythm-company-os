@@ -1,5 +1,3 @@
-import { redactSecretText } from "@/lib/security/redaction";
-
 export type NormalizedExecutionErrorClass =
   | "authentication_error"
   | "authorization_error"
@@ -32,6 +30,8 @@ export class IntegrationExecutionError extends Error {
   }
 }
 
+// Persist stable classifications only: provider exceptions and SQL failures may
+// contain arbitrary customer text even after token/credential redaction.
 export function normalizeExecutionError(error: unknown) {
   if (error instanceof IntegrationExecutionError) {
     return {
@@ -39,12 +39,10 @@ export function normalizeExecutionError(error: unknown) {
       retryable: error.retryable,
       uncertainCompletion: error.uncertainCompletion,
       statusCode: error.statusCode ?? null,
-      sanitizedError: redactSecretText(error.message),
+      sanitizedError: `EXECUTION_${error.errorClass.toUpperCase()}`,
     };
   }
-  const message = redactSecretText(
-    error instanceof Error ? error.message : error,
-  );
+  const message = error instanceof Error ? error.message : String(error ?? "");
   const lower = message.toLowerCase();
   if (/abort|timeout|timed out/.test(lower))
     return {
@@ -52,7 +50,7 @@ export function normalizeExecutionError(error: unknown) {
       retryable: true,
       uncertainCompletion: true,
       statusCode: null,
-      sanitizedError: message,
+      sanitizedError: "EXECUTION_TIMEOUT",
     };
   if (/network|fetch failed|econnreset|enotfound|socket/.test(lower))
     return {
@@ -60,7 +58,7 @@ export function normalizeExecutionError(error: unknown) {
       retryable: true,
       uncertainCompletion: true,
       statusCode: null,
-      sanitizedError: message,
+      sanitizedError: "EXECUTION_NETWORK_ERROR",
     };
   if (/validation|missing provider input|invalid/.test(lower))
     return {
@@ -68,14 +66,14 @@ export function normalizeExecutionError(error: unknown) {
       retryable: false,
       uncertainCompletion: false,
       statusCode: null,
-      sanitizedError: message,
+      sanitizedError: "EXECUTION_VALIDATION_ERROR",
     };
   return {
     errorClass: "unknown" as const,
     retryable: false,
     uncertainCompletion: false,
     statusCode: null,
-    sanitizedError: message,
+    sanitizedError: "EXECUTION_UNKNOWN",
   };
 }
 
