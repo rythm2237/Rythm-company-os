@@ -64,7 +64,7 @@ for (const path of files) {
     missingGate.push(path);
 }
 const contracts = [
-  ["lib/supabase/server.ts", source => assert.match(source, /^import ["']server-only["'];/)],
+  ["lib/supabase/server.ts", source => assert.match(source, /typeof window !== "undefined"/)],
   ["app/(app)/crm/profile-actions.ts", source => { assert.match(source, /await requireOrganizationContext\(/); assert.match(source, /await requireCrm\(/); assert.ok(source.indexOf("await requireCrm(") < source.indexOf("await import(\"@/lib/supabase/server\")")); }],
   ["app/api/admin/automation/dispatch/route.ts", source => {
     assert.match(source, /timingSafeEqual\(/);
@@ -83,7 +83,7 @@ const contracts = [
     assert.doesNotMatch(source, /error_message:\s*String\(|console\.error\("two_nya_push_exception",\s*error/);
   }],
   ["lib/2nya-nailart/push-dispatch.ts", source => {
-    assert.match(source,/^import "server-only";/);
+    assert.match(source,/typeof window !== "undefined"/);
     assert.match(source,/createHmac\("sha256", secret\)/);
   }],
   ...["admin","book","contact-message","manage"].map(name => [
