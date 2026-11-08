@@ -9,21 +9,24 @@ const secret = "W06_SYNTHETIC_SHARED_SIGNING_KEY_abcdefghijklmnopqrstuvwxyz";
 const state = {
   reads: [], writes: [], notifications: 0, dbClientCount: 0,
   initialized: true, failSend: false, forceDbError: false, handler: null,
+  edgeSharedSecret: secret, edgeServiceCredential: "W06_FAKE_SERVICE_KEY",
 };
 globalThis.w06Edge = state;
 const oldDeno = globalThis.Deno, oldFetch = globalThis.fetch;
 const oldEnv = {
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   TWO_NYA_PUSH_DISPATCH_SECRET: process.env.TWO_NYA_PUSH_DISPATCH_SECRET,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
 };
 globalThis.Deno = {
-  env: { get: name => name === "SUPABASE_SERVICE_ROLE_KEY" ? "W06_FAKE_SERVICE_KEY" :
+  env: { get: name => name === "SUPABASE_SERVICE_ROLE_KEY" ? state.edgeServiceCredential :
     name === "SUPABASE_URL" ? "https://w06fixture.supabase.co" :
-    name === "TWO_NYA_PUSH_DISPATCH_SECRET" ? secret : undefined },
+    name === "TWO_NYA_PUSH_DISPATCH_SECRET" ? state.edgeSharedSecret : undefined },
   serve: handler => { state.handler = handler; },
 };
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://w06fixture.supabase.co";
 process.env.TWO_NYA_PUSH_DISPATCH_SECRET = secret;
+process.env.SUPABASE_SERVICE_ROLE_KEY = "W06_FAKE_SERVICE_KEY";
 
 const fixtureMessage = "11111111-1111-4111-8111-111111111111";
 const fixtureAppointment = "22222222-2222-4222-8222-222222222222";
@@ -164,7 +167,35 @@ try {
   assert.equal(calls.length,1);
   assert.equal(state.notifications,1);
   assert.equal(calls[0].init.headers["x-rythm-push-signature"].length,64);
-  console.log("PASS W06 Edge/Backend HMAC: anonymous GET public-only; invalid, tampered, stale POST rejected before service; valid signed contact delivered via mocked push; errors redacted; real backend sender interoperates without I/O.");
+
+  // Production requires no new project-specific secret: the server credential
+  // already present on Vercel and in Supabase Edge derives a domain-bound key.
+  reset();
+  state.edgeSharedSecret=undefined;
+  state.edgeServiceCredential=secret;
+  delete process.env.TWO_NYA_PUSH_DISPATCH_SECRET;
+  process.env.SUPABASE_SERVICE_ROLE_KEY=secret;
+  const before=calls.length;
+  assert.equal(await sender.dispatchNailPush({event_type:"contact_message",target:"admin",message_id:fixtureMessage}),true,
+    "derived service credential must interoperate without dedicated secret");
+  assert.equal(calls.length,before+1);
+  assert.equal(state.notifications,1);
+  assert.notEqual(calls.at(-1).init.headers["x-rythm-push-signature"],
+    createHmac("sha256",secret).update(calls.at(-1).init.headers["x-rythm-push-timestamp"]+"."+calls.at(-1).init.body).digest("hex"),
+    "domain-separated HMAC must not use the service role credential directly");
+
+  // A partially configured dedicated secret must fail closed, never fall back.
+  reset();
+  state.edgeSharedSecret="short-mismatched";
+  r=await state.handler(signed(body));
+  assert.equal(r.status,503);
+  assert.equal(state.dbClientCount,0);
+  reset();
+  state.edgeSharedSecret=undefined;state.edgeServiceCredential="";
+  r=await state.handler(signed(body));
+  assert.equal(r.status,503);
+  assert.equal(state.dbClientCount,0);
+  console.log("PASS W06 Edge/Backend HMAC: anonymous public-key GET; valid/tampered/stale POST; protected service; domain-separated no-new-secret deployment; strict fail-closed override; no external I/O.");
 } finally {
   globalThis.fetch=oldFetch;
   if(oldDeno===undefined) delete globalThis.Deno; else globalThis.Deno=oldDeno;
