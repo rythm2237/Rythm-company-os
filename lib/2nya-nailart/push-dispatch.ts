@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 
-// This server-to-Edge capability is neither a customer JWT nor a service-role key.
-// The Edge handler checks the signature before all privileged database access.
+// The capability is purpose-derived; the Supabase service-role credential itself
+// is never sent to the public Edge endpoint. The Edge validates HMAC before DB access.
 export type NailPushDispatch =
   | {
       appointment_id: string;
@@ -16,7 +16,13 @@ export type NailPushDispatch =
 
 export async function dispatchNailPush(payload: NailPushDispatch): Promise<boolean> {
   if (typeof window !== "undefined") throw new Error("Push dispatch is server-only.");
-  const secret = process.env.TWO_NYA_PUSH_DISPATCH_SECRET || "";
+  const configuredSecret = process.env.TWO_NYA_PUSH_DISPATCH_SECRET;
+  const serviceCredential = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const secret = configuredSecret ?? (serviceCredential.length >= 32
+    ? createHmac("sha256", serviceCredential)
+        .update("RYTHM/W06/two-nya-push/dispatch/v1")
+        .digest("hex")
+    : "");
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "") || "";
 
   if (secret.length < 32 || !/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabaseUrl)) {
