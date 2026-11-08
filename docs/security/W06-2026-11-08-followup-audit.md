@@ -70,7 +70,7 @@ The full CI workflow additionally executes all existing CRM, W03, Phase 0–5, A
 - [ ] Complete source-to-runtime triage of every inventory row; persist per-callsite decision, caller, tenant gate, evidence, permissible result fields and redaction policy.
 - [x] Run bounded W03 routes JWT/HTTP/RLS matrices on dedicated Staging with synthetic A/B/C actors; 981/981 twice. [ ] Extend to every W06 P0/P1 endpoint, including live Edge signed POST and preview deployment parity.
 - [ ] Execute signed/expired/tampered/replay webhook and cron tests with staging resources; suppress real external notifications.
-- [ ] Provision and verify equal server-only `TWO_NYA_PUSH_DISPATCH_SECRET` in Supabase Edge and Vercel, with no secret values included in the repo/chat/report/log.
+- [x] Implement tested purpose-derived HMAC signing from existing server-only Supabase credential; separate key provisioning is optional, not a release prerequisite.
 - [ ] Test synthetic customer-content canaries against server diagnostics and DB execution/audit records; inspect and scrub only disposable test data.
 - [x] Verify W03/W04 merged, Stage/Production 214 public tables, 234 public functions, 148 SECURITY DEFINER, 214 RLS tables, 338 public policies and matching function-body/column hashes. [ ] Resolve two contract-policy differences; feature flags API still unreadable (403), and full preview parity still absent.
 - [ ] Obtain **separate explicit approval** to merge `main` and to deploy the Production Edge and Next.js runtime. The active unsigned Production Edge endpoint must be hardened; a green PR is not deployment or resolution.
@@ -121,3 +121,15 @@ Both production variants are **stricter**. No policies were edited during this a
 - `scripts/w06-audit-privileged-boundaries.mjs`: fail CI on reintroduction of these specific sensitive patterns.
 
 No W06 branch code was merged into `main`; active Production `two-nya-push` remains in its original unauthenticated POST state. The owner authorized only disposable staging / temporary Free Plan project swap for this step, **not** release to Production.
+
+### 2026-11-08 authorized production release plan — HMAC without secret transfer
+
+The owner subsequently explicitly authorized the work needed to close W06, including a production release.
+
+**Runtime configuration:** Both the Supabase Edge runtime and Vercel server already have `SUPABASE_SERVICE_ROLE_KEY`. Supabase documents this as a default Edge secret: https://supabase.com/docs/guides/functions/secrets . When `TWO_NYA_PUSH_DISPATCH_SECRET` is *absent in both environments*, both components independently derive a purpose-bound HMAC signing key from their existing server-only credential using HMAC-SHA256 over the constant `RYTHM/W06/two-nya-push/dispatch/v1`. The service-role credential **is never sent in the Edge request**. Requests carry only timestamp and a fresh HMAC of timestamp + original raw request body. The Edge validates timestamp, body size and the signature **before** the privileged client is constructed. If a dedicated override exists on either side, it takes precedence and any mismatched or too-short override fails closed. No secret values appear in git, docs or test artifacts.
+
+The `SUPABASE_SERVICE_ROLE_KEY` values on Vercel production and Supabase Edge are expected to originate from the same Supabase project; the helper cannot prove their equality by listing encrypted key names. A successful signed live invocation must therefore be treated as a distinct operational proof, and absence of that proof must be reported as a limitation.
+
+**Order to avoid lost notifications:** after green CI and source/security review, merge the branch into `main`, verify Vercel Production deploy of the signed server sender, then deploy the reconciled, authenticated `two-nya-push` Edge function with `verify_jwt=false` (public VAPID GET remains anonymous; signed POST is mandatory). Avoid restoring Edge v6 on rollback. Test anonymous GET reads only the public key; POST without valid signature returns HTTP 401 (or 503 if secret configuration fails), and does not construct a service-role client or touch recipients. Keep real customers/notifications out of smoke tests. Redact PII and secret values from logs. If Vercel deployment fails, do not replace the Edge function until the correct sender is live.
+
+The prior separate `TWO_NYA_PUSH_DISPATCH_SECRET` provisioning item is **superseded by the compatible purpose-derived signing strategy**. A dedicated secret may still be adopted later as a key-rotation improvement (both ends simultaneously). A green CI is not evidence of successful Production propagation.
