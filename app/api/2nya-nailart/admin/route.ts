@@ -76,5 +76,5 @@ export async function POST(request:NextRequest){
     }else return fail('عملیات ناشناخته است.');
     if(result?.error){console.error('2nya_admin_action_failed',{action,code:result.error.code});const conflict=result.error.code==='23P01';return fail(conflict?'این زمان با یک رزرو دیگر تداخل دارد.':'تغییر ذخیره نشد.',conflict?409:400)}
     return NextResponse.json({ok:true,data:result?.data??null},{headers:{'Cache-Control':'no-store'}});
-  }catch(error){console.error('2nya_admin_action_exception',{message:error instanceof Error?error.message:'unknown'});return fail('تغییر ذخیره نشد.')}
+  }catch{console.error('2nya_admin_action_exception');return fail('تغییر ذخیره نشد.')}
 }
