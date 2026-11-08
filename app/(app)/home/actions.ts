@@ -36,9 +36,9 @@ export async function submitCompanyRequest(formData: FormData) {
     try {
       await analyzeProjectOS(service, organizationId, project.id);
       await createProjectRoadmapDraft(service, organizationId, project.id, user.id);
-    } catch (cause) {
+    } catch {
       planningError = true;
-      console.error("home_project_planning_failed", { projectId: project.id, cause });
+      console.error("home_project_planning_failed");
     }
   } else planningError = true;
   revalidatePath("/projects");
