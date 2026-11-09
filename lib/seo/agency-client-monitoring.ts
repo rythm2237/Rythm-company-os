@@ -268,7 +268,7 @@ export async function runAgencySeoSiteMonitoring({
     .order("checked_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (previousError) throw new Error(previousError.message);
+  if (previousError) throw new Error("Previous SEO snapshot lookup failed.");
   const previous = previousData as PreviousSnapshot | null;
 
   await autoBindMatchingProviders({ admin, organizationId, actorUserId, siteId, siteUrl: site.site_url });
@@ -277,7 +277,7 @@ export async function runAgencySeoSiteMonitoring({
     .select("provider_key,integration_resource_id")
     .eq("organization_id", organizationId)
     .eq("site_id", siteId);
-  if (bindingError) throw new Error(bindingError.message);
+  if (bindingError) throw new Error("SEO provider binding lookup failed.");
 
   const resourceIds = (bindings ?? []).map((item) => item.integration_resource_id);
   const resourcesResult = resourceIds.length
@@ -333,7 +333,7 @@ export async function runAgencySeoSiteMonitoring({
     ai_reasoning_error: aiReasoningError,
     created_by_user_id: actorUserId ?? null,
   }).select("id").single();
-  if (saveError || !savedSnapshot) throw new Error(`SEO snapshot could not be saved: ${saveError?.message ?? "unknown error"}`);
+  if (saveError || !savedSnapshot) throw new Error("SEO snapshot could not be saved.");
 
   const anomalies = detectAnomalies({ snapshot, evidence: providerEvidence, intelligenceFindings: intelligence.findings, previous, thresholds });
   const recipient = trigger === "scheduled" ? await notificationRecipient(admin, organizationId, site.created_by_user_id) : null;
