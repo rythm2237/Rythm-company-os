@@ -91,7 +91,7 @@ export async function GET(request: Request) {
       id,
       payload?.projectId,
       "error",
-      `LinkedIn authorization was not completed: ${providerErrorDescription || providerError}`,
+      `LinkedIn authorization was not completed: Provider denied authorization`,
     );
   }
   if (!payload || !code || jar.get("rythm_li_state") !== state || jar.get("rythm_li_integration") !== payload.integrationId || jar.get("rythm_li_user") !== payload.userId) {
@@ -128,7 +128,7 @@ export async function GET(request: Request) {
       redirectUri,
     });
   } catch (error) {
-    return finish(request, id, payload.projectId, "error", error instanceof Error ? error.message : "LinkedIn token exchange failed.");
+    return finish(request, id, payload.projectId, "error", "LinkedIn token exchange failed.");
   }
 
   const returnedScopes = (tokens.scope ?? "").split(/[ ,]+/).filter(Boolean);
@@ -146,7 +146,7 @@ export async function GET(request: Request) {
   try {
     verification = await adapter.verifyCredential(tokens.access_token!);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "LinkedIn Company Page discovery failed.";
+    const message = "LinkedIn Company Page discovery failed.";
     return finish(request, id, payload.projectId, "error", `LinkedIn authorized the account, but RYTHM could not verify a Company Page: ${message}`);
   }
 
@@ -164,7 +164,7 @@ export async function GET(request: Request) {
     target_integration_id: id,
     secret_value: envelope,
   });
-  if (stored.error) return finish(request, id, payload.projectId, "error", `LinkedIn credential could not be stored securely: ${stored.error.message}`);
+  if (stored.error) return finish(request, id, payload.projectId, "error", `LinkedIn credential could not be stored securely: (diagnostic withheld)`);
 
   const now = new Date().toISOString();
   await context.supabase.from("integration_resources").update({ available: false }).eq("integration_id", id).eq("organization_id", context.organizationId);
@@ -209,7 +209,7 @@ export async function GET(request: Request) {
     },
     updated_at: now,
   }).eq("id", id).eq("organization_id", context.organizationId);
-  if (updated.error) return finish(request, id, payload.projectId, "error", updated.error.message);
+  if (updated.error) return finish(request, id, payload.projectId, "error", "Connection update failed.");
 
   await context.supabase.from("audit_events").insert({
     organization_id: context.organizationId,
