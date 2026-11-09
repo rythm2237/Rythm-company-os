@@ -68,12 +68,12 @@ export async function runSeniorPromotionEvaluation(input:{organizationId:string;
     }));
 
     const {data:readiness,error:readinessError}=await supabase.rpc("agent_level_readiness",{p_agent_id:agent.id,p_target_level:"senior"});
-    if(readinessError) throw new Error(`Readiness calculation failed: ${readinessError.message}`);
+    if(readinessError) throw new Error("Readiness calculation failed.");
     const status=readiness?.eligible?"eligible":"blocked";
     await supabase.from("agent_promotion_assessments").update({status,evaluation_count:Number(readiness?.evaluation_count??0),average_score:Number(readiness?.average_score??0),holdout_pass_count:Number(readiness?.holdout_pass_count??0),adversarial_pass_count:Number(readiness?.adversarial_pass_count??0),validated_experience_count:Number(readiness?.validated_experience_count??0),governance_violation_count:Number(readiness?.governance_violation_count??0),readiness,decision_reason:readiness?.eligible?"Evidence threshold reached; human certification review still required.":"Evidence threshold not yet reached. No automatic promotion performed.",completed_at:new Date().toISOString()}).eq("id",assessment.id);
     return {assessmentId:assessment.id,status,readiness,results};
   }catch(error){
-    await supabase.from("agent_promotion_assessments").update({status:"failed",decision_reason:error instanceof Error?error.message:String(error),completed_at:new Date().toISOString()}).eq("id",assessment.id);
+    await supabase.from("agent_promotion_assessments").update({status:"failed",decision_reason:"Promotion evidence evaluation failed.",completed_at:new Date().toISOString()}).eq("id",assessment.id);
     throw error;
   }
 }
