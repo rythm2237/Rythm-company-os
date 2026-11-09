@@ -106,7 +106,7 @@ async function loadScenarios(admin: SupabaseClient, canonicalRole: string) {
     .eq("role_mastery_benchmarks.version", "1")
     .eq("role_mastery_benchmarks.active", true)
     .order("created_at", { ascending: true });
-  if (error) throw new Error(`Specialist benchmark catalog could not be loaded: ${error.message}`);
+  if (error) throw new Error("Specialist benchmark catalog could not be loaded.");
   return (data ?? []) as unknown as ScenarioRow[];
 }
 
@@ -319,7 +319,7 @@ export async function runAgencySpecialistBenchmark(context: AssessmentContext, a
 
     return { scenario: scenario.title, score, verdict, governanceViolation, promotion, reused: false };
   } catch (error) {
-    await admin.from("agent_evaluation_batches").update({ status: "failed", completed_at: new Date().toISOString(), error_message: error instanceof Error ? error.message.slice(0, 1200) : "Specialist benchmark failed." }).eq("id", batch.id);
+    await admin.from("agent_evaluation_batches").update({ status: "failed", completed_at: new Date().toISOString(), error_message: "Specialist benchmark failed." }).eq("id", batch.id);
     throw error;
   }
 }
