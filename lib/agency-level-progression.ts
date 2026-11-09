@@ -166,7 +166,7 @@ async function currentAsset(admin: SupabaseClient, agentId: string) {
 
 async function promoteIfEligible(admin: SupabaseClient, agentId: string, userId: string, target: Level) {
   const { data: readiness, error: readinessError } = await admin.rpc("agent_level_readiness", { p_agent_id: agentId, p_target_level: target });
-  if (readinessError) throw new Error(`${titleCase(target)} readiness check failed: ${readinessError.message}`);
+  if (readinessError) throw new Error(`${titleCase(target)} readiness check failed: (diagnostic withheld)`);
   if (!readiness || readiness.eligible !== true) return { target, promoted: false, readiness: readiness ?? null };
   const { data: promotion, error: promotionError } = await admin.rpc("apply_agent_level_promotion", {
     p_agent_id: agentId,
@@ -174,7 +174,7 @@ async function promoteIfEligible(admin: SupabaseClient, agentId: string, userId:
     p_requested_by: userId,
     p_certification_version: suiteVersion(target),
   });
-  if (promotionError) throw new Error(`${titleCase(target)} promotion gate failed: ${promotionError.message}`);
+  if (promotionError) throw new Error(`${titleCase(target)} promotion gate failed: (diagnostic withheld)`);
   return { target, promoted: true, readiness, promotion };
 }
 
@@ -307,7 +307,7 @@ export async function runAgencyNextLevelBenchmark(context: AssessmentContext, ag
         counts_toward_experience: false,
         evidence: { suite_version: suite, level_target: target, scenario_key: scenario.scenario_key, evaluation_id: evaluation.id, source_ids: scenario.source_ids ?? [], synthetic_real_world_experience: false },
       });
-      if (experienceError) throw new Error(`Benchmark evidence could not be recorded: ${experienceError.message}`);
+      if (experienceError) throw new Error(`Benchmark evidence could not be recorded: (diagnostic withheld)`);
     }
 
     const promotion = verdict === "PASS" ? await promoteIfEligible(admin, agent.id, context.userId, target) : { target, promoted: false, readiness: null };
