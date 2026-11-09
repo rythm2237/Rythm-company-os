@@ -1,6 +1,7 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { createExecutionServiceClient } from "@/lib/integrations/service-runner";
+import { resolveOrganizationContext, isOrganizationEntitlementActive } from "@/lib/auth/organization-context";
 import { discoverGoogleResources, googleProfile } from "@/lib/integrations/connections/providers";
 import { AGENT_OAUTH_COOKIE_NAMES, agentOAuthCallbackPath, type AgentOAuthProviderKey, verifyAgentOAuthState } from "@/lib/integrations/connections/agent-oauth";
 import { dispatchConnectionSetupSessions, signalConnectionAuthorizationCompleted } from "@/lib/integrations/connection-setup-agent";
@@ -109,13 +110,24 @@ export async function maybeHandleAgentOAuthCallback(request: Request, providerKe
   const jar = cookieMap(request);
   const code = url.searchParams.get("code")?.trim() || "";
   const providerError = url.searchParams.get("error")?.trim();
-  if (providerError) return completion(request, providerKey, false, `Provider authorization was not completed: ${providerError}`);
+  if (providerError) return completion(request, providerKey, false, "Provider authorization was not completed.");
   if (
     jar.get("rythm_agent_oauth_state") !== state || jar.get("rythm_agent_oauth_session") !== payload.sessionId ||
     jar.get("rythm_agent_oauth_integration") !== payload.integrationId || jar.get("rythm_agent_oauth_user") !== payload.userId ||
     jar.get("rythm_agent_oauth_provider") !== providerKey
   ) return completion(request, providerKey, false, "Secure Agent OAuth state validation failed. Return to RYTHM and restart the connection.");
   if (providerKey !== "github" && (!code || !jar.get("rythm_agent_oauth_pkce"))) return completion(request, providerKey, false, "Provider authorization code or PKCE verification is missing. Restart the connection.");
+
+  // Signed state/cookie binds the OAuth transaction, but MUST NOT replace a
+  // current authenticated owner and active-organization check. This gate
+  // precedes construction and all reads of the privileged service client.
+  const actor = await resolveOrganizationContext();
+  if (!actor || actor.user.id !== payload.userId ||
+    actor.organizationId !== payload.organizationId || actor.role !== "owner" ||
+    !isOrganizationEntitlementActive(actor.entitlement)) {
+    return completion(request, providerKey, false,
+      "Your RYTHM owner session changed during provider authorization.");
+  }
 
   const service = createExecutionServiceClient();
   const sessionResult = await service.from("integration_setup_sessions")
