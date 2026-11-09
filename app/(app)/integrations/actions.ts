@@ -58,7 +58,7 @@ export async function createIntegration(formData: FormData) {
     .select("id")
     .single();
   if (error || !integration)
-    fail(error?.message ?? "Integration could not be created.");
+    fail("Integration could not be created.");
   if (secret) {
     const { error: secretError } = await context.supabase.rpc(
       "set_organization_integration_secret_v1",
@@ -66,7 +66,7 @@ export async function createIntegration(formData: FormData) {
     );
     if (secretError)
       fail(
-        `Connection created, but credential could not be stored: ${secretError.message}`,
+        `Connection created, but credential could not be stored: (see server audit)`,
       );
   }
   revalidatePath("/integrations");
@@ -84,14 +84,14 @@ export async function rotateIntegrationSecret(formData: FormData) {
     "set_organization_integration_secret_v1",
     { target_integration_id: integrationId, secret_value: secret },
   );
-  if (error) fail(error.message);
+  if (error) fail("Integration operation failed.");
   if (grantedScopes.length) {
     const { error: scopeError } = await context.supabase
       .from("organization_integrations")
       .update({ granted_scopes: grantedScopes })
       .eq("id", integrationId)
       .eq("organization_id", context.organizationId);
-    if (scopeError) fail(scopeError.message);
+    if (scopeError) fail("Integration scope update failed.");
   }
   revalidatePath("/integrations");
   redirect("/integrations?message=Credential%20updated%20securely.");
@@ -147,7 +147,7 @@ export async function grantAgentCapability(formData: FormData) {
       },
       { onConflict: "agent_id,integration_id,capability_key" },
     );
-  if (error) fail(error.message);
+  if (error) fail("Integration operation failed.");
   revalidatePath("/integrations");
   redirect("/integrations?message=Agent%20permission%20updated.");
 }
@@ -161,7 +161,7 @@ export async function revokeAgentCapability(formData: FormData) {
     .update({ enabled: false })
     .eq("id", grantId)
     .eq("organization_id", context.organizationId);
-  if (error) fail(error.message);
+  if (error) fail("Integration operation failed.");
   revalidatePath("/integrations");
 }
 
@@ -187,7 +187,7 @@ export async function applyTemplateIntegrationProfile(formData: FormData) {
       error,
     });
     fail(
-      error?.message ?? "Recommended integration grants could not be applied.",
+      "Recommended integration grants could not be applied.",
     );
   }
   revalidatePath("/integrations");
@@ -236,7 +236,7 @@ export async function setExecutionRollout(formData: FormData) {
     },
     { onConflict: "organization_id,tool_id,integration_key,environment" },
   );
-  if (error) fail(error.message);
+  if (error) fail("Integration operation failed.");
   const { error: auditError } = await context.supabase
     .from("audit_events")
     .insert({
@@ -277,7 +277,7 @@ export async function executeApprovedRequest(formData: FormData) {
   try {
     await executeApprovedToolRequest(executionId);
   } catch (error) {
-    fail(error instanceof Error ? error.message : "Execution failed.");
+    fail("Execution failed.");
   }
   revalidatePath("/integrations");
   redirect(
@@ -300,7 +300,7 @@ export async function rollbackApprovedRequest(formData: FormData) {
   try {
     await rollbackToolExecution(executionId);
   } catch (error) {
-    fail(error instanceof Error ? error.message : "Rollback failed.");
+    fail("Rollback failed.");
   }
   revalidatePath("/integrations");
   redirect(
