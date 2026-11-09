@@ -249,7 +249,7 @@ export async function maybeHandleAgentOAuthCallback(request: Request, providerKe
       },
       updated_at: verifiedAt,
     }).eq("id", payload.integrationId).eq("organization_id", payload.organizationId);
-    if (updated.error) throw new Error(`Provider was authorized, but the connection registry could not be updated: ${updated.error.message}`);
+    if (updated.error) throw new Error("Provider was authorized, but the connection registry could not be updated.");
 
     await service.from("audit_events").insert({
       organization_id: payload.organizationId,
@@ -266,7 +266,7 @@ export async function maybeHandleAgentOAuthCallback(request: Request, providerKe
     await dispatchConnectionSetupSessions(service, { limit: 4 });
     return completion(request, providerKey, true, `${providerLabel[providerKey]} authorization is verified. RYTHM is continuing resource discovery and connection verification in the background.`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Provider authorization could not be completed.";
+    const message = "Provider authorization could not be completed.";
     await service.from("organization_integrations").update({ last_error_at: new Date().toISOString(), last_error_code: "agent_oauth_callback_failed", last_error_message: message.slice(0, 500) }).eq("id", payload.integrationId).eq("organization_id", payload.organizationId);
     return completion(request, providerKey, false, message);
   }
