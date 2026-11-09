@@ -3,7 +3,6 @@ import { createAnalyticsAdminClient } from "@/lib/supabase/analytics-admin";
 import { collectSeoProviderEvidence, type SeoDailyPoint, type SeoProviderEvidence } from "@/lib/integrations/adapters/seo-provider-analytics";
 import { runSeoAiReasoning, runSeoIntelligenceAgent, type SeoFinding } from "@/lib/seo/intelligence-agent";
 import { runSeoMonitoringEngine, type SeoMonitoringSnapshot } from "@/lib/seo/monitoring-engine";
-import { redactSecretText } from "@/lib/security/redaction";
 
 type AdminClient = NonNullable<ReturnType<typeof createAnalyticsAdminClient>>;
 
@@ -78,8 +77,8 @@ async function autoBindMatchingProviders({
       .eq("available", true)
       .in("provider_key", ["google_search_console", "bing_webmaster"]),
   ]);
-  if (existingError) throw new Error(existingError.message);
-  if (resourcesError) throw new Error(resourcesError.message);
+  if (existingError) throw new Error("SEO provider binding lookup failed.");
+  if (resourcesError) throw new Error("SEO provider resource lookup failed.");
 
   const existingProviders = new Set((existing ?? []).map((item) => item.provider_key));
   const candidates = [...(resources ?? [])].sort((a, b) => {
@@ -101,7 +100,7 @@ async function autoBindMatchingProviders({
       created_by_user_id: actorUserId ?? null,
       updated_at: new Date().toISOString(),
     }, { onConflict: "site_id,provider_key" });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error("SEO monitoring persistence failed.");
   }
 }
 
@@ -233,7 +232,7 @@ async function createAnomalyNotification({
     source_id: snapshotId,
     dedupe_key: `agency-seo:${siteId}:${snapshotId}`,
   });
-  if (error && error.code !== "23505") throw new Error(error.message);
+  if (error && error.code !== "23505") throw new Error("SEO monitoring persistence failed.");
   return !error;
 }
 
@@ -284,7 +283,7 @@ export async function runAgencySeoSiteMonitoring({
   const resourcesResult = resourceIds.length
     ? await admin.from("integration_resources").select("id,provider_key,resource_id,available").eq("organization_id", organizationId).in("id", resourceIds)
     : { data: [], error: null };
-  if (resourcesResult.error) throw new Error(resourcesResult.error.message);
+  if (resourcesResult.error) throw new Error("SEO monitoring resource read failed.");
   const resources = resourcesResult.data ?? [];
   const googleBinding = (bindings ?? []).find((item) => item.provider_key === "google_search_console");
   const bingBinding = (bindings ?? []).find((item) => item.provider_key === "bing_webmaster");
@@ -309,7 +308,7 @@ export async function runAgencySeoSiteMonitoring({
     try {
       aiReasoning = await runSeoAiReasoning({ organizationId, actorUserId: aiActorUserId, snapshot, deterministicReport: intelligence, providerEvidence });
     } catch (error) {
-      aiReasoningError = redactSecretText(error instanceof Error ? error.message : "AI reasoning was unavailable.");
+      aiReasoningError = "AI reasoning was unavailable.";
     }
   } else {
     aiReasoningError = "AI reasoning skipped because no authorized user actor is associated with this client site.";
