@@ -115,7 +115,7 @@ async function reconcileProposalContinuation(supabase:ReturnType<typeof createEx
 export async function reconcileDispatchedProjectProposals(limit=16){
   const supabase=createExecutionServiceClient();
   const proposals=await supabase.from("project_proposals").select("id,organization_id,project_id").eq("status","approved").contains("execution_result",{bridge_status:"dispatched"}).order("decided_at",{ascending:true}).limit(Math.max(1,Math.min(limit,50)));
-  if(proposals.error)throw new Error(`Dispatched proposal convergence could not be loaded: ${proposals.error.message}`);
+  if(proposals.error)throw new Error("Dispatched proposal convergence could not be loaded.");
   const results:Array<{proposalId:string;status:string}>=[];
   for(const proposal of proposals.data??[]){
     const status=await reconcileProjectProposal(supabase,proposal.organization_id,proposal.project_id,proposal.id);
@@ -132,7 +132,7 @@ export async function dispatchApprovedProjectToolExecutions(){
     .in("status",["waiting_approval","approved","authorized"])
     .order("created_at",{ascending:true})
     .limit(12);
-  if(error)throw new Error(`Project tool execution queue could not be loaded: ${error.message}`);
+  if(error)throw new Error("Project tool execution queue could not be loaded.");
   const results:Array<{id:string;status:string;error?:string}>=[];
   for(const request of requests??[]){
     try{
@@ -160,7 +160,7 @@ export async function dispatchApprovedProjectToolExecutions(){
       await reconcileProposalContinuation(supabase,request);
       results.push({id:request.id,status:"completed"});
     }catch(error){
-      const message=error instanceof Error?error.message:"Governed execution failed.";
+      const message="Governed execution failed.";
       await supabase.from("project_activity_events").insert({
         organization_id:request.organization_id,
         project_id:request.project_id,
