@@ -207,7 +207,7 @@ export async function maybeHandleAgentOAuthCallback(request: Request, providerKe
     }
 
     const stored = await service.rpc("store_organization_integration_secret_unverified_v1", { target_integration_id: payload.integrationId, secret_value: JSON.stringify(envelope) });
-    if (stored.error) throw new Error(`Provider credential could not be stored securely: ${stored.error.message}`);
+    if (stored.error) throw new Error("Provider credential could not be stored securely.");
 
     const verifiedAt = new Date().toISOString();
     await service.from("integration_resources").update({ available: false }).eq("integration_id", payload.integrationId).eq("organization_id", payload.organizationId);
