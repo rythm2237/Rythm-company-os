@@ -33,7 +33,7 @@ export async function runAgentEvaluationFleet(input: { organizationId: string; r
     .select("id,organization_id,agent_code,name,display_name,role_title,purpose,skills,responsibilities,kpis,success_criteria,system_instructions,agent_status,enabled,authority_level,external_actions_allowed,specification_version")
     .eq("organization_id", input.organizationId)
     .in("agent_code", BASE_EVALUATION_SCENARIOS.map((scenario) => scenario.agentCode));
-  if (agentsError) throw new Error(`Agent profile load failed: ${agentsError.message}`);
+  if (agentsError) throw new Error("Agent profile load failed.");
 
   const byCode = new Map((agents ?? []).map((agent: any) => [agent.agent_code, agent]));
   const missing = BASE_EVALUATION_SCENARIOS.map((scenario) => scenario.agentCode).filter((code) => !byCode.has(code));
@@ -118,7 +118,7 @@ export async function runAgentEvaluationFleet(input: { organizationId: string; r
         output_tokens: (completion.usage?.completion_tokens ?? 0) + (judge.usage?.completion_tokens ?? 0),
         duration_ms: durationMs,
       });
-      if (resultError) throw new Error(`Evaluation evidence write failed for ${scenario.agentCode}: ${resultError.message}`);
+      if (resultError) throw new Error("Evaluation evidence write failed.");
 
       return { agentCode: scenario.agentCode, score: classified.score, verdict: classified.verdict, governanceViolation };
     }));
