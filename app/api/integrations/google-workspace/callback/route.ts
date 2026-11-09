@@ -140,7 +140,7 @@ export async function GET(request: Request) {
 
   if (searchConsolePayload) {
     if (providerError)
-      return finishSearchConsole(request, "error", `Google authorization was not completed: ${providerError}`);
+      return finishSearchConsole(request, "error", `Google authorization was not completed: Provider denied authorization`);
     if (
       !code ||
       !state ||
@@ -158,7 +158,7 @@ export async function GET(request: Request) {
     try {
       ({ clientId, clientSecret } = googleOAuthServerCredentials());
     } catch (error) {
-      return finishSearchConsole(request, "error", error instanceof Error ? error.message : "Google OAuth is not configured.");
+      return finishSearchConsole(request, "error", "Google OAuth is not configured.");
     }
     const redirectUri = `${url.origin}/api/integrations/google-workspace/callback`;
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -194,7 +194,7 @@ export async function GET(request: Request) {
       });
       return finishSearchConsole(request, "message", "Google Search Console connected with read-only access to the canonical rythm-os.com property.");
     } catch (error) {
-      return finishSearchConsole(request, "error", error instanceof Error ? error.message : "Google Search Console connection failed.");
+      return finishSearchConsole(request, "error", "Google Search Console connection failed.");
     }
   }
 
@@ -204,7 +204,7 @@ export async function GET(request: Request) {
   const expectedUserId = cookieStateValid ? cookieUserId : signedPayload?.userId ?? "";
 
   if (providerError)
-    return finish(request, "error", `Google authorization was not completed: ${providerError}`);
+    return finish(request, "error", `Google authorization was not completed: Provider denied authorization`);
   if (!code || !state || (!cookieStateValid && !signedPayload) || !integrationId || !expectedUserId || !codeVerifier)
     return finish(request, "error", "Google OAuth state validation failed. Start the connection again from Integrations.");
 
@@ -284,7 +284,7 @@ export async function GET(request: Request) {
     { target_integration_id: integrationId, secret_value: envelope },
   );
   if (vaultError)
-    return finish(request, "error", `Google credential could not be stored in Vault: ${vaultError.message}`);
+    return finish(request, "error", `Google credential could not be stored in Vault: (diagnostic withheld)`);
 
   const verifiedAt = new Date().toISOString();
   const workspaceResourceId = profile.email ?? integrationId;
@@ -324,7 +324,7 @@ export async function GET(request: Request) {
     .eq("id", integrationId)
     .eq("organization_id", context.organizationId);
   if (updateError)
-    return finish(request, "error", `Google was authorized, but the connection registry could not be updated: ${updateError.message}`);
+    return finish(request, "error", `Google was authorized, but the connection registry could not be updated: (diagnostic withheld)`);
 
   await context.supabase.from("audit_events").insert({
     organization_id: context.organizationId,
