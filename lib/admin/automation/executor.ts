@@ -4,7 +4,6 @@ import { runCoreWebVitalsMonitoring, runSearchConsoleMonitoring } from "@/lib/ad
 import { runCrawlyAuthorityMonitoring } from "@/lib/admin/automation/crawly-monitoring";
 import { runAgencySeoSiteMonitoring } from "@/lib/seo/agency-client-monitoring";
 import { fetchPublicResource } from "@/lib/security/public-url";
-import { redactSecretText } from "@/lib/security/redaction";
 
 export type AutomationTrigger = "manual" | "scheduled" | "system";
 
@@ -59,7 +58,7 @@ async function fetchCheck(path: string) {
     });
     return { path, ok: response.ok, status: response.status, finalUrl: finalUrl.toString(), durationMs: Date.now() - started };
   } catch (error) {
-    return { path, ok: false, status: 0, durationMs: Date.now() - started, error: redactSecretText(error instanceof Error ? error.message : "fetch failed") };
+    return { path, ok: false, status: 0, durationMs: Date.now() - started, error: "Automation HTTP request failed." };
   }
 }
 
@@ -172,7 +171,7 @@ async function agencySeoDailyMonitoring(task: AutomationTask): Promise<HandlerRe
         siteId: site.id,
         siteName: site.name,
         status: "failed",
-        error: redactSecretText(siteError instanceof Error ? siteError.message : "Agency SEO client monitoring failed."),
+        error: "Agency SEO client monitoring failed.",
       });
     }
   }
@@ -217,7 +216,7 @@ export async function executeAutomationTask(taskId: string, triggerType: Automat
   const { data: run, error: runError } = await admin.from("automation_task_runs").insert({ task_id: taskId, trigger_type: triggerType, initiated_by: initiatedBy ?? null, status: "queued" }).select("id").single();
   if (runError) {
     if (runError.code === "23505") return { skipped: true, reason: "already_running" };
-    throw new Error(runError.message);
+    throw new Error("Automation task execution failed.");
   }
 
   const startedAt = new Date();
@@ -257,7 +256,7 @@ export async function dispatchDueAutomationTasks() {
       results.push({
         taskId: task.id,
         status: "failed",
-        error: redactSecretText(taskError instanceof Error ? taskError.message : "Scheduled automation failed."),
+        error: "Scheduled automation failed.",
       });
     }
   }
