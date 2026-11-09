@@ -122,7 +122,7 @@ export async function startCustomerCoreOAuth(request: Request, providerKey: Cust
     response.cookies.set(cookieName(providerKey, "pkce"), verifier, options);
     return response;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Provider authorization could not be started.";
+    const message = "Provider authorization could not be started.";
     return redirectBack(request, integrationId, projectId, "error", message);
   }
 }
