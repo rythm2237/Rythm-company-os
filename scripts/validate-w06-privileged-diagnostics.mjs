@@ -17,6 +17,10 @@ const modulePaths=[
   "lib/integrations/service-runner.ts",
   "lib/integrations/connections/agent-oauth-callback.ts",
   "lib/integrations/connections/customer-platform-oauth.ts",
+  "lib/integrations/connections/github-customer-oauth.ts",
+  "lib/integrations/adapters/seo-provider-analytics.ts",
+  "lib/seo/agency-client-monitoring.ts",
+  "lib/trusted-specialization-acquisition.ts",
 ];
 for(const path of modulePaths){
   const source=readFileSync(path,"utf8");
@@ -37,4 +41,4 @@ assert(ownerGate>=0&&serviceGate>ownerGate,"current owner verification must prec
 assert.match(agentOAuth,/actor\.user\.id !== payload\.userId/);
 assert.match(agentOAuth,/actor\.organizationId !== payload\.organizationId/);
 assert.match(agentOAuth,/actor\.role !== "owner"/);
-console.log("PASS W06 privileged diagnostic and OAuth owner-order contracts: 13 worker/helper modules plus AI chat handler.");
+console.log("PASS W06 privileged diagnostic and OAuth owner-order contracts: 17 worker/helper modules plus AI chat handler.");
