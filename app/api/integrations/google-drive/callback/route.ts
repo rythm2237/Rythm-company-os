@@ -120,7 +120,7 @@ export async function GET(request: Request) {
   const projectId = payload?.projectId ?? null;
 
   if (providerError) {
-    return finish(request, integrationId, projectId, "error", `Google authorization was not completed: ${providerError}`);
+    return finish(request, integrationId, projectId, "error", `Google authorization was not completed: Provider denied authorization`);
   }
   if (!clientId || !clientSecret) {
     return finish(request, integrationId, projectId, "error", "Google OAuth platform credentials are not configured.");
@@ -194,7 +194,7 @@ export async function GET(request: Request) {
       target_integration_id: payload.integrationId,
       secret_value: JSON.stringify(envelope),
     });
-    if (stored.error) throw new Error(`Google Drive credential could not be stored securely: ${stored.error.message}`);
+    if (stored.error) throw new Error(`Google Drive credential could not be stored securely: (diagnostic withheld)`);
 
     const verifiedAt = new Date().toISOString();
     await context.supabase
@@ -249,7 +249,7 @@ export async function GET(request: Request) {
       })
       .eq("id", payload.integrationId)
       .eq("organization_id", context.organizationId);
-    if (updated.error) throw new Error(`Google Drive was verified, but connection state could not be saved: ${updated.error.message}`);
+    if (updated.error) throw new Error(`Google Drive was verified, but connection state could not be saved: (diagnostic withheld)`);
 
     await context.supabase
       .from("integration_setup_sessions")
@@ -278,7 +278,7 @@ export async function GET(request: Request) {
 
     return finish(request, payload.integrationId, projectId, "message", "Google Drive connected and verified with limited file access.");
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Google Drive authorization could not be completed.";
+    const message = "Google Drive authorization could not be completed.";
     const now = new Date().toISOString();
     await context.supabase
       .from("organization_integrations")
