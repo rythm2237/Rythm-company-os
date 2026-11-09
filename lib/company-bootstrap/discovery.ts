@@ -17,12 +17,9 @@ function environment(): "development" | "preview" | "production" {
   return "development";
 }
 
-function safeError(error: unknown) {
-  const raw = error instanceof Error ? error.message : "Bootstrap discovery failed.";
-  return raw
-    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED]")
-    .replace(/[A-Za-z0-9_-]{24,}/g, "[REDACTED]")
-    .slice(0, 500);
+function safeError(_error: unknown) {
+  return "Bootstrap discovery failed.";
+
 }
 
 function asRecord(value: unknown): Record<string, any> {
