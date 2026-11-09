@@ -81,7 +81,7 @@ export async function GET(request: Request) {
   const jar = requestCookies(request);
   const id = payload?.integrationId || jar.get("rythm_yt_integration") || "";
 
-  if (providerError) return finish(request, id, payload?.projectId, "error", `Google authorization was not completed: ${providerError}`);
+  if (providerError) return finish(request, id, payload?.projectId, "error", `Google authorization was not completed: Provider denied authorization`);
   if (!payload || !code || jar.get("rythm_yt_state") !== state || jar.get("rythm_yt_integration") !== payload.integrationId || jar.get("rythm_yt_user") !== payload.userId || !jar.get("rythm_yt_pkce")) {
     return finish(request, id, payload?.projectId, "error", "YouTube OAuth state validation failed. Start again from RYTHM.");
   }
@@ -113,7 +113,7 @@ export async function GET(request: Request) {
       codeVerifier: String(jar.get("rythm_yt_pkce")),
     });
   } catch (error) {
-    return finish(request, id, payload.projectId, "error", error instanceof Error ? error.message : "Google token exchange failed.");
+    return finish(request, id, payload.projectId, "error", "Google token exchange failed.");
   }
 
   const returnedScopes = (tokens.scope ?? "").split(/\s+/).filter(Boolean);
@@ -132,7 +132,7 @@ export async function GET(request: Request) {
       googleProfile(tokens.access_token!),
     ]);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "YouTube channel discovery failed.";
+    const message = "YouTube channel discovery failed.";
     return finish(request, id, payload.projectId, "error", `Google authorized the account, but RYTHM could not verify the YouTube channel: ${message}`);
   }
 
@@ -149,7 +149,7 @@ export async function GET(request: Request) {
     target_integration_id: id,
     secret_value: envelope,
   });
-  if (stored.error) return finish(request, id, payload.projectId, "error", `Google credential could not be stored securely: ${stored.error.message}`);
+  if (stored.error) return finish(request, id, payload.projectId, "error", `Google credential could not be stored securely: (diagnostic withheld)`);
 
   const now = new Date().toISOString();
   await context.supabase.from("integration_resources").update({ available: false }).eq("integration_id", id).eq("organization_id", context.organizationId);
@@ -195,7 +195,7 @@ export async function GET(request: Request) {
     },
     updated_at: now,
   }).eq("id", id).eq("organization_id", context.organizationId);
-  if (updated.error) return finish(request, id, payload.projectId, "error", updated.error.message);
+  if (updated.error) return finish(request, id, payload.projectId, "error", "Connection update failed.");
 
   await context.supabase.from("audit_events").insert({
     organization_id: context.organizationId,
