@@ -58,7 +58,7 @@ export async function GET(request: Request) {
   const cookies = cookieMap(request);
   const integrationId = payload?.integrationId || cookies.get("rythm_bing_integration") || "";
 
-  if (providerError) return finish(request, integrationId, "error", `Bing Webmaster authorization was not completed: ${providerError}`);
+  if (providerError) return finish(request, integrationId, "error", `Bing Webmaster authorization was not completed: Provider denied authorization`);
   if (!payload || !code || cookies.get("rythm_bing_state") !== state || cookies.get("rythm_bing_integration") !== payload.integrationId || cookies.get("rythm_bing_user") !== payload.userId) {
     return finish(request, integrationId, "error", "Bing Webmaster OAuth state validation failed. Start the connection again from RYTHM.");
   }
@@ -86,7 +86,7 @@ export async function GET(request: Request) {
   try {
     tokens = await exchangeBingWebmasterCode({ clientId, clientSecret, code, redirectUri });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Bing Webmaster token exchange failed.";
+    const message = "Bing Webmaster token exchange failed.";
     return finish(request, payload.integrationId, "error", message);
   }
   if (!tokens.refresh_token) return finish(request, payload.integrationId, "error", "Bing Webmaster did not return a refresh token. Reconnect and approve access again.");
@@ -95,7 +95,7 @@ export async function GET(request: Request) {
   try {
     verification = await discoverBingWebmasterSites(tokens.access_token!);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Bing Webmaster site discovery failed.";
+    const message = "Bing Webmaster site discovery failed.";
     return finish(request, payload.integrationId, "error", message);
   }
   const verifiedResources = verification.resources.filter((resource) => resource.metadata?.verified === true);
@@ -113,7 +113,7 @@ export async function GET(request: Request) {
   });
   const service = createExecutionServiceClient();
   const { error: vaultError } = await service.rpc("store_organization_integration_secret_unverified_v1", { target_integration_id: payload.integrationId, secret_value: envelope });
-  if (vaultError) return finish(request, payload.integrationId, "error", `Bing Webmaster credential could not be stored securely: ${vaultError.message}`);
+  if (vaultError) return finish(request, payload.integrationId, "error", `Bing Webmaster credential could not be stored securely: (diagnostic withheld)`);
 
   const now = new Date().toISOString();
   await context.supabase.from("integration_resources").update({ available: false }).eq("integration_id", payload.integrationId).eq("organization_id", context.organizationId);
@@ -156,7 +156,7 @@ export async function GET(request: Request) {
     },
     updated_at: now,
   }).eq("id", payload.integrationId).eq("organization_id", context.organizationId);
-  if (update.error) return finish(request, payload.integrationId, "error", `Bing Webmaster was authorized, but the connection registry could not be updated: ${update.error.message}`);
+  if (update.error) return finish(request, payload.integrationId, "error", `Bing Webmaster was authorized, but the connection registry could not be updated: (diagnostic withheld)`);
 
   await context.supabase.from("audit_events").insert({
     organization_id: context.organizationId,
