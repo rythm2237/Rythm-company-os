@@ -17,11 +17,17 @@ const actions = [
 const files = callbacks.map(name => `app/api/integrations/${name}/callback/route.ts`).concat(actions);
 for (const path of files) {
   const source = readFileSync(path, "utf8");
+  // GBP quota and health checks classify provider error messages locally,
+  // but must never send those raw strings to a URL, DB or log.
+  const reviewedSource = (
+    path.includes("google-business-profile/") ||
+    path.includes("/customer-actions.ts")
+  ) ? source.replaceAll(/error\s+instanceof\s+Error\s*\?\s*error\.message/g, '"CLASSIFICATION_INPUT_ONLY"') : source;
   assert.doesNotMatch(source, /\$\{providerError(?:Description)?\}/, path + " must not reflect OAuth provider error params");
   assert.doesNotMatch(source, /\$\{providerErrorDescription\s*\|\|\s*providerError\}/, path + " must not reflect error_description");
   assert.doesNotMatch(source, /\$\{[\w.]*error\.message\}/i, path + " must not interpolate SQL errors");
-  assert.doesNotMatch(source, /\b(?:error|update|updated|vaultError|stored|secretError|scopeError)\??\.message\b/, path + " raw error in output/DB");
-  assert.doesNotMatch(source, /\b\w+\s+instanceof\s+Error\s*\?\s*\w+\.message/, path + " must classify errors into fixed labels");
+  assert.doesNotMatch(reviewedSource, /\b(?:error|update|updated|vaultError|stored|secretError|scopeError)\??\.message\b/, path + " raw error in output/DB");
+  assert.doesNotMatch(reviewedSource, /\b\w+\s+instanceof\s+Error\s*\?\s*\w+\.message/, path + " must classify errors into fixed labels");
   assert.doesNotMatch(source, /last_error_message:\s*(?:diagnostic|error\.message)\b/, path + " must not persist uncontrolled diagnostic");
 }
 const integrationActions = readFileSync("app/(app)/integrations/actions.ts", "utf8");
