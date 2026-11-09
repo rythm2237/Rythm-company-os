@@ -54,6 +54,17 @@ try{
     assert.equal(state.clientCount,0,name+' must reject BEFORE elevated client');
     assert.equal(state.queries.length,0,name+' must not query any company');
   }
+  // The provider controls its own error query value. Never reflect it in
+  // the OAuth completion page or allow it to reach privileged persistence.
+  state.context=good;state.clientCount=0;state.queries=[];
+  const canaryRequest=new Request(
+    'https://rythm-os.com/api/integrations/google-analytics/callback?state=W06_VALID_STATE&error=TENANT_B_PRIVATE_CUSTOMER_CONTENT',
+    {headers:{cookie:cookies}});
+  const deniedProvider=await mod.exports.maybeHandleAgentOAuthCallback(canaryRequest,'google_analytics');
+  assert.equal(deniedProvider.status,400);
+  assert.doesNotMatch(await deniedProvider.text(),/TENANT_B_PRIVATE_CUSTOMER_CONTENT/);
+  assert.equal(state.clientCount,0,"provider error must fail before any service client");
+
   state.context=good;state.clientCount=0;state.queries=[];
   const valid=await mod.exports.maybeHandleAgentOAuthCallback(request(),'google_analytics');
   assert.equal(valid.status,400,'unknown synthetic session rejected after scoped check');
