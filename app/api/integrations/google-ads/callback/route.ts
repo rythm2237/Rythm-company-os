@@ -73,7 +73,7 @@ export async function GET(request: Request) {
   const integrationId = payload?.integrationId || jar.get("rythm_google_ads_oauth_integration") || "";
   const projectId = payload?.projectId ?? null;
 
-  if (providerError) return finish(request, integrationId, projectId, "error", `Google authorization was not completed: ${providerError}`);
+  if (providerError) return finish(request, integrationId, projectId, "error", `Google authorization was not completed: Provider denied authorization`);
   if (!clientId || !clientSecret) return finish(request, integrationId, projectId, "error", "Google OAuth platform credentials are not configured.");
   if (!payload || !code || jar.get("rythm_google_ads_oauth_state") !== state || jar.get("rythm_google_ads_oauth_integration") !== payload.integrationId || jar.get("rythm_google_ads_oauth_user") !== payload.userId || jar.get("rythm_google_ads_oauth_organization") !== payload.organizationId) {
     return finish(request, integrationId, projectId, "error", "Secure Google Ads OAuth state validation failed. Start again from RYTHM.");
@@ -100,7 +100,7 @@ export async function GET(request: Request) {
       const profile = await googleProfile(tokens.access_token!);
       oauthIdentity = typeof profile.email === "string" ? profile.email : typeof profile.id === "string" ? profile.id : "verified";
     } catch (profileError) {
-      const profileMessage = profileError instanceof Error ? profileError.message : "unknown profile verification error";
+      const profileMessage = "unknown profile verification error";
       throw new Error(`Google OAuth access token failed independent validation before Google Ads verification: ${profileMessage}`);
     }
 
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
     try {
       verification = await verifyGoogleAdsAccess(tokens.access_token!);
     } catch (adsError) {
-      const adsMessage = adsError instanceof Error ? adsError.message : "Google Ads verification failed.";
+      const adsMessage = "Google Ads verification failed.";
       throw new Error(`Google OAuth token is valid for ${oauthIdentity}, but Google Ads rejected the same credential: ${adsMessage}`);
     }
     if (!verification.resources.length) throw new Error("Google Ads authorization succeeded, but no accessible Ads customer account was returned.");
@@ -125,7 +125,7 @@ export async function GET(request: Request) {
     };
     const service = createExecutionServiceClient();
     const stored = await service.rpc("store_organization_integration_secret_unverified_v1", { target_integration_id: payload.integrationId, secret_value: JSON.stringify(envelope) });
-    if (stored.error) throw new Error(`Google Ads credential could not be stored securely: ${stored.error.message}`);
+    if (stored.error) throw new Error(`Google Ads credential could not be stored securely: (diagnostic withheld)`);
 
     const verifiedAt = new Date().toISOString();
     await context.supabase.from("integration_resources").update({ available: false }).eq("integration_id", payload.integrationId).eq("organization_id", context.organizationId);
@@ -159,14 +159,14 @@ export async function GET(request: Request) {
       metadata: { verification_result: "verified", setup_state: "verified", oauth_flow: "google_ads_v1", credential_format: "oauth_token_envelope_v1", resource_count: resources.length, verification_detail: verification.detail },
       updated_at: verifiedAt,
     }).eq("id", payload.integrationId).eq("organization_id", context.organizationId);
-    if (updated.error) throw new Error(`Google Ads was verified, but connection state could not be saved: ${updated.error.message}`);
+    if (updated.error) throw new Error(`Google Ads was verified, but connection state could not be saved: (diagnostic withheld)`);
 
     await context.supabase.from("integration_setup_sessions").update({ current_step: 4, step_status: "completed", session_status: "completed", user_action_required: false, requires_user_action: false, updated_at: verifiedAt }).eq("connection_id", payload.integrationId).eq("organization_id", context.organizationId).eq("automation_mode", "manual");
     await context.supabase.from("audit_events").insert({ organization_id: context.organizationId, actor_type: "user", actor_user_id: context.user.id, event_type: "integration.google_ads_connected", object_type: "organization_integration", object_id: payload.integrationId, risk_level: "low", payload: { auth_type: "oauth", scopes: ["adwords"], resource_count: resources.length, project_id: projectId } });
 
     return finish(request, payload.integrationId, projectId, "message", `Google Ads connected and verified. ${resources.length} customer account(s) discovered.`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Google Ads authorization could not be completed.";
+    const message = "Google Ads authorization could not be completed.";
     const now = new Date().toISOString();
     await context.supabase.from("organization_integrations").update({ status: "needs_attention", last_error_at: now, last_error_code: "oauth_callback_failed", last_error_message: message.slice(0, 500), updated_at: now }).eq("id", payload.integrationId).eq("organization_id", context.organizationId);
     return finish(request, payload.integrationId, projectId, "error", message);
