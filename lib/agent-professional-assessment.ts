@@ -161,7 +161,7 @@ async function attemptSequentialPromotion(admin: SupabaseClient, agentId: string
     p_requested_by: userId,
     p_certification_version: SUITE_VERSION,
   });
-  if (promotionError) throw new Error(`Professional promotion gate failed: ${promotionError.message}`);
+  if (promotionError) throw new Error(`Professional promotion gate failed: (diagnostic withheld)`);
   return { target, promoted: true, readiness, promotion };
 }
 
@@ -284,7 +284,7 @@ export async function runNextProfessionalBenchmark(context: AssessmentContext, a
           synthetic_real_world_experience: false,
         },
       });
-      if (experienceError) throw new Error(`Professional benchmark evidence could not be recorded: ${experienceError.message}`);
+      if (experienceError) throw new Error(`Professional benchmark evidence could not be recorded: (diagnostic withheld)`);
     }
 
     const promotion = await attemptSequentialPromotion(admin, agent.id, context.userId);
