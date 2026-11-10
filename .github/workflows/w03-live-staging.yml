@@ -93,3 +93,12 @@ jobs:
           name: w03-sanitized-evidence
           path: .w03-evidence/result.json
           if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v4
+        if: always() && github.ref == 'refs/heads/main'
+        with:
+          name: w06-privileged-callsite-evidence
+          path: |
+            test-results/w06-privileged-boundaries.json
+            test-results/w06-acceptance-matrix.json
+          if-no-files-found: warn
