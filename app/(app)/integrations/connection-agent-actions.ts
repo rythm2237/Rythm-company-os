@@ -41,8 +41,8 @@ export async function startCustomerConnectionAgent(formData:FormData){
     await dispatchConnectionSetupSessions(service,{limit:2});
     revalidatePath(`/integrations/${integrationId}/setup`);
     message=started.resumed?"AI setup session resumed.":"AI setup started.";
-  }catch(error){
-    redirect(setupUrl(integrationId,projectId,"error",error instanceof Error?error.message:"AI setup could not be started."));
+  }catch{
+    redirect(setupUrl(integrationId,projectId,"error","AI setup could not be started."));
   }
   redirect(setupUrl(integrationId,projectId,"message",message,true));
 }
@@ -86,8 +86,8 @@ export async function controlCustomerConnectionAgent(formData:FormData){
     if(command==="stop")jar.delete(cookieName(sessionId));
     revalidatePath(`/integrations/${integrationId}/setup`);
     message=command==="take_control"?"You have control.":command==="return_control"?"AI resumed.":command==="pause"?"AI setup paused.":command==="resume"?"AI setup resumed.":"AI setup stopped.";
-  }catch(error){
-    redirect(setupUrl(integrationId,projectId,"error",error instanceof Error?error.message:"Connection Agent command failed.",true));
+  }catch{
+    redirect(setupUrl(integrationId,projectId,"error","Connection Agent command failed.",true));
   }
   redirect(setupUrl(integrationId,projectId,"message",message,command!=="stop"));
 }
@@ -107,8 +107,8 @@ export async function restartCustomerConnectionAgent(formData:FormData){
     jar.set(cookieName(started.sessionId),started.resumeToken,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"strict",path:`/integrations/${integrationId}/setup`,maxAge:10*60});
     await dispatchConnectionSetupSessions(service,{limit:2});
     revalidatePath(`/integrations/${integrationId}/setup`);
-  }catch(error){
-    redirect(setupUrl(integrationId,projectId,"error",error instanceof Error?error.message:"Connection Agent could not be restarted."));
+  }catch{
+    redirect(setupUrl(integrationId,projectId,"error","Connection Agent could not be restarted."));
   }
   redirect(setupUrl(integrationId,projectId,"message","Connection restarted. Choose the provider account that owns the required resource.",true));
 }

@@ -100,7 +100,7 @@ async function loadScenarioCatalog(admin: SupabaseClient, canonicalRole: string)
     .eq("role_mastery_benchmarks.version", "1")
     .eq("role_mastery_benchmarks.active", true)
     .order("created_at", { ascending: true });
-  if (error) throw new Error(`Professional benchmark catalog could not be loaded: ${error.message}`);
+  if (error) throw new Error("Professional benchmark catalog could not be loaded.");
   return (data ?? []) as unknown as ScenarioRow[];
 }
 
@@ -161,7 +161,7 @@ async function attemptSequentialPromotion(admin: SupabaseClient, agentId: string
     p_requested_by: userId,
     p_certification_version: SUITE_VERSION,
   });
-  if (promotionError) throw new Error(`Professional promotion gate failed: ${promotionError.message}`);
+  if (promotionError) throw new Error(`Professional promotion gate failed: (diagnostic withheld)`);
   return { target, promoted: true, readiness, promotion };
 }
 
@@ -284,7 +284,7 @@ export async function runNextProfessionalBenchmark(context: AssessmentContext, a
           synthetic_real_world_experience: false,
         },
       });
-      if (experienceError) throw new Error(`Professional benchmark evidence could not be recorded: ${experienceError.message}`);
+      if (experienceError) throw new Error(`Professional benchmark evidence could not be recorded: (diagnostic withheld)`);
     }
 
     const promotion = await attemptSequentialPromotion(admin, agent.id, context.userId);
@@ -336,7 +336,7 @@ export async function runNextProfessionalBenchmark(context: AssessmentContext, a
     await admin.from("agent_evaluation_batches").update({
       status: "failed",
       completed_at: new Date().toISOString(),
-      error_message: error instanceof Error ? error.message.slice(0, 1500) : "Professional benchmark failed.",
+      error_message: "Professional benchmark failed.",
     }).eq("id", batch.id);
     throw error;
   }

@@ -46,7 +46,7 @@ export async function loadCompanyKnowledgeForAgent(context:KnowledgeContext,agen
     context.supabase.from("company_knowledge").select("id,title,category,source_type,content,source_url,storage_path,mime_type,confidentiality,allowed_departments,allowed_role_keywords,updated_at").eq("organization_id",context.organizationId).eq("status","active").order("updated_at",{ascending:false}).limit(80),
     context.supabase.rpc("search_company_knowledge_for_agent_v1",{target_org_id:context.organizationId,target_agent_id:agent.id,query_text:currentTask||agent.role_title,max_results:10}),
   ]);
-  if(chunkError) console.error("company_library_agent_search_failed",{agentId:agent.id,message:chunkError.message});
+  if(chunkError) console.error("company_library_agent_search_failed",{errorCode:chunkError.code??"UNKNOWN"});
   const rows=(data??[]) as KnowledgeRow[];
   const relevant=rows.filter((item)=>roleCanUse(item,agent));
   const allowedKnowledgeIds=new Set(relevant.map((item)=>item.id));

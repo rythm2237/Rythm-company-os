@@ -4,7 +4,6 @@ import { runCoreWebVitalsMonitoring, runSearchConsoleMonitoring } from "@/lib/ad
 import { runCrawlyAuthorityMonitoring } from "@/lib/admin/automation/crawly-monitoring";
 import { runAgencySeoSiteMonitoring } from "@/lib/seo/agency-client-monitoring";
 import { fetchPublicResource } from "@/lib/security/public-url";
-import { redactSecretText } from "@/lib/security/redaction";
 
 export type AutomationTrigger = "manual" | "scheduled" | "system";
 
@@ -59,7 +58,7 @@ async function fetchCheck(path: string) {
     });
     return { path, ok: response.ok, status: response.status, finalUrl: finalUrl.toString(), durationMs: Date.now() - started };
   } catch (error) {
-    return { path, ok: false, status: 0, durationMs: Date.now() - started, error: redactSecretText(error instanceof Error ? error.message : "fetch failed") };
+    return { path, ok: false, status: 0, durationMs: Date.now() - started, error: "Automation HTTP request failed." };
   }
 }
 
@@ -96,7 +95,7 @@ async function aiUsageCost(task: AutomationTask): Promise<HandlerResult> {
   const { data, error } = await admin.from("ai_routing_decisions")
     .select("actual_cost_usd,total_latency_ms,normalized_error_class,created_at")
     .gte("created_at", since);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Automation database operation failed.");
   const rows = data ?? [];
   const cost = rows.reduce((sum, row) => sum + Number(row.actual_cost_usd ?? 0), 0);
   const latencies = rows.map((row) => Number(row.total_latency_ms)).filter((value) => Number.isFinite(value));
@@ -114,8 +113,8 @@ async function securityHealth(): Promise<HandlerResult> {
     admin.from("platform_admins").select("user_id", { count: "exact", head: true }).eq("enabled", true),
     admin.from("automation_tasks").select("id,name,risk_level,requires_approval").eq("enabled", true).in("risk_level", ["high", "critical"]).eq("requires_approval", false),
   ]);
-  if (admins.error) throw new Error(admins.error.message);
-  if (risky.error) throw new Error(risky.error.message);
+  if (admins.error) throw new Error("Automation access lookup failed.");
+  if (risky.error) throw new Error("Automation risk lookup failed.");
   const unsafe = risky.data ?? [];
   return {
     summary: unsafe.length === 0 ? "Admin automation guardrail check passed." : `${unsafe.length} high-risk automation tasks are enabled without approval gating.`,
@@ -144,7 +143,7 @@ async function agencySeoDailyMonitoring(task: AutomationTask): Promise<HandlerRe
     .eq("active", true)
     .order("updated_at", { ascending: true })
     .limit(maxSites);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Automation database operation failed.");
   if (!sites?.length) return { status: "skipped", summary: "No active Agency SEO client websites are configured.", output: { processed: 0 } };
 
   const results: Array<Record<string, unknown>> = [];
@@ -172,7 +171,7 @@ async function agencySeoDailyMonitoring(task: AutomationTask): Promise<HandlerRe
         siteId: site.id,
         siteName: site.name,
         status: "failed",
-        error: redactSecretText(siteError instanceof Error ? siteError.message : "Agency SEO client monitoring failed."),
+        error: "Agency SEO client monitoring failed.",
       });
     }
   }
@@ -217,7 +216,7 @@ export async function executeAutomationTask(taskId: string, triggerType: Automat
   const { data: run, error: runError } = await admin.from("automation_task_runs").insert({ task_id: taskId, trigger_type: triggerType, initiated_by: initiatedBy ?? null, status: "queued" }).select("id").single();
   if (runError) {
     if (runError.code === "23505") return { skipped: true, reason: "already_running" };
-    throw new Error(runError.message);
+    throw new Error("Automation task execution failed.");
   }
 
   const startedAt = new Date();
@@ -235,7 +234,7 @@ export async function executeAutomationTask(taskId: string, triggerType: Automat
     return { runId: run.id, status, summary: result.summary };
   } catch (error) {
     const finishedAt = new Date();
-    const message = redactSecretText(error instanceof Error ? error.message : "Automation execution failed.");
+    const message = "Automation execution failed.";
     await Promise.all([
       admin.from("automation_task_runs").update({ status: "failed", finished_at: finishedAt.toISOString(), duration_ms: finishedAt.getTime() - startedAt.getTime(), error_message: message }).eq("id", run.id),
       admin.from("automation_tasks").update({ last_run_at: finishedAt.toISOString(), next_run_at: typedTask.enabled ? nextRun(typedTask.schedule_mode, finishedAt) : null, updated_at: finishedAt.toISOString() }).eq("id", taskId),
@@ -248,7 +247,7 @@ export async function dispatchDueAutomationTasks() {
   const admin = createAnalyticsAdminClient();
   if (!admin) throw new Error("Supabase service-role environment is unavailable.");
   const { data, error } = await admin.from("automation_tasks").select("id").eq("enabled", true).eq("configuration_status", "ready").lte("next_run_at", new Date().toISOString()).order("next_run_at").limit(10);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Automation database operation failed.");
   const results = [];
   for (const task of data ?? []) {
     try {
@@ -257,7 +256,7 @@ export async function dispatchDueAutomationTasks() {
       results.push({
         taskId: task.id,
         status: "failed",
-        error: redactSecretText(taskError instanceof Error ? taskError.message : "Scheduled automation failed."),
+        error: "Scheduled automation failed.",
       });
     }
   }

@@ -112,7 +112,7 @@ async function lifecycle(
   );
   if (error)
     throw new Error(
-      `Execution lifecycle could not be recorded: ${error.message}`,
+      "Execution lifecycle could not be recorded.",
     );
   return data ?? null;
 }

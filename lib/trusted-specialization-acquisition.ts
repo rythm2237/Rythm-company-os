@@ -109,7 +109,7 @@ export async function acquireMissingSpecializations(input: {
     .eq("role_family", input.normalized.roleFamily)
     .eq("active", true)
     .in("specialization_key", input.normalized.specializations);
-  if (existingError) throw new Error(`Specialization registry could not be checked: ${existingError.message}`);
+  if (existingError) throw new Error("Specialization registry could not be checked.");
 
   const existingKeys = new Set((existing ?? []).map((row: { specialization_key: string }) => row.specialization_key));
   const missingKeys = input.normalized.specializations.filter((key) => !existingKeys.has(key));
@@ -216,7 +216,7 @@ export async function acquireMissingSpecializations(input: {
       next_review_at: nextReview,
       active: true,
     });
-    if (insertError) throw new Error(`Specialization persistence failed: ${insertError.message}`);
+    if (insertError) throw new Error("Specialization persistence failed.");
 
     created.push(specializationId);
     await input.supabase.from("agent_knowledge_provisioning_events").insert({

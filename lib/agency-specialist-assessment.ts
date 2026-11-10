@@ -106,7 +106,7 @@ async function loadScenarios(admin: SupabaseClient, canonicalRole: string) {
     .eq("role_mastery_benchmarks.version", "1")
     .eq("role_mastery_benchmarks.active", true)
     .order("created_at", { ascending: true });
-  if (error) throw new Error(`Specialist benchmark catalog could not be loaded: ${error.message}`);
+  if (error) throw new Error("Specialist benchmark catalog could not be loaded.");
   return (data ?? []) as unknown as ScenarioRow[];
 }
 
@@ -150,7 +150,7 @@ function judgePrompt(scenario: ScenarioRow, candidateOutput: string) {
 
 async function promoteIfEligible(admin: SupabaseClient, agentId: string, userId: string) {
   const { data: readiness, error: readinessError } = await admin.rpc("agent_level_readiness", { p_agent_id: agentId, p_target_level: "specialist" });
-  if (readinessError) throw new Error(`Specialist readiness check failed: ${readinessError.message}`);
+  if (readinessError) throw new Error(`Specialist readiness check failed: (diagnostic withheld)`);
   if (!readiness || readiness.eligible !== true) return { target: "specialist", promoted: false, readiness: readiness ?? null };
   const { data: promotion, error: promotionError } = await admin.rpc("apply_agent_level_promotion", {
     p_agent_id: agentId,
@@ -158,7 +158,7 @@ async function promoteIfEligible(admin: SupabaseClient, agentId: string, userId:
     p_requested_by: userId,
     p_certification_version: AGENCY_SPECIALIST_SUITE_VERSION,
   });
-  if (promotionError) throw new Error(`Specialist promotion gate failed: ${promotionError.message}`);
+  if (promotionError) throw new Error(`Specialist promotion gate failed: (diagnostic withheld)`);
   return { target: "specialist", promoted: true, readiness, promotion };
 }
 
@@ -319,7 +319,7 @@ export async function runAgencySpecialistBenchmark(context: AssessmentContext, a
 
     return { scenario: scenario.title, score, verdict, governanceViolation, promotion, reused: false };
   } catch (error) {
-    await admin.from("agent_evaluation_batches").update({ status: "failed", completed_at: new Date().toISOString(), error_message: error instanceof Error ? error.message.slice(0, 1200) : "Specialist benchmark failed." }).eq("id", batch.id);
+    await admin.from("agent_evaluation_batches").update({ status: "failed", completed_at: new Date().toISOString(), error_message: "Specialist benchmark failed." }).eq("id", batch.id);
     throw error;
   }
 }

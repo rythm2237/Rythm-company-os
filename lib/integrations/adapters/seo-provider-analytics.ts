@@ -47,7 +47,7 @@ function bingDate(value: unknown) {
   const parsed = Date.parse(raw);
   return Number.isFinite(parsed) ? isoDate(new Date(parsed)) : raw.slice(0, 10);
 }
-function providerError(error: unknown) { return error instanceof Error ? error.message.slice(0, 320) : "Provider evidence unavailable."; }
+function providerError(error: unknown) { return "Provider evidence unavailable."; }
 
 async function credentialFor(integration: IntegrationRow) {
   const service = createExecutionServiceClient();

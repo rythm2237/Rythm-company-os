@@ -64,7 +64,7 @@ export async function runSeoMonitoringFromAdmin() {
         source: "admin_seo_monitor",
       },
     });
-    if (error) throw new Error(`SEO monitoring persistence failed: ${error.message}`);
+    if (error) throw new Error("SEO monitoring persistence failed.");
 
     revalidatePath(SEO_ADMIN_PATH);
     const providers = [providerEvidence.google.status === "connected" ? "Google" : null, providerEvidence.bing.status === "connected" ? "Bing" : null].filter(Boolean).join(" + ") || "technical-only";

@@ -2,7 +2,6 @@ import { executeAiRequest } from "@/lib/ai/request-gateway";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { requestToolExecution } from "@/lib/integrations/execution-gateway";
 import { createExecutionServiceClient } from "@/lib/integrations/service-runner";
-import { redactSecretText } from "@/lib/security/redaction";
 
 type JsonRecord = Record<string, unknown>;
 type ProposalRow = {
@@ -136,7 +135,7 @@ export async function dispatchApprovedProjectProposalActions(){
     .eq("status","approved")
     .order("decided_at",{ascending:true})
     .limit(16);
-  if(error)throw new Error(`Approved project proposals could not be loaded: ${error.message}`);
+  if(error)throw new Error("Approved project proposals could not be loaded.");
 
   const results:Array<{proposalId:string;status:string;requests?:string[];error?:string}>=[];
   for(const proposal of (proposals??[]) as ProposalRow[]){
@@ -150,7 +149,7 @@ export async function dispatchApprovedProjectProposalActions(){
           bridge_reason:"continuous_program_investigation_only",bridge_checked_at:new Date().toISOString()}),
         updated_at:new Date().toISOString(),
       }).eq("id",proposal.id).eq("organization_id",proposal.organization_id).eq("status","approved");
-      if(readOnlyError)throw new Error("Read-only proposal bridge failed: "+readOnlyError.message);
+      if(readOnlyError)throw new Error("Read-only proposal bridge failed.");
       results.push({proposalId:proposal.id,status:"investigation_only"});
       continue;
     }
@@ -167,7 +166,7 @@ export async function dispatchApprovedProjectProposalActions(){
           .eq("organization_id",proposal.organization_id).eq("project_id",proposal.project_id).eq("access_status","connected"),
         supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("confidentiality","operational").eq("organization_id",proposal.organization_id).eq("project_id",proposal.project_id).order("created_at",{ascending:false}).limit(12),
       ]);
-      if(bindingsResult.error)throw new Error(`Project connection bindings could not be loaded: ${bindingsResult.error.message}`);
+      if(bindingsResult.error)throw new Error("Project connection bindings could not be loaded.");
       const bindings=((bindingsResult.data??[]) as unknown as BindingRow[]).filter(binding=>{
         const nested=Array.isArray(binding.organization_integrations)?binding.organization_integrations[0]:binding.organization_integrations;
         const integration=record(nested);
@@ -231,7 +230,7 @@ export async function dispatchApprovedProjectProposalActions(){
       }
       results.push({proposalId:proposal.id,status:bridgeStatus,requests:requestIds});
     }catch(error){
-      const message=redactSecretText(error instanceof Error?error.message:"Proposal execution bridge failed.",900);
+      const message="Proposal execution bridge failed.";
       const attempts=finite(current.bridge_attempts,0)+1;
       await supabase.from("project_proposals").update({execution_result:mergeExecutionResult(current,{bridge_status:"retrying",bridge_attempts:attempts,bridge_error:message,bridge_last_attempt_at:new Date().toISOString()}),updated_at:new Date().toISOString()}).eq("id",proposal.id).eq("organization_id",proposal.organization_id);
       if(hasExecutionSignal)await holdProposalContinuation(supabase,proposal,"waiting_for_agent",{external_execution_state:"retrying",external_execution_error:message});

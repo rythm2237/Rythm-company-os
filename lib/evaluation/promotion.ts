@@ -62,18 +62,18 @@ export async function runSeniorPromotionEvaluation(input:{organizationId:string;
       const {data:batch}=await supabase.from("agent_evaluation_batches").insert({organization_id:input.organizationId,requested_by:input.requestedBy??null,suite_version:SUITE_VERSION,model,status:"completed",completed_at:new Date().toISOString(),summary:{promotion:true,agent_code:agent.agent_code,test_type:scenario.kind}}).select("id").single();
       if(!batch) throw new Error("Promotion evidence batch creation failed.");
       const {error:resultError}=await supabase.from("agent_evaluation_results").insert({batch_id:batch.id,organization_id:input.organizationId,agent_id:agent.id,agent_code:agent.agent_code,scenario_id:scenario.id,scenario_title:scenario.title,suite_version:SUITE_VERSION,profile_version:agent.specification_version??null,model,operational_status:agent.agent_status??null,operational_enabled:agent.enabled??null,authority_level:agent.authority_level??null,external_actions_allowed:agent.external_actions_allowed??null,prompt:scenario.prompt,output,judge_payload:{...judged,raw:judgeRaw,test_type:scenario.kind},dimensions:judged.dimensions,score:classified.score,verdict:classified.verdict,governance_violation:judged.governanceViolation,input_tokens:(completion.usage?.prompt_tokens??0)+(judge.usage?.prompt_tokens??0),output_tokens:(completion.usage?.completion_tokens??0)+(judge.usage?.completion_tokens??0),duration_ms:durationMs});
-      if(resultError) throw new Error(`Promotion evidence write failed: ${resultError.message}`);
+      if(resultError) throw new Error(`Promotion evidence write failed: (diagnostic withheld)`);
       await supabase.from("agent_experience_events").insert({agent_id:agent.id,organization_id:input.organizationId,event_type:scenario.kind,source_type:"senior_promotion_evaluation",source_id:batch.id,outcome_status:classified.verdict==="PASS"?"successful":classified.verdict==="CONDITIONAL_PASS"?"mixed":"failed",quality_score:classified.score,counts_toward_experience:false,evidence:{suite_version:SUITE_VERSION,scenario_id:scenario.id,verdict:classified.verdict,governance_violation:judged.governanceViolation},validated_at:new Date().toISOString(),validated_by:input.requestedBy??null});
       return {kind:scenario.kind,score:classified.score,verdict:classified.verdict,governanceViolation:judged.governanceViolation};
     }));
 
     const {data:readiness,error:readinessError}=await supabase.rpc("agent_level_readiness",{p_agent_id:agent.id,p_target_level:"senior"});
-    if(readinessError) throw new Error(`Readiness calculation failed: ${readinessError.message}`);
+    if(readinessError) throw new Error("Readiness calculation failed.");
     const status=readiness?.eligible?"eligible":"blocked";
     await supabase.from("agent_promotion_assessments").update({status,evaluation_count:Number(readiness?.evaluation_count??0),average_score:Number(readiness?.average_score??0),holdout_pass_count:Number(readiness?.holdout_pass_count??0),adversarial_pass_count:Number(readiness?.adversarial_pass_count??0),validated_experience_count:Number(readiness?.validated_experience_count??0),governance_violation_count:Number(readiness?.governance_violation_count??0),readiness,decision_reason:readiness?.eligible?"Evidence threshold reached; human certification review still required.":"Evidence threshold not yet reached. No automatic promotion performed.",completed_at:new Date().toISOString()}).eq("id",assessment.id);
     return {assessmentId:assessment.id,status,readiness,results};
   }catch(error){
-    await supabase.from("agent_promotion_assessments").update({status:"failed",decision_reason:error instanceof Error?error.message:String(error),completed_at:new Date().toISOString()}).eq("id",assessment.id);
+    await supabase.from("agent_promotion_assessments").update({status:"failed",decision_reason:"Promotion evidence evaluation failed.",completed_at:new Date().toISOString()}).eq("id",assessment.id);
     throw error;
   }
 }

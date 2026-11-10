@@ -126,7 +126,7 @@ export async function startGitHubCustomerOAuth(request: Request) {
     response.cookies.set(cookieName("pkce"), verifier, options);
     return response;
   } catch (error) {
-    return redirectBack(request, integrationId, projectId, "error", error instanceof Error ? error.message : "GitHub authorization could not be started.");
+    return redirectBack(request, integrationId, projectId, "error", "GitHub authorization could not be started.");
   }
 }
 
@@ -160,7 +160,7 @@ export async function finishGitHubExistingInstallationOAuth(request: Request) {
     const prepared = await prepareGitHubInstallationConnection(installationId, userAccessToken);
     const service = createExecutionServiceClient();
     const stored = await service.rpc("store_organization_integration_secret_unverified_v1", { target_integration_id: payload.integrationId, secret_value: JSON.stringify(prepared.envelope) });
-    if (stored.error) throw new Error(`GitHub credential could not be stored securely: ${stored.error.message}`);
+    if (stored.error) throw new Error("GitHub credential could not be stored securely.");
     const verifiedAt = new Date().toISOString();
     await context.supabase.from("integration_resources").update({ available: false }).eq("integration_id", payload.integrationId).eq("organization_id", context.organizationId);
     if (prepared.resources.length) {
@@ -168,13 +168,13 @@ export async function finishGitHubExistingInstallationOAuth(request: Request) {
       if (saved.error) throw new Error("Verified GitHub repositories could not be saved.");
     }
     const updated = await context.supabase.from("organization_integrations").update({ account_ref: prepared.accountRef, auth_type: "oauth", status: "connected", enabled: true, granted_scopes: prepared.grantedScopes, connected_at: verifiedAt, last_verified_at: verifiedAt, last_health_check_at: verifiedAt, last_error_at: null, last_error_code: null, last_error_message: null, metadata: { verification_result: "verified", credential_format: "github_app_installation_v1", setup_state: "verified", resource_count: prepared.resources.length, ...prepared.detail }, updated_at: verifiedAt }).eq("id", payload.integrationId).eq("organization_id", context.organizationId);
-    if (updated.error) throw new Error(`GitHub was authorized but the connection registry could not be updated: ${updated.error.message}`);
+    if (updated.error) throw new Error("GitHub was authorized but the connection registry could not be updated.");
     await context.supabase.from("audit_events").insert({ organization_id: context.organizationId, actor_type: "user", actor_user_id: context.user.id, event_type: "integration.github_connected", object_type: "organization_integration", object_id: payload.integrationId, risk_level: "low", payload: { auth_type: "github_app", installation_id: installationId, resource_count: prepared.resources.length, project_id: projectId } });
     const response = redirectBack(request, payload.integrationId, projectId, "message", `GitHub connected. ${prepared.resources.length} verified repository resource(s) discovered.`);
     clearCookies(response);
     return response;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "GitHub authorization could not be completed.";
+    const message = "GitHub authorization could not be completed.";
     await context.supabase.from("organization_integrations").update({ status: "needs_attention", last_error_at: new Date().toISOString(), last_error_code: "oauth_callback_failed", last_error_message: message.slice(0, 500), updated_at: new Date().toISOString() }).eq("id", payload.integrationId).eq("organization_id", context.organizationId);
     const response = redirectBack(request, payload.integrationId, projectId, "error", message);
     clearCookies(response);

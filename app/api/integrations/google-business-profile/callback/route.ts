@@ -20,7 +20,7 @@ function finish(request: Request, id: string, projectId: string | null | undefin
 
 export async function GET(request: Request) {
   const url = new URL(request.url); const state = url.searchParams.get("state")?.trim() || ""; const code = url.searchParams.get("code")?.trim() || ""; const providerError = url.searchParams.get("error")?.trim(); const { clientId, clientSecret } = credentials(); const payload = clientSecret && state ? verifyState(state, clientSecret) : null; const jar = cookieMap(request); const id = payload?.integrationId || jar.get("rythm_gbp_integration") || "";
-  if (providerError) return finish(request, id, payload?.projectId, "error", `Google authorization was not completed: ${providerError}`);
+  if (providerError) return finish(request, id, payload?.projectId, "error", `Google authorization was not completed: Provider denied authorization`);
   if (!clientId || !clientSecret) return finish(request, id, payload?.projectId, "error", "Google OAuth platform credentials are not configured.");
   if (!payload || !code || jar.get("rythm_gbp_state") !== state || jar.get("rythm_gbp_integration") !== payload.integrationId || jar.get("rythm_gbp_user") !== payload.userId || jar.get("rythm_gbp_organization") !== payload.organizationId || !jar.get("rythm_gbp_pkce")) return finish(request, id, payload?.projectId, "error", "Google Business Profile OAuth state validation failed. Start again from RYTHM.");
 
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     if (!(tokens.scope ?? "").split(/\s+/).includes(SCOPE)) throw new Error("Google did not grant Business Profile management access.");
     const envelope = JSON.stringify({ version: 1, provider: "google_business_profile", auth_mode: "oauth", access_token: tokens.access_token, refresh_token: tokens.refresh_token, token_type: tokens.token_type || "Bearer", scope: tokens.scope || SCOPE, expires_at: new Date(Date.now() + Math.max(60, Number(tokens.expires_in ?? 3600)) * 1000).toISOString() });
     const stored = await createExecutionServiceClient().rpc("store_organization_integration_secret_unverified_v1", { target_integration_id: id, secret_value: envelope });
-    if (stored.error) throw new Error(`Google Business Profile credential could not be stored securely: ${stored.error.message}`);
+    if (stored.error) throw new Error(`Google Business Profile credential could not be stored securely: (diagnostic withheld)`);
 
     const [resources, profile] = await Promise.all([discoverGoogleResources("google_business_profile", tokens.access_token!), googleProfile(tokens.access_token!)]);
     if (!resources.length) throw new Error("Google Business Profile authorization succeeded, but no accessible account or location was returned.");
@@ -46,17 +46,17 @@ export async function GET(request: Request) {
     if (saved.error) throw new Error("Google Business Profile resources were discovered but could not be saved.");
 
     const updated = await context.supabase.from("organization_integrations").update({ account_ref: String(profile.email ?? ""), auth_type: "oauth", status: "connected", enabled: true, granted_scopes: ["business.manage"], connected_at: now, last_verified_at: now, last_health_check_at: now, last_error_at: null, last_error_code: null, last_error_message: null, metadata: { verification_result: "verified", setup_state: "verified", credential_format: "oauth_token_envelope_v1", resource_count: resources.length, verification_endpoint: "mybusinessaccountmanagement.googleapis.com/v1/accounts" }, updated_at: now }).eq("id", id).eq("organization_id", context.organizationId);
-    if (updated.error) throw new Error(updated.error.message);
+    if (updated.error) throw new Error("Google Business Profile connection state could not be saved.");
     await context.supabase.from("audit_events").insert({ organization_id: context.organizationId, actor_type: "user", actor_user_id: context.user.id, event_type: "integration.google_business_profile_connected", object_type: "organization_integration", object_id: id, risk_level: "low", payload: { resource_count: resources.length, scope: "business.manage", project_id: payload.projectId ?? null } });
     return finish(request, id, payload.projectId, "message", `Google Business Profile connected and verified. ${resources.length} resource(s) discovered.`);
   } catch (error) {
-    const diagnostic = error instanceof Error ? error.message : "Google Business Profile authorization could not be completed.";
+    const diagnostic = "Google Business Profile authorization could not be completed.";
     // Google OAuth can succeed while the *separately approved* GBP API quota is zero.
     // Do not mislabel this as a failed OAuth authorization or encourage rapid retries.
     const quotaBlocked = /\b429\b|RESOURCE_EXHAUSTED|Requests per minute/i.test(diagnostic);
     const message = quotaBlocked
       ? "Google Business Profile OAuth was authorized, but the Account Management API returned quota exhausted (429). Check My Business Account Management API > Requests per minute in Google Cloud. If quota is 0, request Basic API Access; otherwise wait for quota reset before retrying. Repeated Google sign-ins will not increase API quota."
-      : diagnostic;
+      : "Google Business Profile authorization could not be completed.";
     const now = new Date().toISOString();
     await context.supabase.from("organization_integrations").update({
       status: "needs_attention",

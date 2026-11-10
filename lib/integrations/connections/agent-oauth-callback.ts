@@ -1,6 +1,7 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { createExecutionServiceClient } from "@/lib/integrations/service-runner";
+import { resolveOrganizationContext, isOrganizationEntitlementActive } from "@/lib/auth/organization-context";
 import { discoverGoogleResources, googleProfile } from "@/lib/integrations/connections/providers";
 import { AGENT_OAUTH_COOKIE_NAMES, agentOAuthCallbackPath, type AgentOAuthProviderKey, verifyAgentOAuthState } from "@/lib/integrations/connections/agent-oauth";
 import { dispatchConnectionSetupSessions, signalConnectionAuthorizationCompleted } from "@/lib/integrations/connection-setup-agent";
@@ -109,13 +110,24 @@ export async function maybeHandleAgentOAuthCallback(request: Request, providerKe
   const jar = cookieMap(request);
   const code = url.searchParams.get("code")?.trim() || "";
   const providerError = url.searchParams.get("error")?.trim();
-  if (providerError) return completion(request, providerKey, false, `Provider authorization was not completed: ${providerError}`);
+  if (providerError) return completion(request, providerKey, false, "Provider authorization was not completed.");
   if (
     jar.get("rythm_agent_oauth_state") !== state || jar.get("rythm_agent_oauth_session") !== payload.sessionId ||
     jar.get("rythm_agent_oauth_integration") !== payload.integrationId || jar.get("rythm_agent_oauth_user") !== payload.userId ||
     jar.get("rythm_agent_oauth_provider") !== providerKey
   ) return completion(request, providerKey, false, "Secure Agent OAuth state validation failed. Return to RYTHM and restart the connection.");
   if (providerKey !== "github" && (!code || !jar.get("rythm_agent_oauth_pkce"))) return completion(request, providerKey, false, "Provider authorization code or PKCE verification is missing. Restart the connection.");
+
+  // Signed state/cookie binds the OAuth transaction, but MUST NOT replace a
+  // current authenticated owner and active-organization check. This gate
+  // precedes construction and all reads of the privileged service client.
+  const actor = await resolveOrganizationContext();
+  if (!actor || actor.user.id !== payload.userId ||
+    actor.organizationId !== payload.organizationId || actor.role !== "owner" ||
+    !isOrganizationEntitlementActive(actor.entitlement)) {
+    return completion(request, providerKey, false,
+      "Your RYTHM owner session changed during provider authorization.");
+  }
 
   const service = createExecutionServiceClient();
   const sessionResult = await service.from("integration_setup_sessions")
@@ -207,7 +219,7 @@ export async function maybeHandleAgentOAuthCallback(request: Request, providerKe
     }
 
     const stored = await service.rpc("store_organization_integration_secret_unverified_v1", { target_integration_id: payload.integrationId, secret_value: JSON.stringify(envelope) });
-    if (stored.error) throw new Error(`Provider credential could not be stored securely: ${stored.error.message}`);
+    if (stored.error) throw new Error("Provider credential could not be stored securely.");
 
     const verifiedAt = new Date().toISOString();
     await service.from("integration_resources").update({ available: false }).eq("integration_id", payload.integrationId).eq("organization_id", payload.organizationId);
@@ -249,7 +261,7 @@ export async function maybeHandleAgentOAuthCallback(request: Request, providerKe
       },
       updated_at: verifiedAt,
     }).eq("id", payload.integrationId).eq("organization_id", payload.organizationId);
-    if (updated.error) throw new Error(`Provider was authorized, but the connection registry could not be updated: ${updated.error.message}`);
+    if (updated.error) throw new Error("Provider was authorized, but the connection registry could not be updated.");
 
     await service.from("audit_events").insert({
       organization_id: payload.organizationId,
@@ -266,7 +278,7 @@ export async function maybeHandleAgentOAuthCallback(request: Request, providerKe
     await dispatchConnectionSetupSessions(service, { limit: 4 });
     return completion(request, providerKey, true, `${providerLabel[providerKey]} authorization is verified. RYTHM is continuing resource discovery and connection verification in the background.`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Provider authorization could not be completed.";
+    const message = "Provider authorization could not be completed.";
     await service.from("organization_integrations").update({ last_error_at: new Date().toISOString(), last_error_code: "agent_oauth_callback_failed", last_error_message: message.slice(0, 500) }).eq("id", payload.integrationId).eq("organization_id", payload.organizationId);
     return completion(request, providerKey, false, message);
   }
