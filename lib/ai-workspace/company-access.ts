@@ -3,8 +3,13 @@ import { AIWorkspaceError } from "@/lib/ai-workspace/service";
 
 type PersonalContext={wallet:{id:string;currency:string};account:{allowed_modes:string[];allowed_prompt_profiles:string[]}};
 export async function resolveRegisteredUsagePayer(client:SupabaseClient,organizationId:string,userId:string,personal:PersonalContext){
-  const access=await client.from("aiw_company_member_access").select("role_label,billing_source,allowed_modes,allowed_prompt_profiles,allowed_models,enabled").eq("organization_id",organizationId).eq("user_id",userId).maybeSingle();
-  if(access.error)throw new AIWorkspaceError("COMPANY_AI_ACCESS_LOOKUP_FAILED",503);
+  if(!organizationId||!userId)throw new AIWorkspaceError("ORGANIZATION_CONTEXT_REQUIRED",403);
+  const [membership, access] = await Promise.all([
+    client.from("organization_members").select("membership_status").eq("organization_id",organizationId).eq("user_id",userId).maybeSingle(),
+    client.from("aiw_company_member_access").select("role_label,billing_source,allowed_modes,allowed_prompt_profiles,allowed_models,enabled").eq("organization_id",organizationId).eq("user_id",userId).maybeSingle(),
+  ]);
+  if(membership.error||access.error)throw new AIWorkspaceError("COMPANY_AI_ACCESS_LOOKUP_FAILED",503);
+  if(membership.data?.membership_status!=="active")throw new AIWorkspaceError("ORGANIZATION_ACCESS_DENIED",403);
   if(!access.data?.enabled)return{walletId:personal.wallet.id,currency:personal.wallet.currency,payerType:"personal" as const,roleLabel:null,allowedModes:personal.account.allowed_modes,allowedPromptProfiles:personal.account.allowed_prompt_profiles,allowedModels:[] as string[]};
   const walletLookup=await client.from("usage_wallets").select("id,currency,status").eq("organization_id",organizationId).eq("payer_type","company").maybeSingle();
   if(walletLookup.error)throw new AIWorkspaceError("COMPANY_WALLET_LOOKUP_FAILED",503);

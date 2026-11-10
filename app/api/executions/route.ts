@@ -47,6 +47,11 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  if (body.originatingRequestId != null || body.authoritySource != null)
+    return NextResponse.json(
+      { ok: false, error: "Execution provenance is assigned by the server." },
+      { status: 400 },
+    );
   const integrationId = String(body.integrationId ?? "").trim(),
     capabilityKey = String(body.capabilityKey ?? "").trim();
   if (!integrationId || !capabilityKey)
@@ -68,22 +73,12 @@ export async function POST(request: Request) {
         body.input && typeof body.input === "object"
           ? (body.input as Record<string, unknown>)
           : {},
-      originatingRequestId: body.originatingRequestId
-        ? String(body.originatingRequestId)
-        : null,
       projectId: body.projectId ? String(body.projectId) : null,
       meetingId: body.meetingId ? String(body.meetingId) : null,
       sessionId: body.sessionId ? String(body.sessionId) : null,
       intent: body.intent ? String(body.intent) : capabilityKey,
       requestedBy: body.agentId ? "agent" : "user",
-      authoritySource:
-        body.authoritySource === "boardroom"
-          ? "boardroom"
-          : body.authoritySource === "company_library"
-            ? "company_library"
-            : body.agentId
-              ? "agent"
-              : "human",
+      authoritySource: body.agentId ? "agent" : "human",
     });
     return NextResponse.json(
       { ok: true, ...result },
