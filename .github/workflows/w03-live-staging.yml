@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   verify-staging:
-    if: ${{ github.event.inputs.confirm_staging_only == 'W03-STAGING-ONLY' && (github.ref == 'refs/heads/test/w03-tenant-isolation-evidence' || github.ref == 'refs/heads/security/w06-service-role-backend-boundaries') }}
+    if: ${{ github.event.inputs.confirm_staging_only == 'W03-STAGING-ONLY' && (github.ref == 'refs/heads/test/w03-tenant-isolation-evidence' || github.ref == 'refs/heads/security/w06-service-role-backend-boundaries' || github.ref == 'refs/heads/main') }}
     environment: w02-staging
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -55,7 +55,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: Run W06 privileged-boundary regressions on the reviewed branch
-        if: ${{ github.ref == 'refs/heads/security/w06-service-role-backend-boundaries' }}
+        if: ${{ github.ref == 'refs/heads/security/w06-service-role-backend-boundaries' || github.ref == 'refs/heads/main' }}
         run: npm run test:w06
       - name: Wait for restored staging health
         run: |
@@ -92,4 +92,13 @@ jobs:
         with:
           name: w03-sanitized-evidence
           path: .w03-evidence/result.json
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v4
+        if: always() && github.ref == 'refs/heads/main'
+        with:
+          name: w06-privileged-callsite-evidence
+          path: |
+            test-results/w06-privileged-boundaries.json
+            test-results/w06-acceptance-matrix.json
           if-no-files-found: warn
