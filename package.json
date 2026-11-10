@@ -63,7 +63,7 @@
     "test:crm-connected": "node --import tsx scripts/validate-crm-connected.tsx",
     "test:w02": "node scripts/validate-w02-fixtures.mjs",
     "test:w05": "node --experimental-strip-types scripts/validate-w05-file-confidentiality.mjs && node scripts/validate-w05-storage-rls.mjs && node scripts/validate-w05-file-http.mjs",
-    "test:w06": "node scripts/w06-audit-privileged-boundaries.mjs && node scripts/validate-w06-backend-boundaries.mjs && node scripts/validate-w06-edge-push.mjs && node scripts/validate-w06-evaluation-tenant.mjs && node --import tsx scripts/validate-w06-error-redaction.ts && node scripts/validate-w06-project-gates.mjs && node scripts/validate-w06-oauth-errors.mjs && node scripts/validate-w06-agent-oauth-tenant.mjs && node scripts/validate-w06-privileged-diagnostics.mjs && node scripts/w06-acceptance-matrix.mjs"
+    "test:w06": "node scripts/w06-audit-privileged-boundaries.mjs && node scripts/validate-w06-backend-boundaries.mjs && node scripts/validate-w06-edge-push.mjs && node scripts/validate-w06-evaluation-tenant.mjs && node --import tsx scripts/validate-w06-error-redaction.ts && node scripts/validate-w06-project-gates.mjs && node scripts/validate-w06-oauth-errors.mjs && node scripts/validate-w06-agent-oauth-tenant.mjs && node scripts/validate-w06-privileged-diagnostics.mjs && node scripts/w06-acceptance-matrix.mjs && node --check scripts/fixtures/w06-crm-contract-rls.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
