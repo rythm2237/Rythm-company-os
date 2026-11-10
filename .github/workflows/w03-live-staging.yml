@@ -84,6 +84,9 @@ jobs:
         run: |
           case "$W03_MATRIX" in routes|oauth|public|extended) ;; *) exit 1 ;; esac
           node scripts/fixtures/w03-live.mjs "--${W03_MATRIX}-only"
+      - name: W06 real-JWT customer-scoped contract grant isolation
+        if: ${{ github.ref == 'refs/heads/main' && inputs.matrix == 'extended' }}
+        run: node scripts/fixtures/w06-crm-contract-rls.mjs
       - name: Quarantine W03 identities preserving audit history
         if: always()
         run: node scripts/fixtures/w03-staging.mjs quarantine-partial
@@ -91,7 +94,9 @@ jobs:
         if: always()
         with:
           name: w03-sanitized-evidence
-          path: .w03-evidence/result.json
+          path: |
+            .w03-evidence/result.json
+            .w03-evidence/w06-crm-contract.json
           if-no-files-found: warn
 
       - uses: actions/upload-artifact@v4
