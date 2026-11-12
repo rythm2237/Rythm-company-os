@@ -259,26 +259,38 @@ try {
       return { data: true };
     },
     from(table) {
+      const filters = {};
       return {
         select() { return this; },
-        eq() { return this; },
+        eq(key, value) { filters[key] = value; return this; },
+        async single() { return { data: { id: "synthetic" } }; },
         update(value) { workerState.events.push({ table, value }); return this; },
         insert(value) { workerState.events.push({ table, value }); return this; },
         async maybeSingle() {
+          if (table === "tool_execution_requests") {
+            return { data: filters.organization_id === "A" ? { id: "synthetic" } : null };
+          }
           return { data: { provider_key: "internal", status: "connected", enabled: true } };
         },
       };
     },
   };
-  const { executeApprovedToolRequest } = await load("lib/integrations/service-runner.ts", {
+  const { POST } = await load("app/api/executions/[id]/route.ts", {
+    "next/server": "export const NextResponse = { json: (data, options) => Response.json(data, options) };",
+    "@/lib/auth/api-organization-context": `export const resolveOwnerApiOrganizationContext = async () => ({
+      ok: true, organizationId: globalThis.w07Worker.organizationId, supabase: globalThis.w07Worker.client,
+    });`,
     "server-only": "",
     "@supabase/supabase-js": "export const createClient = () => globalThis.w07Worker.client;",
     "@/lib/integrations/adapters/internal-validation": `
       export const internalValidationAdapter = {
         validate() {}, prepare() {},
+        verify() { return { status: "verified", detail: { recordPresent: true } }; },
+        normalizeError() { return { errorClass: "execution_failed", retryable: false }; },
         execute() {
           globalThis.w07Worker.executions++;
-          throw new Error(globalThis.w07Worker.diagnostic);
+          if (globalThis.w07Worker.diagnostic) throw new Error(globalThis.w07Worker.diagnostic);
+          return { rawResult: { created: true }, externalReferenceId: "synthetic-record" };
         },
       };
     `,
@@ -288,8 +300,17 @@ try {
   Object.assign(process.env, env);
   workerState.diagnostic = canary;
   try {
+    const execute = () => POST(new Request("https://synthetic.invalid/api/executions/synthetic", {
+      method: "POST", body: JSON.stringify({ action: "execute" }),
+    }), { params: Promise.resolve({ id: "synthetic" }) });
+    workerState.organizationId = "B";
+    assert.equal((await execute()).status, 404);
+    assert.equal(workerState.events.length, 0);
+    workerState.organizationId = "A";
     workerState.claim = { error: { message: canary } };
-    await assert.rejects(() => executeApprovedToolRequest("synthetic"), { message: "Execution request could not be claimed." });
+    const denied = await execute();
+    assert.equal(denied.status, 409);
+    assert.equal((await denied.json()).error, "Execution request could not be claimed.");
     const row = {
       id: "synthetic", organization_id: "A", integration_id: "I",
       tool: "internal.validation", capability_key: "validation.record.create",
@@ -298,14 +319,23 @@ try {
     };
     for (const override of [{ human_approval_required: false }, { input: { label: canary } }]) {
       workerState.claim = { data: { ...row, ...override } };
-      await assert.rejects(() => executeApprovedToolRequest("synthetic"), /EXECUTION_APPROVAL_REQUIRED/);
+      const response = await execute();
+      assert.equal(response.status, 409);
+      assert.equal((await response.json()).error, "EXECUTION_APPROVAL_REQUIRED");
     }
     assert.equal(workerState.executions, 0);
     workerState.claim = { data: row };
-    await assert.rejects(() => executeApprovedToolRequest("synthetic"), /EXECUTION_/);
+    const failed = await execute();
+    assert.equal(failed.status, 409);
+    assert.match((await failed.json()).error, /^EXECUTION_/);
     assert.equal(workerState.executions, 1);
+    workerState.diagnostic = null;
+    const succeeded = await execute();
+    assert.equal(succeeded.status, 200);
+    assert.equal((await succeeded.json()).verification.status, "verified");
+    assert.equal(workerState.executions, 2);
     assert.ok(!JSON.stringify(workerState.events).includes(canary));
-    console.log("PASS actual execution worker: claim errors sanitized, exact approval required, adapter failure diagnostics redacted");
+    console.log("PASS execution HTTP route through actual worker: foreign tenant, scoped approval, successful execution and diagnostic redaction");
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key];
