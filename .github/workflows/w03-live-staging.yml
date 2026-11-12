@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   verify-staging:
-    if: ${{ github.event.inputs.confirm_staging_only == 'W03-STAGING-ONLY' && (github.ref == 'refs/heads/test/w03-tenant-isolation-evidence' || github.ref == 'refs/heads/security/w06-service-role-backend-boundaries' || github.ref == 'refs/heads/main') }}
+    if: ${{ github.event.inputs.confirm_staging_only == 'W03-STAGING-ONLY' && (github.ref == 'refs/heads/test/w03-tenant-isolation-evidence' || github.ref == 'refs/heads/security/w06-service-role-backend-boundaries' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/security/w07-agent-tool-memory') }}
     environment: w02-staging
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -57,6 +57,9 @@ jobs:
       - name: Run W06 privileged-boundary regressions on the reviewed branch
         if: ${{ github.ref == 'refs/heads/security/w06-service-role-backend-boundaries' || github.ref == 'refs/heads/main' }}
         run: npm run test:w06
+      - name: Run W07 agent and approval regressions
+        if: ${{ github.ref == 'refs/heads/security/w07-agent-tool-memory' }}
+        run: npm run test:w07
       - name: Wait for restored staging health
         run: |
           node --input-type=module <<'JS'
