@@ -9,7 +9,7 @@ async function load(path, mocks = {}) {
     plugins: [{
       name: "w07-synthetic-boundaries",
       setup(builder) {
-        builder.onResolve({ filter: /^(@\/|next\/server)/ }, ({ path }) =>
+        builder.onResolve({ filter: /.*/ }, ({ path }) =>
           Object.hasOwn(mocks, path) ? { path, namespace: "w07" } : undefined);
         builder.onLoad({ filter: /.*/, namespace: "w07" }, ({ path }) => ({ contents: mocks[path] }));
       },
@@ -245,4 +245,73 @@ try {
   console.log("PASS actual chat handler with stubbed provider: consent, prompt-channel separation, rejection and diagnostic canary");
 } finally {
   delete globalThis.w07Chat;
+}
+
+const { executionDigest } = await load("lib/integrations/idempotency.ts");
+const payload = { label: "Synthetic worker record" };
+const workerState = { events: [], executions: 0 };
+globalThis.w07Worker = workerState;
+try {
+  workerState.client = {
+    async rpc(name, args) {
+      workerState.events.push({ name, args });
+      if (name === "claim_tool_execution_v2") return workerState.claim;
+      return { data: true };
+    },
+    from(table) {
+      return {
+        select() { return this; },
+        eq() { return this; },
+        update(value) { workerState.events.push({ table, value }); return this; },
+        insert(value) { workerState.events.push({ table, value }); return this; },
+        async maybeSingle() {
+          return { data: { provider_key: "internal", status: "connected", enabled: true } };
+        },
+      };
+    },
+  };
+  const { executeApprovedToolRequest } = await load("lib/integrations/service-runner.ts", {
+    "server-only": "",
+    "@supabase/supabase-js": "export const createClient = () => globalThis.w07Worker.client;",
+    "@/lib/integrations/adapters/internal-validation": `
+      export const internalValidationAdapter = {
+        validate() {}, prepare() {},
+        execute() {
+          globalThis.w07Worker.executions++;
+          throw new Error(globalThis.w07Worker.diagnostic);
+        },
+      };
+    `,
+  });
+  const env = { NEXT_PUBLIC_SUPABASE_URL: "https://synthetic.invalid", SUPABASE_SERVICE_ROLE_KEY: "synthetic-test-only" };
+  const previous = Object.fromEntries(Object.keys(env).map((key) => [key, process.env[key]]));
+  Object.assign(process.env, env);
+  workerState.diagnostic = canary;
+  try {
+    workerState.claim = { error: { message: canary } };
+    await assert.rejects(() => executeApprovedToolRequest("synthetic"), { message: "Execution request could not be claimed." });
+    const row = {
+      id: "synthetic", organization_id: "A", integration_id: "I",
+      tool: "internal.validation", capability_key: "validation.record.create",
+      human_approval_required: true, payload_digest: executionDigest(payload),
+      input: payload, retry_policy: { maxAttempts: 1 },
+    };
+    for (const override of [{ human_approval_required: false }, { input: { label: canary } }]) {
+      workerState.claim = { data: { ...row, ...override } };
+      await assert.rejects(() => executeApprovedToolRequest("synthetic"), /EXECUTION_APPROVAL_REQUIRED/);
+    }
+    assert.equal(workerState.executions, 0);
+    workerState.claim = { data: row };
+    await assert.rejects(() => executeApprovedToolRequest("synthetic"), /EXECUTION_/);
+    assert.equal(workerState.executions, 1);
+    assert.ok(!JSON.stringify(workerState.events).includes(canary));
+    console.log("PASS actual execution worker: claim errors sanitized, exact approval required, adapter failure diagnostics redacted");
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+} finally {
+  delete globalThis.w07Worker;
 }

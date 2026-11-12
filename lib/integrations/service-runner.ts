@@ -278,7 +278,7 @@ export async function executeApprovedToolRequest(executionRequestId: string) {
   const row = Array.isArray(claimed) ? claimed[0] : claimed;
   if (claimError || !row)
     throw new Error(
-      claimError?.message ?? "Execution request could not be claimed.",
+      "Execution request could not be claimed.",
     );
   let attempts = 0;
   try {
