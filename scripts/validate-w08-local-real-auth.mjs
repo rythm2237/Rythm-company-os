@@ -27,7 +27,7 @@ async function mailLink(email,type){
    if(!(m.To??[]).some(a=>a.Address===email))continue;
    const item=await (await fetch(mail+"/api/v1/message/"+encodeURIComponent(m.ID))).json();
    for(const match of (item.HTML??"").matchAll(/href=["']([^"']+)["']/gi)){
-    const u=new URL(match[1].replaceAll("&amp;","&"));
+    let u;try{u=new URL(match[1].replaceAll("&amp;","&"));}catch{continue;}
     if(u.pathname!=="/auth/v1/verify"||u.searchParams.get("type")!==type)continue;
     assert.ok(["localhost","127.0.0.1"].includes(u.hostname),"mail link must be local");
     assert.equal(u.port,"54321");
@@ -102,8 +102,8 @@ try{
    if(mobile)await page.getByRole("button",{name:"Menu",exact:true}).click();
    await page.getByLabel("Active company").selectOption(B);
    await page.getByRole("button",{name:"Switch",exact:true}).click();
-   await page.locator(".workspace-context-heading strong").filter({hasText:"W08 "+label+" B"}).waitFor();
-   await page.reload();await page.locator(".workspace-context-heading strong").filter({hasText:"W08 "+label+" B"}).waitFor();
+   await page.locator(".command-header .eyebrow").filter({hasText:"W08 "+label+" B"}).waitFor();
+   await page.reload();await page.locator(".command-header .eyebrow").filter({hasText:"W08 "+label+" B"}).waitFor();
    mark(label+" return user organization switch and reload (local fixture RPC)");
    await logout(page,context,mobile);
    await revoked(signup.s.refresh_token,"signup session");
@@ -119,7 +119,8 @@ try{
    const independent=unwrap(await second.auth.signInWithPassword({email,password}),"second login").session;
    assert.notEqual(first.s.refresh_token,independent.refresh_token);
    const expired={...first.s,expires_at:1};
-   await context.addCookies(first.cs.map((c,i)=>({name:c.name,value:i===0?"base64-"+Buffer.from(JSON.stringify(expired)).toString("base64url"):"",domain:c.domain,path:c.path,httpOnly:c.httpOnly,secure:c.secure,sameSite:c.sameSite})));
+   await context.clearCookies({name:/^sb-127-auth-token(?:\.\d+)?$/});
+   await context.addCookies([{name:"sb-127-auth-token",value:"base64-"+Buffer.from(JSON.stringify(expired)).toString("base64url"),url:app,sameSite:"Lax"}]);
    await page.reload(); await page.getByRole("heading",{name:"What would you like RYTHM to do?"}).waitFor();
    const refreshed=await sessionOf(context);
    assert.notEqual(refreshed.s.refresh_token,first.s.refresh_token,"real refresh must rotate token");
@@ -142,7 +143,7 @@ try{
    await login(page,email,password);
    await page.getByRole("alert").filter({hasText:"Invalid email or password."}).waitFor();
    await login(page,email,newPassword);await page.waitForURL(urlPath("/home"),{timeout:30000});
-   await page.locator(".workspace-context-heading strong").filter({hasText:"W08 "+label+" B"}).waitFor();
+   await page.locator(".command-header .eyebrow").filter({hasText:"W08 "+label+" B"}).waitFor();
    await page.goto(app+"/signup?product=ready_company");
    await page.getByRole("button",{name:"Sign out and create another account"}).click();
    await page.waitForURL(urlPath("/signup"));
