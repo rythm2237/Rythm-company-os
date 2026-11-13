@@ -143,13 +143,13 @@ try{
    const first=await sessionOf(context);
    const second=client();
    const independent=unwrap(await second.auth.signInWithPassword({email,password}),"second login").session;
-   assert.notEqual(first.s.refresh_token,independent.refresh_token);
+   assert.ok(first.s.refresh_token!==independent.refresh_token,"independent refresh tokens must differ");
    const expired={...first.s,expires_at:1};
    await context.clearCookies({name:/^sb-127-auth-token(?:\.\d+)?$/});
    await context.addCookies([{name:"sb-127-auth-token",value:"base64-"+Buffer.from(JSON.stringify(expired)).toString("base64url"),url:app,sameSite:"Lax"}]);
    await page.reload(); await page.getByRole("heading",{name:"What would you like RYTHM to do?"}).waitFor();
    const refreshed=await sessionOf(context);
-   assert.notEqual(refreshed.s.refresh_token,first.s.refresh_token,"real refresh must rotate token");
+   assert.ok(refreshed.s.refresh_token!==first.s.refresh_token,"real refresh must rotate token");
    mark(label+" actual token refresh via expired session cookie");
    await logout(page,context,mobile);
    await revoked(refreshed.s.refresh_token,"browser logout");
