@@ -18,9 +18,9 @@ export default async function SignupPage({ searchParams }: Props) {
   const selectedTemplate = selection.templateKey;
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: memberships } = user
-    ? await supabase.from("organization_members").select("organization_id").eq("user_id", user.id).limit(1)
-    : { data: null };
+  const { data: memberships, error: membershipError } = user
+    ? await supabase.rpc("list_my_organizations")
+    : { data: null, error: null };
   const loginNext = commercialSetupPath(selection);
 
   return (
@@ -41,11 +41,11 @@ export default async function SignupPage({ searchParams }: Props) {
             <p className="form-error" role="alert" style={{ margin: 0 }}>
               You are currently signed in as {user.email ?? "an existing account"}.
             </p>
-            <Link href={memberships?.length
+            {membershipError ? <p role="alert">Organization access could not be checked. Please retry.</p> : <Link href={memberships?.length
               ? selectedTemplate ? `/studio/templates?template=${encodeURIComponent(selectedTemplate)}` : "/studio/templates"
               : commercialSetupPath(selection)}>
               Continue with this account
-            </Link>
+            </Link>}
             <form action={`/auth/logout?returnTo=${encodeURIComponent(commercialSignupPath(selection))}`} method="post">
               <SubmitButton type="submit">Sign out and create another account</SubmitButton>
             </form>
