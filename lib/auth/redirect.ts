@@ -21,11 +21,14 @@ export function safeAuthPath(value: string | null | undefined): string {
 }
 
 /** Explicit, server-side environment configuration; never trust forwarded host headers. */
-export function authCallbackOrigin(env: NodeJS.ProcessEnv = process.env): string {
+export function authCallbackOrigin(env: NodeJS.ProcessEnv = process.env, requestHost?: string): string {
   const configured = env.AUTH_SITE_ORIGIN;
+  const productionHosts = new Set(["rythm-os.com", "www.rythm-os.com", "company.rythm-os.com"]);
+  const host = requestHost?.toLowerCase();
+  const productionOrigin = host && productionHosts.has(host) ? `https://${host}` : "https://rythm-os.com";
   const raw = configured || (env.VERCEL_ENV === "preview" && env.VERCEL_URL
     ? `https://${env.VERCEL_URL}` : env.VERCEL_ENV === "preview" || env.VERCEL_ENV === "development" || env.NODE_ENV === "development"
-    ? "http://localhost:3000" : "https://rythm-os.com");
+    ? "http://localhost:3000" : productionOrigin);
   const url = new URL(raw);
   const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
   if ((url.protocol !== "https:" && !(local && url.protocol === "http:")) ||
