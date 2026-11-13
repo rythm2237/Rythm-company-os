@@ -278,7 +278,7 @@ export async function executeApprovedToolRequest(executionRequestId: string) {
   const row = Array.isArray(claimed) ? claimed[0] : claimed;
   if (claimError || !row)
     throw new Error(
-      claimError?.message ?? "Execution request could not be claimed.",
+      "Execution request could not be claimed.",
     );
   let attempts = 0;
   try {
@@ -289,6 +289,14 @@ export async function executeApprovedToolRequest(executionRequestId: string) {
         "Canonical tool metadata is unavailable.",
         "policy_denied",
       );
+    if ((registered.operation.readWrite === "write" || request.externalSideEffect || request.financialImpact) &&
+        (!request.humanApprovalRequired || !request.payloadDigest ||
+          executionDigest(request.input) !== request.payloadDigest)) {
+      throw new IntegrationExecutionError(
+        "The exact execution payload requires scoped human approval.",
+        "approval_required",
+      );
+    }
     const { data: integration, error: integrationError } = await supabase
       .from("organization_integrations")
       .select(
