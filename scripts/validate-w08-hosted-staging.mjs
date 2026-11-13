@@ -74,11 +74,18 @@ async function home(page,org){
 async function logout(page,context,mobile){
  if(mobile)await page.getByRole("button",{name:"Menu",exact:true}).click();
  const start=performance.now();
- await page.getByRole("button",{name:"Sign out",exact:true}).click();
+ const button=page.getByRole("button",{name:"Sign out",exact:true});
+ await button.scrollIntoViewIfNeeded({timeout:10000});
+ const post=page.waitForResponse(r=>r.url()===app+"/auth/logout"&&r.request().method()==="POST",{timeout:12000});
+ await button.click({timeout:12000});
+ const response=await post;
+ assert.equal(response.status(),303,"native signout POST redirect");
  await page.waitForURL(pathIs("/login"),{timeout:10000});
  assert.ok(performance.now()-start<6500,"signout navigation bound exceeded");
  assert.ok(!new URL(page.url()).searchParams.has("message"),"remote revocation unconfirmed");
- assert.ok(!(await context.cookies(app)).some(c=>cookieMatch(c)||c.name==="rythm_active_org"));
+ const remaining=(await context.cookies(app)).filter(c=>cookieMatch(c)||c.name==="rythm_active_org");
+ if(remaining.length)console.log("W08 logout remaining cookie names/paths: "+JSON.stringify(remaining.map(c=>({name:c.name,path:c.path,secure:c.secure}))));
+ assert.equal(remaining.length,0,"signout must remove session and organization cookies");
  await page.reload();await page.waitForURL(pathIs("/login"));
 }
 async function recoveryCookies(context,f){
