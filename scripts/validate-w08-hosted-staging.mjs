@@ -23,7 +23,8 @@ const pw=()=>randomBytes(24).toString("base64url")+"Aa1!";
 const unwrap=(r,label)=>{if(r.error)throw Error(label+" ["+(r.error.code||r.error.status||"error")+"]");return r.data;};
 const mark=label=>console.log("PASS W08 hosted staging: "+label);
 const pathIs=p=>u=>u.origin===app&&u.pathname===p;
-const cookieMatch=c=>c.name===cookieName||c.name.startsWith(cookieName+".");
+const sessionCookie=c=>c.name===cookieName||c.name.startsWith(cookieName+".");
+const cookieMatch=c=>sessionCookie(c)||c.name.startsWith(cookieName+"-");
 async function fixture(label){
  const id=randomUUID(),email=prefix+label+"-"+id+"@example.test",password=pw(),newPassword=pw();
  // Auth's real signup token is generated without SMTP delivery.
@@ -46,7 +47,7 @@ async function fixture(label){
  return f;
 }
 async function browserSession(context){
- const cs=(await context.cookies(app)).filter(cookieMatch).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+ const cs=(await context.cookies(app)).filter(sessionCookie).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
  assert.ok(cs.length,"missing browser Auth cookie");
  const raw=cs.map(c=>c.value).join("");
  const session=JSON.parse(raw.startsWith("base64-")?Buffer.from(raw.slice(7),"base64url").toString():decodeURIComponent(raw));
@@ -117,7 +118,7 @@ async function probeGoogle(){
  const location=response.headers.get("location");
  if(response.status>=300&&response.status<400&&location&&new URL(location,url).hostname==="accounts.google.com"){
   mark("Google OAuth real staging provider redirect and PKCE (credential entry/callback NOT tested)");
- }else console.log("BLOCKED W08 Google OAuth: staging provider did not redirect to Google; HTTP "+response.status+" (no provider credential used)");
+ }else {const payload=await response.json().catch(()=>({})); const code=String(payload.error_code??payload.code??"unknown"); console.log("BLOCKED W08 Google OAuth: HTTP "+response.status+" code="+(/^[a-zA-Z0-9_-]+$/.test(code)?code:"unknown")+" (no provider credential used)");}
 }
 try{
  await probeGoogle();
@@ -156,13 +157,13 @@ try{
    mark(f.label+" login, wrong password, protected/demo separation, real organization selection and foreign denial");
    const before=await browserSession(context);
    const independent=make();const otherSession=unwrap(await independent.auth.signInWithPassword({email:f.email,password:f.password}),"independent session").session;
-   assert.notEqual(otherSession.refresh_token,before.refresh_token);
+   assert.ok(otherSession.refresh_token!==before.refresh_token,"independent refresh tokens must differ");
    const expired={...before,expires_at:1};
    await context.clearCookies({name:new RegExp("^"+cookieName.replaceAll("-","\\-")+"(?:\\.\\d+)?$")});
    await context.addCookies([{name:cookieName,value:"base64-"+Buffer.from(JSON.stringify(expired)).toString("base64url"),url:app,sameSite:"Lax"}]);
    await page.reload();await home(page,f.orgs[1]);
    const renewed=await browserSession(context);
-   assert.notEqual(renewed.refresh_token,before.refresh_token,"actual refresh must rotate");
+   assert.ok(renewed.refresh_token!==before.refresh_token,"actual refresh must rotate");
    await logout(page,context,mobile);
    await deniedRefresh(renewed.refresh_token,"local logout");
    const alive=unwrap(await independent.auth.refreshSession(),"other session survives local logout").session;
