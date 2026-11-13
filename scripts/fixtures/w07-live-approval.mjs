@@ -10,10 +10,12 @@ export async function verifyW07Approval({ b, clients, cookies, admin, http, reco
   const tool = "internal.validation";
   const capability = "validation.record.create";
   const browser = await chromium.launch();
+  const now = new Date().toISOString();
   try {
     unwrap(await admin.from("organization_integrations").insert({
       id: integrationId, organization_id: company.id, provider_key: "internal",
       display_name: "W07 synthetic internal validation", status: "connected", enabled: true, granted_scopes: [],
+      connected_at: now, last_verified_at: now, metadata: { verification_result: "verified" },
     }), "W07 fixture integration");
     // The Next development process and the database's default claim environment
     // must both authorize this internal tool, solely for the disposable company.
