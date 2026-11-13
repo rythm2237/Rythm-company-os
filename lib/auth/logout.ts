@@ -12,8 +12,8 @@ export function isSessionCookie(name: string, key: string) {
 }
 
 /** Revoke the current session best-effort; local cleanup must never wait indefinitely. */
-export async function endSession({ url, key, cookies, fetcher = fetch, timeoutMs = LOGOUT_TIMEOUT_MS }: {
-  url: string; key: string; cookies: Cookie[]; fetcher?: typeof fetch; timeoutMs?: number;
+export async function endSession({ url, key, cookies, fetcher = fetch, timeoutMs = LOGOUT_TIMEOUT_MS, scope = "local" }: {
+  url: string; key: string; cookies: Cookie[]; fetcher?: typeof fetch; timeoutMs?: number; scope?: "local" | "global";
 }) {
   const storageKey = `sb-${new URL(url).hostname.split(".")[0]}-auth-token`;
   const names = new Set(cookies.filter(c => isSessionCookie(c.name, storageKey)).map(c => c.name));
@@ -44,7 +44,7 @@ export async function endSession({ url, key, cookies, fetcher = fetch, timeoutMs
       timer = setTimeout(() => { controller.abort(); resolve(false); }, timeoutMs);
     });
     const revoked = await Promise.race([
-      client.auth.signOut({ scope: "local" }).then(result => !result.error, () => false),
+      client.auth.signOut({ scope }).then(result => !result.error, () => false),
       deadline,
     ]);
     return { revoked, cookieNames: [...names] };
