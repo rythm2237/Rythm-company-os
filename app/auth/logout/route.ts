@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { endSession } from "@/lib/auth/logout";
+import { safeAuthPath } from "@/lib/auth/redirect";
+import { commercialSignupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +16,10 @@ export async function POST(request: NextRequest) {
   if (!url || !key) return NextResponse.json({ error: "Sign out is temporarily unavailable. Please retry." }, { status: 503 });
 
   const { revoked, cookieNames } = await endSession({ url, key, cookies: request.cookies.getAll() });
-  const destination = new URL("/login", request.url);
+  const requested = new URL(safeAuthPath(request.nextUrl.searchParams.get("returnTo")), request.nextUrl.origin);
+  const destination = new URL(requested.pathname === "/signup"
+    ? commercialSignupPath(selectedCommercialOffer(requested.searchParams.get("product"), requested.searchParams.get("template")))
+    : "/login", request.url);
   if (!revoked) destination.searchParams.set("message", "Signed out on this device. The authentication service could not confirm remote session revocation.");
   const response = NextResponse.redirect(destination, 303);
   response.headers.set("Cache-Control", "no-store, max-age=0");
