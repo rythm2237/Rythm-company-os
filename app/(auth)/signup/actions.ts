@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { recordConfirmedPublicConversion } from "@/lib/analytics/server-conversions";
-import { SITE_ORIGIN } from "@/lib/seo/site";
+import { authCallbackOrigin } from "@/lib/auth/redirect";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { commercialSetupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
 
@@ -21,15 +21,6 @@ function signupErrorMessage(error: { message?: string; code?: string; status?: n
   }
 
   return "Account could not be created. Try again or use a different email address.";
-}
-
-export async function signOutForSignup(formData: FormData) {
-  const supabase = await createAuthServerClient();
-  await supabase.auth.signOut();
-  const requested = String(formData.get("returnTo") ?? "");
-  const url = new URL(requested, SITE_ORIGIN);
-  const selection = selectedCommercialOffer(url.searchParams.get("product"), url.searchParams.get("template"));
-  redirect(`/signup?product=${selection.productCode}${selection.templateKey ? `&template=${encodeURIComponent(selection.templateKey)}` : ""}`);
 }
 
 export async function signup(formData: FormData) {
@@ -58,7 +49,7 @@ export async function signup(formData: FormData) {
   }
 
   const setupPath = commercialSetupPath(selection);
-  const callbackUrl = new URL("/auth/callback", SITE_ORIGIN);
+  const callbackUrl = new URL("/auth/callback", authCallbackOrigin());
   callbackUrl.searchParams.set("next", setupPath);
   callbackUrl.searchParams.set("flow", "signup");
   const { data, error } = await supabase.auth.signUp({
