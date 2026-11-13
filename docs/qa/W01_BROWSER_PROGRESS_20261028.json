@@ -1,0 +1,35 @@
+{
+  "observed_date": "2026-10-28",
+  "w01": "NOT_ACCEPTED",
+  "application_source": "b6cb6a64b3fbce20f40548bec8a273094e33cf16",
+  "normal_user_browser": {
+    "email_password_signin": "PASS",
+    "home_owner_company_context": "PASS",
+    "session_reload": "PASS",
+    "crm_directory": "PASS",
+    "customer_create": "PASS",
+    "customer_update_status": "PASS",
+    "independent_database_customer_verification": "PASS",
+    "lead_create": "PASS",
+    "contract_without_explicit_grant": "DENIED_AS_EXPECTED",
+    "customer_scoped_contract_read_grant": "PASS",
+    "contract_read_after_grant": "PASS"
+  },
+  "pending": [
+    "Explicit owner approval for contract.create and contract.update for this synthetic account/customer before contract document privileged workflow",
+    "Grant revocation and deny verification",
+    "Signout/protected-page denial",
+    "Synthetic fixture cleanup and AI roadmap restoration"
+  ],
+  "auto_review": {
+    "action": "Grant contract.create to the synthetic test owner scoped to its synthetic customer",
+    "result": "REJECTED_PENDING_SPECIFIC_AUTHORIZATION",
+    "workaround_attempted": false
+  },
+  "availability": {
+    "production": "ACTIVE_HEALTHY",
+    "staging": "ACTIVE_HEALTHY",
+    "ai_roadmap": "TEMPORARILY_PAUSED_FOR_ONGOING_TESTS"
+  },
+  "no_production_mutation": true
+}
