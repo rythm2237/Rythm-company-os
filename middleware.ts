@@ -90,7 +90,7 @@ function carrySessionCookies(source: NextResponse, destination: NextResponse) {
   return destination;
 }
 
-function authRedirect(source: NextResponse, url: URL) {
+function authRedirect(source: NextResponse, url: Parameters<typeof NextResponse.redirect>[0]) {
   const destination = carrySessionCookies(source, NextResponse.redirect(url));
   destination.headers.set("Cache-Control", "no-store, max-age=0");
   return destination;
