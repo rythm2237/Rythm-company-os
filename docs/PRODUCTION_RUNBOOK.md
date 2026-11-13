@@ -51,3 +51,8 @@ Pricing variables must be updated whenever the configured model or its official 
 ## Current scope
 
 The production-hardened foundation permits only owner-triggered, low-risk, dry-run execution by `T-001 — Runtime Validation Agent`. It does not permit autonomous scheduling, specialist-agent execution, controlled-live execution, tools, browsing, messaging, or external writes.
+
+
+## Disaster recovery (W09)
+
+See [DISASTER_RECOVERY_RUNBOOK.md](./DISASTER_RECOVERY_RUNBOOK.md). This is a proposed runbook; W09 remains open until the full isolated restore, measured recovery, and owner sign-off gates are evidenced. Do not restore or roll back production during a drill.
