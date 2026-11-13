@@ -85,6 +85,17 @@ function sanitizeInternalError(request: NextRequest) {
   return NextResponse.redirect(safeUrl);
 }
 
+function carrySessionCookies(source: NextResponse, destination: NextResponse) {
+  for (const cookie of source.cookies.getAll()) destination.cookies.set(cookie);
+  return destination;
+}
+
+function authRedirect(source: NextResponse, url: URL) {
+  const destination = carrySessionCookies(source, NextResponse.redirect(url));
+  destination.headers.set("Cache-Control", "no-store, max-age=0");
+  return destination;
+}
+
 function apiError(error: string, status: number, headers?: HeadersInit) {
   return NextResponse.json(
     { ok: false, error },
@@ -137,7 +148,7 @@ export async function middleware(request: NextRequest) {
       "next",
       `${request.nextUrl.pathname}${request.nextUrl.search}`,
     );
-    return NextResponse.redirect(loginUrl);
+    return authRedirect(response, loginUrl);
   }
 
   const supabase = createServerClient(url, publishableKey, {
@@ -147,7 +158,7 @@ export async function middleware(request: NextRequest) {
       },
       setAll(cookiesToSet: SupabaseCookieToSet[]) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        response = carrySessionCookies(response, NextResponse.next({ request }));
         cookiesToSet.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options),
         );
@@ -160,7 +171,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (meetingApiLimit) {
-    if (!user) return apiError("Authentication required.", 401);
+    if (!user) return carrySessionCookies(response, apiError("Authentication required.", 401));
 
     const scope = `meeting:${pathname.split("/").at(-1) ?? "unknown"}`;
     const { data: rateData, error: rateError } = await supabase.rpc("consume_api_rate_limit", {
@@ -171,7 +182,7 @@ export async function middleware(request: NextRequest) {
 
     if (rateError) {
       console.error("api_rate_limit_failed", { path: pathname, code: rateError.code });
-      return apiError("Request protection is temporarily unavailable. Retry shortly.", 503, { "Retry-After": "10" });
+      return carrySessionCookies(response, apiError("Request protection is temporarily unavailable. Retry shortly.", 503, { "Retry-After": "10" }));
     }
 
     const rate = Array.isArray(rateData) ? rateData[0] : rateData;
@@ -180,11 +191,11 @@ export async function middleware(request: NextRequest) {
     const retryAfter = Math.max(1, Number(rate?.retry_after_seconds ?? meetingApiLimit.windowSeconds));
 
     if (!allowed) {
-      return apiError("Too many requests. Retry after the current rate-limit window.", 429, {
+      return carrySessionCookies(response, apiError("Too many requests. Retry after the current rate-limit window.", 429, {
         "Retry-After": String(retryAfter),
         "X-RateLimit-Limit": String(meetingApiLimit.limit),
         "X-RateLimit-Remaining": "0",
-      });
+      }));
     }
 
     response.headers.set("X-RateLimit-Limit", String(meetingApiLimit.limit));
@@ -198,7 +209,7 @@ export async function middleware(request: NextRequest) {
       "next",
       `${request.nextUrl.pathname}${request.nextUrl.search}`,
     );
-    return NextResponse.redirect(loginUrl);
+    return authRedirect(response, loginUrl);
   }
 
   if (isLogin && user && !forceLogin) {
@@ -215,7 +226,7 @@ export async function middleware(request: NextRequest) {
       const target = request.nextUrl.clone();
       target.pathname = "/home";
       target.search = "";
-      return NextResponse.redirect(target);
+      return authRedirect(response, target);
     }
 
     // An authenticated identity with no company access stays on Sign in.
