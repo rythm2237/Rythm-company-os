@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { FormEvent, useMemo, useState } from "react";
 import { createAuthBrowserClient } from "@/lib/supabase/auth-browser";
 
-const RESET_REDIRECT_URL = "https://rythm-os.com/auth/callback?next=/reset-password";
-
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({ redirectTo }: { redirectTo: string }) {
   const supabase = useMemo(() => createAuthBrowserClient(), []);
   const [email, setEmail] = useState("");
   const [pending, setPending] = useState(false);
@@ -28,7 +26,7 @@ export function ForgotPasswordForm() {
     }
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo: RESET_REDIRECT_URL,
+      redirectTo,
     });
 
     if (resetError) {

@@ -1,12 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { safeAuthPath } from "@/lib/auth/redirect";
 import { recordConfirmedPublicConversion } from "@/lib/analytics/server-conversions";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-
-function safeInternalPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/home";
-  return value;
-}
 
 function authFailureUrl(origin: string, next: string, flow: string | null) {
   const message = flow === "oauth" || flow === "oauth_signup"
@@ -44,7 +40,7 @@ function noCompanyAccessUrl(origin: string, next: string) {
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
-  const next = safeInternalPath(request.nextUrl.searchParams.get("next"));
+  const next = safeAuthPath(request.nextUrl.searchParams.get("next"));
   const flow = request.nextUrl.searchParams.get("flow");
   const provider = request.nextUrl.searchParams.get("provider") ?? "unknown";
   const origin = request.nextUrl.origin;

@@ -26,6 +26,8 @@ jobs:
           name: w06-privileged-boundary-inventory
           path: test-results/w06-privileged-boundaries.json
       - run: node scripts/w05-inventory-private-storage.mjs
+      - run: node --import tsx scripts/validate-w08-auth-redirect.ts
+      - run: node --import tsx scripts/validate-w08-session-restore.ts
       - run: node --import tsx scripts/validate-logout.ts
       - run: npm run test:company-logo
       - run: npm run test:enterprise-crm
@@ -83,6 +85,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: google-chrome --version
+      - run: node --import tsx scripts/validate-w08-auth-browser.ts
+        env:
+          CRM_BROWSER_CHANNEL: chrome
       - run: node --import tsx scripts/validate-logout-browser.ts
         env:
           CRM_BROWSER_CHANNEL: chrome

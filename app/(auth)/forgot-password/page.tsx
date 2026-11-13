@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { authCallbackOrigin } from "@/lib/auth/redirect";
 import { ForgotPasswordForm } from "./ForgotPasswordForm";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +11,8 @@ type Props = {
 
 export default async function ForgotPasswordPage({ searchParams }: Props) {
   const params = await searchParams;
+  const origin = authCallbackOrigin(process.env, (await headers()).get("host") ?? undefined);
+  const redirectTo = `${origin}/auth/callback?next=/reset-password`;
 
   return (
     <main className="auth-shell">
@@ -22,7 +26,7 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
         {params.message ? <p className="form-success" role="status">{params.message}</p> : null}
         {params.error ? <p className="form-error" role="alert">{params.error}</p> : null}
 
-        <ForgotPasswordForm />
+        <ForgotPasswordForm redirectTo={redirectTo} />
 
         <p className="security-note">For security, this page does not disclose whether an email is registered.</p>
         <p className="security-note">For the secure PKCE recovery flow, open the reset email in the same browser where you requested it.</p>

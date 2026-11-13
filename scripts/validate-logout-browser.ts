@@ -27,8 +27,8 @@ async function main(){
   // NextRequest canonicalizes loopback IP URLs to localhost; use the same host as the browser Origin.
   await new Promise<void>(r=>server.listen(0,"localhost",r));const origin=`http://localhost:${(server.address() as {port:number}).port}`;
   browser=await chromium.launch({headless:true,channel:process.env.CRM_BROWSER_CHANNEL||undefined});
-  for(mode of ["healthy","failure","stalled"]){
-   const context=await browser.newContext();const name="sb-logout-fixture-auth-token";
+  for(const mobile of [false,true]) for(mode of ["healthy","failure","stalled"]){
+   const context=await browser.newContext(mobile?{viewport:{width:390,height:844},isMobile:true,hasTouch:true}:{viewport:{width:1280,height:800}});const name="sb-logout-fixture-auth-token";
    const session={access_token:"fixture-access-token",refresh_token:"fixture-refresh-token",expires_at:Math.floor(Date.now()/1000)+3600,token_type:"bearer",user:{id:"fixture",aud:"authenticated",app_metadata:{},user_metadata:{}}};
    await context.addCookies([{name,value:"base64-"+Buffer.from(JSON.stringify(session)).toString("base64url"),url:origin},{name:"rythm_active_org",value:"fixture",url:origin},{name:"unrelated-preference",value:"preserved",url:origin}]);
    const page=await context.newPage();page.on("pageerror",e=>errors.push(e.message));await page.goto(origin+"/workspace");
@@ -36,10 +36,11 @@ async function main(){
    assert.ok(Date.now()-began<6000,"navigation is bounded even with an unresponsive auth service");
    assert.equal(await page.getByRole("heading",{name:"Sign in"}).count(),1,await page.content());
    const cookies=await context.cookies();assert.ok(!cookies.some(c=>c.name===name||c.name==="rythm_active_org"));assert.ok(cookies.some(c=>c.name==="unrelated-preference"));
-   assert.equal(new URL(page.url()).searchParams.has("message"),mode!=="healthy");await context.close();
+   assert.equal(new URL(page.url()).searchParams.has("message"),mode!=="healthy");
+   await page.reload();assert.ok(!((await context.cookies()).some(c=>c.name===name||c.name==="rythm_active_org")));assert.equal(new URL(page.url()).pathname,"/login");await context.close();
   }
-  assert.equal(authCalls,3);assert.deepEqual(errors,[]);
-  console.log("Logout browser passed: actual SignOutForm → native POST → actual route/SDK → 303 login, healthy/outage/stalled service, current-session cookie deletion and unrelated-cookie preservation. Isolated fixture, no production user sign-out.");
+  assert.equal(authCalls,6);assert.deepEqual(errors,[]);
+  console.log("Logout desktop/mobile browser passed: actual SignOutForm → native POST → actual route/SDK → 303 login, healthy/outage/stalled service, current-session cookie deletion and unrelated-cookie preservation. Isolated fixture, no production user sign-out.");
  }finally{globalThis.fetch=originalFetch;if(browser)await browser.close();await new Promise<void>(r=>server.close(()=>r()));}
 }
 main().catch(e=>{console.error(e);process.exitCode=1});

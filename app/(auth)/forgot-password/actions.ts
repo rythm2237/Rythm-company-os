@@ -1,10 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { SITE_ORIGIN } from "@/lib/seo/site";
+import { headers } from "next/headers";
+import { authCallbackOrigin } from "@/lib/auth/redirect";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
-
-const RESET_REDIRECT_URL = `${SITE_ORIGIN}/auth/callback?next=/reset-password`;
 
 export async function requestPasswordReset(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -15,7 +14,7 @@ export async function requestPasswordReset(formData: FormData) {
 
   const supabase = await createAuthServerClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: RESET_REDIRECT_URL,
+    redirectTo: `${authCallbackOrigin(process.env, (await headers()).get("host") ?? undefined)}/auth/callback?next=/reset-password`,
   });
 
   if (error) {

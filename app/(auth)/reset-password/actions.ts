@@ -1,6 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { endSession } from "@/lib/auth/logout";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
 export async function updatePassword(formData: FormData) {
@@ -34,6 +36,13 @@ export async function updatePassword(formData: FormData) {
     redirect(`/reset-password?error=${encodeURIComponent("Password could not be updated. Request a new reset link and try again.")}`);
   }
 
-  await supabase.auth.signOut();
-  redirect(`/login?message=${encodeURIComponent("Password updated successfully. Sign in with your new password.")}`);
+  // Password changes intentionally revoke all sessions, but cleanup remains bounded.
+  const jar = await cookies();
+  const { revoked, cookieNames } = await endSession({
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL!, key: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    cookies: jar.getAll(), scope: "global",
+  });
+  for (const name of [...cookieNames, "rythm_active_org"]) jar.set(name, "", { path: "/", maxAge: 0, expires: new Date(0) });
+  const message = revoked ? "Password updated successfully. Sign in with your new password." : "Password updated and signed out on this device. Remote session revocation could not be confirmed. Sign in with your new password.";
+  redirect(`/login?message=${encodeURIComponent(message)}`);
 }

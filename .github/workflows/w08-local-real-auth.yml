@@ -1,0 +1,99 @@
+name: W08 local real Auth (disposable)
+on:
+  pull_request:
+    paths:
+      - 'scripts/validate-w08-local-real-auth.mjs'
+      - 'scripts/fixtures/w08-local-auth.sql'
+      - '.github/workflows/w08-local-real-auth.yml'
+      - 'app/(auth)/**'
+      - 'app/auth/logout/**'
+      - 'lib/auth/**'
+      - 'middleware.ts'
+permissions:
+  contents: read
+concurrency:
+  group: w08-local-auth-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  local-auth:
+    if: github.head_ref == 'security/w08-auth-lifecycle'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      AUTH_SITE_ORIGIN: http://localhost:3000
+      RYTHM_ENV: staging
+      RYTHM_AGENT_EXECUTION_ENABLED: 'false'
+      RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v3.2.0
+        with:
+          version: '2.108.0'
+      - name: Start unlinked disposable Supabase (no hosted credentials)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/w08-local"
+          cd "$RUNNER_TEMP/w08-local"
+          supabase init
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('supabase/config.toml')
+          s=p.read_text()
+          def set_key(section,key,value):
+              global s
+              pattern=r'(?m)(^\['+re.escape(section)+r'\]\s*\n)([\s\S]*?)(?=^\[|\Z)'
+              m=re.search(pattern,s)
+              assert m,section
+              body=m.group(2)
+              body,n=re.subn(r'(?m)^'+re.escape(key)+r'\s*=.*$',key+' = '+value,body)
+              if not n: body=key+' = '+value+'\n'+body
+              s=s[:m.start(2)]+body+s[m.end(2):]
+          set_key('auth','site_url','"http://localhost:3000"')
+          set_key('auth','additional_redirect_urls','["http://localhost:3000/auth/callback", "http://localhost:3000/auth/callback?**"]')
+          set_key('auth.email','enable_confirmations','true')
+          set_key('auth.email','max_frequency','"1s"')
+          p.write_text(s)
+          PY
+          supabase start > "$RUNNER_TEMP/w08-supabase.log" 2>&1
+          supabase status -o env > "$RUNNER_TEMP/w08-local.env"
+          chmod 600 "$RUNNER_TEMP/w08-local.env"
+      - name: Real Auth with desktop/mobile browser and local mail capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/w08-local.env"
+          test "$API_URL" = "http://127.0.0.1:54321"
+          [[ "$DB_URL" == *"127.0.0.1:54322/"* ]]
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/w08-local-auth.sql
+          export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
+          export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$ANON_KEY"
+          export W08_LOCAL_SERVICE_KEY="$SERVICE_ROLE_KEY"
+          # Only loopback Auth and DB. Never inject hosted/provider credentials.
+          env -u W08_LOCAL_SERVICE_KEY ./node_modules/.bin/next build > "$RUNNER_TEMP/w08-next-build.log" 2>&1
+          env -u W08_LOCAL_SERVICE_KEY ./node_modules/.bin/next start --hostname localhost --port 3000 > "$RUNNER_TEMP/w08-next.log" 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:3000/login >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:3000/login >/dev/null
+          node scripts/validate-w08-local-real-auth.mjs
+      - name: Destroy disposable local services
+        if: always()
+        shell: bash
+        run: |
+          if test -d "$RUNNER_TEMP/w08-local/supabase"; then
+            cd "$RUNNER_TEMP/w08-local"
+            supabase stop --no-backup
+          fi
+          rm -f "$RUNNER_TEMP/w08-local.env"

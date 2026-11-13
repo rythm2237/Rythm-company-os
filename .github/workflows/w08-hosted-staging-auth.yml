@@ -1,0 +1,77 @@
+name: W08 hosted staging Auth (explicit authorization)
+on:
+  pull_request:
+    types: [labeled]
+permissions:
+  contents: read
+concurrency:
+  group: w08-hosted-staging-auth
+  cancel-in-progress: false
+jobs:
+  hosted-auth:
+    if: ${{ github.event.label.name == 'w08-staging-authorized' && github.event.pull_request.number == 455 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'security/w08-auth-lifecycle' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    environment: w02-staging
+    env:
+      W08_STAGING_REF: ${{ vars.W02_STAGING_REF }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.W02_STAGING_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.W02_STAGING_ANON_KEY }}
+      AUTH_SITE_ORIGIN: http://localhost:3000
+      RYTHM_ENV: staging
+      RYTHM_AGENT_EXECUTION_ENABLED: 'false'
+      RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Verify staging-only configuration
+        run: |
+          test "$W08_STAGING_REF" = "viqjdgohtxqkrdgwtull"
+          test "$NEXT_PUBLIC_SUPABASE_URL" = "https://viqjdgohtxqkrdgwtull.supabase.co"
+          test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Wait for authorized staging restore
+        env:
+          W08_STAGING_SERVICE_ROLE_KEY: ${{ secrets.W02_STAGING_SERVICE_ROLE_KEY }}
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
+          assert.equal(url,'https://viqjdgohtxqkrdgwtull.supabase.co');
+          const key=process.env.W08_STAGING_SERVICE_ROLE_KEY;
+          assert.ok(key,'staging admin credential missing');
+          let stable=0;
+          for(let i=0;i<72;i++){
+            try {
+              const headers={apikey:key,Authorization:'Bearer '+key};
+              const responses=await Promise.all(['/rest/v1/organizations?select=id&limit=0','/auth/v1/admin/users?page=1&per_page=1'].map(path=>fetch(url+path,{headers,signal:AbortSignal.timeout(5000)})));
+              stable=responses.every(r=>r.ok)?stable+1:0;
+              if(stable>=2){console.log('PASS staging Auth and database readiness');process.exit(0);}
+            } catch {stable=0;}
+            await new Promise(r=>setTimeout(r,5000));
+          }
+          throw Error('Staging did not become ready in the bounded window');
+          JS
+      - name: Run actual staging Auth browser matrix
+        env:
+          W08_STAGING_SERVICE_ROLE_KEY: ${{ secrets.W02_STAGING_SERVICE_ROLE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -u W08_STAGING_SERVICE_ROLE_KEY ./node_modules/.bin/next build > "$RUNNER_TEMP/w08-next-build.log" 2>&1
+          env -u W08_STAGING_SERVICE_ROLE_KEY ./node_modules/.bin/next start --hostname localhost --port 3000 > "$RUNNER_TEMP/w08-hosted-next.log" 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:3000/login >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:3000/login >/dev/null
+          node scripts/validate-w08-hosted-staging.mjs

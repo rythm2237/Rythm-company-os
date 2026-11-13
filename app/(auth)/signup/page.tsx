@@ -3,12 +3,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { signInWithOAuth } from "../oauth-actions";
-import { signup, signOutForSignup } from "./actions";
+import { signup } from "./actions";
 import { commercialSetupPath, commercialSignupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
 
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: Promise<{ error?: string; product?: string; template?: string }> };
+type Props = { searchParams: Promise<{ error?: string; message?: string; product?: string; template?: string }> };
 
 export default async function SignupPage({ searchParams }: Props) {
   const params = await searchParams;
@@ -18,9 +18,9 @@ export default async function SignupPage({ searchParams }: Props) {
   const selectedTemplate = selection.templateKey;
   const supabase = await createAuthServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: memberships } = user
-    ? await supabase.from("organization_members").select("organization_id").eq("user_id", user.id).limit(1)
-    : { data: null };
+  const { data: memberships, error: membershipError } = user
+    ? await supabase.rpc("list_my_organizations")
+    : { data: null, error: null };
   const loginNext = commercialSetupPath(selection);
 
   return (
@@ -34,19 +34,19 @@ export default async function SignupPage({ searchParams }: Props) {
         </div>
 
         {params.error ? <p className="form-error" role="alert">{params.error}</p> : null}
+        {params.message ? <p className="form-success" role="status">{params.message}</p> : null}
 
         {user ? (
           <div className="auth-form" style={{ marginTop: 18 }}>
             <p className="form-error" role="alert" style={{ margin: 0 }}>
               You are currently signed in as {user.email ?? "an existing account"}.
             </p>
-            <Link href={memberships?.length
+            {membershipError ? <p role="alert">Organization access could not be checked. Please retry.</p> : <Link href={memberships?.length
               ? selectedTemplate ? `/studio/templates?template=${encodeURIComponent(selectedTemplate)}` : "/studio/templates"
               : commercialSetupPath(selection)}>
               Continue with this account
-            </Link>
-            <form action={signOutForSignup}>
-              <input type="hidden" name="returnTo" value={commercialSignupPath(selection)} />
+            </Link>}
+            <form action={`/auth/logout?returnTo=${encodeURIComponent(commercialSignupPath(selection))}`} method="post">
               <SubmitButton type="submit">Sign out and create another account</SubmitButton>
             </form>
             <Link href="/home">Return to current company</Link>
