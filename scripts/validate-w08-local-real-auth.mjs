@@ -69,6 +69,11 @@ async function logout(page,context,mobile){
  assert.ok(!(await context.cookies(app)).some(c=>/^sb-127-auth-token/.test(c.name)||c.name==="rythm_active_org"));
  await page.reload(); await page.waitForURL(urlPath("/login"));
 }
+const failures=[];
+async function assertCompany(page,name){
+ await page.locator(".command-header .eyebrow").filter({hasText:name}).waitFor({state:"attached",timeout:10000});
+ await page.getByLabel("Current company: "+name,{exact:true}).waitFor({state:"visible",timeout:10000});
+}
 const browser=await chromium.launch({headless:true,channel:"chrome"});
 try{
  for(const mobile of [false,true]){
@@ -102,9 +107,17 @@ try{
    if(mobile)await page.getByRole("button",{name:"Menu",exact:true}).click();
    await page.getByLabel("Active company").selectOption(B);
    await page.getByRole("button",{name:"Switch",exact:true}).click();
-   await page.locator(".command-header .eyebrow").filter({hasText:"W08 "+label+" B"}).waitFor();
-   await page.reload();await page.locator(".command-header .eyebrow").filter({hasText:"W08 "+label+" B"}).waitFor();
-   mark(label+" return user organization switch and reload (local fixture RPC)");
+   const expectedCompany="W08 "+label+" B";
+   try{await assertCompany(page,expectedCompany);mark(label+" immediate organization switch");}
+   catch{
+    failures.push(label+" immediate organization switch");
+    console.log("FAIL W08 local real Auth: "+label+" immediate organization switch; checking fresh request separately");
+    const heading=page.locator(".command-header .eyebrow");
+    const value=await heading.textContent().catch(()=>null);
+    console.log("W08 organization diagnostic: heading="+(value?.includes("W08 "+label+" A")?"A":value?.includes(expectedCompany)?"B":"missing/other")+" visible="+await heading.isVisible().catch(()=>false)+" badgeB="+await page.getByLabel("Current company: "+expectedCompany,{exact:true}).isVisible().catch(()=>false));
+   }
+   await page.reload();await assertCompany(page,expectedCompany);
+   mark(label+" selected organization persisted on fresh request (local fixture RPC)");
    await logout(page,context,mobile);
    await revoked(signup.s.refresh_token,"signup session");
    await page.goto(app+"/settings");await page.waitForURL(urlPath("/login"));
@@ -143,13 +156,14 @@ try{
    await login(page,email,password);
    await page.getByRole("alert").filter({hasText:"Invalid email or password."}).waitFor();
    await login(page,email,newPassword);await page.waitForURL(urlPath("/home"),{timeout:30000});
-   await page.locator(".command-header .eyebrow").filter({hasText:"W08 "+label+" B"}).waitFor();
+   await assertCompany(page,"W08 "+label+" B");
    await page.goto(app+"/signup?product=ready_company");
    await page.getByRole("button",{name:"Sign out and create another account"}).click();
    await page.waitForURL(urlPath("/signup"));
    await page.getByRole("button",{name:"Create account",exact:true}).waitFor();
    assert.ok(!(await context.cookies(app)).some(c=>/^sb-127-auth-token/.test(c.name)||c.name==="rythm_active_org"));
    mark(label+" real recovery/global revocation/new password/account switch");
-  }finally{await context.close();}
+  }catch(error){failures.push(label+" lifecycle: "+(error?.name??"Error"));console.log("FAIL W08 local real Auth: "+label+" lifecycle: "+(error?.message??"unknown").split("\n")[0]);}finally{await context.close();}
  }
 }finally{await browser.close();}
+assert.equal(failures.length,0,"W08 failures: "+failures.join("; "));
