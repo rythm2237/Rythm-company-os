@@ -65,7 +65,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          env -u W08_STAGING_SERVICE_ROLE_KEY npm run dev -- --hostname localhost --port 3000 > "$RUNNER_TEMP/w08-hosted-next.log" 2>&1 &
+          env -u W08_STAGING_SERVICE_ROLE_KEY ./node_modules/.bin/next build > "$RUNNER_TEMP/w08-next-build.log" 2>&1
+          env -u W08_STAGING_SERVICE_ROLE_KEY ./node_modules/.bin/next start --hostname localhost --port 3000 > "$RUNNER_TEMP/w08-hosted-next.log" 2>&1 &
           APP_PID=$!
           trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
           for i in $(seq 1 90); do
