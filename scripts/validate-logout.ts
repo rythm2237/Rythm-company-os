@@ -21,15 +21,15 @@ async function main() {
   assert.equal(result.revoked,false);assert.equal(calls,1,"logout must not retry refresh during an outage");
  }
  const network=await endSession({url,key,cookies:[cookie()],fetcher:async()=>{throw new Error("offline")}});assert.equal(network.revoked,false);
- assert.equal(isSessionCookie(name+".0",name),true);assert.equal(isSessionCookie(name+"-code-verifier.1",name),true);assert.equal(isSessionCookie("sb-other-auth-token",name),false);assert.equal(isSessionCookie(name+".bad",name),false);
+ assert.equal(isSessionCookie(name+".0",name),true);assert.equal(isSessionCookie(name+"-code-verifier.1",name),true);assert.equal(isSessionCookie(name+"-flows-code-verifier",name),true);assert.equal(isSessionCookie(name+"-flow-cc1a5e865844459f74cd8dd92c35b5ca-code-verifier.1",name),true);assert.equal(isSessionCookie("sb-other-auth-token-flows-code-verifier",name),false);assert.equal(isSessionCookie(name+"-flow-other-preference",name),false);assert.equal(isSessionCookie("sb-other-auth-token",name),false);assert.equal(isSessionCookie(name+".bad",name),false);
  const foreign=await POST(new NextRequest("https://app.example/auth/logout",{method:"POST",headers:{origin:"https://attacker.example"}}));assert.equal(foreign.status,403);
  const absent=await POST(new NextRequest("https://app.example/auth/logout",{method:"POST"}));assert.equal(absent.status,403);
  const oldFetch=globalThis.fetch,oldUrl=process.env.NEXT_PUBLIC_SUPABASE_URL,oldKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
  try {
   process.env.NEXT_PUBLIC_SUPABASE_URL=url;process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=key;globalThis.fetch=healthy;
-  const result=await POST(new NextRequest("https://app.example/auth/logout",{method:"POST",headers:{origin:"https://app.example",cookie:`${name}=${cookie().value}; ${name}.1=old-chunk; sb-other-auth-token=preserve; rythm_active_org=old`}}));
+  const result=await POST(new NextRequest("https://app.example/auth/logout",{method:"POST",headers:{origin:"https://app.example",cookie:`${name}=${cookie().value}; ${name}.1=old-chunk; sb-other-auth-token=preserve; ${name}-flows-code-verifier=synthetic; ${name}-flow-cc1a5e865844459f74cd8dd92c35b5ca-code-verifier=synthetic; rythm_active_org=old`}}));
   assert.equal(result.status,303);assert.equal(result.headers.get("location"),"https://app.example/login");assert.match(result.headers.get("cache-control")!,/no-store/);
-  const deleted=result.cookies.getAll();assert.ok(deleted.some(c=>c.name===name&&c.maxAge===0));assert.ok(deleted.some(c=>c.name===name+".1"&&c.maxAge===0));assert.ok(deleted.some(c=>c.name==="rythm_active_org"));assert.ok(!deleted.some(c=>c.name==="sb-other-auth-token"));
+  const deleted=result.cookies.getAll();assert.ok(deleted.some(c=>c.name===name&&c.maxAge===0));assert.ok(deleted.some(c=>c.name===name+".1"&&c.maxAge===0));assert.ok(deleted.some(c=>c.name==="rythm_active_org"));assert.ok(deleted.some(c=>c.name===name+"-flows-code-verifier"&&c.maxAge===0));assert.ok(deleted.some(c=>c.name===name+"-flow-cc1a5e865844459f74cd8dd92c35b5ca-code-verifier"&&c.maxAge===0));assert.ok(!deleted.some(c=>c.name==="sb-other-auth-token"));
   const switchTo="/signup?product=ready_company&template=ready_ai_advertising_agency_v1";
   for(const [target,expected] of [[switchTo,switchTo],["//evil.invalid","/login"],["/\\\\evil.invalid","/login"],["/projects","/login"]]) {
    const next=await POST(new NextRequest("https://app.example/auth/logout?returnTo="+encodeURIComponent(target),{method:"POST",headers:{origin:"https://app.example",cookie:`${name}=${cookie().value}; rythm_active_org=old`}}));
