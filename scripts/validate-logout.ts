@@ -11,6 +11,8 @@ async function main() {
  const healthy: typeof fetch = async input => { requests.push(String(input)); return new Response(null,{status:204}); };
  const ok = await endSession({url,key,cookies:[cookie()],fetcher:healthy});
  assert.equal(ok.revoked,true); assert.equal(new URL(requests[0]).searchParams.get("scope"),"local");
+ const globalResult=await endSession({url,key,cookies:[cookie()],fetcher:healthy,scope:"global"});
+ assert.equal(globalResult.revoked,true);assert.equal(new URL(requests.at(-1)!).searchParams.get("scope"),"global");
  const stalled: typeof fetch = () => new Promise(()=>{});
  const start=performance.now();const timeout=await endSession({url,key,cookies:[cookie()],fetcher:stalled,timeoutMs:30});
  assert.equal(timeout.revoked,false);assert.ok(performance.now()-start<500,"stalled fetch cannot hold logout open");assert.ok(timeout.cookieNames.includes(name));
@@ -28,6 +30,12 @@ async function main() {
   const result=await POST(new NextRequest("https://app.example/auth/logout",{method:"POST",headers:{origin:"https://app.example",cookie:`${name}=${cookie().value}; ${name}.1=old-chunk; sb-other-auth-token=preserve; rythm_active_org=old`}}));
   assert.equal(result.status,303);assert.equal(result.headers.get("location"),"https://app.example/login");assert.match(result.headers.get("cache-control")!,/no-store/);
   const deleted=result.cookies.getAll();assert.ok(deleted.some(c=>c.name===name&&c.maxAge===0));assert.ok(deleted.some(c=>c.name===name+".1"&&c.maxAge===0));assert.ok(deleted.some(c=>c.name==="rythm_active_org"));assert.ok(!deleted.some(c=>c.name==="sb-other-auth-token"));
+  const switchTo="/signup?product=ready_company&template=ready_ai_advertising_agency_v1";
+  for(const [target,expected] of [[switchTo,switchTo],["//evil.invalid","/login"],["/\\\\evil.invalid","/login"],["/projects","/login"]]) {
+   const next=await POST(new NextRequest("https://app.example/auth/logout?returnTo="+encodeURIComponent(target),{method:"POST",headers:{origin:"https://app.example",cookie:`${name}=${cookie().value}; rythm_active_org=old`}}));
+   assert.equal(next.status,303);assert.equal(next.headers.get("location"),"https://app.example"+expected);
+   assert.ok(next.cookies.getAll().some(c=>c.name==="rythm_active_org"&&c.maxAge===0));
+  }
   const anonymous=await POST(new NextRequest("https://app.example/auth/logout",{method:"POST",headers:{origin:"https://app.example"}}));assert.equal(anonymous.status,303);
  } finally {globalThis.fetch=oldFetch;if(oldUrl===undefined)delete process.env.NEXT_PUBLIC_SUPABASE_URL;else process.env.NEXT_PUBLIC_SUPABASE_URL=oldUrl;if(oldKey===undefined)delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;else process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=oldKey;}
  console.log("Logout passed: real SDK local revocation, hung/failed network deadlines, no refresh retries, cookie chunks, tenant isolation, same-origin POST, 303/no-store and anonymous logout (isolated synthetic session).");
