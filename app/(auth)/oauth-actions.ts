@@ -2,6 +2,7 @@
 
 import type { Provider } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { authCallbackOrigin, safeAuthPath } from "@/lib/auth/redirect";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { commercialSetupPath, commercialSignupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
@@ -28,7 +29,7 @@ export async function signInWithOAuth(formData: FormData) {
   }
 
   const provider = rawProvider as SupportedOAuthProvider;
-  const callbackUrl = new URL("/auth/callback", authCallbackOrigin());
+  const callbackUrl = new URL("/auth/callback", authCallbackOrigin(process.env, (await headers()).get("host") ?? undefined));
   callbackUrl.searchParams.set("next", next);
   callbackUrl.searchParams.set("flow", source === "signup" ? "oauth_signup" : "oauth");
   callbackUrl.searchParams.set("provider", provider);
