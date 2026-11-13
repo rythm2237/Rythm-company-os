@@ -78,7 +78,8 @@ jobs:
           export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$ANON_KEY"
           export W08_LOCAL_SERVICE_KEY="$SERVICE_ROLE_KEY"
           # Only loopback Auth and DB. Never inject hosted/provider credentials.
-          npm run dev -- --hostname localhost --port 3000 > "$RUNNER_TEMP/w08-next.log" 2>&1 &
+          env -u W08_LOCAL_SERVICE_KEY ./node_modules/.bin/next build > "$RUNNER_TEMP/w08-next-build.log" 2>&1
+          env -u W08_LOCAL_SERVICE_KEY ./node_modules/.bin/next start --hostname localhost --port 3000 > "$RUNNER_TEMP/w08-next.log" 2>&1 &
           APP_PID=$!
           trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
           for i in $(seq 1 90); do
