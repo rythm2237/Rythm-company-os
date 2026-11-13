@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { signInWithOAuth } from "../oauth-actions";
-import { signup, signOutForSignup } from "./actions";
+import { signup } from "./actions";
 import { commercialSetupPath, commercialSignupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
 
 export const dynamic = "force-dynamic";
@@ -45,8 +45,7 @@ export default async function SignupPage({ searchParams }: Props) {
               : commercialSetupPath(selection)}>
               Continue with this account
             </Link>
-            <form action={signOutForSignup}>
-              <input type="hidden" name="returnTo" value={commercialSignupPath(selection)} />
+            <form action={`/auth/logout?returnTo=${encodeURIComponent(commercialSignupPath(selection))}`} method="post">
               <SubmitButton type="submit">Sign out and create another account</SubmitButton>
             </form>
             <Link href="/home">Return to current company</Link>
