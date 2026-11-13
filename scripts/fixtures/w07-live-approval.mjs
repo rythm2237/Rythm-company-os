@@ -12,6 +12,9 @@ export async function verifyW07Approval({ b, clients, cookies, admin, http, reco
   const browser = await chromium.launch();
   const now = new Date().toISOString();
   try {
+    unwrap(await admin.from("organization_entitlements").update({ status: "active" })
+      .eq("organization_id", company.id).eq("plan_code", "w03_synthetic")
+      .eq("status", "pending").select("id").single(), "W07 fixture entitlement");
     unwrap(await admin.from("organization_integrations").insert({
       id: integrationId, organization_id: company.id, provider_key: "internal",
       display_name: "W07 synthetic internal validation", status: "connected", enabled: true, granted_scopes: [],
@@ -76,6 +79,8 @@ export async function verifyW07Approval({ b, clients, cookies, admin, http, reco
     const integrationCleanup = await admin.from("organization_integrations")
       .update({ enabled: false, status: "disconnected" })
       .eq("organization_id", company.id).eq("id", integrationId);
-    assert.ok(!rolloutCleanup.error && !integrationCleanup.error, "W07 synthetic controls could not be quarantined");
+    const entitlementCleanup = await admin.from("organization_entitlements").update({ status: "pending" })
+      .eq("organization_id", company.id).eq("plan_code", "w03_synthetic").eq("status", "active");
+    assert.ok(!rolloutCleanup.error && !integrationCleanup.error && !entitlementCleanup.error, "W07 synthetic controls could not be quarantined");
   }
 }
