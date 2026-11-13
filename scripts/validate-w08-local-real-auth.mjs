@@ -62,11 +62,18 @@ async function login(page,email,password,next="/home"){
 async function logout(page,context,mobile){
  if(mobile)await page.getByRole("button",{name:"Menu",exact:true}).click();
  const start=performance.now();
- await page.getByRole("button",{name:"Sign out",exact:true}).click();
+ const button=page.getByRole("button",{name:"Sign out",exact:true});
+ await button.scrollIntoViewIfNeeded({timeout:10000});
+ const post=page.waitForResponse(r=>r.url()===app+"/auth/logout"&&r.request().method()==="POST",{timeout:12000});
+ await button.click({timeout:12000});
+ const response=await post;
+ assert.equal(response.status(),303,"native signout POST redirect");
  await page.waitForURL(urlPath("/login"),{timeout:10000});
  assert.ok(performance.now()-start<6500,"browser signout exceeded bound");
  assert.ok(!new URL(page.url()).searchParams.has("message"),"remote revoke unconfirmed");
- assert.ok(!(await context.cookies(app)).some(c=>/^sb-127-auth-token/.test(c.name)||c.name==="rythm_active_org"));
+ const remaining=(await context.cookies(app)).filter(c=>/^sb-127-auth-token/.test(c.name)||c.name==="rythm_active_org");
+ if(remaining.length)console.log("W08 logout remaining cookie names/paths: "+JSON.stringify(remaining.map(c=>({name:c.name,path:c.path,secure:c.secure}))));
+ assert.equal(remaining.length,0,"signout must remove session and organization cookies");
  await page.reload(); await page.waitForURL(urlPath("/login"));
 }
 const failures=[];
@@ -81,7 +88,7 @@ try{
   const label=mobile?"mobile":"desktop";
   const context=await browser.newContext(mobile?{viewport:{width:390,height:844},isMobile:true,hasTouch:true}:{viewport:{width:1280,height:900}});
   await context.route("**/*",async route=>{const u=new URL(route.request().url());if(u.origin===app||u.origin===api||u.origin==="http://localhost:54321")await route.continue();else await route.abort();});
-  const page=await context.newPage();
+  const page=await context.newPage();page.setDefaultTimeout(12000);
   try{
    const id=randomUUID(),email="w08-"+id+"@example.com",password=pw(),newPassword=pw();
    await page.goto(app+"/home");await page.waitForURL(urlPath("/login"));
@@ -166,7 +173,7 @@ try{
    await page.getByRole("button",{name:"Create account",exact:true}).waitFor();
    assert.ok(!(await context.cookies(app)).some(c=>/^sb-127-auth-token/.test(c.name)||c.name==="rythm_active_org"));
    mark(label+" real recovery/global revocation/new password/account switch");
-  }catch(error){failures.push(label+" lifecycle: "+(error?.name??"Error"));console.log("FAIL W08 local real Auth: "+label+" lifecycle: "+(error?.message??"unknown").split("\n")[0]);}finally{await context.close();}
+  }catch(error){failures.push(label+" lifecycle: "+(error?.name??"Error"));console.log("FAIL W08 local real Auth: "+label+" lifecycle: "+(error?.message??"unknown").split("\n").slice(0,12).join("\n"));console.log("W08 failed at "+String(error?.stack??"").split("\n").find(l=>l.includes("validate-w08-local-real-auth.mjs:")));}finally{await context.close();}
  }
 }finally{await browser.close();}
 assert.equal(failures.length,0,"W08 failures: "+failures.join("; "));
