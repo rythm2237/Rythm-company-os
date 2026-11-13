@@ -103,7 +103,24 @@ async function recoveryCookies(context,f){
  await context.addCookies([...jar].filter(([,v])=>v).map(([name,value])=>({name,value,url:app,sameSite:"Lax"})));
 }
 let browser;
+async function probeGoogle(){
+ const oauth=createClient(url,anon,{auth:{flowType:"pkce",persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+ const callback=app+"/auth/callback?next=%2Fhome&flow=oauth&provider=google";
+ const started=await oauth.auth.signInWithOAuth({provider:"google",options:{redirectTo:callback,skipBrowserRedirect:true}});
+ if(started.error||!started.data.url){console.log("BLOCKED W08 Google OAuth: SDK initiation unavailable");return;}
+ const destination=new URL(started.data.url);
+ assert.equal(destination.origin,url);assert.equal(destination.pathname,"/auth/v1/authorize");
+ assert.equal(destination.searchParams.get("provider"),"google");
+ assert.equal(destination.searchParams.get("redirect_to"),callback);
+ assert.ok(destination.searchParams.get("code_challenge"),"PKCE challenge required");
+ const response=await fetch(destination,{redirect:"manual",headers:{apikey:anon},signal:AbortSignal.timeout(10000)});
+ const location=response.headers.get("location");
+ if(response.status>=300&&response.status<400&&location&&new URL(location,url).hostname==="accounts.google.com"){
+  mark("Google OAuth real staging provider redirect and PKCE (credential entry/callback NOT tested)");
+ }else console.log("BLOCKED W08 Google OAuth: staging provider did not redirect to Google; HTTP "+response.status+" (no provider credential used)");
+}
 try{
+ await probeGoogle();
  const desktop=await fixture("desktop"),mobileFixture=await fixture("mobile");
  browser=await chromium.launch({headless:true,channel:"chrome"});
  for(const [f,other,mobile] of [[desktop,mobileFixture,false],[mobileFixture,desktop,true]]){
@@ -125,6 +142,11 @@ try{
    assert.deepEqual(new Set(memberships.map(x=>x.organization_id)),new Set(f.orgs.map(x=>x.id)));
    const foreign=await a.rpc("set_active_organization",{target_org_id:other.orgs[0].id});
    assert.ok(foreign.error||foreign.data!==other.orgs[0].id,"foreign organization switch succeeded");
+   const foreignPost=await context.request.post(app+"/organization-context/switch",{form:{organizationId:other.orgs[0].id},headers:{origin:app},maxRedirects:0});
+   assert.equal(foreignPost.status(),303);assert.ok(new URL(foreignPost.headers().location,app).searchParams.has("error"),"foreign native switch must be rejected");
+   const cross=await context.request.post(app+"/organization-context/switch",{form:{organizationId:f.orgs[1].id},headers:{origin:"https://attacker.invalid","sec-fetch-site":"cross-site"},maxRedirects:0});
+   assert.equal(cross.status(),403,"cross-origin switch must be rejected");
+   mark(f.label+" native switch rejects foreign membership and cross-origin request");
    if(mobile)await page.getByRole("button",{name:"Menu",exact:true}).click();
    await page.getByLabel("Active company").selectOption(f.orgs[1].id);
    const post=page.waitForResponse(r=>r.url()===app+"/organization-context/switch"&&r.request().method()==="POST",{timeout:15000});
