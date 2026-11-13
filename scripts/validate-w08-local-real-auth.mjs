@@ -71,7 +71,8 @@ async function logout(page,context,mobile){
 }
 const failures=[];
 async function assertCompany(page,name){
- await page.locator(".command-header .eyebrow").filter({hasText:name}).waitFor({state:"attached",timeout:10000});
+ await page.locator("main.simple-home").waitFor({state:"visible",timeout:15000});
+ await page.locator(".command-header .eyebrow").filter({hasText:name}).waitFor({state:"attached",timeout:15000});
  await page.getByLabel("Current company: "+name,{exact:true}).waitFor({state:"visible",timeout:10000});
 }
 const browser=await chromium.launch({headless:true,channel:"chrome"});
@@ -106,14 +107,16 @@ try{
    await page.goto(app+"/home");await page.getByRole("heading",{name:"What would you like RYTHM to do?"}).waitFor({timeout:30000});
    if(mobile)await page.getByRole("button",{name:"Menu",exact:true}).click();
    await page.getByLabel("Active company").selectOption(B);
+   const post=page.waitForResponse(r=>r.url()===app+"/organization-context/switch"&&r.request().method()==="POST",{timeout:15000});
    await page.getByRole("button",{name:"Switch",exact:true}).click();
+   assert.equal((await post).status(),303,"native organization switch redirect");
    const expectedCompany="W08 "+label+" B";
    try{await assertCompany(page,expectedCompany);mark(label+" immediate organization switch");}
    catch{
     failures.push(label+" immediate organization switch");
     console.log("FAIL W08 local real Auth: "+label+" immediate organization switch; checking fresh request separately");
     const heading=page.locator(".command-header .eyebrow");
-    const value=await heading.textContent().catch(()=>null);
+    const value=await heading.textContent({timeout:1500}).catch(()=>null);
     console.log("W08 organization diagnostic: heading="+(value?.includes("W08 "+label+" A")?"A":value?.includes(expectedCompany)?"B":"missing/other")+" visible="+await heading.isVisible().catch(()=>false)+" badgeB="+await page.getByLabel("Current company: "+expectedCompany,{exact:true}).isVisible().catch(()=>false));
    }
    await page.reload();await assertCompany(page,expectedCompany);
