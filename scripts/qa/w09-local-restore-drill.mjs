@@ -6,16 +6,22 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, chmodSync 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
+import { request as httpRequest } from "node:http";
+import { setTimeout as delay } from "node:timers/promises";
 
 const hash = b => createHash("sha256").update(b).digest("hex");
 const root = mkdtempSync(join(tmpdir(), "w09-drill-"));
 chmodSync(root, 0o700);
 const env = { PATH: process.env.PATH, HOME: process.env.HOME, CI: "true" };
+if (process.env.SUPABASE_INTERNAL_IMAGE_REGISTRY === "ghcr.io") env.SUPABASE_INTERNAL_IMAGE_REGISTRY = "ghcr.io";
+let phase = "preflight";
 const stacks = [];
 const log = [];
 const stamp = () => new Date().toISOString();
 const record = (event, extra={}) => {
+  phase=event;
   log.push({ event, utc: stamp(), ...extra });
+  console.log("W09 phase: "+event);
   writeFileSync(join(root,"drill-log.json"), JSON.stringify(log,null,2), {mode:0o600});
 };
 function run(bin,args,cwd=root,input) {
@@ -30,7 +36,7 @@ function localStatus(s) {
   const url=val("API_URL"), key=val("SERVICE_ROLE_KEY")||val("SECRET_KEY"), anon=val("ANON_KEY")||val("PUBLISHABLE_KEY");
   assert.ok(url==="http://127.0.0.1:54321"||url==="http://localhost:54321","local API allowlist");
   assert.ok(key&&anon,"local keys missing");
-  return {url,key,anon};
+  return {url:"http://127.0.0.1:54321",key,anon};
 }
 function start(name) {
   const dir=join(root,name);
@@ -52,9 +58,34 @@ function stop(s) {
   s.stopped=true;
 }
 async function request(s,path,{method="GET",body,anon=false,contentType="application/json"}={}) {
+  assert.equal(s.url,"http://127.0.0.1:54321","request must remain local");
+  assert.ok(path.startsWith("/storage/v1/"),"only local Storage API");
   const key=anon?s.anon:s.key;
-  const response=await fetch(s.url+path,{method,body,redirect:"error",headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":contentType},signal:AbortSignal.timeout(30000)});
-  return response;
+  const bytes=body===undefined?undefined:Buffer.from(body);
+  // A new TCP connection per operation; no stale pooled socket after source teardown.
+  // Native HTTP does not follow redirects, and the host/port are pinned.
+  return await new Promise((resolve,reject)=>{
+    const headers={apikey:key,Authorization:"Bearer "+key,"Content-Type":contentType,Connection:"close"};
+    if(bytes) headers["Content-Length"]=bytes.length;
+    const req=httpRequest({hostname:"127.0.0.1",port:54321,path,method,agent:false,headers},res=>{
+      const chunks=[]; let size=0;
+      res.on("data",chunk=>{ size+=chunk.length; if(size>2*1024*1024){req.destroy(Error("synthetic response too large"));return;} chunks.push(chunk); });
+      res.on("error",reject);
+      res.on("end",()=>resolve({status:res.statusCode,ok:res.statusCode>=200&&res.statusCode<300,arrayBuffer:async()=>Buffer.concat(chunks)}));
+    });
+    req.setTimeout(30000,()=>req.destroy(Error("local Storage timeout")));
+    req.on("error",e=>reject(Error("local Storage transport "+(e.code||e.message||"error"))));
+    req.end(bytes);
+  });
+}
+async function waitForStorage(s) {
+  let reason="not ready";
+  for(let attempt=0;attempt<20;attempt++){
+    try { const res=await request(s,"/storage/v1/bucket"); if(res.ok)return; reason="HTTP "+res.status; }
+    catch(e){reason=e.message;}
+    await delay(1000);
+  }
+  throw Error("local Storage readiness failed: "+reason);
 }
 async function ok(s,path,opts) {
   const res=await request(s,path,opts);
@@ -85,19 +116,24 @@ function checkRls(s,tenant) {
   const n=sql(s,"set role authenticated; set w09.tenant='"+tenant+"'; select count(*) from w09_fixture.records;");
   assert.equal(n,"1","tenant sees only own fixture");
 }
-let success=false;
 try {
   for(const name of ["SUPABASE_ACCESS_TOKEN","SUPABASE_DB_PASSWORD","SUPABASE_SERVICE_ROLE_KEY","SUPABASE_SECRET_KEY","DATABASE_URL"]) {
     assert.ok(!process.env[name],"Refuse cloud/database credential environment: "+name);
   }
   run("supabase",["--version"]);
   run("docker",["version"]);
-  const occupied=run("docker",["ps","--format","{{.Names}}"]).toString();
+  const context=JSON.parse(run("docker",["context","inspect"]).toString());
+  assert.match(context[0]?.Endpoints?.docker?.Host||"",/^unix:\/\/\//,"refuse nonlocal Docker context");
+  const occupied=run("docker",["ps","-a","--format","{{.Names}}"]).toString();
   assert.ok(!occupied.includes("supabase_"),"Use a clean disposable Docker host");
   const suffix=randomUUID().slice(0,8);
+  record("starting_source");
   const source=start("w09-source-"+suffix);
+  record("source_storage_readiness");
+  await waitForStorage(source);
   record("source_ready");
   sql(source,"create schema w09_fixture; create table w09_fixture.records(id integer primary key, tenant text not null, object_path text not null, sha256 text not null); alter table w09_fixture.records enable row level security; grant usage on schema w09_fixture to authenticated; grant select on w09_fixture.records to authenticated; create policy tenant_read on w09_fixture.records for select to authenticated using (tenant=current_setting('w09.tenant',true));");
+  record("source_fixture_setup");
   await createBucket(source);
   let id=0;
   for(const [p,b] of payloads) {
@@ -130,7 +166,10 @@ try {
   const incidentAt=Date.now();
   record("simulated_incident",{sourceRows:3,sourceObjects:3});
   stop(source);
+  record("starting_target");
   const target=start("w09-target-"+suffix);
+  record("target_storage_readiness");
+  await waitForStorage(target);
   assert.notEqual(source.db,target.db);
   assert.equal(sql(target,"select coalesce(to_regnamespace('w09_fixture')::text,'');"),"");
   assert.equal(sql(target,"select count(*) from storage.buckets where id='w09-private';"),"0");
@@ -138,6 +177,7 @@ try {
   const restoredDump=readFileSync(join(root,"database.dump"));
   assert.equal(hash(restoredDump),manifest.databaseSha256);
   run("docker",["exec","-i",target.db,"pg_restore","-U","postgres","-d","postgres","--exit-on-error"],target.dir,restoredDump);
+  record("restore_storage_bytes");
   await createBucket(target);
   for(const f of manifest.files) {
     const bytes=readFileSync(join(root,f.filename));
@@ -157,11 +197,11 @@ try {
   record("validated",result);
   stop(target);
   record("target_disposed");
-  success=true;
   console.log(JSON.stringify(result)); // Safe public CI summary; no paths, tokens or customer data.
 } catch(e) {
-  record("failure",{reason:e.message});
-  console.error("W09 drill failed: "+e.message);
+  const failedPhase=phase;
+  record("failure",{phase:failedPhase,reason:e.message});
+  console.error("W09 drill failed in "+failedPhase+": "+e.message);
   process.exitCode=1;
 } finally {
   for(const s of stacks.reverse()) if(!s.stopped) {
