@@ -64,9 +64,12 @@ async function logout(page,context,mobile){
  const start=performance.now();
  const button=page.getByRole("button",{name:"Sign out",exact:true});
  await button.scrollIntoViewIfNeeded({timeout:10000});
- const post=page.waitForResponse(r=>r.url()===app+"/auth/logout"&&r.request().method()==="POST",{timeout:12000});
- await button.click({timeout:12000});
- const response=await post;
+ const [response]=await Promise.all([
+  page.waitForResponse(r=>new URL(r.url()).pathname==="/auth/logout"&&r.request().method()==="POST",{timeout:15000}),
+  button.click({timeout:12000,noWaitAfter:true})
+ ]);
+ const setCookieNames=(await response.headersArray()).filter(h=>h.name.toLowerCase()==="set-cookie").map(h=>h.value.split("=")[0]);
+ console.log("W08 logout response cookie names: "+JSON.stringify(setCookieNames));
  assert.equal(response.status(),303,"native signout POST redirect");
  await page.waitForURL(urlPath("/login"),{timeout:10000});
  assert.ok(performance.now()-start<6500,"browser signout exceeded bound");
