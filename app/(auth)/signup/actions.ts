@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { recordConfirmedPublicConversion } from "@/lib/analytics/server-conversions";
 import { authCallbackOrigin } from "@/lib/auth/redirect";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
@@ -49,7 +50,7 @@ export async function signup(formData: FormData) {
   }
 
   const setupPath = commercialSetupPath(selection);
-  const callbackUrl = new URL("/auth/callback", authCallbackOrigin());
+  const callbackUrl = new URL("/auth/callback", authCallbackOrigin(process.env, (await headers()).get("host") ?? undefined));
   callbackUrl.searchParams.set("next", setupPath);
   callbackUrl.searchParams.set("flow", "signup");
   const { data, error } = await supabase.auth.signUp({
