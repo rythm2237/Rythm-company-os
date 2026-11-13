@@ -9,7 +9,7 @@ export function SignOutForm({ className, title }: { className?: string; title?: 
     if (pending) { event.preventDefault(); return; }
     setPending(true);
   }}>
-    <Button className={className} title={title} type="submit" loading={pending} loadingLabel="Signing out…">
+    <Button className={className} title={title ?? "Sign out"} aria-label={pending ? "Signing out…" : "Sign out"} type="submit" loading={pending} loadingLabel="Signing out…">
       <span className="product-signout-label">Sign out</span><span aria-hidden="true">↗</span>
     </Button>
   </form>;
