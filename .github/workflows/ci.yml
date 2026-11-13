@@ -26,6 +26,7 @@ jobs:
           name: w06-privileged-boundary-inventory
           path: test-results/w06-privileged-boundaries.json
       - run: node scripts/w05-inventory-private-storage.mjs
+      - run: node --import tsx scripts/validate-w08-auth-redirect.ts
       - run: node --import tsx scripts/validate-logout.ts
       - run: npm run test:company-logo
       - run: npm run test:enterprise-crm
