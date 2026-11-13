@@ -21,7 +21,7 @@ export function safeAuthPath(value: string | null | undefined): string {
 }
 
 /** Explicit, server-side environment configuration; never trust forwarded host headers. */
-export function authCallbackOrigin(env: NodeJS.ProcessEnv = process.env, requestHost?: string): string {
+export function authCallbackOrigin(env: Readonly<Record<string, string | undefined>> = process.env, requestHost?: string): string {
   const configured = env.AUTH_SITE_ORIGIN;
   const productionHosts = new Set(["rythm-os.com", "www.rythm-os.com", "company.rythm-os.com"]);
   const host = requestHost?.toLowerCase();
