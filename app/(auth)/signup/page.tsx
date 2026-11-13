@@ -8,7 +8,7 @@ import { commercialSetupPath, commercialSignupPath, selectedCommercialOffer } fr
 
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: Promise<{ error?: string; product?: string; template?: string }> };
+type Props = { searchParams: Promise<{ error?: string; message?: string; product?: string; template?: string }> };
 
 export default async function SignupPage({ searchParams }: Props) {
   const params = await searchParams;
@@ -34,6 +34,7 @@ export default async function SignupPage({ searchParams }: Props) {
         </div>
 
         {params.error ? <p className="form-error" role="alert">{params.error}</p> : null}
+        {params.message ? <p className="form-success" role="status">{params.message}</p> : null}
 
         {user ? (
           <div className="auth-form" style={{ marginTop: 18 }}>
