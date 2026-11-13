@@ -36,7 +36,8 @@ async function main(){
    assert.ok(Date.now()-began<6000,"navigation is bounded even with an unresponsive auth service");
    assert.equal(await page.getByRole("heading",{name:"Sign in"}).count(),1,await page.content());
    const cookies=await context.cookies();assert.ok(!cookies.some(c=>c.name===name||c.name==="rythm_active_org"));assert.ok(cookies.some(c=>c.name==="unrelated-preference"));
-   assert.equal(new URL(page.url()).searchParams.has("message"),mode!=="healthy");await context.close();
+   assert.equal(new URL(page.url()).searchParams.has("message"),mode!=="healthy");
+   await page.reload();assert.ok(!((await context.cookies()).some(c=>c.name===name||c.name==="rythm_active_org")));assert.equal(new URL(page.url()).pathname,"/login");await context.close();
   }
   assert.equal(authCalls,3);assert.deepEqual(errors,[]);
   console.log("Logout browser passed: actual SignOutForm → native POST → actual route/SDK → 303 login, healthy/outage/stalled service, current-session cookie deletion and unrelated-cookie preservation. Isolated fixture, no production user sign-out.");
