@@ -6,9 +6,13 @@ type Cookie = { name: string; value: string };
 
 /** Only this Supabase project's session cookies, including SSR chunks and PKCE state. */
 export function isSessionCookie(name: string, key: string) {
-  return [key, `${key}-code-verifier`, `${key}-user`].some(
-    prefix => name === prefix || (name.startsWith(`${prefix}.`) && /^\d+$/.test(name.slice(prefix.length + 1))),
-  );
+  const isChunk = (prefix: string) => name === prefix || (name.startsWith(`${prefix}.`) && /^\d+$/.test(name.slice(prefix.length + 1)));
+  // Recent Supabase Auth versions store concurrent PKCE flow verifiers and
+  // their flow index separately from the session. Clear only this project's
+  // exact Auth namespace, including chunked flow cookies.
+  if ([key, `${key}-code-verifier`, `${key}-user`, `${key}-flows-code-verifier`].some(isChunk)) return true;
+  const flowPrefix = `${key}-flow-`;
+  return name.startsWith(flowPrefix) && /^[a-f0-9-]{16,64}-code-verifier(?:\.\d+)?$/i.test(name.slice(flowPrefix.length));
 }
 
 /** Revoke the current session best-effort; local cleanup must never wait indefinitely. */
