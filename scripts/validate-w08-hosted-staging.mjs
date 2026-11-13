@@ -66,7 +66,10 @@ async function login(page,email,password){
 async function home(page,org){
  await page.waitForURL(pathIs("/home"),{timeout:30000});
  await page.getByRole("heading",{name:"What would you like RYTHM to do?"}).waitFor({timeout:30000});
- if(org)await page.locator(".command-header .eyebrow").filter({hasText:org.name}).waitFor();
+ if(org){
+  await page.locator(".command-header .eyebrow").filter({hasText:org.name}).waitFor({state:"attached",timeout:15000});
+  await page.getByLabel("Current company: "+org.name,{exact:true}).waitFor({state:"visible",timeout:15000});
+ }
 }
 async function logout(page,context,mobile){
  if(mobile)await page.getByRole("button",{name:"Menu",exact:true}).click();
@@ -114,7 +117,9 @@ try{
    assert.ok(foreign.error||foreign.data!==other.orgs[0].id,"foreign organization switch succeeded");
    if(mobile)await page.getByRole("button",{name:"Menu",exact:true}).click();
    await page.getByLabel("Active company").selectOption(f.orgs[1].id);
+   const post=page.waitForResponse(r=>r.url()===app+"/organization-context/switch"&&r.request().method()==="POST",{timeout:15000});
    await page.getByRole("button",{name:"Switch",exact:true}).click();
+   assert.equal((await post).status(),303,"native organization switch redirect");
    await home(page,f.orgs[1]);await page.reload();await home(page,f.orgs[1]);
    mark(f.label+" login, wrong password, protected/demo separation, real organization selection and foreign denial");
    const before=await browserSession(context);
