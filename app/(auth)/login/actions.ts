@@ -1,13 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { safeAuthPath } from "@/lib/auth/redirect";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
 export async function login(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/home");
-  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/home";
+  const safeNext = safeAuthPath(next);
 
   if (!email || !password) {
     redirect(`/login?next=${encodeURIComponent(safeNext)}&error=${encodeURIComponent("Email and password are required.")}`);
