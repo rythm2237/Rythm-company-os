@@ -1,0 +1,71 @@
+name: W09 clean Storage runtime package
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/w09-storage-clean-package.yml'
+permissions:
+  contents: read
+jobs:
+  clean-package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Repack exact public image as independent single layer
+        shell: bash
+        run: |
+          set -euo pipefail
+          source='docker.io/supabase/storage-api@sha256:09b6d74764b75f5f49787273a9deb840b3132ccb4137a4a4b41a181d915202bd'
+          target='w09-storage-api-clean:v1.84.19-amd64'
+          docker pull --platform linux/amd64 "$source"
+          docker image inspect "$source" > source.json
+          python -c 'import json; i=json.load(open("source.json"))[0]; assert i["Architecture"]=="amd64" and i["Os"]=="linux"; assert not i["Config"].get("Volumes"), "image declares volumes; export would be incomplete"'
+          docker run --rm --network none --entrypoint node "$source" -p 'process.version+" "+process.arch'
+          cid=$(docker create --network none "$source")
+          trap 'docker rm "$cid" >/dev/null 2>&1 || true' EXIT
+          docker export "$cid" -o rootfs.tar
+          # Preserve original runtime config; replace only layer topology. All input is public vendor image.
+          python - <<'PY'
+          import hashlib, json, tarfile, io
+          from pathlib import Path
+          source=json.loads(Path("source.json").read_text())[0]
+          with open("rootfs.tar","rb") as f: diff=hashlib.file_digest(f,"sha256").hexdigest()
+          config={"architecture":"amd64","os":"linux","config":source["Config"],"rootfs":{"type":"layers","diff_ids":["sha256:"+diff]},"history":[{"created_by":"W09 public Storage image repack; original runtime config retained"}]}
+          data=json.dumps(config,separators=(",",":")).encode()
+          config_name=hashlib.sha256(data).hexdigest()+".json"
+          manifest=json.dumps([{"Config":config_name,"RepoTags":["w09-storage-api-clean:v1.84.19-amd64"],"Layers":["layer.tar"]}]).encode()
+          with tarfile.open("clean-storage.tar","w") as tar:
+              for name,content in [(config_name,data),("manifest.json",manifest)]:
+                  info=tarfile.TarInfo(name);info.size=len(content);tar.addfile(info,io.BytesIO(content))
+              tar.add("rootfs.tar",arcname="layer.tar",recursive=False)
+          PY
+          docker load -i clean-storage.tar
+          docker image inspect "$target" > clean.json
+          python - <<'PY'
+          import json
+          a=json.load(open("source.json"))[0]; b=json.load(open("clean.json"))[0]
+          for k in ("Entrypoint","Cmd","Env","User","WorkingDir","ExposedPorts","Volumes","Healthcheck","Labels","StopSignal"):
+              assert a["Config"].get(k)==b["Config"].get(k), ("config mismatch",k)
+          assert len(b["RootFS"]["Layers"])==1
+          assert not set(a["RootFS"]["Layers"]) & set(b["RootFS"]["Layers"])
+          PY
+          docker run --rm --network none --entrypoint /bin/sh "$target" -ec '
+            echo "569128f3066ac7be59b10b9a0adef708def642ee37cbf9d560a9bdb68f872108  /usr/local/bin/node" | sha256sum -c -
+            echo "ae81a1dd9b4fbab42a1014dda6b9ed13834610583781fe562f84e3cf65ea669b  /usr/lib/libstdc++.so.6" | sha256sum -c -
+            echo "0f3c933942935150d3864bcd3b20b7922c8d95a66959fe1da5e2da73ba986e8a  /usr/lib/libgcc_s.so.1" | sha256sum -c -
+            test "$(node -p process.version)" = v24.22.1
+            test "$(node -p process.arch)" = x64
+            node --check /app/dist/start/server.js
+            echo W09_CLEAN_STORAGE_PACKAGE_PASS
+          '
+          mkdir package
+          gzip -1 -c clean-storage.tar > package/w09-storage-clean.tar.gz
+          (cd package && sha256sum w09-storage-clean.tar.gz > SHA256SUMS)
+          cat package/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w09-public-storage-clean-image
+          path: package/
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
