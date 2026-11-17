@@ -66,6 +66,15 @@ result(await billing.auth.signInWithPassword({ email: operatorEmail, password: o
 assert.equal(result(await billing.rpc("is_platform_admin"), "Read billing identity role"), true);
 
 const browser = await chromium.launch();
+
+async function localContext(options) {
+  const context = await browser.newContext(options);
+  await context.route("**/*", route => {
+    const { origin } = new URL(route.request().url());
+    return origin === app || origin === backend ? route.continue() : route.abort();
+  });
+  return context;
+}
 try {
   for (const [profile, options] of [
     ["desktop", { viewport: { width: 1440, height: 900 } }],
@@ -75,7 +84,7 @@ try {
     const email = "w10-" + id + "@example.com";
     const name = "W10 Agency " + id;
     const password = randomUUID() + "Aa1!";
-    const first = await browser.newContext(options);
+    const first = await localContext(options);
     try {
       const page = await first.newPage();
       await page.goto(app + "/signup" + selection);
@@ -111,7 +120,7 @@ try {
       .select("role").eq("organization_id", org.id).eq("user_id", user.id).single(), "Read Owner membership");
     assert.equal(membership.role, "owner");
 
-    const returning = await browser.newContext(options);
+    const returning = await localContext(options);
     try {
       const page = await returning.newPage();
       await login(page, email, password);
@@ -204,7 +213,7 @@ try {
       const link = result(await admin.from("project_contract_links").select("contract_id,project_id")
         .eq("organization_id", org.id).eq("project_id", projectId).single(), "Read project contract link");
       assert.deepEqual(link, { contract_id: contract.id, project_id: projectId });
-      await page.goto(app + customerPath + "?tab=projects");
+      await page.goto(app + customerPath + "?tab=projects", { waitUntil: "domcontentloaded" });
       await page.getByText(brief, { exact: true }).first().waitFor();
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.getByText(brief, { exact: true }).first().waitFor();
