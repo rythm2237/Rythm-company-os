@@ -161,6 +161,17 @@ try {
         .eq("id", customerId).single(), "Read customer and brief");
       assert.deepEqual(customer, { organization_id: org.id, name: customerName, notes: brief });
 
+      for (const capability of ["contract.read", "contract.create", "contract.update"]) {
+        await page.goto(app + "/crm/access");
+        const accessForm = page.locator("form").filter({ has: page.getByLabel("Member", { exact: true }) });
+        await accessForm.getByLabel("Member", { exact: true }).selectOption(user.id);
+        await accessForm.getByLabel("Capability").selectOption(capability);
+        await accessForm.getByLabel("Scope").selectOption("customer");
+        await accessForm.getByLabel("Resource ID").fill(customerId);
+        await accessForm.getByRole("button", { name: "Grant explicit access" }).click();
+        await page.waitForURL(url => url.pathname === "/crm/access" && url.searchParams.get("saved") === "1");
+      }
+
       const contractNumber = "W10-" + id;
       await page.goto(app + customerPath + "?tab=contracts");
       await page.getByText("Add contract", { exact: true }).click();
