@@ -76,7 +76,13 @@ jobs:
           sed -i '/^comment on policy w05_no_private_authenticated_direct_get/,+1d' supabase/migrations/*_w05_block_cached_private_downloads.sql
           supabase start
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
-          do $$
+          -- Mirror the hosted Data API's read grants for the reservation flow.
+          -- Authenticated requests still pass through the existing RLS policies.
+          grant select on public.organizations, public.organization_members,
+            public.organization_entitlements, public.customer_profiles,
+            public.organization_branding to authenticated, service_role;
+          notify pgrst, 'reload schema';
+          do $
           begin
             if to_regclass('public.crm_accounts') is null then
               raise exception 'CRM accounts schema missing';
