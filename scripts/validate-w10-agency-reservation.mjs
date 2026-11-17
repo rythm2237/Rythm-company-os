@@ -260,7 +260,7 @@ try {
         email: memberEmail, password: memberPassword, email_confirm: true,
       }), "Create restricted synthetic member").user;
       result(await admin.from("organization_members").insert({
-        organization_id: org.id, user_id: member.id, role: "member", membership_status: "active",
+        organization_id: org.id, user_id: member.id, role: "viewer", membership_status: "active",
       }), "Add restricted member");
       const memberClient = createClient(backend, publicKey, { auth: { persistSession: false, autoRefreshToken: false } });
       result(await memberClient.auth.signInWithPassword({ email: memberEmail, password: memberPassword }), "Sign in restricted member");
