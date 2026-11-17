@@ -82,7 +82,7 @@ jobs:
             public.organization_entitlements, public.customer_profiles,
             public.organization_branding to authenticated, service_role;
           notify pgrst, 'reload schema';
-          do $
+          do $$
           begin
             if to_regclass('public.crm_accounts') is null then
               raise exception 'CRM accounts schema missing';
