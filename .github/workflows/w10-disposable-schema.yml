@@ -58,6 +58,9 @@ jobs:
             supabase/migrations/*_first_strategy_cycle.sql
           # This historical data transfer requires two pre-existing live tenants.
           rm supabase/migrations/*_consolidate_canonical_rythm_workforce.sql
+          # The later operational-readiness migration keeps this incomplete
+          # Web Development overlay in preview; apply that maturity at insert.
+          sed -i "s/,'stable',false,/,'preview',false,/" supabase/migrations/*_web_development_company_commercial_template.sql
           supabase start
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
           do $$
