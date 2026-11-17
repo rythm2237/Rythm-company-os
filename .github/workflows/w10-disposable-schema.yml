@@ -56,6 +56,8 @@ jobs:
           # from the original briefs schema. Keep the status update in replay.
           sed -i "/^update public.project_strategy_briefs$/ { n; s/^set status='completed', updated_at=now()$/set status='completed'/; }" \
             supabase/migrations/*_first_strategy_cycle.sql
+          # This historical data transfer requires two pre-existing live tenants.
+          rm supabase/migrations/*_consolidate_canonical_rythm_workforce.sql
           supabase start
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
           do $$
