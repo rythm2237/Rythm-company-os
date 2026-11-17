@@ -33,6 +33,25 @@ jobs:
           insert into auth.users (id, email, aud, role)
           values ('30f4573e-e045-4740-b8d9-8bd7b592df46', 'w10-seed@example.test', 'authenticated', 'authenticated');
           SQL
+          # Preserve the legacy replay order while giving suffixed files
+          # numeric versions accepted by the CLI in this disposable copy.
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import re
+
+          migrations = Path("supabase/migrations")
+          preflights = {"202608060002a", "202608060004a"}
+          for migration in list(migrations.glob("*.sql")):
+              version, name = migration.name.split("_", 1)
+              match = re.fullmatch(r"(\d+)([a-z]?)", version)
+              revision, suffix = match.groups()
+              order = 0 if version in preflights else 1 if not suffix else ord(suffix) - 95
+              replay_version = revision.ljust(14, "0") + f"{order:02d}"
+              target = migrations / f"{replay_version}_{name}"
+              if target.exists():
+                  raise RuntimeError(f"Replay migration collision: {target.name}")
+              migration.rename(target)
+          PYTHON
           supabase start
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
           do $$
