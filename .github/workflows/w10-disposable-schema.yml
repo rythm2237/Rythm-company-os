@@ -66,6 +66,8 @@ jobs:
           sed -i '/^revoke all on function public\.nail_2nya_/d' supabase/migrations/*_paid_launch_privileged_function_hardening.sql
           sed -i "/^ *'public\.nail_2nya_/d" supabase/migrations/*_w04_explicit_pg_temp_for_definers.sql
           sed -i "s/cardinality(funcs)<>52/cardinality(funcs)<>42/; s/expected exactly 52 reviewed/expected exactly 42 non-booking reviewed/" supabase/migrations/*_w04_explicit_pg_temp_for_definers.sql
+          # The hosted cron digest is absent from the repository baseline.
+          sed -i '/on function public\.generate_communication_daily_digest()/d' supabase/migrations/*_paid_launch_privileged_function_hardening.sql
           supabase start
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
           do $$
