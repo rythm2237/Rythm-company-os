@@ -94,6 +94,9 @@ jobs:
           grant select on public.meeting_legal_reviews, public.meeting_agent_sessions,
             public.meeting_agent_messages, public.meetings to authenticated;
           grant update on public.projects to authenticated;
+          grant insert on public.company_events, public.entity_relationships,
+            public.project_progress_events to authenticated;
+          grant usage, select on all sequences in schema public to authenticated;
           notify pgrst, 'reload schema';
           do $$
           begin
