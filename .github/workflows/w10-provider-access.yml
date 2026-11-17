@@ -1,0 +1,24 @@
+name: W10 provider access
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/w10-provider-access.yml'
+permissions:
+  contents: read
+jobs:
+  provider-access:
+    runs-on: ubuntu-24.04
+    environment: w02-staging
+    steps:
+      - name: Check test provider credential availability
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          W02_OPENAI_API_KEY: ${{ secrets.W02_OPENAI_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os
+          available = [key for key in ("OPENAI_API_KEY", "W02_OPENAI_API_KEY") if os.environ.get(key, "").startswith("sk-")]
+          print("W10 test provider credential available: " + str(bool(available)))
+          if not available:
+              raise SystemExit("Provider credential is not configured in the staging Actions environment")
+          PY
