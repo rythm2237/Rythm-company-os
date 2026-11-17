@@ -4,6 +4,7 @@ on:
     paths:
       - '.github/workflows/w10-disposable-schema.yml'
       - 'supabase/migrations/**'
+      - 'scripts/validate-w10-agency-reservation.mjs'
 permissions:
   contents: read
 jobs:
@@ -85,6 +86,36 @@ jobs:
             end if;
           end $$;
           SQL
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify reservation and re-login against disposable Auth
+        env:
+          AUTH_SITE_ORIGIN: http://localhost:3000
+          RYTHM_ENV: staging
+          RYTHM_AGENT_EXECUTION_ENABLED: 'false'
+          RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/w10-disposable"
+          supabase status -o env > "$RUNNER_TEMP/w10-local.env"
+          chmod 600 "$RUNNER_TEMP/w10-local.env"
+          source "$RUNNER_TEMP/w10-local.env"
+          rm "$RUNNER_TEMP/w10-local.env"
+          test "$API_URL" = http://127.0.0.1:54321
+          export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
+          export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$ANON_KEY"
+          cd "$GITHUB_WORKSPACE"
+          ./node_modules/.bin/next build
+          ./node_modules/.bin/next start --hostname localhost --port 3000 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 25 --retry-connrefused --retry-delay 2 http://localhost:3000/login -o /dev/null
+          W10_LOCAL_SERVICE_KEY="$SERVICE_ROLE_KEY" node scripts/validate-w10-agency-reservation.mjs
       - name: Remove disposable services
         if: always()
         run: |
