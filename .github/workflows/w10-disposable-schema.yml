@@ -85,6 +85,9 @@ jobs:
             public.company_template_workflows, public.company_template_meeting_types,
             public.company_template_integration_requirements, public.organization_setup_dependencies,
             public.agents to authenticated, service_role;
+          grant select on public.crm_accounts, public.project_contracts,
+            public.projects, public.project_contract_links to service_role;
+          grant select, insert on public.projects, public.project_contract_links to authenticated;
           notify pgrst, 'reload schema';
           do $$
           begin
