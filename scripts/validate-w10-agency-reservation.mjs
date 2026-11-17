@@ -254,6 +254,24 @@ try {
       } finally {
         await verification.close();
       }
+      const memberEmail = "w10-member-" + id + "@example.com";
+      const memberPassword = randomUUID() + "Aa1!";
+      const member = result(await admin.auth.admin.createUser({
+        email: memberEmail, password: memberPassword, email_confirm: true,
+      }), "Create restricted synthetic member").user;
+      result(await admin.from("organization_members").insert({
+        organization_id: org.id, user_id: member.id, role: "member", membership_status: "active",
+      }), "Add restricted member");
+      const memberClient = createClient(backend, publicKey, { auth: { persistSession: false, autoRefreshToken: false } });
+      result(await memberClient.auth.signInWithPassword({ email: memberEmail, password: memberPassword }), "Sign in restricted member");
+      const visibleCustomer = result(await memberClient.from("crm_accounts").select("id").eq("id", customerId), "Member customer visibility");
+      assert.equal(visibleCustomer.length, 1);
+      const hiddenContracts = result(await memberClient.from("project_contracts").select("id").eq("id", contract.id), "Member contract boundary");
+      assert.deepEqual(hiddenContracts, []);
+      const deniedWrite = await memberClient.from("project_contracts")
+        .insert({ organization_id: org.id, customer_id: customerId, contract_number: "DENIED-" + id }).select("id");
+      assert.ok(deniedWrite.error, "Unpermitted member must not create a contract");
+      console.log(`PASS W10 roles (${profile}): member sees customer and cannot read or create contract`);
       isolatedOrganizations.push({ projectId, customerId });
       console.log(`PASS W10 CRM and project (${profile}): persisted brief, customer, contract and accountable project`);
       console.log(`PASS W10 Agency provision (${profile}): recorded template installation`);
