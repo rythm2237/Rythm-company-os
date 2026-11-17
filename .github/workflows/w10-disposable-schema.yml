@@ -63,6 +63,8 @@ jobs:
           sed -i "s/,'stable',false,/,'preview',false,/" supabase/migrations/*_web_development_company_commercial_template.sql
           # The unrelated 2nya booking site has its own baseline schema.
           rm supabase/migrations/*_2nya_*.sql
+          sed -i '/^revoke all on function public\.nail_2nya_/d' supabase/migrations/*_paid_launch_privileged_function_hardening.sql
+          sed -i "/^ *'public\.nail_2nya_/d" supabase/migrations/*_w04_explicit_pg_temp_for_definers.sql
           supabase start
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
           do $$
