@@ -61,6 +61,8 @@ jobs:
           # The later operational-readiness migration keeps this incomplete
           # Web Development overlay in preview; apply that maturity at insert.
           sed -i "s/,'stable',false,/,'preview',false,/" supabase/migrations/*_web_development_company_commercial_template.sql
+          # The unrelated 2nya booking site has its own baseline schema.
+          rm supabase/migrations/*_2nya_*.sql
           supabase start
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
           do $$
