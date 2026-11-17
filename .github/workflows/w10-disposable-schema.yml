@@ -80,7 +80,11 @@ jobs:
           -- Authenticated requests still pass through the existing RLS policies.
           grant select on public.organizations, public.organization_members,
             public.organization_entitlements, public.customer_profiles,
-            public.organization_branding to authenticated, service_role;
+            public.organization_branding, public.company_templates,
+            public.agent_templates, public.organization_template_installations,
+            public.company_template_workflows, public.company_template_meeting_types,
+            public.company_template_integration_requirements, public.organization_setup_dependencies,
+            public.agents to authenticated, service_role;
           notify pgrst, 'reload schema';
           do $$
           begin
