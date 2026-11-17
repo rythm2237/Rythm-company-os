@@ -1,3 +1,4 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -10,6 +11,8 @@ const selection = "?product=ready_company&template=" + template;
 assert.equal(process.env.NEXT_PUBLIC_SUPABASE_URL, backend);
 assert.ok(process.env.W10_LOCAL_SERVICE_KEY, "Disposable Auth service credential is required");
 
+const publicKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+assert.ok(publicKey, "Disposable Auth public credential is required");
 const admin = createClient(backend, process.env.W10_LOCAL_SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
@@ -51,6 +54,17 @@ async function login(page, email, password) {
   await page.waitForURL(url => ["/setup/company", "/activation"].includes(url.pathname));
 }
 
+const operatorEmail = "w10-billing-" + randomUUID() + "@example.com";
+const operatorPassword = randomUUID() + "Aa1!";
+const operator = result(await admin.auth.admin.createUser({
+  email: operatorEmail, password: operatorPassword, email_confirm: true,
+}), "Create disposable billing operator").user;
+result(await admin.from("platform_admins").insert({ user_id: operator.id }), "Set disposable billing operator role");
+const billing = createClient(backend, publicKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+result(await billing.auth.signInWithPassword({ email: operatorEmail, password: operatorPassword }), "Sign in as billing operator");
+
 const browser = await chromium.launch();
 try {
   for (const [profile, options] of [
@@ -89,8 +103,10 @@ try {
     assert.ok(user.email_confirmed_at);
     assert.equal(org.name, name);
     const entitlement = result(await admin.from("organization_entitlements")
-      .select("status,product_code,selected_template_key").eq("organization_id", org.id).single(), "Read entitlement");
-    assert.deepEqual(entitlement, { status: "pending", product_code: "ready_company", selected_template_key: template });
+      .select("status,product_code,selected_template_key,base_price,currency").eq("organization_id", org.id).single(), "Read entitlement");
+    assert.equal(entitlement.status, "pending");
+    assert.equal(entitlement.product_code, "ready_company");
+    assert.equal(entitlement.selected_template_key, template);
     const membership = result(await admin.from("organization_members")
       .select("role").eq("organization_id", org.id).eq("user_id", user.id).single(), "Read Owner membership");
     assert.equal(membership.role, "owner");
@@ -102,10 +118,32 @@ try {
       await page.goto(app + "/activation");
       assert.equal(new URL(page.url()).pathname, "/activation");
       await page.getByText(/assisted B2B activation/i).first().waitFor();
+      console.log(`PASS W10 Agency reservation (${profile}): pending entitlement and Owner persisted across a fresh login`);
+
+      const now = Date.now();
+      result(await billing.rpc("platform_confirm_company_payment_v1", {
+        p_organization_id: org.id,
+        p_invoice_reference: "W10-SYNTHETIC-" + id,
+        p_amount: entitlement.base_price,
+        p_currency: entitlement.currency,
+        p_period_start: new Date(now - 60000).toISOString(),
+        p_period_end: new Date(now + 7 * 86400000).toISOString(),
+      }), "Record synthetic invoice in disposable database");
+      const active = result(await admin.from("organization_entitlements")
+        .select("status").eq("organization_id", org.id).single(), "Read activated entitlement");
+      assert.equal(active.status, "active");
+      console.log(`PASS W10 assisted activation (${profile}): active entitlement persisted`);
+
+      await page.goto(app + "/studio/templates?template=" + template);
+      await page.getByRole("button", { name: "Provision AI Advertising Agency", exact: true }).click();
+      await page.waitForURL(url => url.pathname === "/company/launch");
+      const installation = result(await admin.from("organization_template_installations")
+        .select("template_key").eq("organization_id", org.id).single(), "Read installed Agency");
+      assert.equal(installation.template_key, template);
+      console.log(`PASS W10 Agency provision (${profile}): recorded template installation`);
     } finally {
       await returning.close();
     }
-    console.log(`PASS W10 Agency reservation (${profile}): pending entitlement and Owner persisted across a fresh login`);
   }
 } finally {
   await browser.close();
