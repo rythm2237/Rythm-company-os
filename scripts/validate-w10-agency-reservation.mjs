@@ -210,6 +210,27 @@ try {
       const project = result(await admin.from("projects").select("organization_id,customer_id,primary_manager_user_id")
         .eq("id", projectId).single(), "Read linked project");
       assert.deepEqual(project, { organization_id: org.id, customer_id: customerId, primary_manager_user_id: user.id });
+      await page.getByRole("heading", { name: brief, exact: true }).first().waitFor();
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.getByRole("heading", { name: brief, exact: true }).first().waitFor();
+      const actionTitle = "W10 Prepare internal report " + id;
+      await page.goto(app + "/actions?project=" + projectId);
+      await page.locator(".action-create-card > summary").click();
+      const actionForm = page.locator(".action-create-card form");
+      await actionForm.getByLabel("Title", { exact: true }).fill(actionTitle);
+      await actionForm.getByLabel("Description", { exact: true }).fill(brief);
+      await actionForm.getByRole("button", { name: "Create governed action" }).click();
+      await page.waitForURL(url => url.pathname === "/actions" && !!url.searchParams.get("action"));
+      const actionId = new URL(page.url()).searchParams.get("action");
+      const updateForm = page.locator('form').filter({ has: page.locator('input[name="actionId"]') });
+      await updateForm.locator('[name="nextStatus"]').selectOption("in_progress");
+      await updateForm.getByLabel("Transition note").fill("Synthetic internal planning started.");
+      await updateForm.getByRole("button", { name: "Update action item" }).click();
+      await page.waitForURL(url => url.searchParams.get("status") === "in_progress");
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.getByRole("heading", { name: actionTitle, exact: true }).waitFor();
+      console.log(`PASS W10 action (${profile}): task creation and transition survive refresh`);
+
       const link = result(await admin.from("project_contract_links").select("contract_id,project_id")
         .eq("organization_id", org.id).eq("project_id", projectId).single(), "Read project contract link");
       assert.deepEqual(link, { contract_id: contract.id, project_id: projectId });
