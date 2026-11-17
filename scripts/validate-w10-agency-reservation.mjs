@@ -163,8 +163,12 @@ try {
 
       for (const capability of ["contract.read", "contract.create", "contract.update"]) {
         await page.goto(app + "/crm/access");
-        const accessForm = page.locator("form").filter({ has: page.getByLabel("Member", { exact: true }) });
-        await accessForm.getByLabel("Member", { exact: true }).selectOption(user.id);
+        assert.equal(new URL(page.url()).pathname, "/crm/access");
+        await page.getByRole("heading", { name: "Grant user access", exact: true }).waitFor();
+        const accessForm = page.locator('form').filter({
+          has: page.locator('input[name="principal_type"][value="user"]'),
+        });
+        await accessForm.locator('select[name="principal_id"]').selectOption(user.id);
         await accessForm.getByLabel("Capability").selectOption(capability);
         await accessForm.getByLabel("Scope").selectOption("customer");
         await accessForm.getByLabel("Resource ID").fill(customerId);
