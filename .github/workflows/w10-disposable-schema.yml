@@ -90,6 +90,7 @@ jobs:
           grant select, insert on public.projects, public.project_contract_links to authenticated;
           grant select, insert, update on public.action_items to authenticated;
           grant select on public.action_items to service_role;
+          grant select on public.approval_requests, public.decisions to authenticated;
           notify pgrst, 'reload schema';
           do $$
           begin
