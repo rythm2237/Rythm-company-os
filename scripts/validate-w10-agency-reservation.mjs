@@ -130,7 +130,7 @@ try {
         p_period_end: new Date(now + 7 * 86400000).toISOString(),
       });
       if (activation.error?.code === "42501") {
-        const safeDetail = activation.error.message.match(/^(?:Platform administrator required|permission denied for (?:table|function|schema|relation) [a-z_][a-z_0-9]*)/i);
+        const safeDetail = activation.error.message.match(/^[A-Za-z0-9_ .()"-]{1,200}$/);
         console.log("W10 local activation authorization: " + (safeDetail?.[0] ?? "other authorization rejection"));
       }
       result(activation, "Record synthetic invoice in disposable database");
