@@ -145,6 +145,50 @@ try {
       const installation = result(await admin.from("organization_template_installations")
         .select("template_key").eq("organization_id", org.id).single(), "Read installed Agency");
       assert.equal(installation.template_key, template);
+
+      const customerName = "W10 Sample Client " + id;
+      const brief = "Design an internal campaign measurement plan for a synthetic customer.";
+      await page.goto(app + "/crm");
+      await page.locator("#add-customer > summary").click();
+      const customerForm = page.locator("#add-customer form");
+      await customerForm.locator('[name="name"]').fill(customerName);
+      await customerForm.getByLabel("Notes").fill(brief);
+      await customerForm.getByRole("button", { name: "Create customer" }).click();
+      await page.waitForURL(url => /^\/crm\/[^/]+$/.test(url.pathname) && url.searchParams.get("saved") === "1");
+      const customerPath = new URL(page.url()).pathname;
+      const customerId = customerPath.split("/").at(-1);
+      const customer = result(await admin.from("crm_accounts").select("organization_id,name,notes")
+        .eq("id", customerId).single(), "Read customer and brief");
+      assert.deepEqual(customer, { organization_id: org.id, name: customerName, notes: brief });
+
+      const contractNumber = "W10-" + id;
+      await page.goto(app + customerPath + "?tab=contracts");
+      await page.getByText("Add contract", { exact: true }).click();
+      const contractForm = page.locator("form").filter({ has: page.getByLabel("Contract identifier") });
+      await contractForm.getByLabel("Contract identifier").fill(contractNumber);
+      await contractForm.getByLabel("Scope", { exact: true }).fill(brief);
+      await contractForm.getByRole("button", { name: "Save contract" }).click();
+      await page.waitForURL(url => url.pathname === customerPath && url.searchParams.get("saved") === "1");
+      const contract = result(await admin.from("project_contracts").select("id,organization_id,customer_id")
+        .eq("organization_id", org.id).eq("contract_number", contractNumber).single(), "Read linked contract");
+      assert.equal(contract.customer_id, customerId);
+
+      const params = new URLSearchParams({ customer: customerId, contract: contract.id });
+      await page.goto(app + "/projects?" + params);
+      const projectForm = page.locator("#create-project form");
+      assert.equal(await projectForm.getByLabel("Project customer").inputValue(), customerId);
+      assert.equal(await projectForm.getByLabel("Project contract").inputValue(), contract.id);
+      await projectForm.getByLabel("Primary accountable manager").selectOption(user.id);
+      await projectForm.getByLabel("Objective").fill(brief);
+      await projectForm.getByRole("button", { name: "Create project", exact: true }).click();
+      await page.waitForURL(url => url.pathname === "/projects/operating" && !!url.searchParams.get("project"));
+      const projectId = new URL(page.url()).searchParams.get("project");
+      const project = result(await admin.from("projects").select("organization_id,customer_id,primary_manager_user_id")
+        .eq("id", projectId).single(), "Read linked project");
+      assert.deepEqual(project, { organization_id: org.id, customer_id: customerId, primary_manager_user_id: user.id });
+      await page.reload();
+      await page.getByText(brief, { exact: true }).first().waitFor();
+      console.log(`PASS W10 CRM and project (${profile}): persisted brief, customer, contract and accountable project`);
       console.log(`PASS W10 Agency provision (${profile}): recorded template installation`);
     } finally {
       await returning.close();
