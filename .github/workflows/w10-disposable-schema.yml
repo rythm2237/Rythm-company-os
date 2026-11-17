@@ -1,0 +1,51 @@
+name: W10 disposable staging schema
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/w10-disposable-schema.yml'
+      - 'supabase/migrations/**'
+permissions:
+  contents: read
+jobs:
+  disposable-schema:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@v3.2.0
+        with:
+          version: '2.108.0'
+      - name: Bootstrap from repository migrations on a fresh runner
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/w10-disposable"
+          mkdir -p "$stage"
+          cd "$stage"
+          supabase init
+          cp -R "$GITHUB_WORKSPACE/supabase/migrations" supabase/
+          supabase start
+          psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          begin
+            if to_regclass('public.crm_accounts') is null then
+              raise exception 'CRM accounts schema missing';
+            end if;
+            if not exists (
+              select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'public' and p.proname = 'provision_commercial_company_v1'
+            ) then
+              raise exception 'Agency reservation RPC missing';
+            end if;
+          end $$;
+          SQL
+      - name: Remove disposable services
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/w10-disposable/supabase/config.toml"; then
+            cd "$RUNNER_TEMP/w10-disposable"
+            supabase stop --no-backup
+          fi
