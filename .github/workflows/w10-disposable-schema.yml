@@ -91,6 +91,9 @@ jobs:
           grant select, insert, update on public.action_items to authenticated;
           grant select on public.action_items to service_role;
           grant select on public.approval_requests, public.decisions to authenticated;
+          grant select on public.meeting_legal_reviews, public.meeting_agent_sessions,
+            public.meeting_agent_messages, public.meetings to authenticated;
+          grant update on public.projects to authenticated;
           notify pgrst, 'reload schema';
           do $$
           begin
