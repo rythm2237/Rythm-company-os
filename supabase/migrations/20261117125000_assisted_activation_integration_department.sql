@@ -1,4 +1,4 @@
--- Assisted activation provisions the canonical Integration Department in the
+-- Assisted activation provisions the canonical Integration Department and Communication Manager in the
 -- same transaction. The authorized billing operator is not a tenant member.
 begin;
 
@@ -26,13 +26,19 @@ begin
     return new;
   end if;
 
-  -- Only a nested insertion of the canonical Integration Department can
-  -- continue under the platform billing actor. Direct writes and other
-  -- department, agent, and builder mutations still require membership.
-  if tg_table_schema = 'public' and tg_table_name = 'departments'
-     and tg_op = 'INSERT' and pg_catalog.pg_trigger_depth() > 1
-     and pg_catalog.to_jsonb(new)->>'template_key' = 'integration'
-     and pg_catalog.to_jsonb(new)->>'name' = 'Integration Department'
+  -- Only the two built-in provisioning writes may continue under the
+  -- platform billing actor. Direct writes and all other keys stay guarded.
+  if tg_table_schema = 'public' and pg_catalog.pg_trigger_depth() > 1
+     and (
+       (tg_table_name = 'departments' and tg_op = 'INSERT'
+        and pg_catalog.to_jsonb(new)->>'template_key' = 'integration'
+        and pg_catalog.to_jsonb(new)->>'name' = 'Integration Department')
+       or
+       (tg_table_name = 'agents' and tg_op in ('INSERT', 'UPDATE')
+        and pg_catalog.to_jsonb(new)->>'agent_code' = 'RYTHM-COMMS'
+        and pg_catalog.to_jsonb(new)->>'external_actions_allowed' = 'false'
+        and pg_catalog.to_jsonb(new)#>>'{permissions,communication,send}' = 'false')
+     )
      and public.is_platform_admin()
      and exists (
        select 1 from public.organization_entitlements e
