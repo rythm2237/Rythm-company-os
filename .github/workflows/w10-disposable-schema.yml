@@ -97,6 +97,7 @@ jobs:
           grant insert on public.company_events, public.entity_relationships,
             public.project_progress_events to authenticated;
           grant usage, select on all sequences in schema public to authenticated;
+          grant insert on public.organization_members to service_role;
           notify pgrst, 'reload schema';
           do $$
           begin
