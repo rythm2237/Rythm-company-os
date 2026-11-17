@@ -65,6 +65,7 @@ const billing = createClient(backend, publicKey, {
 result(await billing.auth.signInWithPassword({ email: operatorEmail, password: operatorPassword }), "Sign in as billing operator");
 assert.equal(result(await billing.rpc("is_platform_admin"), "Read billing identity role"), true);
 
+const isolatedOrganizations = [];
 const browser = await chromium.launch();
 
 async function localContext(options) {
@@ -111,6 +112,16 @@ try {
     assert.equal(user.email, email);
     assert.ok(user.email_confirmed_at);
     assert.equal(org.name, name);
+    const ownerClient = createClient(backend, publicKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    result(await ownerClient.auth.signInWithPassword({ email, password }), "Sign in synthetic Owner for authorization checks");
+    for (const previous of isolatedOrganizations) {
+      const records = result(await ownerClient.from("projects").select("id").eq("id", previous.projectId), "Cross-tenant project read");
+      assert.deepEqual(records, []);
+      const customerRecords = result(await ownerClient.from("crm_accounts").select("id").eq("id", previous.customerId), "Cross-tenant customer read");
+      assert.deepEqual(customerRecords, []);
+      const denied = await ownerClient.from("projects").update({ name: "W10 denied write" }).eq("id", previous.projectId).select("id");
+      assert.ok(denied.error || denied.data?.length === 0, "Cross-tenant project mutation must fail");
+    }
     const entitlement = result(await admin.from("organization_entitlements")
       .select("status,product_code,selected_template_key,base_price,currency").eq("organization_id", org.id).single(), "Read entitlement");
     assert.equal(entitlement.status, "pending");
@@ -243,6 +254,7 @@ try {
       } finally {
         await verification.close();
       }
+      isolatedOrganizations.push({ projectId, customerId });
       console.log(`PASS W10 CRM and project (${profile}): persisted brief, customer, contract and accountable project`);
       console.log(`PASS W10 Agency provision (${profile}): recorded template installation`);
     } finally {
