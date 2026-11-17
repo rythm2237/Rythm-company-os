@@ -63,6 +63,7 @@ const billing = createClient(backend, publicKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 result(await billing.auth.signInWithPassword({ email: operatorEmail, password: operatorPassword }), "Sign in as billing operator");
+assert.equal(result(await billing.rpc("is_platform_admin"), "Read billing identity role"), true);
 
 const browser = await chromium.launch();
 try {
@@ -120,14 +121,19 @@ try {
       console.log(`PASS W10 Agency reservation (${profile}): pending entitlement and Owner persisted across a fresh login`);
 
       const now = Date.now();
-      result(await billing.rpc("platform_confirm_company_payment_v1", {
+      const activation = await billing.rpc("platform_confirm_company_payment_v1", {
         p_organization_id: org.id,
         p_invoice_reference: "W10-SYNTHETIC-" + id,
         p_amount: entitlement.base_price,
         p_currency: entitlement.currency,
         p_period_start: new Date(now - 60000).toISOString(),
         p_period_end: new Date(now + 7 * 86400000).toISOString(),
-      }), "Record synthetic invoice in disposable database");
+      });
+      if (activation.error?.code === "42501") {
+        const safeDetail = activation.error.message.match(/^(?:Platform administrator required|permission denied for (?:table|function|schema|relation) [a-z_][a-z_0-9]*)/i);
+        console.log("W10 local activation authorization: " + (safeDetail?.[0] ?? "other authorization rejection"));
+      }
+      result(activation, "Record synthetic invoice in disposable database");
       const active = result(await admin.from("organization_entitlements")
         .select("status").eq("organization_id", org.id).single(), "Read activated entitlement");
       assert.equal(active.status, "active");
