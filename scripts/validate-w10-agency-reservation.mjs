@@ -50,7 +50,7 @@ async function login(page, email, password) {
   await page.locator('[name="email"]').fill(email);
   await page.locator('[name="password"]').fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await page.waitForURL(url => ["/setup/company", "/activation"].includes(url.pathname));
+  await page.waitForURL(url => ["/setup/company", "/activation", "/studio/templates"].includes(url.pathname));
 }
 
 const operatorEmail = "w10-billing-" + randomUUID() + "@example.com";
@@ -213,10 +213,15 @@ try {
       const link = result(await admin.from("project_contract_links").select("contract_id,project_id")
         .eq("organization_id", org.id).eq("project_id", projectId).single(), "Read project contract link");
       assert.deepEqual(link, { contract_id: contract.id, project_id: projectId });
-      await page.goto(app + customerPath + "?tab=projects", { waitUntil: "domcontentloaded" });
-      await page.getByText(brief, { exact: true }).first().waitFor();
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await page.getByText(brief, { exact: true }).first().waitFor();
+      const verification = await localContext(options);
+      try {
+        const reopened = await verification.newPage();
+        await login(reopened, email, password);
+        await reopened.goto(app + customerPath + "?tab=projects", { waitUntil: "commit" });
+        await reopened.getByRole("link", { name: brief, exact: true }).waitFor();
+      } finally {
+        await verification.close();
+      }
       console.log(`PASS W10 CRM and project (${profile}): persisted brief, customer, contract and accountable project`);
       console.log(`PASS W10 Agency provision (${profile}): recorded template installation`);
     } finally {
