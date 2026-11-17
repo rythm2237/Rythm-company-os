@@ -201,7 +201,12 @@ try {
       const project = result(await admin.from("projects").select("organization_id,customer_id,primary_manager_user_id")
         .eq("id", projectId).single(), "Read linked project");
       assert.deepEqual(project, { organization_id: org.id, customer_id: customerId, primary_manager_user_id: user.id });
-      await page.reload();
+      const link = result(await admin.from("project_contract_links").select("contract_id,project_id")
+        .eq("organization_id", org.id).eq("project_id", projectId).single(), "Read project contract link");
+      assert.deepEqual(link, { contract_id: contract.id, project_id: projectId });
+      await page.goto(app + customerPath + "?tab=projects");
+      await page.getByText(brief, { exact: true }).first().waitFor();
+      await page.reload({ waitUntil: "domcontentloaded" });
       await page.getByText(brief, { exact: true }).first().waitFor();
       console.log(`PASS W10 CRM and project (${profile}): persisted brief, customer, contract and accountable project`);
       console.log(`PASS W10 Agency provision (${profile}): recorded template installation`);
