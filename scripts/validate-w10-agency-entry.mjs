@@ -20,6 +20,9 @@ try {
       });
       const response = await page.goto(origin + "/templates");
       assert.equal(response?.status(), 200);
+      const tour = page.locator(".marketing-guide-dialog");
+      await tour.getByRole("button", { name: "Close", exact: true }).click();
+      await tour.waitFor({ state: "hidden" });
       const agency = page.locator("article").filter({
         has: page.getByRole("heading", { name: "AI Advertising Agency", exact: true }),
       });
