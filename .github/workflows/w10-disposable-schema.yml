@@ -27,6 +27,9 @@ jobs:
           mkdir -p "$stage"
           cd "$stage"
           supabase init
+          sed -i '/^\[auth\]$/,/^\[/ s|^site_url = .*|site_url = "http://localhost:3000"|' supabase/config.toml
+          sed -i '/^\[auth\]$/,/^\[/ s|^additional_redirect_urls = .*|additional_redirect_urls = ["http://localhost:3000/auth/callback", "http://localhost:3000/auth/callback?**"]|' supabase/config.toml
+          sed -i '/^\[auth.email\]$/,/^\[/ s/^enable_confirmations = .*/enable_confirmations = true/' supabase/config.toml
           cp -R "$GITHUB_WORKSPACE/supabase/migrations" supabase/
           # The initial organization seed expects a CEO identity to exist.
           # Supply a synthetic, credential-free identity in this temporary copy.
