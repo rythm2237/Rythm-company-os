@@ -52,6 +52,10 @@ jobs:
                   raise RuntimeError(f"Replay migration collision: {target.name}")
               migration.rename(target)
           PYTHON
+          # Historical sample-project backfill references a timestamp absent
+          # from the original briefs schema. Keep the status update in replay.
+          sed -i "/^update public.project_strategy_briefs$/ { n; s/^set status='completed', updated_at=now()$/set status='completed'/; }" \
+            supabase/migrations/*_first_strategy_cycle.sql
           supabase start
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
           do $$
