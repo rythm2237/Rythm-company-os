@@ -34,10 +34,11 @@ const server = createServer(async (req, res) => {
     calls++;
     evidence();
     console.log("W10 reserved USD " + reserved.toFixed(6) + ", request " + calls);
+    input.service_tier = "default";
     const response = await fetch("https://api.openai.com" + req.url, {
       method: "POST",
       headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
-      body: raw,
+      body: JSON.stringify(input),
       signal: AbortSignal.timeout(120000),
     });
     const body = await response.text();

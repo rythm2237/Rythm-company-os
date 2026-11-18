@@ -6,9 +6,14 @@ import { getRuntimeConfig } from "@/lib/runtime-config";
 const text=(value:unknown,fallback="")=>typeof value==="string"?value:fallback;
 const list=(value:unknown)=>Array.isArray(value)?value:[];
 
+function meetingActionRisk(value:unknown){
+  const risk=text(value).toLowerCase();
+  return ["low","medium","high","critical"].includes(risk)?risk:"high";
+}
+
 /** New work proposed by a meeting is outside the approved roadmap baseline. */
 export function projectMeetingActionNeedsApproval(autonomyMode:string, action:{needs_approval?:unknown;risk?:unknown}){
-  return autonomyMode==="approval_required" || ["high","critical"].includes(text(action.risk).toLowerCase()) || Boolean(action.needs_approval);
+  return autonomyMode==="approval_required" || ["high","critical"].includes(meetingActionRisk(action.risk)) || Boolean(action.needs_approval);
 }
 
 function parseStructuredJson(value:string):Record<string,unknown>{
@@ -129,15 +134,20 @@ async function runMeeting(supabase:SupabaseClient,job:any){
     const requestedOwner=text(action.owner_agent_id);
     const owner=participants.find(a=>a.id===requestedOwner)?.id||chair.id;
     const needsApproval=projectMeetingActionNeedsApproval(project.autonomy_mode,action);
+    const actionRisk=meetingActionRisk(action.risk);
     let approvalId:string|null=null;
     if(needsApproval){
-      const approval=await supabase.from("approval_requests").insert({organization_id:job.organization_id,project_id:project.id,subject_type:"meeting_action",subject_id:meeting.id,title:`Decision required: ${title}`,summary:text(action.description,"Meeting action requires authorization."),risk_level:text(action.risk,"medium"),requested_by_agent_id:chair.id,status:"pending",conditions:["Authorization is limited to the scoped project action."]}).select("id").single();
-      approvalId=approval.data?.id??null;
+      const approval=await supabase.from("approval_requests").insert({organization_id:job.organization_id,project_id:project.id,subject_type:"meeting_action",subject_id:meeting.id,title:`Decision required: ${title}`,summary:text(action.description,"Meeting action requires authorization."),risk_level:actionRisk,requested_by_agent_id:chair.id,status:"pending",conditions:["Authorization is limited to the scoped project action."]}).select("id").single();
+      if(approval.error||!approval.data?.id)throw new Error("Required meeting action approval could not be persisted.");
+      approvalId=approval.data.id;
     }
-    const actionItem=await supabase.from("action_items").insert({organization_id:job.organization_id,project_id:project.id,meeting_id:meeting.id,title,description:text(action.description),status:"open",priority:3,assigned_agent_id:owner,dependencies:[],success_criteria:[],evidence_required:[],risk_level:text(action.risk,"low"),authorization_approval_id:approvalId}).select("id").single();
+    const actionItem=await supabase.from("action_items").insert({organization_id:job.organization_id,project_id:project.id,meeting_id:meeting.id,title,description:text(action.description),status:"open",priority:3,assigned_agent_id:owner,dependencies:[],success_criteria:[],evidence_required:[],risk_level:actionRisk,authorization_approval_id:approvalId}).select("id").single();
+    if(actionItem.error||!actionItem.data)throw new Error("Meeting action could not be persisted.");
     if(actionItem.data){
       const execution=await supabase.from("project_executions").select("id,execution_no").eq("project_id",project.id).eq("organization_id",job.organization_id).eq("status","running").order("execution_no",{ascending:false}).limit(1).maybeSingle();
-      if(execution.data)await supabase.from("project_task_runs").insert({organization_id:job.organization_id,project_id:project.id,execution_id:execution.data.id,action_item_id:actionItem.data.id,task_key:`meeting-${meeting.id.slice(0,8)}-${actionItem.data.id.slice(0,8)}`,title,assigned_agent_id:owner,status:approvalId?"waiting_for_approval":"queued",priority:3,dependencies:[],waiting_on_approval_id:approvalId,idempotency_key:`project:${project.id}:execution:${execution.data.execution_no}:meeting:${meeting.id}:action:${actionItem.data.id}`,input:{description:text(action.description),risk:text(action.risk,"low"),source_meeting_id:meeting.id}});
+      if(execution.error||!execution.data)throw new Error("Active meeting execution is unavailable.");
+      const savedTask=await supabase.from("project_task_runs").insert({organization_id:job.organization_id,project_id:project.id,execution_id:execution.data.id,action_item_id:actionItem.data.id,task_key:`meeting-${meeting.id.slice(0,8)}-${actionItem.data.id.slice(0,8)}`,title,assigned_agent_id:owner,status:approvalId?"waiting_for_approval":"queued",priority:3,dependencies:[],waiting_on_approval_id:approvalId,idempotency_key:`project:${project.id}:execution:${execution.data.execution_no}:meeting:${meeting.id}:action:${actionItem.data.id}`,input:{description:text(action.description),risk:actionRisk,source_meeting_id:meeting.id}});
+      if(savedTask.error)throw new Error("Governed meeting task could not be persisted.");
     }
   }
   for(const updateRaw of list(data.knowledge_updates).slice(0,8)){

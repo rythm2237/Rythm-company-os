@@ -138,7 +138,7 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     supabase.from("project_clarification_requests").select("id,question,reason,input_type,options,materiality,status").eq("project_id",project.id).eq("status","open").order("created_at"),
     supabase.from("project_scope_versions").select("*").eq("project_id",project.id).order("version",{ascending:false}).limit(1).maybeSingle(),
     supabase.from("project_executions").select("*").eq("project_id",project.id).order("execution_no",{ascending:false}).limit(1).maybeSingle(),
-    supabase.from("project_task_runs").select("id,execution_id,task_key,title,status,priority,assigned_agent_id,attempt_count,max_attempts,error_class,error_message,started_at,completed_at,updated_at,agents(agent_code,display_name,name)").eq("project_id",project.id).order("priority").order("created_at"),
+    supabase.from("project_task_runs").select("id,execution_id,task_key,title,status,priority,assigned_agent_id,attempt_count,max_attempts,error_class,error_message,started_at,completed_at,updated_at,agents:agents!project_task_runs_agent_tenant_w03_fk(agent_code,display_name,name)").eq("project_id",project.id).order("priority").order("created_at"),
     supabase.from("project_agents").select("assignment_role,status,authority_scope,agents(id,agent_code,display_name,name,role_title)").eq("project_id",project.id),
     supabase.from("project_proposals").select("*").eq("project_id",project.id).order("created_at",{ascending:false}),
     supabase.from("project_activity_events").select("*").eq("project_id",project.id).order("created_at",{ascending:false}).limit(60),
@@ -179,6 +179,7 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     :onHold?"Review the open governance holds before resuming execution."
     :isContinuous?"Monitor verified outcomes and complete scheduled reviews."
     :"Review the latest roadmap milestone and outstanding work.";
+  const objectiveText=String(project.objective||project.description||"Governed autonomous project.");
   const navCount=(view:View)=>view==="work"?taskRows.length+(projectActions.data?.length??0):view==="decisions"?pendingApprovalRows.length:view==="files"?(documents.data?.length??0):view==="activity"?(activity.data?.length??0):null;
   return <ProjectApprovalProvider key={`${project.id}:${activeView}`} initialApprovals={pendingApprovalRows}><main className="command-shell">
     <section className="panel" style={{marginBottom:18}} aria-label="Project accountability"><div className="crm-fields"><div><small>Customer</small><p>{crmCustomer.data?<Link href={`/crm/${crmCustomer.data.id}`}>{crmCustomer.data.name}</Link>:project.engagement_type==="external"?"Customer unavailable":"Internal project"}</p></div><div><small>Accountable manager</small><p>{crmManager.data?.display_name||(project.primary_manager_user_id?"Assigned manager":"Reconciliation required")}</p></div></div><details><summary>Reassign manager & history</summary><form action={assignManager} className="auth-form"><input type="hidden" name="project_id" value={project.id}/><label>Primary manager<select name="manager_id" required defaultValue={project.primary_manager_user_id||""}><option value="" disabled>Select one manager</option>{crmMembers.data?.map(m=><option key={m.user_id} value={m.user_id}>{m.display_name||m.user_id}</option>)}</select></label><label>Reason<input name="reason"/></label><SubmitButton>Assign manager</SubmitButton></form>{managerHistory.data?.map(h=><p key={h.id}>{new Date(h.created_at).toLocaleString("en-GB")} · {crmMembers.data?.find(m=>m.user_id===h.new_manager_user_id)?.display_name||h.new_manager_user_id} · {h.reason}</p>)}</details></section>
@@ -187,7 +188,8 @@ export default async function ProjectOperatingPage({searchParams}:Props){
         <Link href="/projects" className="project-detail-back">← All projects</Link>
         <p className="eyebrow">PROJECT · {project.project_code}{isContinuous?" · CONTINUOUS PROGRAM":""}</p>
         <h1>{project.name}</h1>
-        <p className="subtitle project-detail-objective">{project.objective||project.description||"Governed autonomous project."}</p>
+        <p className="subtitle project-detail-objective">{objectiveText.length>280?`${objectiveText.slice(0,280)}…`:objectiveText}</p>
+        {objectiveText.length>280?<details className="project-detail-objective"><summary>Full objective</summary><p style={{whiteSpace:"pre-wrap"}}>{objectiveText}</p></details>:null}
       </div>
       <div className="project-detail-header-side">
         <span className={onHold?"project-state-label is-blocked":"project-state-label"}>{projectHealthLabel}</span>
@@ -262,10 +264,10 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     {activeView==="advanced"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project-only team</p><h2>Assigned AI specialists</h2></div><span className="pill">{agents.length} agents</span></div>
       {params.teamSaved?<p className="form-success">Specialist assigned to this project.</p>:null}
       {params.teamError?<p role="alert" className="form-error">Specialist could not be assigned. Choose an enabled company specialist and an allocation from 1 to 100.</p>:null}
-      {role==="owner"?<form action={assignProjectSpecialist} aria-label="Assign project specialist" className="auth-form">
+      {role==="owner"?<form action={assignProjectSpecialist} aria-label="Assign project specialist" role="form" className="auth-form">
         <input type="hidden" name="projectId" value={project.id}/>
-        <label>Enabled specialist<select name="agentId" required defaultValue=""><option value="" disabled>Select a specialist</option>{(assignableAgents.data??[]).map(agent=><option key={agent.id} value={agent.id}>{agent.display_name||agent.name} · {agent.agent_code}</option>)}</select></label>
-        <label>Capacity allocation (%)<input name="allocationPercent" type="number" min="1" max="100" defaultValue="25" required/></label>
+        <label htmlFor="project-specialist-agent">Enabled specialist</label><select id="project-specialist-agent" name="agentId" required defaultValue=""><option value="" disabled>Select a specialist</option>{(assignableAgents.data??[]).map(agent=><option key={agent.id} value={agent.id}>{agent.display_name||agent.name} · {agent.agent_code}</option>)}</select>
+        <label htmlFor="project-specialist-capacity">Capacity allocation (%)</label><input id="project-specialist-capacity" name="allocationPercent" type="number" min="1" max="100" defaultValue="25" required/>
         <SubmitButton>Assign specialist</SubmitButton><p className="security-note">Only enabled company specialists can join this project team.</p>
       </form>:null}<div className="data-list">{agents.map((row:any)=>{const agent=Array.isArray(row.agents)?row.agents[0]:row.agents;return <div className="data-row" key={agent?.id??row.assignment_role}><div><strong>{agent?.display_name||agent?.name||"Agent"}</strong><span>{agent?.role_title||row.assignment_role} · {agent?.agent_code||"AI"}</span></div><span className="pill">{row.status}</span></div>})}{!agents.length?<p className="subtitle">The project team forms after analysis.</p>:null}</div></section>:null}
 

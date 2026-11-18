@@ -69,7 +69,7 @@ result(await billing.auth.signInWithPassword({ email: operatorEmail, password: o
 assert.equal(result(await billing.rpc("is_platform_admin"), "Read billing identity role"), true);
 
 const isolatedOrganizations = [];
-const browser = await chromium.launch();
+const browser = await chromium.launch({ channel: process.env.CRM_BROWSER_CHANNEL || undefined });
 
 async function localContext(options) {
   const context = await browser.newContext(options);
@@ -128,7 +128,7 @@ try {
       for (const table of ["meeting_agent_messages", "meeting_agent_participants"]) {
         assert.deepEqual(result(await ownerClient.from(table).select("session_id").in("session_id", previous.sessionIds), "Cross-tenant " + table), []);
       }
-      for (const table of ["project_task_runs", "project_roadmaps", "meetings", "meeting_agent_sessions", "approval_requests", "project_readiness_assessments"]) {
+      for (const table of ["action_items", "project_task_runs", "project_roadmaps", "meetings", "meeting_agent_sessions", "approval_requests", "project_readiness_assessments"]) {
         const hidden = result(await ownerClient.from(table).select("id").eq("project_id", previous.projectId), "Cross-tenant " + table);
         assert.deepEqual(hidden, [], "Another tenant must not see " + table);
       }
@@ -244,10 +244,15 @@ try {
       const project = result(await admin.from("projects").select("organization_id,customer_id,primary_manager_user_id")
         .eq("id", projectId).single(), "Read linked project");
       assert.deepEqual(project, { organization_id: org.id, customer_id: customerId, primary_manager_user_id: user.id });
-      await page.getByRole("heading", { name: projectName, exact: true }).first().waitFor();
+      const projectHeading = page.getByRole("heading", { name: projectName, exact: true }).first();
+      await projectHeading.waitFor();
+      assert.ok(await projectHeading.evaluate(element => parseFloat(getComputedStyle(element).fontSize)) <= (profile === "mobile" ? 32 : 44), "Project heading must retain its compact workspace scale");
+      await page.getByText("Full objective", { exact: true }).click();
+      await page.getByText(objective, { exact: true }).waitFor();
+      await page.getByText("Full objective", { exact: true }).click();
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.getByRole("heading", { name: projectName, exact: true }).first().waitFor();
-      const actionTitle = "W10 Prepare internal report " + id;
+      const actionTitle = "Review synthetic client brief " + id;
       await page.goto(app + "/actions?project=" + projectId);
       await page.locator(".action-create-card > summary").click();
       const actionForm = page.locator(".action-create-card form");
@@ -328,7 +333,7 @@ try {
       }
       for (const agent of roster) {
         await page.goto(app + "/projects/operating?project=" + projectId + "&view=advanced");
-        const assignment = page.getByRole("form", { name: "Assign project specialist", exact: true });
+        const assignment = page.locator('form[aria-label="Assign project specialist"]');
         await assignment.getByLabel("Enabled specialist", { exact: true }).selectOption(agent.id);
         await assignment.getByLabel("Capacity allocation (%)", { exact: true }).fill("25");
         await assignment.getByRole("button", { name: "Assign specialist", exact: true }).click();
@@ -344,7 +349,16 @@ try {
       assert.ok(capacity.every(row => row.allocation_percent === 25));
       Object.assign(recordEvidence, { assigned_specialist_ids: roster.map(a => a.id) });
       writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
-      console.log(`PASS W10 project team (${profile}): Owner UI assignments and capacity persist under tenant RLS`);
+      const liveStateResponse = await page.request.get(app + "/api/projects/live?projectId=" + projectId);
+      assert.equal(liveStateResponse.status(), 200, "Authenticated project live state must load without relationship/read errors");
+      const liveState = await liveStateResponse.json();
+      assert.equal(liveState.project.id, projectId);
+      assert.ok(liveState.agents.length >= 2);
+      for (const previous of isolatedOrganizations) {
+        assert.equal((await page.request.get(app + "/api/projects/live?projectId=" + previous.projectId)).status(), 404, "Foreign project state must not cross the owner API boundary");
+      }
+      await page.screenshot({ path: "test-results/w10-" + profile + "-project-team.png", fullPage: true });
+      console.log("PASS W10 project team (" + profile + "): Owner UI assignments and capacity persist under tenant RLS");
       if (process.env.W10_LIVE_AI === "true") {
         await page.goto(app + "/projects/operating?project=" + projectId + "&view=advanced");
         const responsePromise = page.waitForResponse(response =>
@@ -429,6 +443,10 @@ try {
           .eq("organization_id", org.id).eq("id", finalTask.id).single(), "Read final generated artifact");
         assert.equal(output.status, "completed");
         assert.ok(Array.isArray(output.safe_result?.deliverables) && output.safe_result.deliverables.length, "An actual post-approval deliverable must persist");
+        const artifactText = String(output.safe_result.summary ?? "") + JSON.stringify(output.safe_result.deliverables);
+        assert.match(artifactText, /CTR|click[- ]through/i, "Persisted KPI output must include click-through work");
+        assert.match(artifactText, /conversion|CVR/i, "Persisted KPI output must include conversion work");
+        assert.match(artifactText, /1[,\s]?000/, "The generated artifact must use the supplied synthetic evidence");
         outputs.push(output);
         const savedApproval = result(await admin.from("approval_requests").select("status,approver_user_id").eq("id", reviewApprovals[0].id).single(), "Read recorded Human CEO decision");
         assert.equal(savedApproval.status, "approved");
@@ -453,7 +471,7 @@ try {
         assert.ok(restrictedOutputs.length, "Tenant viewer can read operational outputs under existing policy");
         const forbiddenApproval = await memberClient.from("approval_requests").update({ status: "rejected" }).eq("id", reviewApprovals[0].id).select("id");
         assert.ok(forbiddenApproval.error || !forbiddenApproval.data?.length, "Viewer cannot change Human CEO decisions");
-        deliveryEvidence = { roadmap_id: roadmap.id, approval_ids: [...pending, ...reviewApprovals].map(p => p.id), review_session_id: reviewSession.id, transcript_ids: transcript.map(m => m.id), outputs: outputs.map(t => ({ id: t.id, organization_id: t.organization_id, status: t.status, summary: t.safe_result.summary })), review_meeting_ids: completedMeetings.map(m => m.id) };
+        deliveryEvidence = { roadmap_id: roadmap.id, approval_ids: [...pending, ...reviewApprovals].map(p => p.id), review_session_id: reviewSession.id, transcript_ids: transcript.map(m => m.id), outputs: outputs.map(t => ({ id: t.id, organization_id: t.organization_id, status: t.status, summary: t.safe_result.summary, deliverables: t.safe_result.deliverables })), review_meeting_ids: completedMeetings.map(m => m.id), review_meetings: completedMeetings.map(m => ({ id: m.id, organization_id: m.organization_id, status: m.status, minutes: m.minutes })) };
         console.log(`PASS W10 generated delivery (${profile}): persisted outputs, reviewed meeting, approvals, refresh and re-login`);
       }
       const meetingLead = result(await admin.from("agents").select("id,agent_code,enabled")
@@ -487,7 +505,24 @@ try {
       await page.getByRole("button", { name: /^Next Action/ }).first().waitFor();
       await page.screenshot({ path: `test-results/w10-${profile}-manual-boardroom.png`, fullPage: true });
       console.log(`PASS W10 Agency Boardroom (${profile}): browser-created meeting, strategy synthesis, explicit participants and refresh`);
-      Object.assign(recordEvidence, { manual_meeting_id: manualMeetingId, manual_session_id: manualSessionId, delivery: deliveryEvidence, stage: deliveryEvidence ? "full_delivery_verified" : "core_and_manual_only" });
+      await page.goto(app + "/actions?project=" + projectId + "&action=" + actionId);
+      const completionForm = page.locator('form').filter({ has: page.locator('input[name="actionId"]') });
+      await completionForm.locator('[name="nextStatus"]').selectOption("completed");
+      await completionForm.getByLabel("Transition note").fill(deliveryEvidence
+        ? "Reviewed the synthetic brief and saved KPI output " + deliveryEvidence.outputs.at(-1).id
+        : "Reviewed the synthetic brief and verified its persisted customer/project links.");
+      await completionForm.getByRole("button", { name: "Update action item" }).click();
+      await page.waitForURL(url => url.searchParams.get("status") === "completed");
+      await page.reload();
+      await page.getByRole("heading", { name: actionTitle, exact: true }).waitFor();
+      await page.getByText("Final action items are immutable.", { exact: true }).waitFor();
+      const completedReview = result(await ownerClient.from("action_items").select("organization_id,status,completed_at").eq("id", actionId).single(), "Read completed brief review");
+      assert.equal(completedReview.status, "completed");
+      assert.equal(completedReview.organization_id, org.id);
+      assert.ok(completedReview.completed_at);
+      await page.screenshot({ path: "test-results/w10-" + profile + "-completed-review.png", fullPage: true });
+      console.log("PASS W10 review task (" + profile + "): Owner completion and immutable final state survive refresh");
+      Object.assign(recordEvidence, { review_action_status: "completed", manual_meeting_id: manualMeetingId, manual_session_id: manualSessionId, delivery: deliveryEvidence, stage: deliveryEvidence ? "full_delivery_verified" : "core_and_manual_only" });
       writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
       isolatedOrganizations.push({ projectId, customerId, contractId: contract.id, departmentIds: departments.map(d => d.id), agentIds: workforce.map(a => a.id), sessionIds: [manualSessionId, ...(deliveryEvidence ? [deliveryEvidence.review_session_id] : [])] });
       console.log(`PASS W10 CRM and project (${profile}): persisted brief, customer, contract and accountable project`);

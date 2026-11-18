@@ -139,18 +139,19 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts && node --import tsx scripts/validate-w10-team-assignment.ts
-      - run: npx playwright install --with-deps chromium
+      - run: node --check scripts/validate-w10-agency-reservation.mjs && node --check scripts/w10-budget-proxy.mjs && node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts && node --import tsx scripts/validate-w10-team-assignment.ts && node scripts/validate-w10-meeting-approval-boundary.mjs
+      - run: google-chrome --version
       - name: Verify reservation and re-login against disposable Auth
         env:
+          CRM_BROWSER_CHANNEL: chrome
           AUTH_SITE_ORIGIN: http://localhost:3000
           RYTHM_ENV: staging
           RYTHM_AGENT_EXECUTION_ENABLED: 'true'
           RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
           NEXT_TELEMETRY_DISABLED: '1'
           # Paid execution is authorized for this one PR update only. Later updates run without a provider key.
-          W10_LIVE_AI: ${{ github.event.before == 'cd6b8298e51aa90eda49c4e6468c8e6c8da04b4b' && 'true' || 'false' }}
-          W10_PROVIDER_KEY: ${{ github.event.before == 'cd6b8298e51aa90eda49c4e6468c8e6c8da04b4b' && secrets.OPENAI_API_KEY || '' }}
+          W10_LIVE_AI: ${{ github.event.before == '8091f25cf1d890a87b1467b9e5412c407c9dfabb' && 'true' || 'false' }}
+          W10_PROVIDER_KEY: ${{ github.event.before == '8091f25cf1d890a87b1467b9e5412c407c9dfabb' && secrets.OPENAI_API_KEY || '' }}
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/w10-disposable"
@@ -183,6 +184,15 @@ jobs:
           trap 'kill "$app_pid" "$proxy_pid" 2>/dev/null || true' EXIT
           curl -fsS --retry 25 --retry-connrefused --retry-delay 2 http://localhost:3000/login -o /dev/null
           W10_LOCAL_SERVICE_KEY="$SERVICE_ROLE_KEY" node scripts/validate-w10-agency-reservation.mjs
+      - name: Print sanitized synthetic evidence
+        if: always()
+        run: |
+          node - <<'JS'
+          const fs=require("node:fs");
+          for(const [marker,path] of [["W10_BUDGET_JSON","test-results/w10-budget.json"],["W10_EVIDENCE_JSON","test-results/w10-evidence.json"]]){
+            if(fs.existsSync(path))console.log(marker+" "+JSON.stringify(JSON.parse(fs.readFileSync(path,"utf8"))).replace(/sk-[A-Za-z0-9_-]{12,}/g,"[redacted]"));
+          }
+          JS
       - uses: actions/upload-artifact@v4
         if: always()
         with:
