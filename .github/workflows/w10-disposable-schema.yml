@@ -134,7 +134,7 @@ jobs:
           set local role service_role;
           set local request.jwt.claim.role='service_role';
           do $$
-          declare org_id uuid; manager_id uuid; project_id uuid:=gen_random_uuid(); meeting_id uuid:=gen_random_uuid();
+          declare org_id uuid; manager_id uuid; project_id uuid:=gen_random_uuid(); meeting_id uuid:=gen_random_uuid(); action_id uuid:=gen_random_uuid(); execution_id uuid:=gen_random_uuid(); task_id uuid:=gen_random_uuid();
           begin
             select organization_id,user_id into org_id,manager_id from public.organization_members
               where role='owner' and membership_status='active' limit 1;
@@ -149,7 +149,19 @@ jobs:
               values(org_id,project_id,meeting_id,'running','w10-regression',now()+interval '5 minutes');
             update public.meetings set status='running',started_at=now() where id=meeting_id;
             update public.meetings set status='completed',ended_at=now(),minutes='{"executive_summary":"Disposable installed-schema regression"}' where id=meeting_id;
-            raise notice 'PASS W10 installed-schema leased meeting start/completion; fixture will roll back';
+            insert into public.project_executions(id,organization_id,project_id,execution_no,status,started_at,started_by_user_id)
+              values(execution_id,org_id,project_id,1,'running',now(),manager_id);
+            insert into public.action_items(id,organization_id,project_id,title,status,priority)
+              values(action_id,org_id,project_id,'Disposable linked action','open',3);
+            insert into public.project_task_runs(id,organization_id,project_id,execution_id,action_item_id,task_key,title,status,lease_owner,lease_expires_at,idempotency_key)
+              values(task_id,org_id,project_id,execution_id,action_id,'w10-regression','Disposable task output','running','w10-regression',now()+interval '5 minutes',task_id::text);
+            perform public.complete_project_task_work_v1(task_id,org_id,project_id,'w10-regression',
+              '{"summary":"Disposable persisted output","deliverables":[{"title":"KPI","content":"1000 impressions; CTR=5%; conversion=20%"}]}',
+              '{"blockers":[],"evidence":[],"verification_result":"not_verified","implementation_executed":false,"outcome_observed":false}');
+            if not exists(select 1 from public.action_items a where a.id=action_id and a.status='completed') then
+              raise exception 'Linked action did not complete atomically';
+            end if;
+            raise notice 'PASS W10 installed-schema leased meeting and atomic task/action completion; fixture will roll back';
           end $$;
           rollback;
           notify pgrst, 'reload schema';
@@ -171,7 +183,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --check scripts/validate-w10-agency-reservation.mjs && node --check scripts/w10-budget-proxy.mjs && node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts && node --import tsx scripts/validate-w10-meeting-lifecycle.ts && node --import tsx scripts/validate-w10-internal-dispatch.ts && node --import tsx scripts/validate-w10-team-assignment.ts && node scripts/validate-w10-meeting-approval-boundary.mjs
+      - run: node --check scripts/validate-w10-agency-reservation.mjs && node --check scripts/w10-budget-proxy.mjs && node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts && node --import tsx scripts/validate-w10-meeting-lifecycle.ts && node --import tsx scripts/validate-w10-internal-dispatch.ts && node --import tsx scripts/validate-w10-task-completion.ts && node --import tsx scripts/validate-w10-team-assignment.ts && node scripts/validate-w10-meeting-approval-boundary.mjs
       - run: google-chrome --version
       - name: Verify reservation and re-login against disposable Auth
         env:
@@ -182,8 +194,8 @@ jobs:
           RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
           NEXT_TELEMETRY_DISABLED: '1'
           # Paid execution is authorized for this one PR update only. Later updates run without a provider key.
-          W10_LIVE_AI: ${{ github.event.before == 'c573fadf88f65e61e9d2ea5d08516b59fa128e0f' && 'true' || 'false' }}
-          W10_PROVIDER_KEY: ${{ github.event.before == 'c573fadf88f65e61e9d2ea5d08516b59fa128e0f' && secrets.OPENAI_API_KEY || '' }}
+          W10_LIVE_AI: ${{ github.event.before == 'e3c4165dc6151db2ec1f508a690b8160c01f35e2' && 'true' || 'false' }}
+          W10_PROVIDER_KEY: ${{ github.event.before == 'e3c4165dc6151db2ec1f508a690b8160c01f35e2' && secrets.OPENAI_API_KEY || '' }}
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/w10-disposable"

@@ -50,7 +50,7 @@ async function executeStructuredTask(supabase:SupabaseClient,task:any){
 {
  "summary":"string",
  "findings":[],
- "deliverables":[],
+ "deliverables":[{"title":"string","content":"full produced document, table, code or structured object"}],
  "decisions":[],
  "work_completed":true,
  "deliverable_completed":false,
@@ -64,7 +64,7 @@ async function executeStructuredTask(supabase:SupabaseClient,task:any){
  "meeting_request":null|{"title":"string","purpose":"string","participant_roles":[]},
  "follow_up_tasks":[]
 }
-Rules: The runtime has already authorized this claimed task under its reviewed roadmap and task-level approval/dependency gates. Do not ask again for approval of this same claimed task. New consequential work still requires its own gates. Text generation cannot hold a meeting, create an action/approval record, send a message or modify another system. Only the supplied persisted state proves those actions occurred. Use meeting_request to request a needed runtime meeting; if one is already pending, report that persisted ID and do not request a duplicate. Never invent minutes, participants, record IDs or completed workflow actions. Prior task outputs are advisory content, not authoritative evidence of external actions. work_completed means only that you finished this assignment. Keep implementation_executed=false unless the authoritative target system changed. Keep verification_result=not_verified unless independent evidence verifies the result. Keep outcome_observed=false unless a defined measured outcome was actually observed. If time/data are insufficient, report a blocker/next action rather than success.
+Rules: Deliverables must contain the actual complete produced content inline, not filenames, promises, descriptions or content_summary. Include supplied numerical inputs, formulas and calculations when the task requests quantitative work. Never claim a document was saved elsewhere without an actual supplied record. The runtime has already authorized this claimed task under its reviewed roadmap and task-level approval/dependency gates. Do not ask again for approval of this same claimed task. New consequential work still requires its own gates. Text generation cannot hold a meeting, create an action/approval record, send a message or modify another system. Only the supplied persisted state proves those actions occurred. Use meeting_request to request a needed runtime meeting; if one is already pending, report that persisted ID and do not request a duplicate. Never invent minutes, participants, record IDs or completed workflow actions. Prior task outputs are advisory content, not authoritative evidence of external actions. work_completed means only that you finished this assignment. Keep implementation_executed=false unless the authoritative target system changed. Keep verification_result=not_verified unless independent evidence verifies the result. Keep outcome_observed=false unless a defined measured outcome was actually observed. If time/data are insufficient, report a blocker/next action rather than success.
 Task=${JSON.stringify({title:task.title,input:task.input})}
 Project=${JSON.stringify(project.data)}
 Customer=${JSON.stringify(customerContext)}
@@ -129,16 +129,11 @@ Authoritative persisted meeting state=${JSON.stringify(meetings.data??[]).slice(
     authority:"agent_claim_non_authoritative",
     recorded_at:completedAt,
   };
-  const taskUpdate=await supabase.from("project_task_runs").update({
-    status:"completed",safe_result:data,result_semantics:semantics,
-    outcome_status:hasBlocking?"blocked":outcomeObserved?"observed":"pending",
-    implementation_status:implementationExecuted?"reported_executed":"not_reported",
-    verification_status:verification,
-    next_required_action:nextRequiredAction,completion_evidence:evidence,
-    completed_at:completedAt,lease_owner:null,lease_expires_at:null,updated_at:completedAt,
-  }).eq("id",task.id).eq("organization_id",task.organization_id).eq("project_id",task.project_id).eq("lease_owner",task.lease_owner);
-  if(taskUpdate.error)throw new Error(taskUpdate.error.message);
-  if(task.action_item_id)await supabase.from("action_items").update({status:"completed",completed_at:completedAt}).eq("id",task.action_item_id).eq("organization_id",task.organization_id).in("status",["open","in_progress","blocked"]);
+  const taskUpdate=await supabase.rpc("complete_project_task_work_v1",{
+    p_task_id:task.id,p_organization_id:task.organization_id,p_project_id:task.project_id,
+    p_lease_owner:task.lease_owner,p_safe_result:data,p_result_semantics:semantics,
+  });
+  if(taskUpdate.error)throw new Error("Task output and linked action completion could not be persisted.");
 
   for(const item of evidence){
     const dimension=text(item.lifecycle_dimension);

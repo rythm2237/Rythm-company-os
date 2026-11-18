@@ -443,7 +443,7 @@ try {
         const reviewApprovals = result(await admin.from("approval_requests").select("id,title")
           .eq("organization_id", org.id).eq("project_id", projectId).eq("subject_type", "meeting_action").eq("status", "pending"), "Read post-meeting Human CEO gate");
         assert.equal(reviewApprovals.length, 1, "The scoped finalization must await exactly one meeting approval");
-        const finalTask = result(await admin.from("project_task_runs").select("id,status")
+        const finalTask = result(await admin.from("project_task_runs").select("id,status,action_item_id")
           .eq("organization_id", org.id).eq("project_id", projectId).eq("waiting_on_approval_id", reviewApprovals[0].id).single(), "Read governed finalization task");
         assert.equal(finalTask.status, "waiting_for_approval");
         await page.goto(app + "/projects/operating?project=" + projectId + "&view=decisions");
@@ -457,8 +457,11 @@ try {
         const output = result(await admin.from("project_task_runs").select("id,title,status,safe_result,organization_id")
           .eq("organization_id", org.id).eq("id", finalTask.id).single(), "Read final generated artifact");
         assert.equal(output.status, "completed");
+        assert.equal(result(await ownerClient.from("action_items").select("status").eq("organization_id", org.id).eq("id", finalTask.action_item_id).single(), "Read atomically completed linked action").status, "completed");
         assert.ok(Array.isArray(output.safe_result?.deliverables) && output.safe_result.deliverables.length, "An actual post-approval deliverable must persist");
-        const artifactText = String(output.safe_result.summary ?? "") + JSON.stringify(output.safe_result.deliverables);
+        const bodies = output.safe_result.deliverables.filter(item => item && typeof item === "object" && item.content != null);
+        assert.ok(bodies.length, "A deliverable needs its full inline content, not a description or filename");
+        const artifactText = bodies.map(item => typeof item.content === "string" ? item.content : JSON.stringify(item.content)).join("\n");
         assert.match(artifactText, /CTR|click[- ]through/i, "Persisted KPI output must include click-through work");
         assert.match(artifactText, /conversion|CVR/i, "Persisted KPI output must include conversion work");
         assert.match(artifactText, /1[,\s]?000/, "The generated artifact must use the supplied synthetic evidence");

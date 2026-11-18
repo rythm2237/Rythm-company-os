@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { writeFileSync, mkdirSync } from "node:fs";
 const key = process.env.W10_PROVIDER_KEY;
 if (!key?.startsWith("sk-")) throw Error("W10 provider credential unavailable");
-const ceiling = 0.25;
+const ceiling = 0.40;
 let reserved = 0, actual = 0, calls = 0;
 const outcomes = [];
 mkdirSync("test-results", { recursive: true });
