@@ -83,13 +83,15 @@ async function aiJson(input:{organizationId:string;projectId:string;meetingId:st
 }
 
 async function runMeeting(supabase:SupabaseClient,job:any){
-  const [meetingResult,projectResult,projectAgentsResult,knowledgeResult]=await Promise.all([
+  const [meetingResult,projectResult,projectAgentsResult,knowledgeResult,outputsResult]=await Promise.all([
     supabase.from("meetings").select("id,title,purpose,agenda,chair_agent_id,involvement_mode,status").eq("id",job.meeting_id).eq("organization_id",job.organization_id).single(),
     supabase.from("projects").select("id,name,objective,constraints,autonomy_mode,budget_cap_usd,responsible_department").eq("id",job.project_id).eq("organization_id",job.organization_id).single(),
     supabase.from("project_agents").select("agent_id,assignment_role,status,agents(id,agent_code,name,display_name,role_title,purpose,work_style,enabled)").eq("project_id",job.project_id).eq("organization_id",job.organization_id).in("status",["assigned","active"]),
     supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("confidentiality","operational").eq("project_id",job.project_id).eq("organization_id",job.organization_id).order("created_at",{ascending:false}).limit(12),
+    supabase.from("project_task_runs").select("id,title,safe_result").eq("organization_id",job.organization_id).eq("project_id",job.project_id).eq("status","completed").order("created_at",{ascending:false}).limit(8),
   ]);
   if(!meetingResult.data||!projectResult.data)throw new Error("Meeting or project is unavailable.");
+  if(projectAgentsResult.error||knowledgeResult.error||outputsResult.error)throw new Error("Meeting project evidence is unavailable.");
   const meeting=meetingResult.data,project=projectResult.data;
   if(meeting.involvement_mode!=="AUTONOMOUS")throw new Error("Meeting is not authorized for autonomous execution.");
   if(!["limited_autonomy","full_autonomy_within_policy","approval_required"].includes(project.autonomy_mode))throw new Error("Project autonomy policy does not permit autonomous internal meetings.");
@@ -105,7 +107,7 @@ async function runMeeting(supabase:SupabaseClient,job:any){
 
   if(savedParticipants.error)throw new Error("Autonomous meeting participants could not be persisted.");
 
-  const knowledge=JSON.stringify(knowledgeResult.data??[]).slice(0,16000);
+  const knowledge=JSON.stringify({project_documents:knowledgeResult.data??[],persisted_task_outputs:outputsResult.data??[]}).slice(0,22000);
   const transcript:Array<{agent:Agent;position:Record<string,unknown>}>=[];
   let totalCost=0,totalInput=0,totalOutput=0,turn=0;
   for(const agent of participants){

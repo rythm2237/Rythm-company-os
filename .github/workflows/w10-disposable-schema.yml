@@ -142,7 +142,7 @@ jobs:
             insert into public.projects(id,organization_id,project_code,name,status,autonomy_mode,primary_manager_user_id,engagement_type)
               values(project_id,org_id,'W10-LIFECYCLE-REGRESSION','Disposable lifecycle regression','active','approval_required',manager_id,'internal');
             perform set_config('request.jwt.claim.sub','',true);
-            if public.is_org_owner(org_id) then raise exception 'Regression worker must have no Owner identity'; end if;
+            if auth.uid() is not null or auth.role()<>'service_role' then raise exception 'Regression worker must have service role and no Owner identity'; end if;
             insert into public.meetings(id,organization_id,project_id,title,purpose,status,involvement_mode)
               values(meeting_id,org_id,project_id,'Disposable internal review','Exercise installed lifecycle triggers','draft','AUTONOMOUS');
             insert into public.project_autonomous_meeting_jobs(organization_id,project_id,meeting_id,status,lease_owner,lease_expires_at)
@@ -182,8 +182,8 @@ jobs:
           RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
           NEXT_TELEMETRY_DISABLED: '1'
           # Paid execution is authorized for this one PR update only. Later updates run without a provider key.
-          W10_LIVE_AI: ${{ github.event.before == '15b47983a886f3cd4d03b8dda5146456d7e0dd86' && 'true' || 'false' }}
-          W10_PROVIDER_KEY: ${{ github.event.before == '15b47983a886f3cd4d03b8dda5146456d7e0dd86' && secrets.OPENAI_API_KEY || '' }}
+          W10_LIVE_AI: ${{ github.event.before == 'c573fadf88f65e61e9d2ea5d08516b59fa128e0f' && 'true' || 'false' }}
+          W10_PROVIDER_KEY: ${{ github.event.before == 'c573fadf88f65e61e9d2ea5d08516b59fa128e0f' && secrets.OPENAI_API_KEY || '' }}
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/w10-disposable"

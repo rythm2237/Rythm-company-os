@@ -3,6 +3,7 @@ import {build} from "esbuild";
 import {createRequire} from "node:module";
 const require=createRequire(import.meta.url);
 async function syntheticGateway(input){
+  if(input.feature==="boardroom.deliberation"&&!input.prompt.includes("W10 persisted draft control"))throw Error("Persisted draft evidence must reach actual deliberation");
   return {
     outputText:JSON.stringify(input.feature==="boardroom.summary"
       ? {executive_summary:"Synthetic review",consensus:"Review",disagreements:[],decision:"Synthetic recommendation",recommendation:"Internal draft",action_items:[{title:"Finalize internal draft",description:"Only internal synthetic work",risk:"HIGH",needs_approval:false}],knowledge_updates:[]}
@@ -55,6 +56,7 @@ try {
           if(table==="projects")return {data:{id:"project",name:"Synthetic project",objective:"Internal draft",constraints:[],autonomy_mode:"approval_required",budget_cap_usd:0.25},error:null};
           if(table==="project_agents")return {data:agents.map(agent=>({agents:agent})),error:null};
           if(table==="project_context_documents")return {data:[],error:null};
+          if(table==="project_task_runs")return {data:[{id:"draft",title:"Synthetic draft",safe_result:{summary:"W10 persisted draft control"}}],error:null};
           if(table==="project_executions"){
             assert.equal(filters.project_id,"project");
             return {data:{id:"execution",execution_no:1},error:null};

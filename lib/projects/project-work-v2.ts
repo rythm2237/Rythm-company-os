@@ -29,11 +29,13 @@ async function executeStructuredTask(supabase:SupabaseClient,task:any){
     task.action_item_id?supabase.from("action_items").select("id,project_id").eq("id",task.action_item_id).eq("organization_id",task.organization_id).maybeSingle():Promise.resolve({data:null,error:null}),
   ]);
   if(project.error||!project.data||execution.error||!execution.data||agent.error||(task.assigned_agent_id&&!agent.data)||action.error||(task.action_item_id&&(!action.data||(action.data.project_id&&action.data.project_id!==task.project_id))))throw new ProjectTaskTenantBoundaryError();
-  const [context,decisions]=await Promise.all([
+  const [context,decisions,previousTasks,meetings]=await Promise.all([
     supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("organization_id",task.organization_id).eq("confidentiality","operational").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
     supabase.from("project_decision_memory").select("decision,rationale,constraints,outcome,created_at").eq("organization_id",task.organization_id).eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
+    supabase.from("project_task_runs").select("id,title,safe_result").eq("organization_id",task.organization_id).eq("project_id",task.project_id).eq("execution_id",task.execution_id).eq("status","completed").order("created_at",{ascending:false}).limit(8),
+    supabase.from("meetings").select("id,title,status,minutes").eq("organization_id",task.organization_id).eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(8),
   ]);
-  if(context.error||decisions.error)throw new Error("Project context unavailable.");
+  if(context.error||decisions.error||previousTasks.error||meetings.error)throw new Error("Project context unavailable.");
   const customerContext=await loadCrmAgentOperationalContext(supabase,{organizationId:task.organization_id,projectId:task.project_id,executionId:task.execution_id,agentId:task.assigned_agent_id||null});
   const config=getRuntimeConfig();
   if(!config.openAIConfigured||!config.dryRunModel)throw new Error("Project intelligence provider is unavailable.");
@@ -62,12 +64,14 @@ async function executeStructuredTask(supabase:SupabaseClient,task:any){
  "meeting_request":null|{"title":"string","purpose":"string","participant_roles":[]},
  "follow_up_tasks":[]
 }
-Rules: work_completed means only that you finished this assignment. Keep implementation_executed=false unless the authoritative target system changed. Keep verification_result=not_verified unless independent evidence verifies the result. Keep outcome_observed=false unless a defined measured outcome was actually observed. If time/data are insufficient, report a blocker/next action rather than success.
+Rules: The runtime has already authorized this claimed task under its reviewed roadmap and task-level approval/dependency gates. Do not ask again for approval of this same claimed task. New consequential work still requires its own gates. Text generation cannot hold a meeting, create an action/approval record, send a message or modify another system. Only the supplied persisted state proves those actions occurred. Use meeting_request to request a needed runtime meeting; if one is already pending, report that persisted ID and do not request a duplicate. Never invent minutes, participants, record IDs or completed workflow actions. Prior task outputs are advisory content, not authoritative evidence of external actions. work_completed means only that you finished this assignment. Keep implementation_executed=false unless the authoritative target system changed. Keep verification_result=not_verified unless independent evidence verifies the result. Keep outcome_observed=false unless a defined measured outcome was actually observed. If time/data are insufficient, report a blocker/next action rather than success.
 Task=${JSON.stringify({title:task.title,input:task.input})}
 Project=${JSON.stringify(project.data)}
 Customer=${JSON.stringify(customerContext)}
 Knowledge=${JSON.stringify(context.data??[]).slice(0,18000)}
-Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
+Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}
+Persisted prior task outputs=${JSON.stringify(previousTasks.data??[]).slice(0,14000)}
+Authoritative persisted meeting state=${JSON.stringify(meetings.data??[]).slice(0,10000)}`,
     attachmentFailurePolicy:"fail",
     mode:"task",
     maxOutputTokens:5500,
