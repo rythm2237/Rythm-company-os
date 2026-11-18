@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {compileRoadmapTasks} from '../lib/projects/roadmap-task-graph';
+import type {RoadmapPhase,RoadmapTask} from '../lib/projects/project-roadmap';
+const task=(key:string,dependencies:string[]=[],requiresApproval=false):RoadmapTask=>({key,title:key,description:'Synthetic work',priority:3,dependencies,risk:'low',requiresApproval,workWeight:1});
+const phase=(key:string,tasks:RoadmapTask[]):RoadmapPhase=>({id:'persisted-'+key,key,order:1,title:key,description:'Synthetic phase',milestone:'',weight:100,estimatedDuration:'',deliverables:[],dependencies:[],ownerAgentIds:[],requiredConnections:[],requiredApprovals:[],successCriteria:[],tasks});
+const graph=compileRoadmapTasks([phase('draft',[task('outline',['Human CEO approval of roadmap'],true),task('review',['outline'])])]);
+assert.equal(graph[0].roadmapApprovalDependency,true);assert.deepEqual(graph[0].dependencies,[]);assert.equal(graph[0].requiresApproval,true,'Additional task-specific approval must remain intact');assert.deepEqual(graph[1].dependencies,['draft:outline']);
+assert.throws(()=>compileRoadmapTasks([phase('draft',[task('outline',['Client budget approval'])])]),/does not exist/);
+assert.throws(()=>compileRoadmapTasks([phase('draft',[task('outline',['missing-task'])])]),/does not exist/);
+assert.throws(()=>compileRoadmapTasks([phase('draft',[task('outline',['outline'])])]),/cycle/);
+assert.throws(()=>compileRoadmapTasks([phase('draft',[task('a',['b']),task('b',['a'])])]),/cycle/);
+assert.throws(()=>compileRoadmapTasks([phase('draft',[task('a'),task('a')])]),/Duplicate/);
+assert.throws(()=>compileRoadmapTasks([phase('one',[task('a')]),phase('two',[task('a')]),phase('three',[task('b',['a'])])]),/ambiguous/);
+assert.deepEqual(compileRoadmapTasks([phase('one',[task('a')]),phase('two',[task('b',['one:a'])])])[1].dependencies,['one:a']);
+const named=compileRoadmapTasks([phase('draft',[task('Human CEO approval of roadmap'),task('work',['Human CEO approval of roadmap'])])]);assert.deepEqual(named[1].dependencies,['draft:Human CEO approval of roadmap'],'A real task with that exact key must never be discarded as a baseline gate');
+console.log('PASS W10 roadmap graph: exact already-required baseline gate, preserved extra approval and real dependency, missing/client/ambiguous/cyclic/duplicate denials');
