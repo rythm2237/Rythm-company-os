@@ -139,7 +139,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts
+      - run: node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts && node --import tsx scripts/validate-w10-team-assignment.ts
       - run: npx playwright install --with-deps chromium
       - name: Verify reservation and re-login against disposable Auth
         env:
@@ -149,8 +149,8 @@ jobs:
           RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
           NEXT_TELEMETRY_DISABLED: '1'
           # Paid execution is authorized for this one PR update only. Later updates run without a provider key.
-          W10_LIVE_AI: ${{ github.event.before == '9740311bb88cd4910c91a3197f4c86d959e709fd' && 'true' || 'false' }}
-          W10_PROVIDER_KEY: ${{ github.event.before == '9740311bb88cd4910c91a3197f4c86d959e709fd' && secrets.OPENAI_API_KEY || '' }}
+          W10_LIVE_AI: ${{ github.event.before == 'cd6b8298e51aa90eda49c4e6468c8e6c8da04b4b' && 'true' || 'false' }}
+          W10_PROVIDER_KEY: ${{ github.event.before == 'cd6b8298e51aa90eda49c4e6468c8e6c8da04b4b' && secrets.OPENAI_API_KEY || '' }}
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/w10-disposable"

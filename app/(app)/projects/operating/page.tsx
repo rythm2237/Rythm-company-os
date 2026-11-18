@@ -17,7 +17,7 @@ import { ContinuousProgramPanel, type ProgramReadModel, type ReviewReadModel, ty
 
 export const dynamic="force-dynamic";
 type View="overview"|"roadmap"|"work"|"activity"|"decisions"|"files"|"results"|"advanced";
-type Props={searchParams:Promise<{project?:string;view?:string;taskStatus?:string;taskAgent?:string;planning?:string;activityFilter?:string;programSaved?:string;programError?:string}>};
+type Props={searchParams:Promise<{project?:string;view?:string;taskStatus?:string;taskAgent?:string;planning?:string;activityFilter?:string;programSaved?:string;programError?:string;teamSaved?:string;teamError?:string}>};
 const views:Array<{key:View;label:string}>=[{key:"overview",label:"Overview"},{key:"roadmap",label:"Roadmap"},{key:"work",label:"Work"},{key:"activity",label:"Activity"},{key:"decisions",label:"Decisions"},{key:"files",label:"Files"},{key:"results",label:"Results"},{key:"advanced",label:"Advanced"}];
 const legacyViews:Record<string,View>={live:"advanced",agents:"advanced",tasks:"work",approvals:"decisions",actions:"work"};
 const label=(value:string)=>value.replaceAll("_"," ").replaceAll("."," · ");
@@ -25,6 +25,22 @@ const formatDate=(value:string|null|undefined)=>value?new Intl.DateTimeFormat("e
 function payloadSummary(item:WorkflowTimelineItem){const p=item.payload??{};const explicit=[p.event_label,p.label,p.reason,p.next_step,p.after_state].find(v=>typeof v==="string"&&v.trim());return typeof explicit==="string"?explicit:label(item.event_type);}
 function destinationForRelationship(edge:EntityRelationship,projectId:string){const c=[edge.source_type,edge.target_type];if(c.includes("meeting")||c.includes("meeting_session")||c.includes("decision")||c.includes("legal_review"))return "/meetings/room";if(c.includes("action_item"))return `/actions?project=${projectId}`;if(c.includes("memory_record"))return "/memory";return `/projects/operating?project=${projectId}&view=overview`;}
 async function ownerContext(){const {supabase,user,organizationId}=await requireOwnerOrganizationContext();return {supabase,user,organizationId};}
+
+async function assignProjectSpecialist(formData:FormData){
+  "use server";
+  const {supabase,organizationId}=await ownerContext();
+  const projectId=String(formData.get("projectId")??"");
+  const agentId=String(formData.get("agentId")??"");
+  const allocation=Number(formData.get("allocationPercent"));
+  const {data:project}=await supabase.from("projects").select("id").eq("organization_id",organizationId).eq("id",projectId).maybeSingle();
+  if(!project)redirect("/projects?error=Project%20not%20available.");
+  const destination=`/projects/operating?project=${encodeURIComponent(projectId)}&view=advanced`;
+  if(!Number.isInteger(allocation)||allocation<1||allocation>100)redirect(`${destination}&teamError=1`);
+  const {error}=await supabase.rpc("assign_project_specialist_v1",{p_project_id:projectId,p_agent_id:agentId,p_allocation_percent:allocation});
+  if(error){console.error("project_specialist_assignment_failed",{code:error.code});redirect(`${destination}&teamError=1`);}
+  revalidatePath("/projects/operating");
+  redirect(`${destination}&teamSaved=1`);
+}
 
 async function submitContinuousProposalForApproval(formData:FormData) {
   "use server";
@@ -136,6 +152,9 @@ export default async function ProjectOperatingPage({searchParams}:Props){
   const generatedOutputs=activeView==="results" ? await supabase.from("project_task_runs")
     .select("id,title,completed_at,safe_result").eq("organization_id",organizationId).eq("project_id",project.id)
     .eq("status","completed").order("completed_at",{ascending:false}).limit(30) : {data:[],error:null};
+  const assignableAgents=activeView==="advanced"&&role==="owner" ? await supabase.from("agents")
+    .select("id,agent_code,display_name,name").eq("organization_id",organizationId).eq("enabled",true)
+    .eq("agent_status","enabled").not("agent_code","in","(T-001,RYTHM-COMMS)").order("agent_code") : {data:[],error:null};
   const openClarifications=clarifications.data??[];const latestReadiness=readiness.data;const latestScope=scope.data;const latestExecution=execution.data;const allTaskRows=tasks.data??[];
   const taskRows=latestExecution?allTaskRows.filter((task:any)=>task.execution_id===latestExecution.id):allTaskRows;
   const proposalRows=proposals.data??[];const attention=proposalRows.filter((p:any)=>["ready_for_executive","needs_revision","internal_review"].includes(p.status));const pendingApprovalRows=(approvals.data??[]).filter((a:any)=>a.status==="pending");
@@ -240,7 +259,15 @@ export default async function ProjectOperatingPage({searchParams}:Props){
       <section className="panel project-view-panel"><div className="project-card-metrics"><div><span>Meetings</span><strong>{meetings.count??0}</strong></div><div><span>Decisions</span><strong>{decisions.count??0}</strong></div><div><span>Approvals</span><strong>{approvals.count??0}</strong></div><div><span>Workflow state</span><strong>{label(workflowState)}</strong></div><div><span>Open health events</span><strong>{health.data?.length??0}</strong></div><div><span>Last activity</span><strong>{formatDate(progress.lastActivityAt)}</strong></div></div></section>
     </>:null}
 
-    {activeView==="advanced"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project-only team</p><h2>Assigned AI specialists</h2></div><span className="pill">{agents.length} agents</span></div><div className="data-list">{agents.map((row:any)=>{const agent=Array.isArray(row.agents)?row.agents[0]:row.agents;return <div className="data-row" key={agent?.id??row.assignment_role}><div><strong>{agent?.display_name||agent?.name||"Agent"}</strong><span>{agent?.role_title||row.assignment_role} · {agent?.agent_code||"AI"}</span></div><span className="pill">{row.status}</span></div>})}{!agents.length?<p className="subtitle">The project team forms after analysis.</p>:null}</div></section>:null}
+    {activeView==="advanced"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project-only team</p><h2>Assigned AI specialists</h2></div><span className="pill">{agents.length} agents</span></div>
+      {params.teamSaved?<p className="form-success">Specialist assigned to this project.</p>:null}
+      {params.teamError?<p role="alert" className="form-error">Specialist could not be assigned. Choose an enabled company specialist and an allocation from 1 to 100.</p>:null}
+      {role==="owner"?<form action={assignProjectSpecialist} aria-label="Assign project specialist" className="auth-form">
+        <input type="hidden" name="projectId" value={project.id}/>
+        <label>Enabled specialist<select name="agentId" required defaultValue=""><option value="" disabled>Select a specialist</option>{(assignableAgents.data??[]).map(agent=><option key={agent.id} value={agent.id}>{agent.display_name||agent.name} · {agent.agent_code}</option>)}</select></label>
+        <label>Capacity allocation (%)<input name="allocationPercent" type="number" min="1" max="100" defaultValue="25" required/></label>
+        <SubmitButton>Assign specialist</SubmitButton><p className="security-note">Only enabled company specialists can join this project team.</p>
+      </form>:null}<div className="data-list">{agents.map((row:any)=>{const agent=Array.isArray(row.agents)?row.agents[0]:row.agents;return <div className="data-row" key={agent?.id??row.assignment_role}><div><strong>{agent?.display_name||agent?.name||"Agent"}</strong><span>{agent?.role_title||row.assignment_role} · {agent?.agent_code||"AI"}</span></div><span className="pill">{row.status}</span></div>})}{!agents.length?<p className="subtitle">The project team forms after analysis.</p>:null}</div></section>:null}
 
     {activeView==="work"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Execution graph</p><h2>Project tasks</h2></div><span className="pill">{filteredTasks.length}/{taskRows.length}</span></div><form method="get" className="project-task-filters"><input type="hidden" name="project" value={project.id}/><input type="hidden" name="view" value="work"/><label>Status<select name="taskStatus" defaultValue={selectedStatus}><option value="all">All statuses</option>{[...new Set(taskRows.map((task:any)=>task.status))].map(status=><option key={status} value={status}>{label(status)}</option>)}</select></label><label>Agent<select name="taskAgent" defaultValue={selectedAgent}><option value="all">All agents</option>{agents.map((row:any)=>{const agent=Array.isArray(row.agents)?row.agents[0]:row.agents;return <option key={agent?.id??row.assignment_role} value={agent?.id}>{agent?.display_name||agent?.name||row.assignment_role}</option>})}</select></label><button>Apply filters</button></form><div className="data-list">{filteredTasks.map((task:any)=><div className="data-row" key={task.id}><div><strong>{task.title}</strong><span>{task.agents?.agent_code??"Unassigned"} · attempt {task.attempt_count}/{task.max_attempts}{task.error_message?` · ${task.error_message}`:""}</span></div><span className="pill">{label(task.status)}</span></div>)}</div></section>:null}
 

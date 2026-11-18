@@ -6,6 +6,11 @@ import { getRuntimeConfig } from "@/lib/runtime-config";
 const text=(value:unknown,fallback="")=>typeof value==="string"?value:fallback;
 const list=(value:unknown)=>Array.isArray(value)?value:[];
 
+/** New work proposed by a meeting is outside the approved roadmap baseline. */
+export function projectMeetingActionNeedsApproval(autonomyMode:string, action:{needs_approval?:unknown;risk?:unknown}){
+  return autonomyMode==="approval_required" || ["high","critical"].includes(text(action.risk).toLowerCase()) || Boolean(action.needs_approval);
+}
+
 function parseStructuredJson(value:string):Record<string,unknown>{
   const stripped=value
     .replace(/^```json\s*/i,"")
@@ -123,7 +128,7 @@ async function runMeeting(supabase:SupabaseClient,job:any){
     if(!title)continue;
     const requestedOwner=text(action.owner_agent_id);
     const owner=participants.find(a=>a.id===requestedOwner)?.id||chair.id;
-    const needsApproval=Boolean(action.needs_approval);
+    const needsApproval=projectMeetingActionNeedsApproval(project.autonomy_mode,action);
     let approvalId:string|null=null;
     if(needsApproval){
       const approval=await supabase.from("approval_requests").insert({organization_id:job.organization_id,project_id:project.id,subject_type:"meeting_action",subject_id:meeting.id,title:`Decision required: ${title}`,summary:text(action.description,"Meeting action requires authorization."),risk_level:text(action.risk,"medium"),requested_by_agent_id:chair.id,status:"pending",conditions:["Authorization is limited to the scoped project action."]}).select("id").single();

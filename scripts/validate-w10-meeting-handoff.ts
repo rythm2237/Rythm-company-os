@@ -1,7 +1,12 @@
+import {projectMeetingActionNeedsApproval} from "../lib/projects/project-autonomous-meetings";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {PGlite} from "@electric-sql/pglite";
 async function main(){
+ assert.equal(projectMeetingActionNeedsApproval("approval_required",{needs_approval:false,risk:"low"}),true);
+ assert.equal(projectMeetingActionNeedsApproval("limited_autonomy",{needs_approval:false,risk:"low"}),false);
+ assert.equal(projectMeetingActionNeedsApproval("full_autonomy_within_policy",{needs_approval:false,risk:"critical"}),true);
+ assert.equal(projectMeetingActionNeedsApproval("limited_autonomy",{needs_approval:true,risk:"low"}),true);
  const db=new PGlite();
  await db.exec(`create role anon;create role authenticated;create role service_role;
  create table public.project_executions(id int primary key,organization_id int,project_id int,status text,completed_at timestamptz,last_heartbeat_at timestamptz,updated_at timestamptz);

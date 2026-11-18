@@ -294,31 +294,58 @@ try {
       const deniedWrite = await memberClient.from("project_contracts")
         .insert({ organization_id: org.id, customer_id: customerId, contract_number: "DENIED-" + id }).select("id");
       assert.ok(deniedWrite.error, "Unpermitted member must not create a contract");
+      const deniedAssignment = await memberClient.rpc("assign_project_specialist_v1", { p_project_id: projectId, p_agent_id: workforce[0].id, p_allocation_percent: 25 });
+      assert.ok(deniedAssignment.error, "A viewer must not assign project specialists");
+      const anonymousClient = createClient(backend, publicKey, { auth: { persistSession: false, autoRefreshToken: false } });
+      assert.ok((await anonymousClient.rpc("assign_project_specialist_v1", { p_project_id: projectId, p_agent_id: workforce[0].id, p_allocation_percent: 25 })).error, "Anonymous project assignment must fail");
+      for (const previous of isolatedOrganizations) {
+        assert.ok((await ownerClient.rpc("assign_project_specialist_v1", { p_project_id: projectId, p_agent_id: previous.agentIds[0], p_allocation_percent: 25 })).error, "Foreign specialists must not join an owned project");
+        assert.ok((await ownerClient.rpc("assign_project_specialist_v1", { p_project_id: previous.projectId, p_agent_id: previous.agentIds[0], p_allocation_percent: 25 })).error, "A foreign project must not be reassigned");
+      }
       console.log(`PASS W10 roles (${profile}): member sees customer and cannot read or create contract`);
       const recordEvidence = { profile, organization_id: org.id, owner_user_id: user.id, customer_id: customerId, contract_id: contract.id, project_id: projectId, action_id: actionId, department_ids: departments.map(d => d.id), agent_ids: workforce.map(a => a.id), stage: "core_verified", live_provider_execution: process.env.W10_LIVE_AI === "true" };
       evidence.push(recordEvidence);
       writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
       let deliveryEvidence = null;
-      if (process.env.W10_LIVE_AI === "true") {
-        const roster = result(await admin.from("agents").select("id,agent_code,enabled")
-          .eq("organization_id", org.id).not("agent_code", "in", "(RYTHM-COMMS,T-001)").order("agent_code").limit(2), "Read Agency roster");
-        for (const agent of roster) {
-          await page.goto(app + "/agents/" + encodeURIComponent(agent.agent_code));
-          if (!agent.enabled) await page.getByRole("button", { name: "Enable agent runtime", exact: true }).click();
+      const roster = result(await admin.from("agents").select("id,agent_code,enabled")
+        .eq("organization_id", org.id).not("agent_code", "in", "(RYTHM-COMMS,T-001)").order("agent_code").limit(2), "Read Agency roster");
+      for (const agent of roster) {
+        await page.goto(app + "/agents/" + encodeURIComponent(agent.agent_code));
+        if (!agent.enabled) await page.getByRole("button", { name: "Enable agent runtime", exact: true }).click();
+        await page.getByRole("button", { name: "Pause agent runtime", exact: true }).waitFor();
+        const activeAgent = result(await ownerClient.from("agents").select("enabled,agent_status").eq("id", agent.id).single(), "Read enabled runtime state");
+        assert.deepEqual(activeAgent, { enabled: true, agent_status: "enabled" });
+        if (agent.id === roster[0].id) {
+          await page.getByRole("button", { name: "Pause agent runtime", exact: true }).click();
+          await page.getByRole("button", { name: "Enable agent runtime", exact: true }).waitFor();
+          const pausedAgent = result(await ownerClient.from("agents").select("enabled,agent_status").eq("id", agent.id).single(), "Read paused runtime state");
+          assert.deepEqual(pausedAgent, { enabled: false, agent_status: "paused" });
+          await page.getByRole("button", { name: "Enable agent runtime", exact: true }).click();
           await page.getByRole("button", { name: "Pause agent runtime", exact: true }).waitFor();
-          const activeAgent = result(await ownerClient.from("agents").select("enabled,agent_status").eq("id", agent.id).single(), "Read enabled runtime state");
-          assert.deepEqual(activeAgent, { enabled: true, agent_status: "enabled" });
-          if (agent.id === roster[0].id) {
-            await page.getByRole("button", { name: "Pause agent runtime", exact: true }).click();
-            await page.getByRole("button", { name: "Enable agent runtime", exact: true }).waitFor();
-            const pausedAgent = result(await ownerClient.from("agents").select("enabled,agent_status").eq("id", agent.id).single(), "Read paused runtime state");
-            assert.deepEqual(pausedAgent, { enabled: false, agent_status: "paused" });
-            await page.getByRole("button", { name: "Enable agent runtime", exact: true }).click();
-            await page.getByRole("button", { name: "Pause agent runtime", exact: true }).waitFor();
-            await page.reload();
-            await page.getByRole("button", { name: "Pause agent runtime", exact: true }).waitFor();
-          }
+          await page.reload();
+          await page.getByRole("button", { name: "Pause agent runtime", exact: true }).waitFor();
         }
+      }
+      for (const agent of roster) {
+        await page.goto(app + "/projects/operating?project=" + projectId + "&view=advanced");
+        const assignment = page.getByRole("form", { name: "Assign project specialist", exact: true });
+        await assignment.getByLabel("Enabled specialist", { exact: true }).selectOption(agent.id);
+        await assignment.getByLabel("Capacity allocation (%)", { exact: true }).fill("25");
+        await assignment.getByRole("button", { name: "Assign specialist", exact: true }).click();
+        await page.waitForURL(url => url.searchParams.get("teamSaved") === "1");
+      }
+      const assignedTeam = result(await ownerClient.from("project_agents").select("agent_id,organization_id,authority_scope")
+        .eq("project_id", projectId).in("agent_id", roster.map(a => a.id)), "Read manager-selected specialists");
+      assert.equal(assignedTeam.length, 2);
+      assert.ok(assignedTeam.every(row => row.organization_id === org.id && row.authority_scope.external_actions === false));
+      const capacity = result(await ownerClient.from("project_agent_capacity").select("agent_id,allocation_percent")
+        .eq("project_id", projectId).in("agent_id", roster.map(a => a.id)), "Read atomic project capacity");
+      assert.equal(capacity.length, 2);
+      assert.ok(capacity.every(row => row.allocation_percent === 25));
+      Object.assign(recordEvidence, { assigned_specialist_ids: roster.map(a => a.id) });
+      writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
+      console.log(`PASS W10 project team (${profile}): Owner UI assignments and capacity persist under tenant RLS`);
+      if (process.env.W10_LIVE_AI === "true") {
         await page.goto(app + "/projects/operating?project=" + projectId + "&view=advanced");
         const responsePromise = page.waitForResponse(response =>
           new URL(response.url()).pathname === "/api/projects/analyze" && response.request().method() === "POST",
@@ -338,7 +365,7 @@ try {
         console.log(`PASS W10 live analysis (${profile}): actual provider output persisted`);
         const team = result(await admin.from("project_agents").select("agent_id")
           .eq("organization_id", org.id).eq("project_id", projectId), "Read assigned project specialists");
-        assert.ok(team.length >= 2, "Analysis must assign the two requested specialists without fixture intervention");
+        assert.ok(team.length >= 2, "Analysis must preserve the manager-selected specialists");
         await page.reload();
         const runResponse = page.waitForResponse(r => new URL(r.url()).pathname === "/api/projects/run" && r.request().method() === "POST", { timeout: 240000 });
         await page.getByRole("button", { name: "Run Project", exact: true }).click();
