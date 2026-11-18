@@ -1,0 +1,42 @@
+name: W13 Offline Dispatch Resilience (no hosted credentials)
+on:
+  pull_request:
+    paths:
+      - 'app/api/projects/dispatch/route.ts'
+      - 'lib/projects/project-dispatch-resilience.ts'
+      - 'lib/projects/project-work-v2.ts'
+      - 'lib/projects/project-autonomous-meetings.ts'
+      - 'lib/projects/project-supervisor.ts'
+      - 'lib/projects/project-proposal-execution.ts'
+      - 'lib/projects/project-tool-execution.ts'
+      - 'supabase/migrations/20261118150000_project_dispatch_resilience.sql'
+      - 'scripts/validate-w13-dispatch-resilience.ts'
+      - 'scripts/validate-w06-backend-boundaries.mjs'
+      - '.github/workflows/w13-dispatch-offline.yml'
+      - 'package.json'
+permissions:
+  contents: read
+concurrency:
+  group: w13-offline-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      RYTHM_AGENT_EXECUTION_ENABLED: 'false'
+      RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run test:w13
+      - run: node scripts/validate-w06-backend-boundaries.mjs
+      - run: npm run typecheck
+      - run: npm run lint
