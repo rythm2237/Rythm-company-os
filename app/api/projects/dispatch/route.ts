@@ -144,7 +144,8 @@ export async function GET(request:Request){
           () => reconcileGoogleConnections(service, googleRepairOrganizationId), errors, [], ctx)
       : [];
 
-    const completionHealth=await retryIdempotentRpc(()=>service.rpc("refresh_project_completion_health_v1"),{onRetry:(attempt)=>console.warn("project_dispatch_retry",JSON.stringify({traceId,step:"completion_health",attempt}))});
+    // This RPC resolves and reinserts health rows; retrying it could duplicate audit activity.
+    const completionHealth=await service.rpc("refresh_project_completion_health_v1");
     if(completionHealth.error)reportFailure(ctx,errors,"completion_health");
 
     const supervisorResults=[...supervisorBefore,...supervisorAfter];
