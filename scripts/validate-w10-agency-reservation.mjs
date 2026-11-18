@@ -175,7 +175,7 @@ try {
 
       const customerName = "W10 Sample Client " + id;
       const brief = "Create an offline measurement plan for a synthetic cafe campaign.";
-      const objective = brief + " The fictional cafe sells vegan lunches in Budapest to adults aged 25-45. Use only synthetic assumptions: 1000 impressions, 50 clicks, 10 purchases; no external data or integrations. Deliver a short KPI table with CTR and conversion formulas and explicitly labelled assumptions. Assign both available specialists to this project. Keep the roadmap to one phase with one draft task, requiring Human CEO approval before drafting. That task must request an internal review meeting with both specialists. The meeting reviews this initial draft and records minutes. It must create exactly one finalization action requiring Human CEO approval before producing the final KPI document. That finalization action must not request another meeting, create additional actions or propose external work. No messages, campaign launch, purchases or other external actions. Completion means a reviewed internal document, never real marketing results.";
+      const objective = brief + " The fictional cafe sells vegan lunches in Budapest to adults aged 25-45. Use only synthetic assumptions: 1000 impressions, 50 clicks, 10 purchases; no external data or integrations. Deliver a short KPI table with CTR and conversion formulas and explicitly labelled assumptions. Assign both available specialists to this project. Keep the roadmap to one phase with one outline task. The initial outline is authorized only after the Human CEO approves this roadmap. That task must request an internal review meeting with both specialists. The meeting reviews this initial draft and records minutes. It must create exactly one finalization action requiring Human CEO approval before producing the final KPI document. That finalization action must not request another meeting, create additional actions or propose external work. No messages, campaign launch, purchases or other external actions. Completion means a reviewed internal document, never real marketing results.";
       const projectName = objective.slice(0, 120);
       await page.goto(app + "/crm");
       await page.locator("#add-customer > summary").click();
@@ -338,14 +338,15 @@ try {
         await page.goto(app + "/projects/operating?project=" + projectId + "&view=decisions");
         const pending = result(await admin.from("approval_requests").select("id,title,status")
           .eq("organization_id", org.id).eq("project_id", projectId).eq("status", "pending"), "Read task approval gate");
-        assert.ok(pending.length, "Scoped task must await the requested Human CEO authorization");
+        // Approve & Start authorizes the reviewed outline baseline. Honor any
+        // additional task gates returned by the roadmap without inventing one.
         for (const approval of pending) {
           await page.getByLabel("Decision reason for " + approval.title, { exact: true }).fill("Approve only the synthetic internal measurement draft; no external actions.");
           const approvedResponse = page.waitForResponse(r => new URL(r.url()).pathname === "/api/projects/live" && r.request().method() === "POST");
           await page.getByRole("button", { name: "Approve & continue", exact: true }).first().click();
           assert.equal((await approvedResponse).ok(), true, "Owner task authorization must persist");
         }
-        console.log(`PASS W10 Human CEO gates (${profile}): roadmap and scoped task authorized in browser`);
+        console.log(`PASS W10 Human CEO gates (${profile}): roadmap and ${pending.length} additional task authorizations persisted`);
         assert.ok(process.env.CRON_SECRET, "Disposable scheduler credential required");
         let outputs = [], completedMeetings = [];
         for (let tick = 0; tick < 4; tick++) {
@@ -385,7 +386,7 @@ try {
         assert.equal(output.status, "completed");
         assert.ok(Array.isArray(output.safe_result?.deliverables) && output.safe_result.deliverables.length, "An actual post-approval deliverable must persist");
         outputs.push(output);
-        const savedApproval = result(await admin.from("approval_requests").select("status,approver_user_id").eq("id", pending[0].id).single(), "Read recorded Human CEO decision");
+        const savedApproval = result(await admin.from("approval_requests").select("status,approver_user_id").eq("id", reviewApprovals[0].id).single(), "Read recorded Human CEO decision");
         assert.equal(savedApproval.status, "approved");
         assert.equal(savedApproval.approver_user_id, user.id);
         await page.goto(app + "/projects/operating?project=" + projectId + "&view=results");
@@ -406,7 +407,7 @@ try {
         } finally { await recheck.close(); }
         const restrictedOutputs = result(await memberClient.from("project_task_runs").select("id").eq("project_id", projectId), "Viewer output visibility");
         assert.ok(restrictedOutputs.length, "Tenant viewer can read operational outputs under existing policy");
-        const forbiddenApproval = await memberClient.from("approval_requests").update({ status: "rejected" }).eq("id", pending[0].id).select("id");
+        const forbiddenApproval = await memberClient.from("approval_requests").update({ status: "rejected" }).eq("id", reviewApprovals[0].id).select("id");
         assert.ok(forbiddenApproval.error || !forbiddenApproval.data?.length, "Viewer cannot change Human CEO decisions");
         deliveryEvidence = { roadmap_id: roadmap.id, approval_ids: [...pending, ...reviewApprovals].map(p => p.id), review_session_id: reviewSession.id, transcript_ids: transcript.map(m => m.id), outputs: outputs.map(t => ({ id: t.id, organization_id: t.organization_id, status: t.status, summary: t.safe_result.summary })), review_meeting_ids: completedMeetings.map(m => m.id) };
         console.log(`PASS W10 generated delivery (${profile}): persisted outputs, reviewed meeting, approvals, refresh and re-login`);
