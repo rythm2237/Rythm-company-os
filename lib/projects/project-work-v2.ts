@@ -165,9 +165,9 @@ Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
   await evaluateProjectCompletion(supabase,task.project_id,"task_completed_structured","project_task_run",task.id);
 }
 
-export async function dispatchProjectWorkV2(supabase:SupabaseClient,workerId=`project-worker-v2-${randomUUID()}`){
+export async function dispatchProjectWorkV2(supabase:SupabaseClient,workerId=`project-worker-v2-${randomUUID()}`,claimLimit=6){
   await supabase.rpc("recover_stale_project_task_runs_v1");
-  const claimed=await supabase.rpc("claim_project_task_runs_v1",{worker_id:workerId,claim_limit:6,lease_seconds:240});
+  const claimed=await supabase.rpc("claim_project_task_runs_v1",{worker_id:workerId,claim_limit:Math.max(1,Math.min(claimLimit,6)),lease_seconds:240});
   if(claimed.error)throw new Error(claimed.error.message);
   const results:Array<{id:string;status:string;error?:string}>=[];
   for(const task of claimed.data??[]){
