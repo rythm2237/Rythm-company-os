@@ -315,7 +315,8 @@ try {
       writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
       let deliveryEvidence = null;
       const roster = result(await admin.from("agents").select("id,agent_code,enabled")
-        .eq("organization_id", org.id).not("agent_code", "in", "(RYTHM-COMMS,T-001)").order("agent_code").limit(2), "Read Agency roster");
+        .eq("organization_id", org.id).in("agent_code", ["ANALYTICS_SPECIALIST", "STRATEGY_DIRECTOR"]).order("agent_code"), "Read Agency KPI specialists");
+      assert.equal(roster.length, 2, "Agency analytics and strategy specialists must exist");
       for (const agent of roster) {
         await page.goto(app + "/agents/" + encodeURIComponent(agent.agent_code));
         if (!agent.enabled) await page.getByRole("button", { name: "Enable agent runtime", exact: true }).click();
