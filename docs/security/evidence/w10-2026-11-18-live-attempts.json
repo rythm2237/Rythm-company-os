@@ -1,0 +1,378 @@
+{
+  "scope": "Disposable synthetic Auth/Postgres/Chrome only; failures are not full acceptance",
+  "attempts": [
+    {
+      "run_id": 44394501686,
+      "budget": {
+        "ceiling": 0.25,
+        "reserved": 0.0482268,
+        "actual": 0.0070172,
+        "calls": 3,
+        "outcomes": [
+          {
+            "status": 200,
+            "code": null,
+            "type": null,
+            "parameter": null
+          },
+          {
+            "status": 200,
+            "code": null,
+            "type": null,
+            "parameter": null
+          },
+          {
+            "status": 200,
+            "code": null,
+            "type": null,
+            "parameter": null
+          }
+        ],
+        "model": "gpt-4.1-mini"
+      },
+      "evidence": [
+        {
+          "profile": "desktop",
+          "organization_id": "68164298-7312-47c0-a433-511c4d573795",
+          "owner_user_id": "f7d2b231-6d68-4d54-a4c1-5d63f60722ed",
+          "customer_id": "32c07b6b-0917-413d-b402-0e370616b7dd",
+          "contract_id": "4ce40ee9-2d48-4d04-9190-b92f28b5620b",
+          "project_id": "5746d8db-b608-462f-9c9d-3539ee402dd0",
+          "action_id": "ebc2aaaf-8947-418f-890b-3cd5d25c6be1",
+          "department_ids": [
+            "bb38acfc-42bb-4724-aeb9-df7f792c867c",
+            "8947528d-74ad-475c-a6a6-b9e34c4a0609",
+            "2a77d26e-fd0e-4aa0-80e1-7cd34cc41be0",
+            "d6324767-6126-4c62-bd73-454ed1d480bf",
+            "79b48117-4513-40de-98d2-5c24f1dac299",
+            "45aa4600-a768-4a9c-8ff5-16c3afa3784b",
+            "8ac1613f-08a9-4edf-b1e3-5a72d53bed56",
+            "3df7f1f8-522b-4833-8756-17a6fe51f1fa"
+          ],
+          "agent_ids": [
+            "04e15ab7-79fc-4725-b16c-8e20d8c04ba0",
+            "44ea6c4b-b4b1-494f-be18-5bc88fe1d338",
+            "755fc16e-df11-4801-82ee-b0e40492a6b9",
+            "9dd3fcb8-c297-4818-84b5-29ed6b24719b",
+            "b6399f66-0e1a-4e4e-ae13-789bf764bb15",
+            "c2afb0c4-9ab3-4413-a12f-47f01b1da189",
+            "c5f8f086-a0d0-41b7-8123-a6ab46e3b3d2",
+            "ce19418c-947e-47c9-9dfb-70d5e59a61af",
+            "e29a0455-0bbf-43e1-a068-d2a6d8c50fda",
+            "f1394cd0-fe1f-46ba-938b-166d3989bacf",
+            "f4f90e84-8985-40df-b525-4890fe4a478d"
+          ],
+          "stage": "core_verified",
+          "live_provider_execution": true,
+          "assigned_specialist_ids": [
+            "b6399f66-0e1a-4e4e-ae13-789bf764bb15",
+            "c2afb0c4-9ab3-4413-a12f-47f01b1da189"
+          ]
+        }
+      ]
+    },
+    {
+      "run_id": 44395391542,
+      "budget": {
+        "ceiling": 0.25,
+        "reserved": 0.034124,
+        "actual": 0.0046524,
+        "calls": 2,
+        "outcomes": [
+          {
+            "status": 200,
+            "code": null,
+            "type": null,
+            "parameter": null
+          },
+          {
+            "status": 200,
+            "code": null,
+            "type": null,
+            "parameter": null
+          }
+        ],
+        "model": "gpt-4.1-mini"
+      },
+      "evidence": [
+        {
+          "profile": "desktop",
+          "organization_id": "fde37c44-bf8f-4058-9666-1942ee85e6d1",
+          "owner_user_id": "019ab262-600e-43fb-894e-d0e9b56007aa",
+          "customer_id": "524da84e-f082-4657-b63b-ed4c3c7be89c",
+          "contract_id": "3c514b3a-b7de-4937-a391-a4e781e54c9d",
+          "project_id": "0469e4c9-83dc-4f23-98dc-e430d761661a",
+          "action_id": "8b8c7030-ab89-457c-a5b0-1aaa01fd87da",
+          "department_ids": [
+            "b7f45555-3602-492e-89da-c6bedf0130a0",
+            "fcfb02bc-812a-4ee8-9148-46ddc80a7cf4",
+            "215300cd-add3-4891-922e-4bd1571696ac",
+            "e530b0d3-cf7d-4fe5-be6a-62de93c84ee9",
+            "fb5c7659-d2b2-407d-a37b-292f5e13261f",
+            "4aa3ae36-6dd1-485d-9915-0b48b53d96bc",
+            "e76bc02b-29a1-402d-997b-6db8f323d721",
+            "f6ce8726-3c84-4797-a44b-4ae98d9159a6"
+          ],
+          "agent_ids": [
+            "027a46ca-bf33-4803-b74b-14de67f9f2ad",
+            "0459ecd1-769f-4606-962c-e371910eb075",
+            "284c69c0-aa9e-432c-9024-07daa89885d2",
+            "2b06befe-10ab-49b3-a199-955a1f82249c",
+            "37ddd69a-07b6-49fe-b9da-691901b6b1d3",
+            "401dd03d-80d9-4d32-bba8-d7693becef9c",
+            "60a5c46a-1041-4fbd-884c-104566213a43",
+            "c27de232-9e12-40da-bfef-06090b631ec4",
+            "ce2c07fc-cac1-4673-a6a1-e1ffa116031f",
+            "f19aa397-0205-410b-9ace-5a5a067ab2d7",
+            "f626a263-a5c7-435d-91c4-d3bea783a336"
+          ],
+          "stage": "core_verified",
+          "live_provider_execution": true,
+          "assigned_specialist_ids": [
+            "ce2c07fc-cac1-4673-a6a1-e1ffa116031f",
+            "284c69c0-aa9e-432c-9024-07daa89885d2"
+          ]
+        }
+      ]
+    },
+    {
+      "run_id": 44396130985,
+      "budget": {
+        "ceiling": 0.25,
+        "reserved": 0.047707200000000005,
+        "actual": 0.0064816,
+        "calls": 3,
+        "outcomes": [
+          {
+            "status": 200,
+            "code": null,
+            "type": null,
+            "parameter": null
+          },
+          {
+            "status": 200,
+            "code": null,
+            "type": null,
+            "parameter": null
+          },
+          {
+            "status": 200,
+            "code": null,
+            "type": null,
+            "parameter": null
+          }
+        ],
+        "model": "gpt-4.1-mini"
+      },
+      "evidence": [
+        {
+          "profile": "desktop",
+          "organization_id": "1df975be-0cdf-4935-a833-2e6a7aa4213d",
+          "owner_user_id": "573329ae-aeef-466b-8f16-7ab8fbf5a5ff",
+          "customer_id": "c253707a-7495-40e3-bc9f-f1b285a54901",
+          "contract_id": "0215357f-ec0e-41de-a65c-340285a7fdc4",
+          "project_id": "6828600d-1ea1-42c5-9620-605b98bf642a",
+          "action_id": "c160d86c-5c5e-4eb8-af06-20a739c59e29",
+          "department_ids": [
+            "df58e1e7-48e7-4836-8ddb-51366d8edd39",
+            "ada032b6-4fa8-4fae-919f-90680a1334dc",
+            "d8cd2911-7c54-43c2-b372-e8a36320dca3",
+            "670ab19e-d47c-4ec3-ae47-fb8e9cde0983",
+            "4dcac84f-23cd-490a-a24e-5452bd306ca4",
+            "ac3e8be4-b579-420a-9d95-efb092a8776f",
+            "88bcd4dc-fd58-43fc-b604-f17ec1df376d",
+            "24d0b8d1-f1c3-4586-a21e-a931f4c452ab"
+          ],
+          "agent_ids": [
+            "09215710-8321-4066-a450-87dc7ccfd8a6",
+            "11e84d83-eb16-4ee6-96d2-6f876635c843",
+            "15a7edc3-fd38-4457-96bf-e05665498c1a",
+            "30b4846b-ed0a-489b-b125-d81bdf9ef1fb",
+            "421aaad9-9088-4a4e-8962-2fd85f122193",
+            "81bc0a58-3fc1-4981-b018-95ffaa889244",
+            "921d7002-97d7-4444-9a2a-9f32a1fdd1bd",
+            "abbcb9fc-5242-4bf5-a0f2-50ec547c655a",
+            "bf9f7e2b-37dc-4bf0-accf-597b97a14654",
+            "d130d795-a5f7-474d-a6b1-64d10664b2a6",
+            "dca09d5e-d13e-469a-a725-9999fa683b85"
+          ],
+          "stage": "core_verified",
+          "live_provider_execution": true,
+          "assigned_specialist_ids": [
+            "abbcb9fc-5242-4bf5-a0f2-50ec547c655a",
+            "15a7edc3-fd38-4457-96bf-e05665498c1a"
+          ],
+          "delivery_diagnostics": {
+            "project_task_runs": [
+              {
+                "id": "4e0fbc5a-e203-4468-99ce-40834fdbd40f",
+                "status": "completed",
+                "safe_result": {
+                  "summary": "Developed the initial draft of the offline measurement plan for the synthetic vegan cafe campaign using provided synthetic assumptions. Created a KPI table including CTR and conversion rate formulas with all synthetic data assumptions explicitly labeled. Prepared the task for an internal review meeting involving both specialists as required by the project roadmap.",
+                  "blockers": [
+                    {
+                      "summary": "Pending internal review meeting with both assigned specialists as required by the roadmap before finalization.",
+                      "blocking": true,
+                      "severity": "medium",
+                      "dimension": "deliverable",
+                      "next_required_action": "Schedule and conduct internal review meeting with both assigned specialists to review this draft measurement plan and record meeting minutes."
+                    },
+                    {
+                      "summary": "Finalization action requiring Human CEO approval is outstanding before producing the final KPI document.",
+                      "blocking": true,
+                      "severity": "high",
+                      "dimension": "acceptance",
+                      "next_required_action": "Create and submit the finalization action for Human CEO approval after internal review is completed."
+                    }
+                  ],
+                  "evidence": [
+                    {
+                      "source": "internal draft created in response to task input",
+                      "confidence": 1,
+                      "evidence_type": "document",
+                      "lifecycle_dimension": "deliverable",
+                      "verification_result": "not_verified",
+                      "external_system_reference": ""
+                    }
+                  ],
+                  "findings": [],
+                  "proposal": null,
+                  "decisions": [],
+                  "deliverables": [
+                    {
+                      "type": "Offline Measurement Plan Draft",
+                      "content": {
+                        "KPI_table": {
+                          "CTR": {
+                            "notes": "Synthetic assumption explicitly labeled.",
+                            "value": "50 / 1000 = 5%",
+                            "formula": "clicks / impressions"
+                          },
+                          "Conversion Rate": {
+                            "notes": "Synthetic assumption explicitly labeled.",
+                            "value": "10 / 50 = 20%",
+                            "formula": "purchases / clicks"
+                          }
+                        },
+                        "description": "Initial draft plan using synthetic data assumptions.",
+                        "synthetic_assumptions": {
+                          "clicks": 50,
+                          "purchases": 10,
+                          "impressions": 1000
+                        }
+                      }
+                    }
+                  ],
+                  "work_completed": true,
+                  "follow_up_tasks": [],
+                  "meeting_request": {
+                    "title": "Internal Review Meeting: Offline Measurement Plan Draft",
+                    "purpose": "Review the initial draft offline measurement plan including KPI table with synthetic assumptions and prepare meeting minutes as mandated by the roadmap phase.",
+                    "participant_roles": [
+                      "Specialist 1",
+                      "Specialist 2"
+                    ]
+                  },
+                  "outcome_observed": false,
+                  "verification_result": "not_verified",
+                  "next_required_action": "Schedule and hold internal review meeting with both specialists to review the draft offline measurement plan, record minutes, then generate the finalization action requiring Human CEO approval.",
+                  "deliverable_completed": false,
+                  "implementation_executed": false
+                },
+                "error_message": null
+              },
+              {
+                "id": "8e9c9bce-2aaf-4dc0-a598-2f62080cc455",
+                "status": "queued",
+                "safe_result": {},
+                "error_message": null
+              },
+              {
+                "id": "8d05181d-38cf-4b71-8fcf-9f07ebc543cc",
+                "status": "queued",
+                "safe_result": {},
+                "error_message": null
+              }
+            ],
+            "meetings": [
+              {
+                "id": "88555ec6-9942-459a-9007-8f27235fca20",
+                "status": "draft",
+                "involvement_mode": "AUTONOMOUS"
+              }
+            ],
+            "project_autonomous_meeting_jobs": [
+              {
+                "id": "0d8bcfd9-7c7f-430f-a804-f39ef7487157",
+                "status": "queued",
+                "error_message": null,
+                "next_attempt_at": null
+              }
+            ],
+            "project_activity_events": [
+              {
+                "event_type": "task.completed",
+                "detail": "Developed the initial draft of the offline measurement plan for the synthetic vegan cafe campaign using provided synthetic assumptions. Created a KPI table including CTR and conversion rate formulas with all synthetic data assumptions explicitly labeled. Prepared the task for an internal review meeting involving both specialists as required by the project roadmap.",
+                "metadata": {
+                  "task_run_id": "4e0fbc5a-e203-4468-99ce-40834fdbd40f",
+                  "work_completed": true,
+                  "outcome_observed": false,
+                  "verification_result": "not_verified",
+                  "implementation_executed": false
+                }
+              },
+              {
+                "event_type": "meeting.requested",
+                "detail": "Review the initial draft offline measurement plan including KPI table with synthetic assumptions and prepare meeting minutes as mandated by the roadmap phase.",
+                "metadata": {
+                  "meeting_id": "88555ec6-9942-459a-9007-8f27235fca20"
+                }
+              },
+              {
+                "event_type": "project.execution.started",
+                "detail": "Execution #1 started from roadmap v1 with 3 tasks. Progress is measured against weighted roadmap work, not raw task count.",
+                "metadata": {
+                  "roadmap_id": "2991c538-8f0f-4aa2-ac20-cce4990302d9",
+                  "roadmap_version": 1,
+                  "readiness_at_start": 85,
+                  "global_readiness_gate": false
+                }
+              },
+              {
+                "event_type": "project.roadmap.approved",
+                "detail": "Project execution progress will now be measured against this approved weighted roadmap.",
+                "metadata": {}
+              },
+              {
+                "event_type": "project.roadmap.created",
+                "detail": "Execution has not started. Manager approval is required to establish the project baseline.",
+                "metadata": {}
+              },
+              {
+                "event_type": "project.analysis.completed",
+                "detail": "Execution readiness 85%",
+                "metadata": {}
+              },
+              {
+                "event_type": "project.specialist.assigned",
+                "detail": "The Human Owner assigned an enabled company specialist to this project.",
+                "metadata": {
+                  "actor_user_id": "573329ae-aeef-466b-8f16-7ab8fbf5a5ff",
+                  "allocation_percent": 25
+                }
+              },
+              {
+                "event_type": "project.specialist.assigned",
+                "detail": "The Human Owner assigned an enabled company specialist to this project.",
+                "metadata": {
+                  "actor_user_id": "573329ae-aeef-466b-8f16-7ab8fbf5a5ff",
+                  "allocation_percent": 25
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -73,6 +73,8 @@ const browser = await chromium.launch({ channel: process.env.CRM_BROWSER_CHANNEL
 
 async function localContext(options) {
   const context = await browser.newContext(options);
+  context.setDefaultTimeout(30000);
+  context.setDefaultNavigationTimeout(45000);
   await context.route("**/*", route => {
     const { origin } = new URL(route.request().url());
     return origin === app || origin === backend ? route.continue() : route.abort();
