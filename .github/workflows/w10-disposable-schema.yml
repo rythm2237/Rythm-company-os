@@ -11,7 +11,7 @@ permissions:
 jobs:
   disposable-schema:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     environment: w02-staging
     env:
       SUPABASE_TELEMETRY_DISABLED: '1'
@@ -103,6 +103,22 @@ jobs:
           grant all on all tables in schema public to service_role;
           grant usage, select on all sequences in schema public to service_role;
           grant update on public.agents to authenticated;
+          -- Reproduce hosted Data API grants; every listed table must retain RLS.
+          do $$
+          declare table_name text;
+          begin
+            foreach table_name in array array['project_readiness_assessments','project_agents',
+              'project_agent_capacity','project_roadmaps','project_roadmap_phases','project_executions',
+              'project_task_runs','project_activity_events','project_context_documents',
+              'project_decision_memory','project_autonomous_meeting_jobs','project_proposals',
+              'project_scope_versions','project_clarification_requests'] loop
+              if not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
+                where n.nspname='public' and c.relname=table_name and c.relrowsecurity) then
+                raise exception 'Required RLS missing: %', table_name;
+              end if;
+              execute format('grant select on public.%I to authenticated', table_name);
+            end loop;
+          end $$;
           notify pgrst, 'reload schema';
           do $$
           begin
@@ -127,7 +143,7 @@ jobs:
         env:
           AUTH_SITE_ORIGIN: http://localhost:3000
           RYTHM_ENV: staging
-          RYTHM_AGENT_EXECUTION_ENABLED: 'false'
+          RYTHM_AGENT_EXECUTION_ENABLED: 'true'
           RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
           NEXT_TELEMETRY_DISABLED: '1'
           W10_PROVIDER_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -150,6 +166,7 @@ jobs:
           export RYTHM_DRY_RUN_MODEL=gpt-4.1-mini
           export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
           export W10_LIVE_AI=true
+          export CRON_SECRET="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
           unset W10_PROVIDER_KEY
           ./node_modules/.bin/next build
           ./node_modules/.bin/next start --hostname localhost --port 3000 &
@@ -161,7 +178,7 @@ jobs:
         if: always()
         with:
           name: w10-budget
-          path: test-results/w10-budget.json
+          path: test-results/
           if-no-files-found: ignore
       - name: Remove disposable services
         if: always()

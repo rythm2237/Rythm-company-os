@@ -8,6 +8,7 @@ mkdirSync("test-results", { recursive: true });
 function evidence() {
   writeFileSync("test-results/w10-budget.json", JSON.stringify({ ceiling, reserved, actual, calls, model: "gpt-4.1-mini" }, null, 2));
 }
+evidence();
 const server = createServer(async (req, res) => {
   try {
     if (req.url === "/health") { res.end("ready"); return; }
