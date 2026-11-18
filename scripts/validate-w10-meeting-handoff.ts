@@ -1,0 +1,30 @@
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import {PGlite} from "@electric-sql/pglite";
+async function main(){
+ const db=new PGlite();
+ await db.exec(`create role anon;create role authenticated;create role service_role;
+ create table public.project_executions(id int primary key,organization_id int,project_id int,status text,completed_at timestamptz,last_heartbeat_at timestamptz,updated_at timestamptz);
+ create table public.project_task_runs(id int primary key,execution_id int,status text);
+ create table public.project_activity_events(organization_id int,project_id int,execution_id int,event_type text,headline text,detail text,importance text,metadata jsonb);
+ create table public.project_autonomous_meeting_jobs(organization_id int,project_id int,meeting_id int,status text);
+ create function public.evaluate_project_completion_v1(int,text,text,int) returns jsonb language sql as $$select '{}'::jsonb$$;
+ insert into public.project_executions(id,organization_id,project_id,status) values(1,10,20,'running'),(2,10,30,'running');
+ insert into public.project_task_runs values(1,1,'completed'),(2,2,'completed');
+ insert into public.project_activity_events(organization_id,project_id,execution_id,event_type,metadata) values(10,20,1,'meeting.requested','{"meeting_id":101}'),(10,30,2,'meeting.requested','{"meeting_id":102}');
+ insert into public.project_autonomous_meeting_jobs values(10,20,101,'queued'),(999,30,102,'queued');`);
+ await db.exec(await readFile("supabase/migrations/20261118123000_project_meeting_completion_handoff.sql","utf8"));
+ const reconcile=async()=>Number((await db.query<{n:number}>("select public.reconcile_project_execution_terminal_states_v1() n")).rows[0].n);
+ assert.equal(await reconcile(),1,"Unrelated tenant job must not block execution 2; own queued meeting holds execution 1");
+ assert.equal((await db.query<{status:string}>("select status from public.project_executions where id=1")).rows[0].status,"running");
+ await db.exec("update public.project_autonomous_meeting_jobs set status='completed' where organization_id=10;insert into public.project_task_runs values(3,1,'waiting_for_approval')");
+ assert.equal(await reconcile(),0,"Post-meeting authorization remains a real work gate");
+ await db.exec("update public.project_task_runs set status='completed' where id=3");
+ assert.equal(await reconcile(),1);
+ assert.equal(await reconcile(),0,"Terminal reconciliation remains idempotent");
+ const acl=await db.query<{member:boolean;worker:boolean}>("select has_function_privilege('authenticated','public.reconcile_project_execution_terminal_states_v1()','execute') member,has_function_privilege('service_role','public.reconcile_project_execution_terminal_states_v1()','execute') worker");
+ assert.deepEqual(acl.rows[0],{member:false,worker:true});
+ await db.close();
+ console.log("PASS W10 meeting handoff: actual PostgreSQL holds originating execution, preserves approval wait, ignores foreign jobs, completes idempotently and enforces service-only ACL");
+}
+main().catch(error=>{console.error(error);process.exitCode=1;});

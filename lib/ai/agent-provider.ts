@@ -271,7 +271,8 @@ async function runWithOpenAI(input: ConcreteRunInput) {
   const client = new OpenAI({ apiKey });
   const request = async (includeBinary: boolean) => client.responses.create({
     model: input.model,
-    reasoning: input.reasoningLevel ? { effort: input.reasoningLevel } : undefined,
+    // GPT-4 models do not accept reasoning-specific request parameters.
+    reasoning: input.reasoningLevel && !/^gpt-4(?:[.o-]|$)/i.test(input.model) ? { effort: input.reasoningLevel } : undefined,
     max_output_tokens: Math.max(1, Math.min(16_000, input.maxOutputTokens ?? 3200)),
     store: false,
     input: [

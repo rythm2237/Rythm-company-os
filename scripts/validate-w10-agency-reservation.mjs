@@ -175,7 +175,7 @@ try {
 
       const customerName = "W10 Sample Client " + id;
       const brief = "Create an offline measurement plan for a synthetic cafe campaign.";
-      const objective = brief + " The fictional cafe sells vegan lunches in Budapest to adults aged 25-45. Use only synthetic assumptions: 1000 impressions, 50 clicks, 10 purchases; no external data or integrations. Deliver a short KPI table with CTR and conversion formulas and explicitly labelled assumptions. Assign both available specialists to this project. Keep the roadmap to one phase with one draft task, requiring Human CEO approval before drafting. That task must request an internal review meeting with both specialists. The meeting reviews the draft, records minutes and recommends acceptance; it must not create extra work or request another meeting. No messages, campaign launch, purchases or other external actions. Completion means a reviewed internal document, never real marketing results.";
+      const objective = brief + " The fictional cafe sells vegan lunches in Budapest to adults aged 25-45. Use only synthetic assumptions: 1000 impressions, 50 clicks, 10 purchases; no external data or integrations. Deliver a short KPI table with CTR and conversion formulas and explicitly labelled assumptions. Assign both available specialists to this project. Keep the roadmap to one phase with one draft task, requiring Human CEO approval before drafting. That task must request an internal review meeting with both specialists. The meeting reviews this initial draft and records minutes. It must create exactly one finalization action requiring Human CEO approval before producing the final KPI document. That finalization action must not request another meeting, create additional actions or propose external work. No messages, campaign launch, purchases or other external actions. Completion means a reviewed internal document, never real marketing results.";
       const projectName = objective.slice(0, 120);
       await page.goto(app + "/crm");
       await page.locator("#add-customer > summary").click();
@@ -309,6 +309,11 @@ try {
         await page.getByRole("button", { name: "Run Project Analysis", exact: true }).click();
         const analysisResponse = await responsePromise;
         const analysisBody = await analysisResponse.json();
+        if (!analysisResponse.ok()) {
+          const diagnostics = await admin.from("ai_routing_decisions").select("normalized_error_class,reason_codes")
+            .eq("organization_id", org.id).eq("project_id", projectId);
+          console.log("W10 gateway failure classification:", JSON.stringify(diagnostics.data ?? []));
+        }
         assert.equal(analysisResponse.ok(), true, "Live project analysis HTTP " + analysisResponse.status() + " " + String(analysisBody.error ?? ""));
         const persistedAnalysis = result(await admin.from("project_readiness_assessments")
           .select("id").eq("organization_id", org.id).eq("project_id", projectId), "Read live project analysis");
@@ -354,10 +359,32 @@ try {
             .eq("project_id", projectId).eq("organization_id", org.id).eq("status", "completed"), "Read completed review meeting");
           if (outputs.some(t => Array.isArray(t.safe_result?.deliverables) && t.safe_result.deliverables.length) && completedMeetings.length) break;
         }
-        const output = outputs.find(t => Array.isArray(t.safe_result?.deliverables) && t.safe_result.deliverables.length);
-        assert.ok(output, "An actual generated deliverable must persist");
         assert.ok(completedMeetings.length, "An actual project review meeting must complete");
         assert.ok(completedMeetings[0].minutes?.executive_summary, "Meeting minutes must persist");
+        const reviewSession = result(await admin.from("meeting_agent_sessions").select("id,status,organization_id")
+          .eq("organization_id", org.id).eq("meeting_id", completedMeetings[0].id).eq("status", "completed").single(), "Read persisted review session");
+        const transcript = result(await admin.from("meeting_agent_messages").select("id,message_type")
+          .eq("organization_id", org.id).eq("session_id", reviewSession.id), "Read persisted real deliberation");
+        assert.ok(transcript.length >= 3 && transcript.some(m => m.message_type === "synthesis"), "Actual specialist positions and synthesis must persist");
+        const reviewApprovals = result(await admin.from("approval_requests").select("id,title")
+          .eq("organization_id", org.id).eq("project_id", projectId).eq("subject_type", "meeting_action").eq("status", "pending"), "Read post-meeting Human CEO gate");
+        assert.equal(reviewApprovals.length, 1, "The scoped finalization must await exactly one meeting approval");
+        const finalTask = result(await admin.from("project_task_runs").select("id,status")
+          .eq("organization_id", org.id).eq("project_id", projectId).eq("waiting_on_approval_id", reviewApprovals[0].id).single(), "Read governed finalization task");
+        assert.equal(finalTask.status, "waiting_for_approval");
+        await page.goto(app + "/projects/operating?project=" + projectId + "&view=decisions");
+        await page.getByLabel("Decision reason for " + reviewApprovals[0].title, { exact: true }).fill("Accept this internal review and authorize only the final synthetic KPI document.");
+        const reviewResponse = page.waitForResponse(r => new URL(r.url()).pathname === "/api/projects/live" && r.request().method() === "POST");
+        await page.getByRole("button", { name: "Approve & continue", exact: true }).click();
+        assert.equal((await reviewResponse).ok(), true, "Post-meeting Human CEO approval must persist");
+        const finalDispatch = await fetch(app + "/api/projects/dispatch", { headers: { Authorization: "Bearer " + process.env.CRON_SECRET }, signal: AbortSignal.timeout(290000) });
+        assert.equal(finalDispatch.ok, true);
+        assert.deepEqual((await finalDispatch.json()).failedSteps, []);
+        const output = result(await admin.from("project_task_runs").select("id,title,status,safe_result,organization_id")
+          .eq("organization_id", org.id).eq("id", finalTask.id).single(), "Read final generated artifact");
+        assert.equal(output.status, "completed");
+        assert.ok(Array.isArray(output.safe_result?.deliverables) && output.safe_result.deliverables.length, "An actual post-approval deliverable must persist");
+        outputs.push(output);
         const savedApproval = result(await admin.from("approval_requests").select("status,approver_user_id").eq("id", pending[0].id).single(), "Read recorded Human CEO decision");
         assert.equal(savedApproval.status, "approved");
         assert.equal(savedApproval.approver_user_id, user.id);
@@ -374,14 +401,14 @@ try {
           await fresh.goto(app + "/projects/operating?project=" + projectId + "&view=results");
           await fresh.getByText(output.safe_result.summary, { exact: true }).waitFor();
           await fresh.goto(app + "/meetings/room?project=" + projectId + "&meeting=" + completedMeetings[0].id);
-          await fresh.getByText(completedMeetings[0].minutes.executive_summary, { exact: false }).first().waitFor();
+          await fresh.getByText(completedMeetings[0].minutes.executive_summary, { exact: false }).filter({ visible: true }).first().waitFor();
           await fresh.screenshot({ path: `test-results/w10-${profile}-meeting.png`, fullPage: true });
         } finally { await recheck.close(); }
         const restrictedOutputs = result(await memberClient.from("project_task_runs").select("id").eq("project_id", projectId), "Viewer output visibility");
         assert.ok(restrictedOutputs.length, "Tenant viewer can read operational outputs under existing policy");
         const forbiddenApproval = await memberClient.from("approval_requests").update({ status: "rejected" }).eq("id", pending[0].id).select("id");
         assert.ok(forbiddenApproval.error || !forbiddenApproval.data?.length, "Viewer cannot change Human CEO decisions");
-        deliveryEvidence = { roadmap_id: roadmap.id, approval_ids: pending.map(p => p.id), outputs: outputs.map(t => ({ id: t.id, organization_id: t.organization_id, status: t.status, summary: t.safe_result.summary })), review_meeting_ids: completedMeetings.map(m => m.id) };
+        deliveryEvidence = { roadmap_id: roadmap.id, approval_ids: [...pending, ...reviewApprovals].map(p => p.id), review_session_id: reviewSession.id, transcript_ids: transcript.map(m => m.id), outputs: outputs.map(t => ({ id: t.id, organization_id: t.organization_id, status: t.status, summary: t.safe_result.summary })), review_meeting_ids: completedMeetings.map(m => m.id) };
         console.log(`PASS W10 generated delivery (${profile}): persisted outputs, reviewed meeting, approvals, refresh and re-login`);
       }
       const meetingLead = result(await admin.from("agents").select("id,agent_code,enabled")
