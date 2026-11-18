@@ -124,14 +124,14 @@ export async function reconcileDispatchedProjectProposals(limit=16){
   return results;
 }
 
-export async function dispatchApprovedProjectToolExecutions(){
+export async function dispatchApprovedProjectToolExecutions(limit=12){
   const supabase=createExecutionServiceClient();
   const {data:requests,error}=await supabase.from("tool_execution_requests")
     .select("id,organization_id,project_id,status,approval_request_id,agent_id,tool,capability_key,target_ref,correlation_id,originating_request_id")
     .not("project_id","is",null)
     .in("status",["waiting_approval","approved","authorized"])
     .order("created_at",{ascending:true})
-    .limit(12);
+    .limit(Math.max(1,Math.min(limit,12)));
   if(error)throw new Error("Project tool execution queue could not be loaded.");
   const results:Array<{id:string;status:string;error?:string}>=[];
   for(const request of requests??[]){
