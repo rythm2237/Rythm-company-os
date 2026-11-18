@@ -5,12 +5,14 @@ on:
       - '.github/workflows/w10-disposable-schema.yml'
       - 'supabase/migrations/**'
       - 'scripts/validate-w10-agency-reservation.mjs'
+      - 'scripts/w10-budget-proxy.mjs'
 permissions:
   contents: read
 jobs:
   disposable-schema:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
+    environment: w02-staging
     env:
       SUPABASE_TELEMETRY_DISABLED: '1'
     steps:
@@ -98,6 +100,9 @@ jobs:
             public.project_progress_events to authenticated;
           grant usage, select on all sequences in schema public to authenticated;
           grant insert on public.organization_members to service_role;
+          grant all on all tables in schema public to service_role;
+          grant usage, select on all sequences in schema public to service_role;
+          grant update on public.agents to authenticated;
           notify pgrst, 'reload schema';
           do $$
           begin
@@ -125,6 +130,7 @@ jobs:
           RYTHM_AGENT_EXECUTION_ENABLED: 'false'
           RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
           NEXT_TELEMETRY_DISABLED: '1'
+          W10_PROVIDER_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/w10-disposable"
@@ -136,12 +142,27 @@ jobs:
           export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
           export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$ANON_KEY"
           cd "$GITHUB_WORKSPACE"
+          test -n "$W10_PROVIDER_KEY"
+          node scripts/w10-budget-proxy.mjs &
+          proxy_pid=$!
+          export OPENAI_API_KEY=sk-w10-loopback-only
+          export OPENAI_BASE_URL=http://127.0.0.1:3199/v1
+          export RYTHM_DRY_RUN_MODEL=gpt-4.1-mini
+          export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          export W10_LIVE_AI=true
+          unset W10_PROVIDER_KEY
           ./node_modules/.bin/next build
           ./node_modules/.bin/next start --hostname localhost --port 3000 &
           app_pid=$!
-          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          trap 'kill "$app_pid" "$proxy_pid" 2>/dev/null || true' EXIT
           curl -fsS --retry 25 --retry-connrefused --retry-delay 2 http://localhost:3000/login -o /dev/null
           W10_LOCAL_SERVICE_KEY="$SERVICE_ROLE_KEY" node scripts/validate-w10-agency-reservation.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: w10-budget
+          path: test-results/w10-budget.json
+          if-no-files-found: ignore
       - name: Remove disposable services
         if: always()
         run: |
