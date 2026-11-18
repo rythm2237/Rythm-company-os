@@ -48,7 +48,7 @@ assert.ok(route.includes('service.rpc("complete_project_dispatch_lease_v1"'));
 assert.ok(route.indexOf('await authorizeDispatcher(')<route.indexOf('acquire_project_dispatch_lease_v1'));
 assert.ok(route.includes('dispatchProjectWorkV2(service,undefined,1)'));
 assert.ok(route.includes('dispatchAutonomousProjectMeetings(service,undefined,1)'));
-assert.ok(route.includes("dispatchApprovedProjectToolExecutions()"));
+assert.ok(route.includes("dispatchApprovedProjectToolExecutions(1)"),"governed actions stay enabled but are bounded to one per tick");
 assert.ok(route.includes('reportFailure(ctx,errors,"continuous_reviews")'));
 assert.ok(route.includes('console.error("project_dispatch_alert"'));
 assert.ok(tasks.includes('claim_project_task_runs_v1'));
