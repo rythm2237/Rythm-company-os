@@ -99,21 +99,21 @@ export async function GET(request:Request){
     if(health.error)reportFailure(ctx,errors,"health");
     if(meetingRecovery.error)reportFailure(ctx,errors,"meeting_recovery");
 
-    const supervisorBefore=await isolated("supervisor_pre",()=>superviseProjectExecutions(service),errors,[],ctx);
+    const supervisorBefore=await isolated("supervisor_pre",()=>superviseProjectExecutions(service,4),errors,[],ctx);
 
     const [knowledgeResults,connectionSetupResults]=await Promise.all([
       isolated("knowledge",()=>dispatchProjectKnowledge(service,{claimLimit:1}),errors,[],ctx),
       isolated("connection_setup",()=>dispatchConnectionSetupSessions(service,{limit:1}),errors,[],ctx),
     ]);
-    const proposalResults=await isolated("proposal_bridge",()=>dispatchApprovedProjectProposalActions(),errors,[],ctx);
-    const proposalConvergence=await isolated("proposal_convergence",()=>reconcileDispatchedProjectProposals(),errors,[],ctx);
+    const proposalResults=await isolated("proposal_bridge",()=>dispatchApprovedProjectProposalActions(1),errors,[],ctx);
+    const proposalConvergence=await isolated("proposal_convergence",()=>reconcileDispatchedProjectProposals(2),errors,[],ctx);
     const [taskResults,meetingResults]=await Promise.all([
       isolated("tasks",()=>dispatchProjectWorkV2(service,undefined,1),errors,[],ctx),
       isolated("meetings",()=>dispatchAutonomousProjectMeetings(service,undefined,1),errors,[],ctx),
     ]);
 
-    const supervisorAfter=await isolated("supervisor_post",()=>superviseProjectExecutions(service),errors,[],ctx);
-    const toolResults=await isolated("external_actions",()=>dispatchApprovedProjectToolExecutions(),errors,[],ctx);
+    const supervisorAfter=await isolated("supervisor_post",()=>superviseProjectExecutions(service,4),errors,[],ctx);
+    const toolResults=await isolated("external_actions",()=>dispatchApprovedProjectToolExecutions(1),errors,[],ctx);
     const terminal=await service.rpc("reconcile_project_execution_terminal_states_v1");
     if(terminal.error)reportFailure(ctx,errors,"terminal_reconciliation");
 
@@ -123,7 +123,7 @@ export async function GET(request:Request){
     if(startedObservations.error)reportFailure(ctx,errors,"observation_start");
 
     const completion=await isolated("completion",()=>reconcileProjectCompletionRuntime(service),errors,{observationWindows:0,projectsEvaluated:0,normalizedTasks:0,generatedReports:0},ctx);
-    const lifecycleContinuation=await isolated("completion_continuation",()=>ensureProjectLifecycleContinuation(service),errors,[],ctx);
+    const lifecycleContinuation=await isolated("completion_continuation",()=>ensureProjectLifecycleContinuation(service,3),errors,[],ctx);
     // Feature gated until the database migration and lifecycle reconciliation are approved.
     // Creates durable review intents only; actual evidence gathering and proposals remain governed.
     let continuousReviewsQueued=0;
