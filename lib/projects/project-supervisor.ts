@@ -318,8 +318,8 @@ async function recoverFailedMeetingJobs(supabase:SupabaseClient,execution:Execut
   }
 }
 
-export async function superviseProjectExecutions(supabase:SupabaseClient){
-  const executionResult=await supabase.from("project_executions").select("id,organization_id,project_id,execution_no,status,recovery_count,last_progress_at").in("status",["queued","running"]).order("updated_at",{ascending:true}).limit(20);
+export async function superviseProjectExecutions(supabase:SupabaseClient,limit=20){
+  const executionResult=await supabase.from("project_executions").select("id,organization_id,project_id,execution_no,status,recovery_count,last_progress_at").in("status",["queued","running"]).order("updated_at",{ascending:true}).limit(Math.max(1,Math.min(limit,20)));
   if(executionResult.error)throw new Error(executionResult.error.message);
   const results:SupervisorResult[]=[];
 
