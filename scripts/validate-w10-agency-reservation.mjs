@@ -122,6 +122,12 @@ try {
       assert.deepEqual(records, []);
       const customerRecords = result(await ownerClient.from("crm_accounts").select("id").eq("id", previous.customerId), "Cross-tenant customer read");
       assert.deepEqual(customerRecords, []);
+      assert.deepEqual(result(await ownerClient.from("project_contracts").select("id").eq("id", previous.contractId), "Cross-tenant contract read"), []);
+      assert.deepEqual(result(await ownerClient.from("departments").select("id").in("id", previous.departmentIds), "Cross-tenant department read"), []);
+      assert.deepEqual(result(await ownerClient.from("agents").select("id").in("id", previous.agentIds), "Cross-tenant workforce read"), []);
+      for (const table of ["meeting_agent_messages", "meeting_agent_participants"]) {
+        assert.deepEqual(result(await ownerClient.from(table).select("session_id").in("session_id", previous.sessionIds), "Cross-tenant " + table), []);
+      }
       for (const table of ["project_task_runs", "project_roadmaps", "meetings", "meeting_agent_sessions", "approval_requests", "project_readiness_assessments"]) {
         const hidden = result(await ownerClient.from(table).select("id").eq("project_id", previous.projectId), "Cross-tenant " + table);
         assert.deepEqual(hidden, [], "Another tenant must not see " + table);
@@ -172,6 +178,14 @@ try {
       const installation = result(await admin.from("organization_template_installations")
         .select("template_key").eq("organization_id", org.id).single(), "Read installed Agency");
       assert.equal(installation.template_key, template);
+      const departments = result(await admin.from("departments").select("id,organization_id").eq("organization_id", org.id), "Read installed Agency departments");
+      const workforce = result(await admin.from("agents").select("id,organization_id,department_id,agent_code").eq("organization_id", org.id).neq("agent_code", "RYTHM-COMMS"), "Read installed Agency workforce");
+      assert.ok(departments.length >= 5, "Agency departmental setup must persist");
+      assert.equal(result(await ownerClient.from("departments").select("id").eq("organization_id", org.id), "Owner department visibility").length, departments.length);
+      assert.ok(workforce.length >= 7, "Seven Agency specialists must persist");
+      assert.ok(workforce.every(agent => agent.organization_id === org.id && departments.some(department => department.id === agent.department_id)), "Every specialist must reference its own tenant department");
+      console.log(`PASS W10 workforce (${profile}): persisted departments and tenant-bound specialists`);
+
 
       const customerName = "W10 Sample Client " + id;
       const brief = "Create an offline measurement plan for a synthetic cafe campaign.";
@@ -281,6 +295,9 @@ try {
         .insert({ organization_id: org.id, customer_id: customerId, contract_number: "DENIED-" + id }).select("id");
       assert.ok(deniedWrite.error, "Unpermitted member must not create a contract");
       console.log(`PASS W10 roles (${profile}): member sees customer and cannot read or create contract`);
+      const recordEvidence = { profile, organization_id: org.id, owner_user_id: user.id, customer_id: customerId, contract_id: contract.id, project_id: projectId, action_id: actionId, department_ids: departments.map(d => d.id), agent_ids: workforce.map(a => a.id), stage: "core_verified", live_provider_execution: process.env.W10_LIVE_AI === "true" };
+      evidence.push(recordEvidence);
+      writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
       let deliveryEvidence = null;
       if (process.env.W10_LIVE_AI === "true") {
         const roster = result(await admin.from("agents").select("id,agent_code,enabled")
@@ -434,7 +451,7 @@ try {
       const manualSessionId = new URL(page.url()).searchParams.get("session");
       const manualMeeting = result(await admin.from("meetings").select("organization_id,status").eq("id", manualMeetingId).single(), "Read browser-created meeting");
       assert.deepEqual(manualMeeting, { organization_id: org.id, status: "running" });
-      const manualParticipants = result(await admin.from("meeting_agent_participants").select("agent_id,session_role,explicitly_authorized_by_ceo")
+      const manualParticipants = result(await ownerClient.from("meeting_agent_participants").select("agent_id,session_role,explicitly_authorized_by_ceo")
         .eq("organization_id", org.id).eq("session_id", manualSessionId), "Read authorized meeting participants");
       assert.equal(manualParticipants.length, 2);
       assert.ok(manualParticipants.every(p => p.explicitly_authorized_by_ceo));
@@ -443,9 +460,9 @@ try {
       await page.getByRole("button", { name: /^Next Action/ }).first().waitFor();
       await page.screenshot({ path: `test-results/w10-${profile}-manual-boardroom.png`, fullPage: true });
       console.log(`PASS W10 Agency Boardroom (${profile}): browser-created meeting, strategy synthesis, explicit participants and refresh`);
-      evidence.push({ profile, organization_id: org.id, owner_user_id: user.id, customer_id: customerId, contract_id: contract.id, project_id: projectId, action_id: actionId, manual_meeting_id: manualMeetingId, manual_session_id: manualSessionId, delivery: deliveryEvidence });
+      Object.assign(recordEvidence, { manual_meeting_id: manualMeetingId, manual_session_id: manualSessionId, delivery: deliveryEvidence, stage: deliveryEvidence ? "full_delivery_verified" : "core_and_manual_only" });
       writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
-      isolatedOrganizations.push({ projectId, customerId });
+      isolatedOrganizations.push({ projectId, customerId, contractId: contract.id, departmentIds: departments.map(d => d.id), agentIds: workforce.map(a => a.id), sessionIds: [manualSessionId, ...(deliveryEvidence ? [deliveryEvidence.review_session_id] : [])] });
       console.log(`PASS W10 CRM and project (${profile}): persisted brief, customer, contract and accountable project`);
       console.log(`PASS W10 Agency provision (${profile}): recorded template installation`);
     } catch (error) {

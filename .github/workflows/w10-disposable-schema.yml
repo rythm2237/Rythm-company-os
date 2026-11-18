@@ -95,7 +95,7 @@ jobs:
           grant select on public.approval_requests, public.decisions to authenticated;
           grant update on public.approval_requests to authenticated;
           grant select on public.meeting_legal_reviews, public.meeting_agent_sessions,
-            public.meeting_agent_messages, public.meetings to authenticated;
+            public.meeting_agent_messages, public.meeting_agent_participants, public.meetings to authenticated;
           grant update on public.projects to authenticated;
           grant insert on public.company_events, public.entity_relationships,
             public.project_progress_events to authenticated;
@@ -112,7 +112,7 @@ jobs:
               'project_agent_capacity','project_roadmaps','project_roadmap_phases','project_executions',
               'project_task_runs','project_activity_events','project_context_documents',
               'project_decision_memory','project_autonomous_meeting_jobs','project_proposals',
-              'project_scope_versions','project_clarification_requests','agent_asset_profiles'] loop
+              'project_scope_versions','project_clarification_requests','agent_asset_profiles','departments'] loop
               if not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
                 where n.nspname='public' and c.relname=table_name and c.relrowsecurity) then
                 raise exception 'Required RLS missing: %', table_name;
