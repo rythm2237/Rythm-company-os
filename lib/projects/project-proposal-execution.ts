@@ -128,13 +128,13 @@ async function planApprovedProposalActions(proposal:ProposalRow,bindings:Binding
   return {actions,missingInputs:strings(parsed.missing_inputs).slice(0,20),correlationId:response.correlationId};
 }
 
-export async function dispatchApprovedProjectProposalActions(){
+export async function dispatchApprovedProjectProposalActions(limit=16){
   const supabase=createExecutionServiceClient();
   const {data:proposals,error}=await supabase.from("project_proposals")
     .select("id,organization_id,project_id,created_by_agent_id,title,proposal_type,executive_summary,rationale,expected_impact,estimated_cost,cost_currency,risk_level,required_permissions,execution_result,decided_by_user_id,decided_at")
     .eq("status","approved")
     .order("decided_at",{ascending:true})
-    .limit(16);
+    .limit(Math.max(1,Math.min(limit,16)));
   if(error)throw new Error("Approved project proposals could not be loaded.");
 
   const results:Array<{proposalId:string;status:string;requests?:string[];error?:string}>=[];
