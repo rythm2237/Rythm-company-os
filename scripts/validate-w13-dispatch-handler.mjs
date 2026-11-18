@@ -80,7 +80,6 @@ const capture=(...items)=>state.logs.push(items.map(String).join(" "));
 console.error=capture;
 console.warn=capture;
 console.info=capture;
-let firstResolve;
 try{
   const compiled=await build({
     entryPoints:["app/api/projects/dispatch/route.ts"],
