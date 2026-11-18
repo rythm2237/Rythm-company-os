@@ -272,6 +272,26 @@ try {
         .insert({ organization_id: org.id, customer_id: customerId, contract_number: "DENIED-" + id }).select("id");
       assert.ok(deniedWrite.error, "Unpermitted member must not create a contract");
       console.log(`PASS W10 roles (${profile}): member sees customer and cannot read or create contract`);
+      if (profile === "desktop" && process.env.W10_LIVE_AI === "true") {
+        const roster = result(await admin.from("agents").select("id,agent_code,enabled")
+          .eq("organization_id", org.id).neq("agent_code", "RYTHM-COMMS").limit(2), "Read Agency roster");
+        for (const agent of roster) {
+          await page.goto(app + "/agents/" + encodeURIComponent(agent.agent_code));
+          await page.getByRole("button", { name: "Enable agent runtime", exact: true }).click();
+        }
+        await page.goto(app + "/projects/operating?project=" + projectId);
+        const responsePromise = page.waitForResponse(response =>
+          new URL(response.url()).pathname === "/api/projects/analyze" && response.request().method() === "POST",
+          { timeout: 240000 });
+        await page.getByRole("button", { name: "Run Project Analysis", exact: true }).click();
+        const analysisResponse = await responsePromise;
+        const analysisBody = await analysisResponse.json();
+        assert.equal(analysisResponse.ok(), true, "Live project analysis HTTP " + analysisResponse.status() + " " + String(analysisBody.error ?? ""));
+        const persistedAnalysis = result(await admin.from("project_readiness_assessments")
+          .select("id").eq("organization_id", org.id).eq("project_id", projectId), "Read live project analysis");
+        assert.ok(persistedAnalysis.length > 0);
+        console.log("PASS W10 live analysis: actual provider output persisted");
+      }
       isolatedOrganizations.push({ projectId, customerId });
       console.log(`PASS W10 CRM and project (${profile}): persisted brief, customer, contract and accountable project`);
       console.log(`PASS W10 Agency provision (${profile}): recorded template installation`);
