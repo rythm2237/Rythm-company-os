@@ -418,6 +418,16 @@ try {
             .eq("project_id", projectId).eq("organization_id", org.id).eq("status", "completed"), "Read completed review meeting");
           if (outputs.some(t => Array.isArray(t.safe_result?.deliverables) && t.safe_result.deliverables.length) && completedMeetings.length) break;
         }
+        if (!completedMeetings.length) {
+          const diagnostics = {};
+          for (const [table, columns] of [["project_task_runs", "id,status,safe_result,error_message"], ["meetings", "id,status,involvement_mode"], ["project_autonomous_meeting_jobs", "id,status,error_message,next_attempt_at"], ["project_activity_events", "event_type,detail,metadata"]]) {
+            const read = await admin.from(table).select(columns).eq("organization_id", org.id).eq("project_id", projectId);
+            diagnostics[table] = read.error ? { code: read.error.code } : read.data;
+          }
+          console.log("W10 synthetic delivery diagnostics:", JSON.stringify(diagnostics));
+          recordEvidence.delivery_diagnostics = diagnostics;
+          writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
+        }
         assert.ok(completedMeetings.length, "An actual project review meeting must complete");
         assert.ok(completedMeetings[0].minutes?.executive_summary, "Meeting minutes must persist");
         const reviewSession = result(await admin.from("meeting_agent_sessions").select("id,status,organization_id")
@@ -479,7 +489,9 @@ try {
       if (!meetingLead.enabled) {
         await page.goto(app + "/agents/STRATEGY_DIRECTOR");
         await page.getByRole("button", { name: "Enable agent runtime", exact: true }).click();
+        await page.getByRole("button", { name: "Pause agent runtime", exact: true }).waitFor();
       }
+      assert.equal(result(await ownerClient.from("agents").select("enabled").eq("id", meetingLead.id).single(), "Read enabled meeting lead").enabled, true);
       const advisor = result(await admin.from("agents").select("id").eq("organization_id", org.id)
         .eq("enabled", true).not("agent_code", "in", "(STRATEGY_DIRECTOR,RYTHM-COMMS,T-001)").limit(1).single(), "Read enabled meeting advisor");
       await page.goto(app + "/meetings");
