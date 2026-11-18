@@ -4,6 +4,8 @@ import fs from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { dispatchDiagnostic, isTransientUpstreamFailure, retryIdempotentRpc } from "../lib/projects/project-dispatch-resilience";
 
+async function main(){
+
 const source=(file:string)=>fs.readFileSync(file,"utf8");
 const route=source("app/api/projects/dispatch/route.ts");
 const tasks=source("lib/projects/project-work-v2.ts");
@@ -107,3 +109,6 @@ try{
   await db.close();
 }
 console.log("W13 PASS: synthetic 502 retry, trace redaction, offline atomic lease, queue integration guards");
+
+}
+main().catch(error=>{console.error(error);process.exitCode=1;});
