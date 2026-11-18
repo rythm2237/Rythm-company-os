@@ -3,7 +3,7 @@
  * Never wrap the dispatcher, a claim, a task, an approval, or an external action here.
  * Replaying a timed-out write can duplicate a real-world side effect.
  */
-type RpcResult = { error?: unknown };
+type RpcResult = { error?: unknown; status?: number };
 
 export function isTransientUpstreamFailure(input: unknown): boolean {
   if (!input || typeof input !== "object") return false;
@@ -14,7 +14,7 @@ export function isTransientUpstreamFailure(input: unknown): boolean {
   // PostgREST connection errors, connection exceptions, and PG restart/overload.
   if (["PGRST000", "PGRST002", "57P01", "57P02", "57P03", "53300"].includes(code)) return true;
   if (code.startsWith("08") && /^[0-9A-Z]{5}$/.test(code)) return true;
-  return false;
+  return /(?:fetch failed|ECONNRESET|ETIMEDOUT|ECONNREFUSED|socket hang up|network request failed)/i.test(String(error.message ?? ""));
 }
 
 export async function retryIdempotentRpc<T extends RpcResult>(
@@ -32,7 +32,11 @@ export async function retryIdempotentRpc<T extends RpcResult>(
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const result = await operation();
-      if (!result.error || !isTransientUpstreamFailure(result.error) || attempt === maxAttempts) return result;
+      if (!result.error || attempt === maxAttempts) return result;
+      const candidate = typeof result.error === "object" && result.error !== null
+        ? { ...(result.error as object), status: (result.error as { status?: number }).status ?? result.status }
+        : { status: result.status };
+      if (!isTransientUpstreamFailure(candidate)) return result;
     } catch (error) {
       if (!isTransientUpstreamFailure(error) || attempt === maxAttempts) throw error;
     }
