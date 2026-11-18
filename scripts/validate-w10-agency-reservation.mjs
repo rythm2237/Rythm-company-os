@@ -540,6 +540,17 @@ try {
       console.log(`PASS W10 CRM and project (${profile}): persisted brief, customer, contract and accountable project`);
       console.log(`PASS W10 Agency provision (${profile}): recorded template installation`);
     } catch (error) {
+      const record = evidence.find(item => item.profile === profile);
+      if (record) {
+        const diagnostics = {};
+        for (const [table, columns] of [["project_roadmaps", "id,status"], ["project_roadmap_phases", "phase_key,weight,tasks"], ["project_task_runs", "id,status,safe_result,error_message"], ["meetings", "id,status,involvement_mode"], ["project_autonomous_meeting_jobs", "id,status,error_message,next_attempt_at"], ["project_activity_events", "event_type,detail,metadata"]]) {
+          const read = await admin.from(table).select(columns).eq("organization_id", record.organization_id).eq("project_id", record.project_id);
+          diagnostics[table] = read.error ? { code: read.error.code } : read.data;
+        }
+        record.failure_diagnostics = diagnostics;
+        writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
+        console.log("W10 synthetic failure diagnostics:", JSON.stringify(diagnostics));
+      }
       const failurePage = returning.pages().at(-1);
       if (failurePage) {
         console.log("W10 failure page:", new URL(failurePage.url()).pathname);

@@ -99,8 +99,11 @@ async function runMeeting(supabase:SupabaseClient,job:any){
   const participants=[chair,...agents.filter(a=>a.id!==chair.id)].slice(0,4);
   const session=await supabase.from("meeting_agent_sessions").insert({organization_id:job.organization_id,meeting_id:meeting.id,project_id:project.id,status:"running",decision_question:meeting.purpose,language:"English",model:"adaptive-routing",max_rounds:1,budget_cap_usd:Math.min(1.5,Math.max(0.25,Number(project.budget_cap_usd??1.5))),external_research_allowed:false,started_at:new Date().toISOString()}).select("id").single();
   if(session.error||!session.data)throw new Error(session.error?.message||"Meeting session could not be created.");
-  await supabase.from("meetings").update({status:"running",started_at:new Date().toISOString()}).eq("id",meeting.id).eq("organization_id",job.organization_id);
-  await supabase.from("meeting_agent_participants").insert(participants.map((a,index)=>({session_id:session.data.id,organization_id:job.organization_id,agent_id:a.id,seat_order:index+1,session_role:a.id===chair.id?"synthesizer":"advisor",explicitly_authorized_by_ceo:false,authorization_source:"project_policy"})));
+  const startedMeeting=await supabase.from("meetings").update({status:"running",started_at:new Date().toISOString()}).eq("id",meeting.id).eq("organization_id",job.organization_id);
+  if(startedMeeting.error)throw new Error("Autonomous meeting lifecycle start could not be persisted.");
+  const savedParticipants=await supabase.from("meeting_agent_participants").insert(participants.map((a,index)=>({session_id:session.data.id,organization_id:job.organization_id,agent_id:a.id,seat_order:index+1,session_role:a.id===chair.id?"synthesizer":"advisor",explicitly_authorized_by_ceo:false,authorization_source:"project_policy"})));
+
+  if(savedParticipants.error)throw new Error("Autonomous meeting participants could not be persisted.");
 
   const knowledge=JSON.stringify(knowledgeResult.data??[]).slice(0,16000);
   const transcript:Array<{agent:Agent;position:Record<string,unknown>}>=[];
@@ -119,8 +122,11 @@ async function runMeeting(supabase:SupabaseClient,job:any){
   totalCost+=synthesis.costUsd;totalInput+=synthesis.inputTokens;totalOutput+=synthesis.outputTokens;
   const data=synthesis.data,now=new Date().toISOString();
   await supabase.from("meeting_agent_messages").insert({organization_id:job.organization_id,meeting_id:meeting.id,session_id:session.data.id,agent_id:chair.id,turn_index:turn+1,round_no:2,speaker_type:"agent",message_type:"synthesis",content:JSON.stringify(data),model:synthesis.model,input_tokens:synthesis.inputTokens,output_tokens:synthesis.outputTokens,estimated_cost_usd:synthesis.costUsd,ai_correlation_id:synthesis.correlationId});
-  await supabase.from("meeting_agent_sessions").update({status:"completed",synthesis:text(data.executive_summary,"Meeting completed."),recommendation:text(data.recommendation),decision_options:list(data.disagreements),total_input_tokens:totalInput,total_output_tokens:totalOutput,estimated_cost_usd:totalCost,completed_at:now,updated_at:now}).eq("id",session.data.id);
-  await supabase.from("meetings").update({status:"completed",ended_at:now,minutes:{executive_summary:data.executive_summary,consensus:data.consensus,disagreements:data.disagreements,decision:data.decision,recommendation:data.recommendation,risks:data.risks,action_items:data.action_items}}).eq("id",meeting.id).eq("organization_id",job.organization_id);
+  const savedSession=await supabase.from("meeting_agent_sessions").update({status:"completed",synthesis:text(data.executive_summary,"Meeting completed."),recommendation:text(data.recommendation),decision_options:list(data.disagreements),total_input_tokens:totalInput,total_output_tokens:totalOutput,estimated_cost_usd:totalCost,completed_at:now,updated_at:now}).eq("id",session.data.id);
+  if(savedSession.error)throw new Error("Autonomous meeting session completion could not be persisted.");
+  const savedMeeting=await supabase.from("meetings").update({status:"completed",ended_at:now,minutes:{executive_summary:data.executive_summary,consensus:data.consensus,disagreements:data.disagreements,decision:data.decision,recommendation:data.recommendation,risks:data.risks,action_items:data.action_items}}).eq("id",meeting.id).eq("organization_id",job.organization_id);
+
+  if(savedMeeting.error)throw new Error("Autonomous meeting completion could not be persisted.");
 
   if(text(data.decision)){
     const decision=await supabase.from("decisions").insert({organization_id:job.organization_id,project_id:project.id,decision_key:`PM-${meeting.id.slice(0,8)}-${Date.now()}`,title:meeting.title,context:text(data.executive_summary,meeting.purpose),options:list(data.disagreements),recommendation:{text:text(data.recommendation)},rationale:text(data.consensus),risk_level:"low",status:"approved",requires_human_approval:false,proposed_by_agent_id:chair.id,decided_at:now,source_meeting_session_id:session.data.id}).select("id").single();

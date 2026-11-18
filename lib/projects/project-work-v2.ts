@@ -109,7 +109,9 @@ Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
   if(data.meeting_request&&typeof data.meeting_request==="object"){
     const m=object(data.meeting_request);
     const meeting=await supabase.from("meetings").insert({organization_id:task.organization_id,project_id:task.project_id,title:text(m.title,`Working session: ${task.title}`),purpose:text(m.purpose,"Resolve project task collaboratively."),status:"draft",human_join_allowed:true,agenda:list(m.participant_roles),chair_agent_id:task.assigned_agent_id}).select("id").single();
-    if(meeting.data)await supabase.from("project_activity_events").insert({organization_id:task.organization_id,project_id:task.project_id,execution_id:task.execution_id,agent_id:task.assigned_agent_id,event_type:"meeting.requested",headline:"Agent requested a working session",detail:text(m.purpose),metadata:{meeting_id:meeting.data.id}});
+    if(meeting.error||!meeting.data)throw new Error("Requested project meeting could not be persisted.");
+    const requestedMeeting=await supabase.from("project_activity_events").insert({organization_id:task.organization_id,project_id:task.project_id,execution_id:task.execution_id,agent_id:task.assigned_agent_id,event_type:"meeting.requested",headline:"Agent requested a working session",detail:text(m.purpose),metadata:{meeting_id:meeting.data.id}});
+    if(requestedMeeting.error)throw new Error("Requested project meeting could not be queued.");
   }
 
   const completedAt=new Date().toISOString();

@@ -23,7 +23,7 @@ const oldKey=process.env.OPENAI_API_KEY,oldModel=process.env.RYTHM_DRY_RUN_MODEL
 process.env.OPENAI_API_KEY="sk-synthetic-no-provider-access";
 process.env.RYTHM_DRY_RUN_MODEL="synthetic";
 try {
-  for(const failApproval of [false,true]){
+  for(const failure of ["none","approval","start","participants","session","completion"]){
     const writes=[];
     const agents=[
       {id:"agent-1",agent_code:"ANALYTICS_SPECIALIST",name:"Analyst",role_title:"Analyst",enabled:true},
@@ -37,8 +37,14 @@ try {
         const answer=()=>{
           if(operation!=="select"){
             writes.push({table,operation,payload});
+            if ((failure === "start" && table === "meetings" && payload.status === "running") ||
+                (failure === "participants" && table === "meeting_agent_participants") ||
+                (failure === "session" && table === "meeting_agent_sessions" && operation === "update") ||
+                (failure === "completion" && table === "meetings" && payload.status === "completed")) {
+              return {data:null,error:{code:"synthetic_write_failure"}};
+            }
             if(operation==="insert"&&table==="approval_requests"){
-              return failApproval ? {data:null,error:{code:"synthetic_write_failure"}} : {data:{id:"approval"},error:null};
+              return failure === "approval" ? {data:null,error:{code:"synthetic_write_failure"}} : {data:{id:"approval"},error:null};
             }
             return {data:operation==="insert"?{id:table==="meeting_agent_sessions"?"session":"action"}:null,error:null};
           }
@@ -64,10 +70,10 @@ try {
     const result=await fixtureModule.exports.dispatchAutonomousProjectMeetings(supabase,"worker");
     const actionWrites=writes.filter(write=>write.table==="action_items"&&write.operation==="insert");
     const taskWrites=writes.filter(write=>write.table==="project_task_runs"&&write.operation==="insert");
-    assert.equal(writes.find(write=>write.table==="approval_requests").payload.risk_level,"high");
-    if(failApproval){
-      assert.equal(actionWrites.length,0,"A failed required approval must prevent action creation");
-      assert.equal(taskWrites.length,0,"A failed required approval must prevent queued work");
+    if (["none","approval"].includes(failure)) assert.equal(writes.find(write=>write.table==="approval_requests").payload.risk_level,"high");
+    if(failure !== "none"){
+      assert.equal(actionWrites.length,0,"A failed required write must prevent action creation");
+      assert.equal(taskWrites.length,0,"A failed required write must prevent queued work");
       assert.equal(result[0].status,"retrying");
     }else{
       assert.equal(actionWrites[0].payload.authorization_approval_id,"approval");
@@ -80,4 +86,4 @@ try {
   if(oldKey===undefined)delete process.env.OPENAI_API_KEY;else process.env.OPENAI_API_KEY=oldKey;
   if(oldModel===undefined)delete process.env.RYTHM_DRY_RUN_MODEL;else process.env.RYTHM_DRY_RUN_MODEL=oldModel;
 }
-console.log("PASS W10 actual meeting worker: tenant-bound internal review, normalized risk, persisted Human CEO gate and fail-closed approval write failure (synthetic provider/persistence adapters)");
+console.log("PASS W10 actual meeting worker: tenant-bound internal review, normalized risk, persisted Human CEO gate and fail-closed lifecycle, participants, session, minutes and approval write failures (synthetic provider/persistence adapters)");

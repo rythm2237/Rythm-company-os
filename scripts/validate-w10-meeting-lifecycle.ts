@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {PGlite} from '@electric-sql/pglite';
+async function main(){
+ const db=new PGlite();
+ await db.exec(`create schema auth;
+ create function auth.role() returns text language sql as $$select current_setting('w10.role',true)$$;
+ create function public.is_org_owner(uuid) returns boolean language sql as $$select current_setting('w10.owner',true)='true'$$;
+ create table public.projects(id uuid,organization_id uuid,status text,autonomy_mode text);
+ create table public.meetings(id uuid,organization_id uuid,project_id uuid,status text,involvement_mode text,scheduled_for timestamptz,started_at timestamptz,ended_at timestamptz,minutes jsonb);
+ create table public.project_autonomous_meeting_jobs(meeting_id uuid,organization_id uuid,project_id uuid,status text,lease_owner text,lease_expires_at timestamptz);`);
+ await db.exec(await readFile('supabase/migrations/20261118143000_leased_project_meeting_lifecycle.sql','utf8'));
+ await db.exec(`create trigger lifecycle before update on public.meetings for each row execute function public.enforce_meeting_lifecycle();
+ insert into public.projects values('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000002','active','approval_required');
+ insert into public.meetings(id,organization_id,project_id,status,involvement_mode) select '00000000-0000-4000-8000-000000000003',organization_id,id,'draft','AUTONOMOUS' from public.projects;
+ insert into public.project_autonomous_meeting_jobs select id,organization_id,project_id,'running','worker',now()+interval '5 minutes' from public.meetings;
+ set w10.owner='false';set w10.role='authenticated';`);
+ const start="update public.meetings set status='running',started_at=now()";
+ await assert.rejects(db.exec(start),/Only an organization owner/);
+ await db.exec("set w10.role='service_role';update public.project_autonomous_meeting_jobs set organization_id='00000000-0000-4000-8000-000000000004'");
+ await assert.rejects(db.exec(start),/Only an organization owner/);
+ await db.exec("update public.project_autonomous_meeting_jobs set organization_id='00000000-0000-4000-8000-000000000002',lease_expires_at=now()-interval '1 minute'");
+ await assert.rejects(db.exec(start),/Only an organization owner/);
+ await db.exec("update public.project_autonomous_meeting_jobs set lease_expires_at=now()+interval '5 minutes';update public.meetings set involvement_mode='CEO_REQUIRED'");
+ await assert.rejects(db.exec(start),/Only an organization owner/);
+ await db.exec("update public.meetings set involvement_mode='AUTONOMOUS'");
+ await db.exec(start);
+ await assert.rejects(db.exec("update public.meetings set status='completed',ended_at=now()"),/require minutes/);
+ await assert.rejects(db.exec("update public.meetings set status='cancelled'"),/Only an organization owner/);
+ await db.exec(`update public.meetings set status='completed',ended_at=now(),minutes='{"executive_summary":"Synthetic internal review"}'`);
+ await assert.rejects(db.exec("update public.meetings set minutes='{}'"),/immutable/);
+ await db.exec("delete from public.meetings;insert into public.meetings(id,organization_id,project_id,status,involvement_mode) select '00000000-0000-4000-8000-000000000005',organization_id,id,'draft','CEO_REQUIRED' from public.projects;set w10.role='authenticated';set w10.owner='true'");
+ await db.exec(start);
+ await db.close();
+ console.log('PASS W10 actual PostgreSQL meeting lifecycle: active leased same-tenant worker only, viewer/foreign/expired/CEO-required denials, minutes and immutability, normal Owner preserved');
+}
+main().catch(error=>{console.error(error);process.exitCode=1;});

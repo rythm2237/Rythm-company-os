@@ -139,7 +139,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --check scripts/validate-w10-agency-reservation.mjs && node --check scripts/w10-budget-proxy.mjs && node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts && node --import tsx scripts/validate-w10-team-assignment.ts && node scripts/validate-w10-meeting-approval-boundary.mjs
+      - run: node --check scripts/validate-w10-agency-reservation.mjs && node --check scripts/w10-budget-proxy.mjs && node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts && node --import tsx scripts/validate-w10-meeting-lifecycle.ts && node --import tsx scripts/validate-w10-team-assignment.ts && node scripts/validate-w10-meeting-approval-boundary.mjs
       - run: google-chrome --version
       - name: Verify reservation and re-login against disposable Auth
         env:
@@ -150,8 +150,8 @@ jobs:
           RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
           NEXT_TELEMETRY_DISABLED: '1'
           # Paid execution is authorized for this one PR update only. Later updates run without a provider key.
-          W10_LIVE_AI: ${{ github.event.before == 'c872f8a19da37ea868fbed89f64074a8ef47b49a' && 'true' || 'false' }}
-          W10_PROVIDER_KEY: ${{ github.event.before == 'c872f8a19da37ea868fbed89f64074a8ef47b49a' && secrets.OPENAI_API_KEY || '' }}
+          W10_LIVE_AI: ${{ github.event.before == '60c85f5065231e2acc7caa9067a15857c3c48477' && 'true' || 'false' }}
+          W10_PROVIDER_KEY: ${{ github.event.before == '60c85f5065231e2acc7caa9067a15857c3c48477' && secrets.OPENAI_API_KEY || '' }}
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/w10-disposable"
