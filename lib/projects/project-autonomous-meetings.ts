@@ -100,7 +100,7 @@ async function runMeeting(supabase:SupabaseClient,job:any){
   const session=await supabase.from("meeting_agent_sessions").insert({organization_id:job.organization_id,meeting_id:meeting.id,project_id:project.id,status:"running",decision_question:meeting.purpose,language:"English",model:"adaptive-routing",max_rounds:1,budget_cap_usd:Math.min(1.5,Math.max(0.25,Number(project.budget_cap_usd??1.5))),external_research_allowed:false,started_at:new Date().toISOString()}).select("id").single();
   if(session.error||!session.data)throw new Error(session.error?.message||"Meeting session could not be created.");
   const startedMeeting=await supabase.from("meetings").update({status:"running",started_at:new Date().toISOString()}).eq("id",meeting.id).eq("organization_id",job.organization_id);
-  if(startedMeeting.error)throw new Error("Autonomous meeting lifecycle start could not be persisted.");
+  if(startedMeeting.error)throw new Error(`Autonomous meeting lifecycle start could not be persisted (${startedMeeting.error.code}: ${startedMeeting.error.message}).`);
   const savedParticipants=await supabase.from("meeting_agent_participants").insert(participants.map((a,index)=>({session_id:session.data.id,organization_id:job.organization_id,agent_id:a.id,seat_order:index+1,session_role:a.id===chair.id?"synthesizer":"advisor",explicitly_authorized_by_ceo:false,authorization_source:"project_policy"})));
 
   if(savedParticipants.error)throw new Error("Autonomous meeting participants could not be persisted.");

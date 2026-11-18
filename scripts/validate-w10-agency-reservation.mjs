@@ -24,6 +24,8 @@ function result(response, label) {
   return response.data;
 }
 
+assert.equal(result(await admin.rpc("w10_runtime_role_v1"), "Verify disposable server role"), "service_role");
+
 const mail = "http://127.0.0.1:54324";
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function mailLink(email,type){

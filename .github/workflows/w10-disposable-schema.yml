@@ -123,6 +123,31 @@ jobs:
               execute format('grant select on public.%I to authenticated', table_name);
             end loop;
           end $$;
+          -- Catalog-neutral identity check, scoped to this disposable runner only.
+          create function public.w10_runtime_role_v1() returns text
+            language sql security invoker set search_path='' as $$select auth.role()$$;
+          revoke all on function public.w10_runtime_role_v1() from public, anon, authenticated;
+          grant execute on function public.w10_runtime_role_v1() to service_role;
+          -- Exercise the complete installed trigger chain, before paying for AI.
+          -- All fixture rows roll back; they do not count as journey evidence.
+          begin;
+          set local role service_role;
+          set local request.jwt.claim.role='service_role';
+          do $$
+          declare org_id uuid; project_id uuid:=gen_random_uuid(); meeting_id uuid:=gen_random_uuid();
+          begin
+            select id into org_id from public.organizations limit 1;
+            insert into public.projects(id,organization_id,project_code,name,status,autonomy_mode)
+              values(project_id,org_id,'W10-LIFECYCLE-REGRESSION','Disposable lifecycle regression','active','approval_required');
+            insert into public.meetings(id,organization_id,project_id,title,purpose,status,involvement_mode)
+              values(meeting_id,org_id,project_id,'Disposable internal review','Exercise installed lifecycle triggers','draft','AUTONOMOUS');
+            insert into public.project_autonomous_meeting_jobs(organization_id,project_id,meeting_id,status,lease_owner,lease_expires_at)
+              values(org_id,project_id,meeting_id,'running','w10-regression',now()+interval '5 minutes');
+            update public.meetings set status='running',started_at=now() where id=meeting_id;
+            update public.meetings set status='completed',ended_at=now(),minutes='{"executive_summary":"Disposable installed-schema regression"}' where id=meeting_id;
+            raise notice 'PASS W10 installed-schema leased meeting start/completion; fixture will roll back';
+          end $$;
+          rollback;
           notify pgrst, 'reload schema';
           do $$
           begin
