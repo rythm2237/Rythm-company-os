@@ -1,3 +1,4 @@
+import { isMeetingSynthesizer, selectMeetingSynthesizer } from "../lib/meetings/synthesis-policy";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { executeAiRequest } from "../lib/ai/request-gateway";
@@ -153,7 +154,11 @@ async function main() {
     const source = readFileSync("app/api/meetings/deliberate/route.ts", "utf8");
     assert.match(source, /participants\.length < 2/);
     assert.match(source, /explicitly_authorized_by_ceo/);
-    assert.match(source, /agent_code === "B-001"/);
+    assert.match(source, /!isMeetingSynthesizer\(responseAgent\)/);
+    assert.equal(isMeetingSynthesizer({ agent_code: "B-001" }), true);
+    assert.equal(isMeetingSynthesizer({ agent_code: "STRATEGY_DIRECTOR" }), true);
+    assert.equal(isMeetingSynthesizer({ agent_code: "ACCOUNT_MANAGER" }), false);
+    assert.equal(selectMeetingSynthesizer([{ agent_code: "STRATEGY_DIRECTOR", enabled: false }]), undefined);
     assert.match(source, /Preserve material disagreements/);
     assert.match(source, /Human CEO makes the final decision/);
     assert.match(source, /awaitingChairClose:true/);
