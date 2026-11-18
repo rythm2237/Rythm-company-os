@@ -481,7 +481,9 @@ try {
           await login(fresh, email, password);
           await fresh.goto(app + "/projects/operating?project=" + projectId + "&view=results");
           await fresh.getByText(output.safe_result.summary, { exact: true }).waitFor();
-          await fresh.goto(app + "/meetings/room?project=" + projectId + "&meeting=" + completedMeetings[0].id);
+          await fresh.goto(app + "/meetings/room?project=" + projectId + "&meeting=" + completedMeetings[0].id + "&session=" + reviewSession.id);
+          await fresh.getByRole("button", { name: "Notes", exact: true }).filter({ visible: true }).first().click();
+          await fresh.screenshot({ path: `test-results/w10-${profile}-meeting-open.png`, fullPage: true });
           await fresh.getByText(completedMeetings[0].minutes.executive_summary, { exact: false }).filter({ visible: true }).first().waitFor();
           await fresh.screenshot({ path: `test-results/w10-${profile}-meeting.png`, fullPage: true });
         } finally { await recheck.close(); }
