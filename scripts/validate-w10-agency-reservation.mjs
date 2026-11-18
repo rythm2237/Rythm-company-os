@@ -543,7 +543,7 @@ try {
       const record = evidence.find(item => item.profile === profile);
       if (record) {
         const diagnostics = {};
-        for (const [table, columns] of [["project_roadmaps", "id,status"], ["project_roadmap_phases", "phase_key,weight,tasks"], ["project_task_runs", "id,status,safe_result,error_message"], ["meetings", "id,status,involvement_mode"], ["project_autonomous_meeting_jobs", "id,status,error_message,next_attempt_at"], ["project_activity_events", "event_type,detail,metadata"]]) {
+        for (const [table, columns] of [["projects", "id,status,lifecycle_state,blocker_type"], ["project_roadmaps", "id,status"], ["project_roadmap_phases", "phase_key,weight,tasks"], ["project_task_runs", "id,status,safe_result,error_message"], ["meetings", "id,status,involvement_mode"], ["project_autonomous_meeting_jobs", "id,status,error_message,next_attempt_at"], ["project_activity_events", "event_type,detail,metadata"]]) {
           const read = await admin.from(table).select(columns).eq("organization_id", record.organization_id).eq("project_id", record.project_id);
           diagnostics[table] = read.error ? { code: read.error.code } : read.data;
         }

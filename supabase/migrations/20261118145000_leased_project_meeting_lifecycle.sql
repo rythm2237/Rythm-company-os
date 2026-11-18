@@ -26,7 +26,7 @@ begin
         where j.meeting_id=old.id and j.organization_id=old.organization_id
           and j.project_id=old.project_id and j.status='running'
           and j.lease_owner is not null and j.lease_expires_at>now()
-          and p.status='active'
+          and public.project_internal_work_authorized_v1(p.id,p.organization_id)
           and p.autonomy_mode in ('limited_autonomy','full_autonomy_within_policy','approval_required')
       )
     ) then

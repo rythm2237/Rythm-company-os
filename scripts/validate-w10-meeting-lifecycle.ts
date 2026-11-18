@@ -7,9 +7,10 @@ async function main(){
  create function auth.role() returns text language sql as $$select current_setting('w10.role',true)$$;
  create function public.is_org_owner(uuid) returns boolean language sql as $$select current_setting('w10.owner',true)='true'$$;
  create table public.projects(id uuid,organization_id uuid,status text,autonomy_mode text);
+ create function public.project_internal_work_authorized_v1(uuid,uuid) returns boolean language sql as $$select exists(select 1 from public.projects where id=$1 and organization_id=$2 and status='active')$$;
  create table public.meetings(id uuid,organization_id uuid,project_id uuid,status text,involvement_mode text,scheduled_for timestamptz,started_at timestamptz,ended_at timestamptz,minutes jsonb);
  create table public.project_autonomous_meeting_jobs(meeting_id uuid,organization_id uuid,project_id uuid,status text,lease_owner text,lease_expires_at timestamptz);`);
- await db.exec(await readFile('supabase/migrations/20261118143000_leased_project_meeting_lifecycle.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261118145000_leased_project_meeting_lifecycle.sql','utf8'));
  await db.exec(`create trigger lifecycle before update on public.meetings for each row execute function public.enforce_meeting_lifecycle();
  insert into public.projects values('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000002','active','approval_required');
  insert into public.meetings(id,organization_id,project_id,status,involvement_mode) select '00000000-0000-4000-8000-000000000003',organization_id,id,'draft','AUTONOMOUS' from public.projects;
