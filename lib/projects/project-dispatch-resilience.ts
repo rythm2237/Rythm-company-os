@@ -18,7 +18,7 @@ export function isTransientUpstreamFailure(input: unknown): boolean {
 }
 
 export async function retryIdempotentRpc<T extends RpcResult>(
-  operation: () => Promise<T>,
+  operation: () => PromiseLike<T>,
   options: {
     maxAttempts?: number;
     baseDelayMs?: number;
