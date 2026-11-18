@@ -5,7 +5,7 @@ const require=createRequire(import.meta.url);
 async function syntheticGateway(input){
   return {
     outputText:JSON.stringify(input.feature==="boardroom.summary"
-      ? {executive_summary:"Synthetic review",consensus:"Review",disagreements:[],decision:"",recommendation:"Internal draft",action_items:[{title:"Finalize internal draft",description:"Only internal synthetic work",risk:"HIGH",needs_approval:false}],knowledge_updates:[]}
+      ? {executive_summary:"Synthetic review",consensus:"Review",disagreements:[],decision:"Synthetic recommendation",recommendation:"Internal draft",action_items:[{title:"Finalize internal draft",description:"Only internal synthetic work",risk:"HIGH",needs_approval:false}],knowledge_updates:[]}
       : {position:"Synthetic position",risks:[],action_items:[]}),
     correlationId:"synthetic",actualCostUsd:0,usage:{inputTokens:1,outputTokens:1},routingDecision:{selectedModel:"synthetic"}
   };
@@ -23,7 +23,7 @@ const oldKey=process.env.OPENAI_API_KEY,oldModel=process.env.RYTHM_DRY_RUN_MODEL
 process.env.OPENAI_API_KEY="sk-synthetic-no-provider-access";
 process.env.RYTHM_DRY_RUN_MODEL="synthetic";
 try {
-  for(const failure of ["none","approval","start","participants","session","completion"]){
+  for(const failure of ["none","approval","start","participants","session","completion","transcript","recommendation"]){
     const writes=[];
     const agents=[
       {id:"agent-1",agent_code:"ANALYTICS_SPECIALIST",name:"Analyst",role_title:"Analyst",enabled:true},
@@ -37,7 +37,9 @@ try {
         const answer=()=>{
           if(operation!=="select"){
             writes.push({table,operation,payload});
-            if ((failure === "start" && table === "meetings" && payload.status === "running") ||
+            if ((failure === "transcript" && table === "meeting_agent_messages") ||
+                (failure === "recommendation" && table === "project_decision_memory") ||
+                (failure === "start" && table === "meetings" && payload.status === "running") ||
                 (failure === "participants" && table === "meeting_agent_participants") ||
                 (failure === "session" && table === "meeting_agent_sessions" && operation === "update") ||
                 (failure === "completion" && table === "meetings" && payload.status === "completed")) {
@@ -68,6 +70,9 @@ try {
       }
     };
     const result=await fixtureModule.exports.dispatchAutonomousProjectMeetings(supabase,"worker");
+    assert.equal(writes.some(write=>write.table==="decisions"),false,"Internal synthesis cannot auto-approve formal Human CEO decisions");
+    const memory=writes.find(write=>write.table==="project_decision_memory");
+    if(memory)assert.equal(memory.payload.outcome.authority,"advisory_only");
     const actionWrites=writes.filter(write=>write.table==="action_items"&&write.operation==="insert");
     const taskWrites=writes.filter(write=>write.table==="project_task_runs"&&write.operation==="insert");
     if (["none","approval"].includes(failure)) assert.equal(writes.find(write=>write.table==="approval_requests").payload.risk_level,"high");
@@ -86,4 +91,4 @@ try {
   if(oldKey===undefined)delete process.env.OPENAI_API_KEY;else process.env.OPENAI_API_KEY=oldKey;
   if(oldModel===undefined)delete process.env.RYTHM_DRY_RUN_MODEL;else process.env.RYTHM_DRY_RUN_MODEL=oldModel;
 }
-console.log("PASS W10 actual meeting worker: tenant-bound internal review, normalized risk, persisted Human CEO gate and fail-closed lifecycle, participants, session, minutes and approval write failures (synthetic provider/persistence adapters)");
+console.log("PASS W10 actual meeting worker: tenant-bound internal review, normalized risk, persisted Human CEO gate and fail-closed lifecycle, participants, transcript, recommendation, session, minutes and approval write failures; no formal decision auto-approval (synthetic provider/persistence adapters)");
