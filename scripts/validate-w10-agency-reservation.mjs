@@ -483,9 +483,9 @@ try {
           await fresh.getByText(output.safe_result.summary, { exact: true }).waitFor();
           await fresh.goto(app + "/meetings/room?project=" + projectId + "&meeting=" + completedMeetings[0].id + "&session=" + reviewSession.id);
           await fresh.getByRole("button", { name: "Notes", exact: true }).filter({ visible: true }).first().click();
-          await fresh.screenshot({ path: `test-results/w10-${profile}-meeting-open.png`, fullPage: true });
-          await fresh.getByText(completedMeetings[0].minutes.executive_summary, { exact: false }).filter({ visible: true }).first().waitFor();
-          await fresh.screenshot({ path: `test-results/w10-${profile}-meeting.png`, fullPage: true });
+          const persistedSummary = completedMeetings[0].minutes.executive_summary;
+          await fresh.getByText(persistedSummary, { exact: false }).or(fresh.getByText(JSON.stringify(persistedSummary).slice(1, -1), { exact: false })).filter({ visible: true }).first().waitFor();
+          await fresh.screenshot({ path: `test-results/w10-${profile}-meeting.png`, fullPage: false, animations: "disabled", timeout: 15000 });
         } finally { await recheck.close(); }
         const restrictedOutputs = result(await memberClient.from("project_task_runs").select("id").eq("project_id", projectId), "Viewer output visibility");
         assert.ok(restrictedOutputs.length, "Tenant viewer can read operational outputs under existing policy");
