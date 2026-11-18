@@ -39,7 +39,8 @@ assert.deepEqual(JSON.parse(alert),{traceId:trace,step:"health",errorCode:"UPSTR
 assert.equal(alert.includes("sensitive-provider-body"),false);
 
 // Structural queue integration guard: scheduler does NOT retry claims, AI, approvals or external action jobs.
-assert.equal((route.match(/retryIdempotentRpc\(/g)??[]).length,3);
+assert.equal((route.match(/retryIdempotentRpc\(/g)??[]).length,2);
+assert.ok(route.includes('const completionHealth=await service.rpc("refresh_project_completion_health_v1")'),"non-idempotent completion health must not retry");
 assert.ok(route.includes('service.rpc("acquire_project_dispatch_lease_v1"'));
 assert.ok(route.includes('service.rpc("complete_project_dispatch_lease_v1"'));
 assert.ok(route.indexOf('await authorizeDispatcher(')<route.indexOf('acquire_project_dispatch_lease_v1'));
