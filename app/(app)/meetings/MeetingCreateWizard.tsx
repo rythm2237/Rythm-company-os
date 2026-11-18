@@ -1,5 +1,6 @@
 "use client";
 
+import { isMeetingSynthesizer, selectMeetingSynthesizer } from "@/lib/meetings/synthesis-policy";
 import { Button } from "@/components/ui/Button";
 
 import {useMemo,useState} from "react";
@@ -18,7 +19,7 @@ const baseAgenda=[
 
 export default function MeetingCreateWizard({agents,action}:Props){
   const enabled=agents.filter(a=>a.enabled);
-  const initialSelected=useMemo(()=>enabled.filter(a=>preferredCodes.has(a.agent_code)).map(a=>a.id),[agents]);
+  const initialSelected=useMemo(()=>agents.filter(a=>a.enabled&&(preferredCodes.has(a.agent_code)||isMeetingSynthesizer(a))).map(a=>a.id),[agents]);
   const [title,setTitle]=useState("");
   const [purpose,setPurpose]=useState("");
   const [decisionQuestion,setDecisionQuestion]=useState("");
@@ -31,7 +32,7 @@ export default function MeetingCreateWizard({agents,action}:Props){
   const [launchMode,setLaunchMode]=useState("now");
   const [scheduledFor,setScheduledFor]=useState("");
   const [error,setError]=useState("");
-  const b001=enabled.find(a=>a.agent_code==="B-001");
+  const synthesizer=selectMeetingSynthesizer(enabled);
 
   const toggle=(id:string)=>setAgentIds(current=>current.includes(id)?current.filter(x=>x!==id):[...current,id]);
   const suggestAgenda=()=>{
@@ -51,7 +52,7 @@ export default function MeetingCreateWizard({agents,action}:Props){
     if(purpose.trim().length<10)return "Describe the meeting objective in at least 10 characters.";
     if(decisionQuestion.trim().length<10)return "Enter the decision question the meeting must resolve.";
     if(agentIds.filter(id=>enabled.some(a=>a.id===id)).length<2)return "Select at least two enabled Agents.";
-    if(!b001||!agentIds.includes(b001.id))return "B-001 Executive Orchestrator is required for governed synthesis.";
+    if(!synthesizer||!agentIds.includes(synthesizer.id))return "An Executive Orchestrator or Strategy Director is required for governed synthesis.";
     if(!agenda.trim())return "Agenda cannot be empty.";
     if(launchMode==="schedule"&&!scheduledFor)return "Choose a scheduled date and time.";
     return "";
@@ -65,7 +66,7 @@ export default function MeetingCreateWizard({agents,action}:Props){
 
     <section className="wizard-step"><div className="wizard-step-index">1</div><div className="wizard-step-body"><h3>Topic and objective</h3><p className="wizard-help">Keep the title short; use the objective and decision question to make the expected outcome explicit.</p><label>Meeting title<input name="title" value={title} onChange={e=>setTitle(e.target.value)} minLength={3} required placeholder="e.g. Customer-support triage pilot"/></label><label>Objective<textarea name="purpose" value={purpose} onChange={e=>setPurpose(e.target.value)} rows={4} required placeholder="What should this meeting accomplish?"/></label><label>Decision question<textarea name="decisionQuestion" value={decisionQuestion} onChange={e=>setDecisionQuestion(e.target.value)} rows={3} required placeholder="What exact decision should the room resolve?"/></label></div></section>
 
-    <section className="wizard-step"><div className="wizard-step-index">2</div><div className="wizard-step-body"><div className="wizard-inline-heading"><div><h3>Who should be in the room?</h3><p className="wizard-help">Select only the roles that materially improve the decision. B-001 remains required for governed synthesis.</p></div><span className="pill">{agentIds.length} selected</span></div><div className="wizard-agent-grid">{enabled.map(agent=>{const selected=agentIds.includes(agent.id);const required=agent.agent_code==="B-001";return <label key={agent.id} className={`wizard-agent ${selected?"wizard-agent-selected":""}`}><input type="checkbox" name="agentIds" value={agent.id} checked={selected} onChange={()=>{if(!required)toggle(agent.id);}}/><span><strong>{agent.agent_code} · {agent.display_name??agent.name}</strong><small>{agent.role_title}</small></span>{required?<b>Required</b>:null}</label>;})}</div>{!b001?<p className="form-error">B-001 is not enabled for this organization. Governed Boardroom sessions cannot start.</p>:null}</div></section>
+    <section className="wizard-step"><div className="wizard-step-index">2</div><div className="wizard-step-body"><div className="wizard-inline-heading"><div><h3>Who should be in the room?</h3><p className="wizard-help">Select only the roles that materially improve the decision. A template lead remains required for governed synthesis.</p></div><span className="pill">{agentIds.length} selected</span></div><div className="wizard-agent-grid">{enabled.map(agent=>{const selected=agentIds.includes(agent.id);const required=agent.id===synthesizer?.id;return <label key={agent.id} className={`wizard-agent ${selected?"wizard-agent-selected":""}`}><input type="checkbox" name="agentIds" value={agent.id} checked={selected} onChange={()=>{if(!required)toggle(agent.id);}}/><span><strong>{agent.agent_code} · {agent.display_name??agent.name}</strong><small>{agent.role_title}</small></span>{required?<b>Required</b>:null}</label>;})}</div>{!synthesizer?<p className="form-error">An Executive Orchestrator or Strategy Director is not enabled for this organization. Governed Boardroom sessions cannot start.</p>:null}</div></section>
 
     <section className="wizard-step"><div className="wizard-step-index">3</div><div className="wizard-step-body"><div className="wizard-inline-heading"><div><h3>Agenda</h3><p className="wizard-help">RYTHM proposes a decision-focused structure. Edit it freely before the session is created.</p></div><Button type="button" className="secondary-button" onClick={suggestAgenda}>Refresh suggestion</Button></div><textarea name="agenda" value={agenda} onChange={e=>setAgenda(e.target.value)} rows={8} required/><small className="wizard-help">One agenda item per line.</small></div></section>
 
@@ -74,6 +75,6 @@ export default function MeetingCreateWizard({agents,action}:Props){
     <section className="wizard-step"><div className="wizard-step-index">5</div><div className="wizard-step-body"><h3>When should it run?</h3><fieldset className="wizard-choice-group"><legend>Launch mode</legend><label className={launchMode==="now"?"wizard-choice-selected":""}><input type="radio" checked={launchMode==="now"} onChange={()=>setLaunchMode("now")}/><span><strong>Start now</strong><small>Create the governed session and open the Boardroom immediately.</small></span></label><label className={launchMode==="schedule"?"wizard-choice-selected":""}><input type="radio" checked={launchMode==="schedule"} onChange={()=>setLaunchMode("schedule")}/><span><strong>Schedule</strong><small>Prepare the governed session and place it on the schedule. Human-controlled start remains required.</small></span></label></fieldset>{launchMode==="schedule"?<label>Scheduled time<input name="scheduledFor" type="datetime-local" value={scheduledFor} onChange={e=>setScheduledFor(e.target.value)} required/></label>:<input type="hidden" name="scheduledFor" value=""/>}</div></section>
 
     {error?<p className="form-error" role="alert">{error}</p>:null}
-    <Button type="submit" className="wizard-submit" disabled={!b001}>{launchMode==="now"?"Create & open Boardroom":"Schedule governed meeting"}</Button>
+    <Button type="submit" className="wizard-submit" disabled={!synthesizer}>{launchMode==="now"?"Create & open Boardroom":"Schedule governed meeting"}</Button>
   </form>;
 }

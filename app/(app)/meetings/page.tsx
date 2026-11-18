@@ -1,8 +1,9 @@
+import { isMeetingSynthesizer, selectMeetingSynthesizer } from "@/lib/meetings/synthesis-policy";
 import { SubmitButton } from "@/components/ui/Button";
 import Link from "next/link";
 import {revalidatePath} from "next/cache";
 import {redirect} from "next/navigation";
-import {createAuthServerClient} from "@/lib/supabase/auth-server";
+import {requireOwnerOrganizationContext} from "@/lib/auth/organization-context";
 import MeetingCreateWizard from "./MeetingCreateWizard";
 
 export const dynamic="force-dynamic";
@@ -19,14 +20,7 @@ const formatDate=(value:string|null)=>value?new Intl.DateTimeFormat("en-GB",{dat
 const list=(value:unknown)=>Array.isArray(value)?value.map(item=>typeof item==="string"?item:JSON.stringify(item)):[];
 const minutesText=(value:unknown)=>{if(!value)return"";if(typeof value==="string")return value;if(typeof value==="object"&&!Array.isArray(value)){const text=(value as Record<string,unknown>).text;if(typeof text==="string")return text;}return JSON.stringify(value);};
 
-async function ownerContext(){
-  const supabase=await createAuthServerClient();
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user)redirect("/login");
-  const {data:membership}=await supabase.from("organization_members").select("organization_id").eq("user_id",user.id).eq("role","owner").maybeSingle();
-  if(!membership)redirect("/login?error=Owner%20authorization%20required.");
-  return{supabase,user,organizationId:membership.organization_id as string};
-}
+async function ownerContext(){return requireOwnerOrganizationContext();}
 
 async function createMeeting(formData:FormData){
   "use server";
@@ -48,7 +42,7 @@ async function createMeeting(formData:FormData){
   const {data:agents}=await supabase.from("agents").select("id,agent_code,enabled").eq("organization_id",organizationId).in("id",requestedAgentIds);
   const selected=agents??[];
   if(selected.length!==requestedAgentIds.length||selected.some(a=>!a.enabled||a.agent_code==="T-001"))redirect(`/meetings?error=${encodeURIComponent("Only enabled Boardroom Agents may be selected.")}`);
-  if(!selected.some(a=>a.agent_code==="B-001"))redirect(`/meetings?error=${encodeURIComponent("B-001 Executive Orchestrator is required for governed synthesis.")}`);
+  if(!selected.some(a=>isMeetingSynthesizer(a)))redirect(`/meetings?error=${encodeURIComponent("An Executive Orchestrator or Strategy Director is required for governed synthesis.")}`);
   const now=new Date().toISOString();
   const status:MeetingStatus=launchMode==="now"?"running":"scheduled";
   const {data:meeting,error:meetingError}=await supabase.from("meetings").insert({organization_id:organizationId,title,purpose,status,scheduled_for:launchMode==="schedule"?scheduled!.toISOString():null,started_at:launchMode==="now"?now:null,agenda,human_join_allowed:chairMode==="live",created_by_user_id:user.id}).select("id").single();
@@ -56,7 +50,7 @@ async function createMeeting(formData:FormData){
   const {data:session,error:sessionError}=await supabase.from("meeting_agent_sessions").insert({organization_id:organizationId,meeting_id:meeting.id,status:"ready",decision_question:decisionQuestion,language,max_rounds:rounds,budget_cap_usd:budget,external_research_allowed:false}).select("id").single();
   if(sessionError||!session){await supabase.from("meetings").delete().eq("id",meeting.id).eq("organization_id",organizationId);redirect(`/meetings?error=${encodeURIComponent("Governed Agent session could not be prepared.")}`);}
   const ordered=[...selected].sort((a,b)=>requestedAgentIds.indexOf(a.id)-requestedAgentIds.indexOf(b.id));
-  const {error:participantError}=await supabase.from("meeting_agent_participants").insert(ordered.map((a,index)=>({session_id:session.id,organization_id:organizationId,agent_id:a.id,seat_order:index+1,session_role:a.agent_code==="B-001"?"synthesizer":"advisor",explicitly_authorized_by_ceo:true})));
+  const {error:participantError}=await supabase.from("meeting_agent_participants").insert(ordered.map((a,index)=>({session_id:session.id,organization_id:organizationId,agent_id:a.id,seat_order:index+1,session_role:a.id===selectMeetingSynthesizer(selected)?.id?"synthesizer":"advisor",explicitly_authorized_by_ceo:true})));
   if(participantError){await supabase.from("meeting_agent_sessions").delete().eq("id",session.id).eq("organization_id",organizationId);await supabase.from("meetings").delete().eq("id",meeting.id).eq("organization_id",organizationId);redirect(`/meetings?error=${encodeURIComponent("Selected Agents could not be authorized for the Boardroom.")}`);}
   await supabase.from("audit_events").insert([{organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"meeting.created",object_type:"meeting",object_id:meeting.id,risk_level:"low",payload:{title,status,agenda_count:agenda.length,launch_mode:launchMode,chair_mode:chairMode}},{organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"meeting.agent_session_prepared",object_type:"meeting",object_id:meeting.id,risk_level:"medium",payload:{session_id:session.id,agents:ordered.map(a=>a.agent_code),rounds,budget_cap_usd:budget,language,chair_mode:chairMode,external_actions:false,external_research:false,enabled_agents_only:true}}]);
   revalidatePath("/meetings");revalidatePath("/meetings/room");revalidatePath("/command-center");
@@ -91,7 +85,7 @@ export default async function MeetingEnginePage({searchParams}:Props){
   const canStart=selected?.status==="draft"||selected?.status==="scheduled";const canComplete=selected?.status==="running";const canCancel=Boolean(selected&&selected.status!=="completed"&&selected.status!=="cancelled");
   return <main className="command-shell">
     <header className="command-header"><div><p className="eyebrow">RYTHM MEETING ENGINE</p><h1>Boardroom</h1><p className="subtitle">Create a governed decision meeting in one flow, then let the right Agents deliberate under Human CEO authority.</p></div><Link className="secondary-button" href="/command-center">Command Center</Link></header>
-    <section className="organization-banner"><div><span>Authority</span><strong>Human CEO / Owner</strong></div><div><span>Governance</span><strong>B-001 synthesis · Human final authority</strong></div><div><span>Execution</span><strong>No external actions by default</strong></div></section>
+    <section className="organization-banner"><div><span>Authority</span><strong>Human CEO / Owner</strong></div><div><span>Governance</span><strong>Template lead synthesis · Human final authority</strong></div><div><span>Execution</span><strong>No external actions by default</strong></div></section>
     {params.message?<p className="form-success">{params.message}</p>:null}{params.error?<p className="form-error">{params.error}</p>:null}
 
     <section className="panel panel-wide meeting-create-panel" style={{marginTop:18}}><MeetingCreateWizard agents={agents} action={createMeeting}/></section>

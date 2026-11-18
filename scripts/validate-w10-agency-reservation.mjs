@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { chromium, devices } from "playwright";
 
 mkdirSync("test-results", { recursive: true });
+const evidence = [];
 const app = "http://localhost:3000";
 const backend = "http://127.0.0.1:54321";
 const template = "ready_ai_advertising_agency_v1";
@@ -280,6 +281,7 @@ try {
         .insert({ organization_id: org.id, customer_id: customerId, contract_number: "DENIED-" + id }).select("id");
       assert.ok(deniedWrite.error, "Unpermitted member must not create a contract");
       console.log(`PASS W10 roles (${profile}): member sees customer and cannot read or create contract`);
+      let deliveryEvidence = null;
       if (process.env.W10_LIVE_AI === "true") {
         const roster = result(await admin.from("agents").select("id,agent_code,enabled")
           .eq("organization_id", org.id).not("agent_code", "in", "(RYTHM-COMMS,T-001)").order("agent_code").limit(2), "Read Agency roster");
@@ -367,11 +369,52 @@ try {
         assert.ok(restrictedOutputs.length, "Tenant viewer can read operational outputs under existing policy");
         const forbiddenApproval = await memberClient.from("approval_requests").update({ status: "rejected" }).eq("id", pending[0].id).select("id");
         assert.ok(forbiddenApproval.error || !forbiddenApproval.data?.length, "Viewer cannot change Human CEO decisions");
+        deliveryEvidence = { roadmap_id: roadmap.id, approval_ids: pending.map(p => p.id), outputs: outputs.map(t => ({ id: t.id, organization_id: t.organization_id, status: t.status, summary: t.safe_result.summary })), review_meeting_ids: completedMeetings.map(m => m.id) };
         console.log(`PASS W10 generated delivery (${profile}): persisted outputs, reviewed meeting, approvals, refresh and re-login`);
       }
+      const meetingLead = result(await admin.from("agents").select("id,agent_code,enabled")
+        .eq("organization_id", org.id).eq("agent_code", "STRATEGY_DIRECTOR").single(), "Read Agency meeting lead");
+      if (!meetingLead.enabled) {
+        await page.goto(app + "/agents/STRATEGY_DIRECTOR");
+        await page.getByRole("button", { name: "Enable agent runtime", exact: true }).click();
+      }
+      const advisor = result(await admin.from("agents").select("id").eq("organization_id", org.id)
+        .eq("enabled", true).not("agent_code", "in", "(STRATEGY_DIRECTOR,RYTHM-COMMS,T-001)").limit(1).single(), "Read enabled meeting advisor");
+      await page.goto(app + "/meetings");
+      await page.getByLabel("Meeting title", { exact: true }).fill("Synthetic client review " + id);
+      await page.getByLabel("Objective", { exact: true }).fill("Review the internal synthetic measurement plan without external actions.");
+      await page.getByLabel("Decision question", { exact: true }).fill("Is the offline measurement plan suitable for internal Human CEO review?");
+      await page.locator('input[name="agentIds"][value="' + meetingLead.id + '"]').check();
+      await page.locator('input[name="agentIds"][value="' + advisor.id + '"]').check();
+      await page.getByLabel("Challenge depth").selectOption("1");
+      await page.getByLabel("AI budget cap (USD)").fill("0.1");
+      await page.getByRole("button", { name: "Create & open Boardroom", exact: true }).click();
+      await page.waitForURL(url => url.pathname === "/meetings/room" && !!url.searchParams.get("session"));
+      const manualMeetingId = new URL(page.url()).searchParams.get("meeting");
+      const manualSessionId = new URL(page.url()).searchParams.get("session");
+      const manualMeeting = result(await admin.from("meetings").select("organization_id,status").eq("id", manualMeetingId).single(), "Read browser-created meeting");
+      assert.deepEqual(manualMeeting, { organization_id: org.id, status: "running" });
+      const manualParticipants = result(await admin.from("meeting_agent_participants").select("agent_id,session_role,explicitly_authorized_by_ceo")
+        .eq("organization_id", org.id).eq("session_id", manualSessionId), "Read authorized meeting participants");
+      assert.equal(manualParticipants.length, 2);
+      assert.ok(manualParticipants.every(p => p.explicitly_authorized_by_ceo));
+      assert.equal(manualParticipants.find(p => p.agent_id === meetingLead.id)?.session_role, "synthesizer");
+      await page.reload();
+      await page.getByRole("button", { name: /^Next Action/ }).first().waitFor();
+      await page.screenshot({ path: `test-results/w10-${profile}-manual-boardroom.png`, fullPage: true });
+      console.log(`PASS W10 Agency Boardroom (${profile}): browser-created meeting, strategy synthesis, explicit participants and refresh`);
+      evidence.push({ profile, organization_id: org.id, owner_user_id: user.id, customer_id: customerId, contract_id: contract.id, project_id: projectId, action_id: actionId, manual_meeting_id: manualMeetingId, manual_session_id: manualSessionId, delivery: deliveryEvidence });
+      writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
       isolatedOrganizations.push({ projectId, customerId });
       console.log(`PASS W10 CRM and project (${profile}): persisted brief, customer, contract and accountable project`);
       console.log(`PASS W10 Agency provision (${profile}): recorded template installation`);
+    } catch (error) {
+      const failurePage = returning.pages().at(-1);
+      if (failurePage) {
+        console.log("W10 failure page:", new URL(failurePage.url()).pathname);
+        await failurePage.screenshot({ path: `test-results/w10-${profile}-failure.png`, fullPage: true }).catch(() => {});
+      }
+      throw error;
     } finally {
       await returning.close();
     }

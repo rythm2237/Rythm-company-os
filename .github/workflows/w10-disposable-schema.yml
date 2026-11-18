@@ -111,7 +111,7 @@ jobs:
               'project_agent_capacity','project_roadmaps','project_roadmap_phases','project_executions',
               'project_task_runs','project_activity_events','project_context_documents',
               'project_decision_memory','project_autonomous_meeting_jobs','project_proposals',
-              'project_scope_versions','project_clarification_requests'] loop
+              'project_scope_versions','project_clarification_requests','agent_asset_profiles'] loop
               if not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
                 where n.nspname='public' and c.relname=table_name and c.relrowsecurity) then
                 raise exception 'Required RLS missing: %', table_name;
@@ -138,6 +138,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx
       - run: npx playwright install --with-deps chromium
       - name: Verify reservation and re-login against disposable Auth
         env:
