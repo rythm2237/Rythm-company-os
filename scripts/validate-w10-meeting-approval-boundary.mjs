@@ -17,8 +17,8 @@ const compiled=await build({
     builder.onLoad({filter:/.*/,namespace:"w10"},()=>({loader:"js",contents:"export const executeAiRequest = "+syntheticGateway.toString()}));
   }}]
 });
-const module={exports:{}};
-new Function("require","module","exports",compiled.outputFiles[0].text)(require,module,module.exports);
+const fixtureModule={exports:{}};
+new Function("require","module","exports",compiled.outputFiles[0].text)(require,fixtureModule,fixtureModule.exports);
 const oldKey=process.env.OPENAI_API_KEY,oldModel=process.env.RYTHM_DRY_RUN_MODEL;
 process.env.OPENAI_API_KEY="sk-synthetic-no-provider-access";
 process.env.RYTHM_DRY_RUN_MODEL="synthetic";
@@ -61,7 +61,7 @@ try {
         return query;
       }
     };
-    const result=await module.exports.dispatchAutonomousProjectMeetings(supabase,"worker");
+    const result=await fixtureModule.exports.dispatchAutonomousProjectMeetings(supabase,"worker");
     const actionWrites=writes.filter(write=>write.table==="action_items"&&write.operation==="insert");
     const taskWrites=writes.filter(write=>write.table==="project_task_runs"&&write.operation==="insert");
     assert.equal(writes.find(write=>write.table==="approval_requests").payload.risk_level,"high");
