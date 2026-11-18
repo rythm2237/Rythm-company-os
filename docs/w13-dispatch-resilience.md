@@ -12,16 +12,16 @@
 ## Changes in this feature branch (not applied to production)
 
 1. A service-only, atomic singleton lease prevents overlapping scheduled handler executions; it is owned by a newly generated UUID trace. A missing migration fails closed instead of dispatching without the lock.
-2. Health operations that are explicitly treated as idempotent receive at most three attempts with 120/240 ms bounded backoff on transient upstream errors. **The whole dispatch, claims, AI tasks, proposals, approvals, and external action gateways must never be automatically replayed.**
+2. The read-only scheduler-authorization lookup and the deduplicating execution-health maintenance RPC receive at most three attempts with 120/240 ms bounded backoff on transient errors. **The completion-health RPC is intentionally NOT retried**: it resolves and reinserts monitoring events. The whole dispatch, claims, AI tasks, proposals, approvals, and external action gateways must never be automatically replayed.
 3. Each step logs a generated trace identifier, fixed step label, duration and sanitized status/error code. No exception bodies, tokens, customer content or organization IDs are placed in the new logs.
 4. A durable global health state records `healthy | degraded | failed`, sanitized failure labels and consecutive failure count without customer data; a degraded response returns 503, not a misleading 200.
-5. One task and one meeting are claimed per scheduler tick; knowledge and connection setup work are bounded. The preexisting approval and tenant filters are unchanged.
+5. One task, meeting, approved proposal bridge and governed tool execution are claimed per scheduler tick; knowledge and connection setup are bounded; supervisor, proposal reconciliation and lifecycle continuation batches are capped. The preexisting approval and tenant filters are unchanged.
 6. Excess work is deferred instead of starting new jobs after the dispatch budget is exhausted. Running jobs are **not** aborted by `Promise.race`, which would risk duplicate side effects.
 7. Existing worker durable retry queues and supervisor reconciliation remain the dead-letter/recovery mechanism for business operations. W13 does not create a new unreviewed replay queue.
 
 ## Commands / gates
 
-- `npm run test:w13`: synthetic HTTP 502/503/504 retry and backoff; rejection of permanent 401; trace redaction; offline PGlite SQL migration, atomic lease ownership, expiry and state recovery; source integration guards for task/meeting claims and proposal idempotency keys.
+- `npm run test:w13`: synthetic HTTP 502/503/504 retry and backoff; rejection of permanent 401; trace redaction; offline PGlite SQL migration, atomic lease ownership, expiry and state recovery; source integration guards for task/meeting claims and proposal idempotency keys; actual compiled dispatch route under mocked 502/overlap with no duplicate synthetic task or gateway actions.
 - `npm run typecheck`
 - `npm run lint`
 - `npm run build` (includes `test:w13` in prebuild).
@@ -30,7 +30,7 @@
 ## Pending acceptance evidence
 
 1. Run the migration against a **disposable already-authorized staging database**, not production. Verify `anon` and `authenticated` cannot execute lease RPCs.
-2. With synthetic authorized fixtures, inject a 502 response into an explicitly idempotent maintenance upstream call and verify 3-attempt cap, backoff, `traceId`, 503 when exhausted and recovered health after success.
+2. With synthetic authorized fixtures, inject a 502 response into an explicitly idempotent maintenance upstream call and verify 3-attempt cap, backoff, `traceId`, 503 when exhausted and recovered health after success. The offline handler injection is committed; hosted staging injection remains pending.
 3. Send two *authorized synthetic* scheduler invocations simultaneously; verify only one acquires the lease, the other returns 202, and no duplicate project proposals, task outcomes or external actions occur.
 4. Correlate `X-Trace-Id`, runtime logs, lease health status and queue state. Check that log/alert payloads contain no credentials, raw upstream errors, customer records or prompts.
 5. Verify scheduler continues at its five-minute cadence and workload drains without exceeding 300 s. Production load/noisy testing is prohibited.
