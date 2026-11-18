@@ -289,6 +289,18 @@ try {
           await page.goto(app + "/agents/" + encodeURIComponent(agent.agent_code));
           if (!agent.enabled) await page.getByRole("button", { name: "Enable agent runtime", exact: true }).click();
           await page.getByRole("button", { name: "Pause agent runtime", exact: true }).waitFor();
+          const activeAgent = result(await ownerClient.from("agents").select("enabled,agent_status").eq("id", agent.id).single(), "Read enabled runtime state");
+          assert.deepEqual(activeAgent, { enabled: true, agent_status: "enabled" });
+          if (agent.id === roster[0].id) {
+            await page.getByRole("button", { name: "Pause agent runtime", exact: true }).click();
+            await page.getByRole("button", { name: "Enable agent runtime", exact: true }).waitFor();
+            const pausedAgent = result(await ownerClient.from("agents").select("enabled,agent_status").eq("id", agent.id).single(), "Read paused runtime state");
+            assert.deepEqual(pausedAgent, { enabled: false, agent_status: "paused" });
+            await page.getByRole("button", { name: "Enable agent runtime", exact: true }).click();
+            await page.getByRole("button", { name: "Pause agent runtime", exact: true }).waitFor();
+            await page.reload();
+            await page.getByRole("button", { name: "Pause agent runtime", exact: true }).waitFor();
+          }
         }
         await page.goto(app + "/projects/operating?project=" + projectId + "&view=advanced");
         const responsePromise = page.waitForResponse(response =>

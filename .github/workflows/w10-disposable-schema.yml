@@ -147,7 +147,9 @@ jobs:
           RYTHM_AGENT_EXECUTION_ENABLED: 'true'
           RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
           NEXT_TELEMETRY_DISABLED: '1'
-          W10_PROVIDER_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Paid execution is authorized for this one PR update only. Later updates run without a provider key.
+          W10_LIVE_AI: ${{ github.event.before == '182ec6022c6aecf815118ebfa232f80fcaeded2c' && 'true' || 'false' }}
+          W10_PROVIDER_KEY: ${{ github.event.before == '182ec6022c6aecf815118ebfa232f80fcaeded2c' && secrets.OPENAI_API_KEY || '' }}
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/w10-disposable"
@@ -159,14 +161,19 @@ jobs:
           export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
           export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$ANON_KEY"
           cd "$GITHUB_WORKSPACE"
-          test -n "$W10_PROVIDER_KEY"
-          node scripts/w10-budget-proxy.mjs &
-          proxy_pid=$!
-          export OPENAI_API_KEY=sk-w10-loopback-only
-          export OPENAI_BASE_URL=http://127.0.0.1:3199/v1
-          export RYTHM_DRY_RUN_MODEL=gpt-4.1-mini
+          proxy_pid=""
+          if test "$W10_LIVE_AI" = true; then
+            test -n "$W10_PROVIDER_KEY"
+            node scripts/w10-budget-proxy.mjs &
+            proxy_pid=$!
+            export OPENAI_API_KEY=sk-w10-loopback-only
+            export OPENAI_BASE_URL=http://127.0.0.1:3199/v1
+            export RYTHM_DRY_RUN_MODEL=gpt-4.1-mini
+          else
+            unset OPENAI_API_KEY OPENAI_BASE_URL RYTHM_DRY_RUN_MODEL
+          fi
+          echo "W10 live provider execution: $W10_LIVE_AI"
           export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
-          export W10_LIVE_AI=true
           export CRON_SECRET="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
           unset W10_PROVIDER_KEY
           ./node_modules/.bin/next build
