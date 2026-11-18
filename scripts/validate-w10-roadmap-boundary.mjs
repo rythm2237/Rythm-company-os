@@ -16,7 +16,7 @@ try{
  const review=dependencies=>({id:'roadmap',version:1,status:'in_review',phases:[{id:'phase',key:'draft',tasks:[{key:'outline',dependencies,requiresApproval:true}]}]});
  const post=roadmapId=>fixtureModule.exports.POST(new Request('http://localhost/api/projects/roadmap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({projectId:'project',roadmapId:roadmapId??'roadmap',action:'approve_and_start'})}));
  for(const dependencies of [['Client budget approval'],['outline'],['missing-task']]){
-  state.review=review(dependencies);assert.equal((await post()).status,422);assert.deepEqual([state.approve,state.start,state.writes],[0,0,0]);assert.equal(state.review.status,'in_review','Invalid model graph remains reviewable through normal Request changes');
+  state.review=review(dependencies);const response=await post();assert.equal(response.status,422);const body=await response.json();assert.equal(body.code,'ROADMAP_GRAPH_INVALID');assert.equal(body.error.includes(dependencies[0]),false,'Do not echo raw model or backend errors');assert.deepEqual([state.approve,state.start,state.writes],[0,0,0]);assert.equal(state.review.status,'in_review','Invalid model graph remains reviewable through normal Request changes');
  }
  state.review=review([]);assert.equal((await post('stale-roadmap')).status,409);assert.equal(state.approve,0);
  state.owned=false;assert.equal((await post()).status,404);assert.equal(state.approve,0);state.owned=true;

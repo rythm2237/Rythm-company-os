@@ -50,7 +50,7 @@ export async function POST(request:Request){
     const review=await getLatestProjectRoadmap(service,auth.organizationId,projectId);
     if(!review||review.id!==roadmapId)return NextResponse.json({ok:false,error:"Roadmap is not the current review version."},{status:409});
     try{compileRoadmapTasks(review.phases);}
-    catch(error){return NextResponse.json({ok:false,error:error instanceof Error?error.message:"Roadmap dependencies require revision."},{status:422});}
+    catch{return NextResponse.json({ok:false,error:"Roadmap task dependencies need revision. Request changes before approval.",code:"ROADMAP_GRAPH_INVALID"},{status:422});}
 
     const roadmap=await approveProjectRoadmap(service,auth.organizationId,projectId,roadmapId,auth.user.id);if(!roadmap)throw new Error("Unable to approve roadmap.");
 
