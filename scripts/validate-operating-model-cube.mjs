@@ -55,7 +55,9 @@ try{
  const frozen=await cube.evaluate(el=>getComputedStyle(el).transform);await page.waitForTimeout(300);assert.equal(await cube.evaluate(el=>getComputedStyle(el).transform),frozen,'Pause freezes orientation');
  await page.locator('.model-cube-options button').nth(1).click();await page.waitForTimeout(1500);
  await page.locator('.model-cube-options button').nth(2).click();await page.waitForTimeout(1500);
+ const resumeFrom=await cube.evaluate(el=>new DOMMatrixReadOnly(getComputedStyle(el).transform).m11);
  await page.getByRole('button',{name:'Play cube rotation'}).click();
+ const resumed=await cube.evaluate(el=>new DOMMatrixReadOnly(getComputedStyle(el).transform).m11);assert.ok(Math.abs(resumed-resumeFrom)<.15,'Resume starts from the selected orientation');
  assert.equal(await page.locator('.operating-model-explorer').getAttribute('data-cube-playing'),'true');
  await page.waitForTimeout(3000);await page.screenshot({path:`${output}/motion-desktop.png`});
  evidence.push({motion:'PASS',pause:'PASS',resume:'PASS'});const video=page.video();await c.close();await video.saveAs(`${output}/cube-motion.webm`);

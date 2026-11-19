@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
 import { PUBLIC_TEMPLATES, SOLUTION_PATHS } from "@/lib/public-experience/content";
 
 type Model = { id: string; name: string; label: string; detail: string; roles: string[]; href: string; cta: string; preview?: boolean };
@@ -41,6 +41,7 @@ export default function OperatingModelCube({ variant, children }: { variant: "so
   const [playing, setPlaying] = useState(false);
   const [reduced, setReduced] = useState(true);
   const [frozen, setFrozen] = useState<string>();
+  const [spinStart, setSpinStart] = useState(-24);
   const cube = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -50,7 +51,15 @@ export default function OperatingModelCube({ variant, children }: { variant: "so
   }, []);
   function choose(index: number) { setSelected(index); setFrozen(undefined); setPlaying(false); }
   function toggleMotion() {
-    if (playing && cube.current) setFrozen(getComputedStyle(cube.current).transform);
+    if (cube.current) {
+      const transform = getComputedStyle(cube.current).transform;
+      if (playing) setFrozen(transform);
+      else {
+        const matrix = new DOMMatrixReadOnly(transform);
+        setSpinStart(Math.atan2(matrix.m31, matrix.m11) * 180 / Math.PI);
+        setFrozen(undefined);
+      }
+    }
     setPlaying(!playing);
   }
   const model = items[selected];
@@ -61,7 +70,7 @@ export default function OperatingModelCube({ variant, children }: { variant: "so
     <div className="model-cube-stage" aria-hidden="true">
       <div className="model-cube-orbit model-cube-orbit-one" /><div className="model-cube-orbit model-cube-orbit-two" />
       <div className="model-cube-floor" />
-      <div className={`model-cube${playing ? " is-rotating" : ""}`} ref={cube} style={{ transform: frozen ?? `rotateX(-18deg) rotateY(${-selected * 90 - 24}deg)`, transition: frozen ? "none" : undefined }}>
+      <div className={`model-cube${playing ? " is-rotating" : ""}`} ref={cube} style={{ transform: frozen ?? `rotateX(-18deg) rotateY(${-selected * 90 - 24}deg)`, transition: frozen ? "none" : undefined, "--cube-start": `${spinStart}deg` } as CSSProperties}>
         {faces.map((face, index) => <div className={`model-cube-face model-cube-side-${index}`} key={face.id}>
           <div className="model-cube-face-top"><span>RYTHM / {variant === "solutions" ? "OPERATING MODEL" : "COMPANY TEMPLATE"}</span><span>0{index + 1}</span></div>
           <h3>{face.name}</h3>
