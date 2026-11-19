@@ -1,0 +1,1 @@
+alter table public.nail_2nya_contact_messages add column if not exists push_notified_at timestamptz null;

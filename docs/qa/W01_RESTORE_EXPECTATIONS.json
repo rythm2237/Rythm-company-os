@@ -1,0 +1,48 @@
+{
+  "captured_at": "2026-10-25",
+  "source_project": "dezbacyuvsdrlpmmpjht",
+  "dump_sha256": "99178a9f3a21c1a88ab33cdf5a74526ffffd310ad39faecf454a971a7d6ffa64",
+  "inventory": {
+    "columns": {
+      "md5": "998b5e4cc0406e6e123fd5cbd0020422",
+      "count": 3232
+    },
+    "indexes": {
+      "md5": "0931321460d2f1d88a3a1522f6d93563",
+      "count": 631
+    },
+    "policies": {
+      "md5": "fb5b95914bcf9bba702714e826d41c07",
+      "count": 338
+    },
+    "triggers": {
+      "md5": "fcd27e7ba5d7d947d781f11dfbf8bf34",
+      "count": 141
+    },
+    "functions": {
+      "md5": "9e080760fa26022a2d71489567a0cf1a",
+      "count": 267
+    },
+    "relations": {
+      "md5": "325b09a29c62265fd9af5c9306bb04f4",
+      "count": 222
+    },
+    "column_acl": {
+      "md5": "d100515422f4d0a2181fc8debc9a399f",
+      "count": 81
+    },
+    "extensions": {
+      "md5": "a780df56a54cc7745b7f9dccd92fdcef",
+      "count": 8
+    },
+    "constraints": {
+      "md5": "3116c8fe0e166c4b9b96c57032642e06",
+      "count": 1381
+    },
+    "effective_acl": {
+      "md5": "0d2aba5da97a004371fe116693dbf30c",
+      "count": 5939
+    }
+  },
+  "scope": "public and crm_private definitions/effective privileges; selected dependency extensions. Excludes ACL grantor lineage, default ACL, other nonpublic schemas, HTTP/JWT runtime and tenant behavioral tests."
+}

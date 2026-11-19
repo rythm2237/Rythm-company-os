@@ -1,0 +1,1 @@
+drop policy if exists "nail_2nya_temp_hero_upload" on storage.objects;

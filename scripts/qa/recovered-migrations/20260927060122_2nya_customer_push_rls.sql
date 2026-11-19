@@ -1,0 +1,1 @@
+alter table public.nail_2nya_customer_push_subscriptions enable row level security; alter table public.nail_2nya_notification_deliveries enable row level security; revoke all on table public.nail_2nya_customer_push_subscriptions from anon, authenticated; revoke all on table public.nail_2nya_notification_deliveries from anon, authenticated;

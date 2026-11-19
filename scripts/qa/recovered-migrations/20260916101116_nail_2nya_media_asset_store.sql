@@ -1,0 +1,1 @@
+create table if not exists public.nail_2nya_media_assets (asset_key text primary key, mime_type text not null, base64_data text not null default '', updated_at timestamptz not null default now()); alter table public.nail_2nya_media_assets enable row level security; revoke all on public.nail_2nya_media_assets from anon, authenticated;

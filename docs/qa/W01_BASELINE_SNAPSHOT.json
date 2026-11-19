@@ -1,0 +1,1107 @@
+{
+  "version": 1,
+  "observed_date_utc": "2026-10-25",
+  "scope": "Metadata snapshots only. Staging, runtime flag state, and schema parity NOT verified.",
+  "production": {
+    "github": {
+      "repository": "rythm2237/Rythm-company-os",
+      "branch": "main",
+      "main_sha": "8ba2f605f9fc926ab5428284f125589540a16ff0",
+      "ci_run_url": "https://github.com/rythm2237/Rythm-company-os/actions/runs/39990393502",
+      "ci_result": "success"
+    },
+    "vercel": {
+      "project_id": "prj_zDgN04lvSuAEzkLr5MzQSohmwYoB",
+      "deployment_id": "dpl_DkyZXAywZnoEtvRRmvmyXSg67MaF",
+      "git_branch": "main",
+      "git_sha": "8ba2f605f9fc926ab5428284f125589540a16ff0",
+      "status": "READY",
+      "target": "production",
+      "aliases": [
+        "rythm-os.com",
+        "www.rythm-os.com",
+        "company.rythm-os.com",
+        "2nya-nailart.rythm-os.com"
+      ],
+      "canonical_url": "https://rythm-os.com"
+    },
+    "supabase": {
+      "project_ref": "dezbacyuvsdrlpmmpjht",
+      "status": "ACTIVE_HEALTHY",
+      "region": "eu-west-1",
+      "postgres_version": "17.6",
+      "public_table_count": 214,
+      "public_rls_enabled_table_count": 214,
+      "public_function_count": 234,
+      "schema_fingerprint_md5": "4cb5f82d276c88fe4cc6e9cadc3fdb72",
+      "schema_inventory_lines": 4022
+    }
+  },
+  "staging_candidate": {
+    "project_ref": "viqjdgohtxqkrdgwtull",
+    "name": "rythm-phase3-staging",
+    "region": "eu-west-1",
+    "status": "INACTIVE",
+    "migrations": "UNAVAILABLE_CONNECTION_TIMEOUT",
+    "preview_environment": "NOT_CONFIGURED"
+  },
+  "feature_flags": {
+    "vercel_project_and_deployment": "UNVERIFIED_403_FORBIDDEN",
+    "runtime_env_values": "NOT_INSPECTED"
+  },
+  "migrations": {
+    "repository_files": [
+      "202608050001_rythm_core",
+      "202608050002_seed_company",
+      "202608050003_approval_engine_guardrails",
+      "202608050004_decision_engine_guardrails",
+      "202608050005_meeting_engine_guardrails",
+      "202608050006_action_item_engine_guardrails",
+      "202608050007_agent_runtime_control_plane",
+      "202608060001_base_agent_registry",
+      "202608060002_production_hardening",
+      "202608060002a_production_hardening_preflight",
+      "202608060003_strategy_analyst_agent",
+      "202608060004_agent_visual_identity",
+      "202608060004a_agent_visual_identity_preflight",
+      "202608060005_visual_identity_hardening",
+      "202608060006_project_workspace",
+      "202608060006a_project_workspace_integration",
+      "202608060007_project_context_ingestion",
+      "202608060008_first_strategy_cycle",
+      "202608070001_execution_planning",
+      "202608070002_project_pulse",
+      "202608070003_project_pulse_trigger_dedupe",
+      "202608070004_project_pulse_progress_cast_hotfix",
+      "202608070005_multi_agent_meeting_runtime",
+      "202608070006_multi_agent_empty_output_recovery",
+      "202608070007_completed_multi_agent_session_recovery",
+      "202608070008_completed_multi_agent_session_recovery_v2",
+      "202608070009_legal_review_gate",
+      "202608070010_legal_review_calibration_v2",
+      "202608070010z_company_event_signature_compat",
+      "202608070011_unified_workflow_backend",
+      "202608070012_decision_action_handoff",
+      "202608070013_idea_issue_intake",
+      "202608080014_meeting_economics",
+      "202608080015_meeting_chair_production_hotfix",
+      "202608080016_batch3_security_reliability",
+      "202608080017_batch3_runtime_incident_capture",
+      "202608080018_mvp_release_audit_blockers",
+      "202608090019_mvp_release_audit_blockers_recovery",
+      "202608090020_legal_triage_post_closure_integrity",
+      "202608090021_legal_triage_closure_basis",
+      "202608100001_ceo_decision_closed_meeting_integrity",
+      "202608110001_commercial_multitenant_foundation",
+      "202608110002_active_organization_context",
+      "202608110003_fix_customer_provision_status",
+      "202608110004_day3_agent_factory_templates",
+      "202608110005_day3_company_builder_drafts",
+      "202608120001_day3_agent_studio_crud",
+      "202608120002_commercial_security_catalog",
+      "20260812150327_commercial_security_catalog_grant_hardening",
+      "20260814232000_privacy_requests",
+      "20260814233500_api_rate_limits",
+      "20260815060000_consumer_withdrawal_requests",
+      "20260816003000_agent_evaluation_evidence",
+      "20260816150000_agent_identity_level_marketplace_foundation",
+      "20260816151000_agent_valuation_level_ordering",
+      "20260816161500_agent_senior_promotion_framework",
+      "20260816162500_fix_senior_readiness_governance_count",
+      "202608170001_agent_builder_v2",
+      "202608180001_agent_attachments_memory",
+      "202608180002_agent_artifacts",
+      "202608180003_company_knowledge_foundation",
+      "202608190001_trusted_agent_knowledge_schema",
+      "202608190002_trusted_sources_and_blueprints",
+      "202608190002b_role_foundations_v1",
+      "202608190002c_role_specializations_v1",
+      "202608190003_agent_knowledge_provisioning_functions",
+      "202608190004_agent_provisioning_guardrails",
+      "202608190005_transfer_company_knowledge_detachment",
+      "202608190006_mastery_company_library",
+      "202608190007_mastery_company_library_grant_hardening",
+      "202608190008_web_development_professional_specialization",
+      "20260820203000_communication_center_mvp",
+      "20260821172000_native_mailbox_workflow",
+      "20260821182000_resend_shared_mail_domain",
+      "20260821183500_root_domain_mailboxes",
+      "20260821194000_cloudflare_inbound_email",
+      "20260822054000_communication_inbound_transport_live",
+      "20260822173000_company_structure_workforce_communications",
+      "20260822173500_company_structure_workforce_communications_fix",
+      "20260822174000_company_workforce_completion",
+      "20260822181000_finance_center_core",
+      "20260822190500_multitenant_billing_payments",
+      "20260824152000_crm_customer_sales_center",
+      "20260824174500_adaptive_agent_routing",
+      "20260824182500_integration_tool_execution",
+      "20260824183500_integration_service_secret_access",
+      "20260824200000_software_company_template",
+      "20260825071207_phase0_security_grant_hardening",
+      "20260825091111_phase1b_routing_modes_telemetry",
+      "20260825091238_phase1b_routing_grant_hardening",
+      "20260825100348_phase1c_request_intelligence_telemetry",
+      "20260825113000_phase1d_feature_scoped_routing_rollout",
+      "20260826192947_phase2_integration_execution_gateway",
+      "20260827054000_phase2_service_role_claim_compatibility",
+      "20260827110500_phase2_validation_idempotency_constraint",
+      "20260827133000_phase3_company_auto_bootstrap_foundation",
+      "20260827143000_phase3_bootstrap_tool_catalog",
+      "20260827150000_phase3_bootstrap_apply_gateway",
+      "20260827154500_phase3_pgcrypto_schema_qualification",
+      "20260827160000_phase3_bootstrap_rpc_anon_hardening",
+      "20260827170000_google_workspace_oauth_credential_envelope",
+      "20260827213500_phase3_google_oauth_refresh_service",
+      "20260828090000_ready_ai_company_library",
+      "20260828101500_ready_company_minimum_standard",
+      "20260828102500_ready_company_standard_enforcement",
+      "20260828113000_generic_business_api_adapter_contract",
+      "20260828133000_generic_business_api_read_validation",
+      "20260828145500_advertising_professional_foundations",
+      "20260828152000_senior_gtm_strategist",
+      "20260828154000_advertising_agency_marketplace_copy",
+      "20260829190000_trusted_professional_knowledge_packs",
+      "20260830171000_gtm_professional_benchmark",
+      "20260830171100_fix_professional_readiness_semantics",
+      "20260830185500_harden_agent_level_readiness_access",
+      "20260830214500_invalidate_capped_gtm_benchmark",
+      "20260831014500_consolidate_canonical_rythm_workforce",
+      "20260831044500_agency_specialist_benchmarks",
+      "20260831044600_communications_specialist_benchmark",
+      "20260831053500_specialist_remediation_readiness",
+      "20260831071000_continuous_agency_level_benchmarks",
+      "20260831104500_workforce_benchmark_coverage",
+      "20260831114000_fullstack_specialist_benchmark_completion_guard",
+      "20260831125000_allow_governed_internal_action_orchestration",
+      "20260831125500_ai_role_path_client_brief_and_orchestration",
+      "20260902170000_operational_agent_readiness",
+      "20260902174500_operational_agent_readiness_indexes",
+      "202609030001_public_referral_analytics",
+      "202609030002_confirmed_conversion_outcomes",
+      "20260909073000_admin_automation_center",
+      "20260909080000_admin_automation_auth_hardening",
+      "20260909164448_admin_automation_integrations",
+      "20260909164630_admin_automation_integrations_index",
+      "20260911195800_revoke_project_dependency_rpc_public_execute",
+      "20260911205500_configure_crawly_authority_monitoring",
+      "20260912203000_project_operating_system",
+      "20260912204000_project_os_compatibility",
+      "20260912205000_project_os_scheduler_hardening",
+      "20260912206000_project_os_database_scheduler",
+      "20260912207000_project_os_autonomous_meetings",
+      "20260912208000_project_os_knowledge_ingestion",
+      "20260912209000_project_os_proposal_governance",
+      "20260912210000_project_os_terminal_reconciliation",
+      "20260912214800_project_os_security_hardening",
+      "20260914004500_default_integration_department",
+      "20260914160000_project_progress_snapshot",
+      "20260914203000_project_roadmap_baselines",
+      "20260914204000_project_roadmap_progress_backfill",
+      "20260914214500_project_approval_discussions",
+      "202609142245_project_executive_attention_policy",
+      "20260915081500_customer_integration_catalog_and_requirements",
+      "20260915103000_customer_connection_platform_phase1",
+      "20260915104500_connection_secret_service_boundary",
+      "20260915121500_customer_connection_platform_phase2",
+      "20260915121600_connection_agent_auto_resume",
+      "20260915121700_connection_agent_phase2_hardening",
+      "20260915134500_universal_connection_flight_deck_rollout",
+      "20260915210500_org_level_resource_selection_autoadvance",
+      "20260915231500_connection_agent_terminal_browser_cleanup",
+      "20260920213000_rythm_ai_workspace_foundation",
+      "20260920213100_rythm_ai_workspace_provider_state_hardening",
+      "20260920213200_rythm_ai_workspace_idempotency_currency",
+      "20260920213300_rythm_ai_workspace_guest_lifecycle",
+      "20260920213400_rythm_ai_workspace_private_files",
+      "20260920213500_web_development_company_commercial_template",
+      "20260920213600_ai_workspace_company_member_access",
+      "20260921091500_ai_workspace_message_idempotency_constraint",
+      "20260921113000_ai_workspace_pricing_trial",
+      "20260921114500_ai_workspace_starter_billing",
+      "20260921120500_ai_workspace_trial_upgrade_reconciliation",
+      "20260921123500_ai_workspace_token_pricing_copy",
+      "202609211345_ai_workspace_plan_tiers_regional_pricing",
+      "202609211355_ai_workspace_plan_grant_types",
+      "202609211400_ai_workspace_plan_code_tiers",
+      "20260925075500_bing_webmaster_integration_catalog",
+      "20260925150500_fix_public_ai_workspace_billing_cta",
+      "20260925161000_youtube_connection_adapter",
+      "202609252045_linkedin_marketing_connection_adapter",
+      "20260926074014_customer_admin_agent_lifecycle",
+      "20260926120000_agency_seo_client_management",
+      "20260926121000_agency_seo_client_management_hardening",
+      "20260926122000_agency_seo_client_management_indexes",
+      "202609261420_agency_seo_scheduled_monitoring",
+      "20260926143202_customer_admin_privacy_minimization",
+      "20260926221427_company_branding_logos",
+      "20260927061000_2nya_booking_approval_notifications",
+      "20260927103000_2nya_admin_portfolio_gallery",
+      "20260927104500_2nya_align_portfolio_seed_with_current_site",
+      "20260927115500_2nya_fix_booking_push_trigger",
+      "20260927193000_project_autonomy_supervisor_recovery",
+      "20260927195000_project_scheduled_recovery_health_fix",
+      "20260927195500_project_retry_health_resolution",
+      "20260928154000_company_email_tenant_hardening",
+      "20260928154100_tenant_fk_delete_semantics",
+      "20260928170000_enable_managed_outbound_email",
+      "20260928191000_managed_resend_service_boundary",
+      "20260929070810_paid_launch_privileged_function_hardening",
+      "20260929131404_launch_template_operational_readiness",
+      "20260929153000_commercial_template_offer_alignment",
+      "20260929170000_project_approval_atomic_resume",
+      "20260929190000_project_completion_architecture_v2",
+      "20260929190100_project_completion_evaluator_v2",
+      "20260929190300_project_completion_runtime_guards",
+      "20260929190400_project_completion_rpc_hardening",
+      "20260929190500_project_completion_security_hardening",
+      "20260929200427_assisted_commercial_activation",
+      "20260930071000_project_completion_performance_hardening",
+      "20260930073000_project_completion_reporting_health",
+      "20260930073100_project_kpi_trigger_delete_safety",
+      "20260930074000_project_completion_tool_evidence_indexes",
+      "20260930080000_project_completion_paused_state",
+      "20260930203220_approval_interaction_guards",
+      "20260930205029_approval_loop_policy_precedence",
+      "20261006051500_pending_company_provisioning_trigger_fix",
+      "20261018190000_continuous_program_foundation",
+      "20261021120000_continuous_program_evaluator_adapter",
+      "20261022153241_shared_enterprise_crm",
+      "20261023104940_enterprise_customer_sales",
+      "20261023123537_crm_connected_records"
+    ],
+    "production_records": [
+      {
+        "version": "20260812145919",
+        "name": "commercial_security_catalog"
+      },
+      {
+        "version": "20260812150327",
+        "name": "commercial_security_catalog_grant_hardening"
+      },
+      {
+        "version": "20260814173500",
+        "name": "security_definer_execute_hardening"
+      },
+      {
+        "version": "20260814173543",
+        "name": "tenant_table_grant_hardening"
+      },
+      {
+        "version": "20260814212732",
+        "name": "privacy_requests"
+      },
+      {
+        "version": "20260814213224",
+        "name": "api_rate_limits"
+      },
+      {
+        "version": "20260815060013",
+        "name": "consumer_withdrawal_requests"
+      },
+      {
+        "version": "20260815223443",
+        "name": "agent_evaluation_evidence"
+      },
+      {
+        "version": "20260816131942",
+        "name": "agent_identity_level_marketplace_foundation"
+      },
+      {
+        "version": "20260816132830",
+        "name": "agent_valuation_level_ordering"
+      },
+      {
+        "version": "20260816141431",
+        "name": "agent_senior_promotion_framework"
+      },
+      {
+        "version": "20260816141637",
+        "name": "fix_senior_readiness_governance_count"
+      },
+      {
+        "version": "20260817220218",
+        "name": "agent_builder_v2"
+      },
+      {
+        "version": "20260818120424",
+        "name": "agent_attachments_memory"
+      },
+      {
+        "version": "20260818131612",
+        "name": "agent_artifacts"
+      },
+      {
+        "version": "20260818180520",
+        "name": "company_knowledge_foundation"
+      },
+      {
+        "version": "20260819134950",
+        "name": "trusted_agent_knowledge_schema"
+      },
+      {
+        "version": "20260819135252",
+        "name": "trusted_sources_and_blueprints"
+      },
+      {
+        "version": "20260819135409",
+        "name": "role_foundations_v1"
+      },
+      {
+        "version": "20260819135505",
+        "name": "role_specializations_v1"
+      },
+      {
+        "version": "20260819135546",
+        "name": "agent_knowledge_provisioning_functions"
+      },
+      {
+        "version": "20260819141216",
+        "name": "agent_provisioning_guardrails"
+      },
+      {
+        "version": "20260819141728",
+        "name": "transfer_company_knowledge_detachment"
+      },
+      {
+        "version": "20260819171944",
+        "name": "mastery_company_library"
+      },
+      {
+        "version": "20260819173049",
+        "name": "mastery_company_library_grant_hardening"
+      },
+      {
+        "version": "20260819203024",
+        "name": "web_development_professional_specialization"
+      },
+      {
+        "version": "20260820183402",
+        "name": "communication_center_mvp"
+      },
+      {
+        "version": "20260821151712",
+        "name": "native_mailbox_workflow"
+      },
+      {
+        "version": "20260821161431",
+        "name": "resend_shared_mail_domain"
+      },
+      {
+        "version": "20260821162132",
+        "name": "root_domain_mailboxes"
+      },
+      {
+        "version": "20260821172441",
+        "name": "cloudflare_inbound_email"
+      },
+      {
+        "version": "20260822053816",
+        "name": "communication_inbound_transport_live"
+      },
+      {
+        "version": "20260822152816",
+        "name": "company_structure_workforce_communications"
+      },
+      {
+        "version": "20260822155408",
+        "name": "company_workforce_completion"
+      },
+      {
+        "version": "20260822160243",
+        "name": "finance_center_core"
+      },
+      {
+        "version": "20260822190547",
+        "name": "multitenant_billing_payments"
+      },
+      {
+        "version": "20260824150218",
+        "name": "crm_customer_sales_center"
+      },
+      {
+        "version": "20260824160449",
+        "name": "adaptive_agent_routing"
+      },
+      {
+        "version": "20260824183153",
+        "name": "integration_tool_execution"
+      },
+      {
+        "version": "20260824183433",
+        "name": "integration_service_secret_access"
+      },
+      {
+        "version": "20260824192826",
+        "name": "software_company_template"
+      },
+      {
+        "version": "20260825071207",
+        "name": "phase0_security_grant_hardening"
+      },
+      {
+        "version": "20260825091111",
+        "name": "phase1b_routing_modes_telemetry"
+      },
+      {
+        "version": "20260825091238",
+        "name": "phase1b_routing_grant_hardening"
+      },
+      {
+        "version": "20260825100348",
+        "name": "phase1c_request_intelligence_telemetry"
+      },
+      {
+        "version": "20260825163014",
+        "name": "phase1d_feature_scoped_routing_rollout"
+      },
+      {
+        "version": "20260827045514",
+        "name": "phase2_integration_execution_gateway"
+      },
+      {
+        "version": "20260827061351",
+        "name": "phase2_service_role_claim_compatibility"
+      },
+      {
+        "version": "20260827110429",
+        "name": "phase2_validation_idempotency_constraint"
+      },
+      {
+        "version": "20260827125413",
+        "name": "phase3_company_auto_bootstrap_foundation"
+      },
+      {
+        "version": "20260827125429",
+        "name": "phase3_bootstrap_tool_catalog"
+      },
+      {
+        "version": "20260827125513",
+        "name": "phase3_bootstrap_apply_gateway"
+      },
+      {
+        "version": "20260827125521",
+        "name": "phase3_pgcrypto_schema_qualification"
+      },
+      {
+        "version": "20260827125602",
+        "name": "phase3_bootstrap_rpc_anon_hardening"
+      },
+      {
+        "version": "20260827132840",
+        "name": "google_workspace_oauth_credential_envelope"
+      },
+      {
+        "version": "20260828052857",
+        "name": "phase3_google_oauth_refresh_service"
+      },
+      {
+        "version": "20260828070542",
+        "name": "ready_ai_company_library"
+      },
+      {
+        "version": "20260828082649",
+        "name": "ready_company_minimum_standard_part1"
+      },
+      {
+        "version": "20260828082717",
+        "name": "ready_company_minimum_standard_part2"
+      },
+      {
+        "version": "20260828082744",
+        "name": "ready_company_minimum_standard_part3"
+      },
+      {
+        "version": "20260828092443",
+        "name": "generic_business_api_adapter_contract"
+      },
+      {
+        "version": "20260828094047",
+        "name": "generic_business_api_read_validation"
+      },
+      {
+        "version": "20260828110240",
+        "name": "advertising_professional_foundations"
+      },
+      {
+        "version": "20260828110318",
+        "name": "senior_gtm_strategist"
+      },
+      {
+        "version": "20260828111646",
+        "name": "advertising_agency_marketplace_copy"
+      },
+      {
+        "version": "20260829175041",
+        "name": "trusted_professional_knowledge_packs"
+      },
+      {
+        "version": "20260830185043",
+        "name": "gtm_professional_benchmark"
+      },
+      {
+        "version": "20260830185100",
+        "name": "fix_professional_readiness_semantics"
+      },
+      {
+        "version": "20260830185401",
+        "name": "harden_agent_level_readiness_access"
+      },
+      {
+        "version": "20260830193817",
+        "name": "invalidate_capped_gtm_benchmark"
+      },
+      {
+        "version": "20260831014642",
+        "name": "consolidate_canonical_rythm_workforce"
+      },
+      {
+        "version": "20260831044243",
+        "name": "agency_specialist_benchmarks"
+      },
+      {
+        "version": "20260831044257",
+        "name": "communications_specialist_benchmark"
+      },
+      {
+        "version": "20260831060547",
+        "name": "specialist_remediation_readiness"
+      },
+      {
+        "version": "20260831071540",
+        "name": "continuous_agency_level_benchmarks"
+      },
+      {
+        "version": "20260831090700",
+        "name": "workforce_benchmark_coverage"
+      },
+      {
+        "version": "20260831095202",
+        "name": "fullstack_specialist_benchmark_completion_guard"
+      },
+      {
+        "version": "20260831110943",
+        "name": "allow_governed_internal_action_orchestration"
+      },
+      {
+        "version": "20260831111012",
+        "name": "ai_role_path_client_brief_and_action_orchestration_v2"
+      },
+      {
+        "version": "20260831111909",
+        "name": "ai_role_path_live_website_discovery_snapshot"
+      },
+      {
+        "version": "20260902164533",
+        "name": "operational_agent_readiness"
+      },
+      {
+        "version": "20260902164742",
+        "name": "operational_agent_readiness_indexes"
+      },
+      {
+        "version": "20260903060239",
+        "name": "public_referral_analytics"
+      },
+      {
+        "version": "20260903065623",
+        "name": "confirmed_conversion_outcomes"
+      },
+      {
+        "version": "20260909055142",
+        "name": "admin_automation_center"
+      },
+      {
+        "version": "20260909055247",
+        "name": "admin_automation_auth_hardening"
+      },
+      {
+        "version": "20260909164448",
+        "name": "admin_automation_integrations"
+      },
+      {
+        "version": "20260909164630",
+        "name": "admin_automation_integrations_index"
+      },
+      {
+        "version": "20260911175901",
+        "name": "revoke_project_dependency_rpc_public_execute"
+      },
+      {
+        "version": "20260911185811",
+        "name": "configure_crawly_authority_monitoring"
+      },
+      {
+        "version": "20260912194213",
+        "name": "project_operating_system"
+      },
+      {
+        "version": "20260912194230",
+        "name": "project_os_compatibility"
+      },
+      {
+        "version": "20260912194243",
+        "name": "project_os_scheduler_hardening"
+      },
+      {
+        "version": "20260912194312",
+        "name": "project_os_database_scheduler"
+      },
+      {
+        "version": "20260912194330",
+        "name": "project_os_autonomous_meetings"
+      },
+      {
+        "version": "20260912194344",
+        "name": "project_os_knowledge_ingestion"
+      },
+      {
+        "version": "20260912194405",
+        "name": "project_os_proposal_governance"
+      },
+      {
+        "version": "20260912194413",
+        "name": "project_os_terminal_reconciliation"
+      },
+      {
+        "version": "20260912194802",
+        "name": "project_os_security_hardening"
+      },
+      {
+        "version": "20260913223225",
+        "name": "default_integration_department"
+      },
+      {
+        "version": "20260914154827",
+        "name": "project_progress_snapshot"
+      },
+      {
+        "version": "20260914182818",
+        "name": "project_roadmap_baselines"
+      },
+      {
+        "version": "20260914182846",
+        "name": "project_roadmap_progress_backfill"
+      },
+      {
+        "version": "20260914202154",
+        "name": "project_approval_discussions"
+      },
+      {
+        "version": "20260914211057",
+        "name": "project_executive_attention_policy_v2"
+      },
+      {
+        "version": "20260915055743",
+        "name": "customer_integration_catalog_and_requirements"
+      },
+      {
+        "version": "20260915073227",
+        "name": "customer_connection_platform_phase1"
+      },
+      {
+        "version": "20260915073410",
+        "name": "connection_secret_service_boundary"
+      },
+      {
+        "version": "20260915115308",
+        "name": "customer_connection_platform_phase2"
+      },
+      {
+        "version": "20260915115322",
+        "name": "connection_agent_auto_resume"
+      },
+      {
+        "version": "20260915115512",
+        "name": "connection_agent_phase2_hardening"
+      },
+      {
+        "version": "20260915160407",
+        "name": "universal_connection_flight_deck_rollout"
+      },
+      {
+        "version": "20260915202021",
+        "name": "connection_flight_deck_auto_human_handoff"
+      },
+      {
+        "version": "20260915210127",
+        "name": "org_level_resource_selection_autoadvance"
+      },
+      {
+        "version": "20260915211159",
+        "name": "connection_agent_terminal_browser_cleanup"
+      },
+      {
+        "version": "20260916001029",
+        "name": "activate_communication_runtime_triage"
+      },
+      {
+        "version": "20260916001101",
+        "name": "fix_communication_runtime_handoff_source"
+      },
+      {
+        "version": "20260916001131",
+        "name": "fix_communication_runtime_approval_constraints"
+      },
+      {
+        "version": "20260916001203",
+        "name": "fix_communication_notification_severity"
+      },
+      {
+        "version": "20260916070836",
+        "name": "nail_2nya_booking_platform_foundation"
+      },
+      {
+        "version": "20260916071435",
+        "name": "nail_2nya_grant_hardening"
+      },
+      {
+        "version": "20260916071630",
+        "name": "nail_2nya_security_performance_hardening"
+      },
+      {
+        "version": "20260916072136",
+        "name": "nail_2nya_admin_manual_booking_rpc"
+      },
+      {
+        "version": "20260916101116",
+        "name": "nail_2nya_media_asset_store"
+      },
+      {
+        "version": "20260916101216",
+        "name": "remove_unused_nail_2nya_media_asset_store"
+      },
+      {
+        "version": "20260916101504",
+        "name": "nail_2nya_public_media_chunks"
+      },
+      {
+        "version": "20260916101706",
+        "name": "remove_unused_nail_2nya_public_media_chunks"
+      },
+      {
+        "version": "20260916103559",
+        "name": "nail_2nya_live_booking_pwa_admin"
+      },
+      {
+        "version": "20260916103747",
+        "name": "nail_2nya_realtime_admin_events"
+      },
+      {
+        "version": "20260916113715",
+        "name": "nail_2nya_push_delivery_trigger"
+      },
+      {
+        "version": "20260916113739",
+        "name": "nail_2nya_push_trigger_no_secret"
+      },
+      {
+        "version": "20260916113800",
+        "name": "nail_2nya_admin_bootstrap_rotate"
+      },
+      {
+        "version": "20260916113906",
+        "name": "nail_2nya_claim_admin_grant_hardening"
+      },
+      {
+        "version": "20260916175126",
+        "name": "nail_2nya_public_video_chunks_v4"
+      },
+      {
+        "version": "20260917064924",
+        "name": "nail_2nya_public_media_bucket"
+      },
+      {
+        "version": "20260917065004",
+        "name": "nail_2nya_remove_temp_hero_upload_policy"
+      },
+      {
+        "version": "20260921061955",
+        "name": "rythm_ai_workspace_foundation"
+      },
+      {
+        "version": "20260921062011",
+        "name": "rythm_ai_workspace_provider_state_hardening"
+      },
+      {
+        "version": "20260921062038",
+        "name": "rythm_ai_workspace_idempotency_currency"
+      },
+      {
+        "version": "20260921062106",
+        "name": "rythm_ai_workspace_guest_lifecycle"
+      },
+      {
+        "version": "20260921062121",
+        "name": "rythm_ai_workspace_private_files"
+      },
+      {
+        "version": "20260921062147",
+        "name": "web_development_company_commercial_template"
+      },
+      {
+        "version": "20260921062213",
+        "name": "ai_workspace_company_member_access"
+      },
+      {
+        "version": "20260921071614",
+        "name": "ai_workspace_message_idempotency_constraint"
+      },
+      {
+        "version": "20260921094455",
+        "name": "ai_workspace_pricing_trial"
+      },
+      {
+        "version": "20260921094740",
+        "name": "ai_workspace_starter_billing"
+      },
+      {
+        "version": "20260921094843",
+        "name": "ai_workspace_starter_billing"
+      },
+      {
+        "version": "20260921095334",
+        "name": "ai_workspace_trial_upgrade_reconciliation"
+      },
+      {
+        "version": "20260921101731",
+        "name": "ai_workspace_token_pricing_copy"
+      },
+      {
+        "version": "20260921115059",
+        "name": "ai_workspace_plan_tiers_regional_pricing"
+      },
+      {
+        "version": "20260921115518",
+        "name": "ai_workspace_plan_grant_types"
+      },
+      {
+        "version": "20260921115600",
+        "name": "ai_workspace_plan_code_tiers"
+      },
+      {
+        "version": "20260925080731",
+        "name": "bing_webmaster_integration_catalog"
+      },
+      {
+        "version": "20260925131124",
+        "name": "fix_public_ai_workspace_billing_cta"
+      },
+      {
+        "version": "20260925160945",
+        "name": "youtube_connection_adapter"
+      },
+      {
+        "version": "20260925184557",
+        "name": "linkedin_marketing_connection_adapter"
+      },
+      {
+        "version": "20260926074014",
+        "name": "customer_admin_agent_lifecycle"
+      },
+      {
+        "version": "20260926101216",
+        "name": "agency_seo_client_management"
+      },
+      {
+        "version": "20260926101310",
+        "name": "agency_seo_client_management_hardening"
+      },
+      {
+        "version": "20260926101418",
+        "name": "agency_seo_client_management_indexes"
+      },
+      {
+        "version": "20260926124746",
+        "name": "agency_seo_scheduled_monitoring"
+      },
+      {
+        "version": "20260926143202",
+        "name": "customer_admin_privacy_minimization"
+      },
+      {
+        "version": "20260926221427",
+        "name": "company_branding_logos"
+      },
+      {
+        "version": "20260927060117",
+        "name": "2nya_customer_push_tables"
+      },
+      {
+        "version": "20260927060122",
+        "name": "2nya_customer_push_rls"
+      },
+      {
+        "version": "20260927060133",
+        "name": "2nya_customer_push_rpc"
+      },
+      {
+        "version": "20260927060142",
+        "name": "2nya_available_dates_rpc"
+      },
+      {
+        "version": "20260927060158",
+        "name": "2nya_customer_booking_pending"
+      },
+      {
+        "version": "20260927060555",
+        "name": "2nya_push_key_vault"
+      },
+      {
+        "version": "20260927083615",
+        "name": "2nya_admin_portfolio_gallery_v2"
+      },
+      {
+        "version": "20260927084356",
+        "name": "2nya_align_portfolio_seed_with_current_site"
+      },
+      {
+        "version": "20260927095203",
+        "name": "2nya_fix_booking_push_trigger"
+      },
+      {
+        "version": "20260927133631",
+        "name": "nail_2nya_contact_inbox"
+      },
+      {
+        "version": "20260927134254",
+        "name": "nail_2nya_contact_push_claim"
+      },
+      {
+        "version": "20260927184731",
+        "name": "project_autonomy_supervisor_recovery"
+      },
+      {
+        "version": "20260927185532",
+        "name": "project_scheduled_recovery_health_fix"
+      },
+      {
+        "version": "20260927185646",
+        "name": "project_retry_health_resolution"
+      },
+      {
+        "version": "20260928141040",
+        "name": "company_email_tenant_hardening"
+      },
+      {
+        "version": "20260928141059",
+        "name": "tenant_fk_delete_semantics"
+      },
+      {
+        "version": "20260928165350",
+        "name": "enable_managed_outbound_email"
+      },
+      {
+        "version": "20260928174743",
+        "name": "managed_resend_service_boundary"
+      },
+      {
+        "version": "20260929070810",
+        "name": "paid_launch_privileged_function_hardening"
+      },
+      {
+        "version": "20260929131404",
+        "name": "launch_template_operational_readiness"
+      },
+      {
+        "version": "20260929153000",
+        "name": "commercial_template_offer_alignment"
+      },
+      {
+        "version": "20260929170000",
+        "name": "project_approval_atomic_resume"
+      },
+      {
+        "version": "20260929170229",
+        "name": "project_completion_architecture_v2"
+      },
+      {
+        "version": "20260929170348",
+        "name": "project_completion_security_hardening"
+      },
+      {
+        "version": "20260929200427",
+        "name": "assisted_commercial_activation"
+      },
+      {
+        "version": "20260930045419",
+        "name": "project_completion_runtime_guards"
+      },
+      {
+        "version": "20260930045423",
+        "name": "project_completion_rpc_hardening"
+      },
+      {
+        "version": "20260930050917",
+        "name": "project_completion_performance_hardening"
+      },
+      {
+        "version": "20260930051926",
+        "name": "project_completion_reporting_health"
+      },
+      {
+        "version": "20260930051945",
+        "name": "project_kpi_trigger_delete_safety"
+      },
+      {
+        "version": "20260930052501",
+        "name": "project_completion_tool_evidence_indexes"
+      },
+      {
+        "version": "20260930062902",
+        "name": "project_completion_paused_state"
+      },
+      {
+        "version": "20260930204854",
+        "name": "approval_interaction_guards"
+      },
+      {
+        "version": "20261001065114",
+        "name": "approval_loop_policy_precedence"
+      },
+      {
+        "version": "20261006031045",
+        "name": "pending_company_provisioning_trigger_fix"
+      },
+      {
+        "version": "20261021162350",
+        "name": "continuous_program_foundation_20261018"
+      },
+      {
+        "version": "20261021162407",
+        "name": "continuous_program_evaluator_adapter_20261021"
+      },
+      {
+        "version": "20261023101943",
+        "name": "shared_enterprise_crm"
+      },
+      {
+        "version": "20261023123202",
+        "name": "enterprise_customer_sales"
+      },
+      {
+        "version": "20261023125317",
+        "name": "crm_connected_records"
+      }
+    ],
+    "summary": {
+      "repository": 218,
+      "production": 203,
+      "exact_match": 15,
+      "repository_only_version_name": 203,
+      "production_only_version_name": 188,
+      "repository_only_name": 57,
+      "production_only_name": 41
+    }
+  },
+  "release_evidence": {
+    "sources": [
+      "GitHub REST main commit and migration directory",
+      "GitHub Actions run 39990393502",
+      "Vercel deployment lookup for rythm-os.com and aliases",
+      "Supabase project and migration metadata; read-only pg_catalog metadata/fingerprint"
+    ],
+    "immutable_at": "Git commit SHA containing this snapshot; GitHub Actions job/run artifact if green",
+    "limitation": "Version/name differences may be historical application metadata; compare physical schema fingerprint between production and isolated staging before acceptance."
+  }
+}

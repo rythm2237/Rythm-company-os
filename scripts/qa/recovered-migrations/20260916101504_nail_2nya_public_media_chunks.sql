@@ -1,0 +1,1 @@
+create table if not exists public.nail_2nya_media_chunks (asset_key text not null, chunk_no integer not null, mime_type text not null, data text not null, updated_at timestamptz not null default now(), primary key(asset_key, chunk_no)); alter table public.nail_2nya_media_chunks enable row level security; revoke all on public.nail_2nya_media_chunks from anon, authenticated;

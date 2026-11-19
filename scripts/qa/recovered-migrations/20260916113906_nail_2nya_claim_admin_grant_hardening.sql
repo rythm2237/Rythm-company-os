@@ -1,0 +1,1 @@
+revoke all on function public.nail_2nya_claim_admin(text) from public,anon; grant execute on function public.nail_2nya_claim_admin(text) to authenticated;
