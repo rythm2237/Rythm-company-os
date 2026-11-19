@@ -25,9 +25,9 @@ export default function StudioCubeScene(props: Props) {
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.toneMappingExposure = .85;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.VSMShadowMap;
     renderer.domElement.setAttribute("aria-hidden", "true");
     element.appendChild(renderer.domElement);
 
@@ -39,18 +39,18 @@ export default function StudioCubeScene(props: Props) {
     const pmrem = new THREE.PMREMGenerator(renderer);
     const environmentMap = pmrem.fromScene(environment, .04);
     scene.environment = environmentMap.texture;
-    scene.environmentIntensity = .75;
+    scene.environmentIntensity = .4;
     environment.dispose(); pmrem.dispose();
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xb7c3d9, 2.1));
-    const key = new THREE.DirectionalLight(0xfffcf5, 4.2);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xb7c3d9, .9));
+    const key = new THREE.DirectionalLight(0xfffcf5, 2.4);
     key.position.set(-3, 7, 5); key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
     Object.assign(key.shadow.camera, { left: -4.5, right: 4.5, top: 4.5, bottom: -4.5, near: .5, far: 20 });
-    key.shadow.bias = -.001; key.shadow.normalBias = .025; key.shadow.radius = 4;
+    key.shadow.bias = -.001; key.shadow.normalBias = .025; key.shadow.radius = 5; key.shadow.blurSamples = 8;
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xe5edff, 1.5); fill.position.set(5, 3, 4); scene.add(fill);
-    const rim = new THREE.DirectionalLight(0xc0caff, 2); rim.position.set(2, 4, -5); scene.add(rim);
+    const fill = new THREE.DirectionalLight(0xe5edff, .7); fill.position.set(5, 3, 4); scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xc0caff, 1); rim.position.set(2, 4, -5); scene.add(rim);
 
     const rig = new THREE.Group(), upperRow = new THREE.Group();
     rig.rotation.set(.1, -.12, .02); rig.add(upperRow); scene.add(rig);
@@ -113,7 +113,7 @@ export default function StudioCubeScene(props: Props) {
       const finishes = [.24, .64, .36, .75, .32, .5, .22, .7, .42];
       const material = new THREE.MeshPhysicalMaterial({ map, bumpMap, bumpScale: .018,
         color: 0xffffff, metalness: cell % 3 === 0 ? .36 : .12, roughness: finishes[(cell + face) % 9],
-        clearcoat: cell % 3 === 0 ? .65 : .15, clearcoatRoughness: .22, envMapIntensity: 1.05 });
+        clearcoat: cell % 3 === 0 ? .65 : .15, clearcoatRoughness: .22, envMapIntensity: .65 });
       materialCache.set(cacheKey, material); materials.push(material); return material;
     }
     // Box material order: +X, -X, +Y, -Y, +Z, -Z. Each external tile has original page-specific artwork.
@@ -130,7 +130,7 @@ export default function StudioCubeScene(props: Props) {
     }
 
     const floorGeometry = new THREE.PlaneGeometry(200, 200);
-    const floorMaterial = new THREE.ShadowMaterial({ color: 0x3d4b67, opacity: .2 });
+    const floorMaterial = new THREE.ShadowMaterial({ color: 0x3d4b67, opacity: .13 });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial); floor.rotation.x = -Math.PI / 2; floor.position.y = -2.22; floor.receiveShadow = true; scene.add(floor);
     // Soft ambient contact beneath the moving object; the directional light also casts the actual geometry shadow.
     const shadowCanvas = document.createElement("canvas"); shadowCanvas.width = shadowCanvas.height = 128;
