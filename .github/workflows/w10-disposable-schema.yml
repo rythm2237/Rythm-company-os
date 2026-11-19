@@ -178,6 +178,13 @@ jobs:
             end if;
           end $$;
           SQL
+      - name: W13 real queue claim and idempotency (disposable local PostgreSQL only)
+        if: ${{ github.head_ref == 'pilot/w13-dispatch-resilience' }}
+        run: |
+          set -euo pipefail
+          test -f scripts/fixtures/w13-real-queue-local.sql
+          psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
+            -v ON_ERROR_STOP=1 -f scripts/fixtures/w13-real-queue-local.sql
       - uses: actions/setup-node@v4
         with:
           node-version: 22
