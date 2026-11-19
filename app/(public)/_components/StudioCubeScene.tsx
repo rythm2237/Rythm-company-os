@@ -153,17 +153,18 @@ export default function StudioCubeScene(props: Props) {
       textureHeight: innerWidth < 760 ? 512 : 768, multisample: 0, clipBias: .003,
       shader: {
         name: "RythmGlassReflection",
-        uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null } },
+        uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null }, uViewportHeight: { value: 1 } },
         vertexShader: `uniform mat4 textureMatrix;
           varying vec4 vReflectionUv; varying vec2 vFloorUv;
           void main() { vFloorUv = uv; vReflectionUv = textureMatrix * vec4(position, 1.0);
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-        fragmentShader: `uniform sampler2D tDiffuse;
+        fragmentShader: `uniform sampler2D tDiffuse; uniform float uViewportHeight;
           varying vec4 vReflectionUv; varying vec2 vFloorUv;
           void main() {
             vec4 reflected = texture2DProj(tDiffuse, vReflectionUv);
             float fade = 1.0 - smoothstep(0.04, 0.39, length(vFloorUv - vec2(0.5)));
-            gl_FragColor = vec4(reflected.rgb, reflected.a * 0.46 * fade);
+            float edgeFade = smoothstep(0.0, 0.20, gl_FragCoord.y / uViewportHeight);
+            gl_FragColor = vec4(reflected.rgb, reflected.a * 0.46 * fade * edgeFade);
             #include <tonemapping_fragment>
             #include <colorspace_fragment>
           }`,
@@ -192,7 +193,9 @@ export default function StudioCubeScene(props: Props) {
     const target = new THREE.Quaternion(), pointer = new THREE.Vector2(), smoothedPointer = new THREE.Vector2();
     function resize() {
       const { width, height } = element.getBoundingClientRect();
-      renderer.setSize(width, height, false); camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+      (floor.material as THREE.ShaderMaterial).uniforms.uViewportHeight.value = renderer.domElement.height;
+      camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix();
       renderScene();
     }
     const observer = new ResizeObserver(resize); observer.observe(element); resize();
