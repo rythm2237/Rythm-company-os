@@ -1,3 +1,5 @@
+> **Production release completed:** see [the approved production release record](W10-2026-11-19-production-release.md). The pre-release assessment below is retained as historical evidence.
+
 # W10 final release review — 2026-11-19
 
 ## Decision

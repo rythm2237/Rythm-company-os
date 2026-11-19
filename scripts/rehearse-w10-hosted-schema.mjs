@@ -123,6 +123,13 @@ try{
   for(const [index,[key]]of mappings.entries())await db.query("insert into public.agent_templates(template_key,version,name,role,role_code,purpose,system_instructions_template,role_family,default_specializations) values($1,'1.0','W10 synthetic template','Specialist',$2,'Synthetic replay','No external actions','marketing',array[]::text[])",[key,'W10-'+index]);
  });
  await stage('ten-forward-migrations',async()=>{
+  // The WASM bootstrap superuser is web_user. Hosted migrations run as postgres;
+  // match database ownership too, so pg_database_owner and default ACLs agree.
+  const databaseName=(await db.query('select current_database() as name')).rows[0].name;
+  const databaseOwner=extra.database?.owner??'postgres';
+  await exec(`alter database ${qi(databaseName)} owner to ${qi(databaseOwner)}`,'captured database ownership');
+  await exec('set role postgres','observed production migration actor');
+  summary.migration_actor='postgres';summary.source_database_owner=databaseOwner;
   const manifest=JSON.parse(await readFile('docs/security/evidence/w10-2026-11-19-migration-manifest.json','utf8'));
   assert.equal(manifest.payloads.length,10);summary.migrations=[];
   for(const entry of manifest.payloads){
@@ -134,6 +141,7 @@ try{
   assert.deepEqual(acl,{owner_assign:true,anon_assign:false,worker_complete:true,user_complete:false});summary.new_rpc_acl=acl;
  });
  await stage('installed-schema-role-and-lifecycle-smoke',async()=>{
+  await exec('reset role','trusted synthetic fixture bootstrap');
   await exec(await readFile('scripts/w10-hosted-schema-role-smoke.sql','utf8'),'synthetic actual-schema smoke');
  });
  await stage('inverse-migration-rehearsal',async()=>{

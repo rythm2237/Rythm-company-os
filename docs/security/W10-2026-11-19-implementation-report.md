@@ -1,3 +1,5 @@
+> **Production release completed:** see [the approved production release record](W10-2026-11-19-production-release.md). The pre-release assessment below is retained as historical evidence.
+
 # W10 — Agency journey implementation and evidence
 Updated 2026-11-19. **All three acceptance criteria PASS for the tested disposable staging scenario. Owner accepted the W10 staging evidence in conversation on November 19. Production migration, merge and deployment remain unauthorized.**
 

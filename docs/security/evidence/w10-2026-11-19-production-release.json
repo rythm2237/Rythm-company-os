@@ -1,0 +1,706 @@
+{
+  "recorded_on": "2026-11-19",
+  "owner_authorization": {
+    "source": "Explicit yes to production migrations, PR #457 merge and production deployment",
+    "approved": true
+  },
+  "repository": "rythm2237/Rythm-company-os",
+  "feature_branch": "pilot/w10-agency-e2e",
+  "approved_feature_commit": "33f7ea6ad32497e00e9569ce9a5dff85b43bdcf6",
+  "previous_main": "55a1377e348c2d9ac0082c8b1f3acbba26acbc45",
+  "release_commit": "42c7d16ebad3dfefca40c51b73dd90f76383637b",
+  "release_tree": "f22d58cd1539f46b6bfbff9c91791620c5f24c4c",
+  "release_tree_equals_approved_feature": true,
+  "pr": {
+    "number": 457,
+    "merged": true,
+    "merge_method": "squash"
+  },
+  "deployment": {
+    "id": "dpl_Bi7VX7umMmy1nWc7nnVwY2k3pBqQ",
+    "production_url": "https://rythm-os.com",
+    "build_url": "https://rythm-company-4ngus8lb1-ytalashti-7156s-projects.vercel.app",
+    "target": "production",
+    "status": "READY",
+    "commit": "42c7d16ebad3dfefca40c51b73dd90f76383637b",
+    "framework": "nextjs",
+    "created_at_ms": 1795080810428,
+    "ready_at_ms": 1795080970767,
+    "build_duration_seconds": 158.826
+  },
+  "database": {
+    "project_ref": "dezbacyuvsdrlpmmpjht",
+    "ledger_before": 210,
+    "ledger_after": 220,
+    "migrations": [
+      {
+        "path": "supabase/migrations/20261117125000_assisted_activation_integration_department.sql",
+        "name": "w10_20261117125000_assisted_activation_integration_department",
+        "source_sha256": "0fbe1dfe7bc4a43325c3ec47354b5b49722e5139a7bf0ffcec2fe5438e359a88",
+        "execution_sha256": "ace36c8f642aaea9d466096c8c32af833dbc005d99f05c4a84ebec18f05af04e",
+        "managed_version": "20261119092842",
+        "success": true
+      },
+      {
+        "path": "supabase/migrations/20261117125500_agency_template_marketing_specializations.sql",
+        "name": "w10_20261117125500_agency_template_marketing_specializations",
+        "source_sha256": "c700faa05508d29515d64c9e2f0c1c5c56abe000e84c9a1886ad2525954f1d06",
+        "execution_sha256": "cbaedcf7d528eb02621b00e13dbb2ebd723c62d5c0f700f715c1db9cb79278a6",
+        "managed_version": "20261119092900",
+        "success": true
+      },
+      {
+        "path": "supabase/migrations/20261117130000_crm_contract_customer_scope.sql",
+        "name": "w10_20261117130000_crm_contract_customer_scope",
+        "source_sha256": "858bd22e5e5a64ffa915ea175aa8ae2fa7c8753bd6e7afc00bda2e13d0688df0",
+        "execution_sha256": "a5cc7d39d8f9817d1f28ccef0a3f0a5de5fa012df3ff68f5985d89de7586efa8",
+        "managed_version": "20261119092902",
+        "success": true
+      },
+      {
+        "path": "supabase/migrations/20261117140000_project_workflow_read_grants.sql",
+        "name": "w10_20261117140000_project_workflow_read_grants",
+        "source_sha256": "9c9dee33bff737f44809ea9e9f9f7861fc9e900a6a716d6db0acf36851474984",
+        "execution_sha256": "e79178912bf217c85e2351e170ed039154a4d34504420d1c7a15b5c3e369f889",
+        "managed_version": "20261119092904",
+        "success": true
+      },
+      {
+        "path": "supabase/migrations/20261118120000_agency_meeting_synthesizer.sql",
+        "name": "w10_20261118120000_agency_meeting_synthesizer",
+        "source_sha256": "3f4d65f966a48386c006365edf5d8734f2bc6f9dc65e150fb8adf562eb7e7305",
+        "execution_sha256": "a6259f7c6eacd64b138226b8ba72204af02495452b04f89055139e75c7bb6b77",
+        "managed_version": "20261119092905",
+        "success": true
+      },
+      {
+        "path": "supabase/migrations/20261118123000_project_meeting_completion_handoff.sql",
+        "name": "w10_20261118123000_project_meeting_completion_handoff",
+        "source_sha256": "1b1d215a068ec78cd969060720279c874a98511192062d714aec6469c498fde6",
+        "execution_sha256": "c1ae59f798051a3f575de10774f0439e505af7e7d3c8c15d191f8da2f9230e44",
+        "managed_version": "20261119092907",
+        "success": true
+      },
+      {
+        "path": "supabase/migrations/20261118133000_owner_project_specialist_assignment.sql",
+        "name": "w10_20261118133000_owner_project_specialist_assignment",
+        "source_sha256": "b8e74f08642b0c8fa71c586fc3e3f428cfc9d3cbd369b1630c0d8c5b595566d7",
+        "execution_sha256": "03b6433a3cee22ef6f01e75e5e48e29c843f6ff196f186563504401fe5412d26",
+        "managed_version": "20261119092908",
+        "success": true
+      },
+      {
+        "path": "supabase/migrations/20261118144000_internal_review_dispatch_continuation.sql",
+        "name": "w10_20261118144000_internal_review_dispatch_continuation",
+        "source_sha256": "3558820a4600fa9f1c652af6addfd60d71d0c9b1ea8d9f046c368287bebc99bb",
+        "execution_sha256": "dfd464f7948a980d8ac770df2829cccd52577e09acd19ffa6432c44842d19e7c",
+        "managed_version": "20261119092910",
+        "success": true
+      },
+      {
+        "path": "supabase/migrations/20261118145000_leased_project_meeting_lifecycle.sql",
+        "name": "w10_20261118145000_leased_project_meeting_lifecycle",
+        "source_sha256": "748a79d71404780e4387e6a804bc409a0054c331f6f58002d440971a8e23d74c",
+        "execution_sha256": "2bba2145751115a80abda503cc774db8e23eae6697bd8ca4af378a7912d0e155",
+        "managed_version": "20261119092912",
+        "success": true
+      },
+      {
+        "path": "supabase/migrations/20261118150000_atomic_project_task_completion.sql",
+        "name": "w10_20261118150000_atomic_project_task_completion",
+        "source_sha256": "fde8ea1fa97a64f2709b6a687c291734750d980c51f487e2e3ff8b6fc3a74a32",
+        "execution_sha256": "1b97f6fd623027763b3d949d89c7e5f4aeac43ad35a0775990b151f627d32add",
+        "managed_version": "20261119092914",
+        "success": true
+      }
+    ],
+    "preflight": {
+      "rls_disabled": [],
+      "missing_columns": [],
+      "missing_functions": [],
+      "missing_relations": [],
+      "agent_tenant_fk_validated": true,
+      "missing_contract_policies": [],
+      "timeline_security_invoker": true,
+      "template_specialization_bindings": [
+        {
+          "target": "b2b_marketing",
+          "version": "1.0",
+          "template": "advertising_account_manager",
+          "active_target_exists": true,
+          "prior_specializations": []
+        },
+        {
+          "target": "content_marketing",
+          "version": "1.0",
+          "template": "advertising_content_specialist",
+          "active_target_exists": true,
+          "prior_specializations": []
+        },
+        {
+          "target": "content_marketing",
+          "version": "1.0",
+          "template": "advertising_copywriter",
+          "active_target_exists": true,
+          "prior_specializations": []
+        },
+        {
+          "target": "performance_marketing",
+          "version": "1.0",
+          "template": "advertising_performance_marketing",
+          "active_target_exists": true,
+          "prior_specializations": []
+        },
+        {
+          "target": "b2b_marketing",
+          "version": "1.0",
+          "template": "advertising_strategy_director",
+          "active_target_exists": true,
+          "prior_specializations": []
+        }
+      ]
+    },
+    "postflight": {
+      "rls_disabled": [],
+      "missing_columns": [],
+      "missing_functions": [],
+      "missing_relations": [],
+      "agent_tenant_fk_validated": true,
+      "missing_contract_policies": [],
+      "timeline_security_invoker": true,
+      "template_specialization_bindings": [
+        {
+          "target": "b2b_marketing",
+          "version": "1.0",
+          "template": "advertising_account_manager",
+          "active_target_exists": true,
+          "prior_specializations": [
+            "b2b_marketing"
+          ]
+        },
+        {
+          "target": "content_marketing",
+          "version": "1.0",
+          "template": "advertising_content_specialist",
+          "active_target_exists": true,
+          "prior_specializations": [
+            "content_marketing"
+          ]
+        },
+        {
+          "target": "content_marketing",
+          "version": "1.0",
+          "template": "advertising_copywriter",
+          "active_target_exists": true,
+          "prior_specializations": [
+            "content_marketing"
+          ]
+        },
+        {
+          "target": "performance_marketing",
+          "version": "1.0",
+          "template": "advertising_performance_marketing",
+          "active_target_exists": true,
+          "prior_specializations": [
+            "performance_marketing"
+          ]
+        },
+        {
+          "target": "b2b_marketing",
+          "version": "1.0",
+          "template": "advertising_strategy_director",
+          "active_target_exists": true,
+          "prior_specializations": [
+            "b2b_marketing"
+          ]
+        }
+      ]
+    },
+    "rpc_acl": {
+      "assignment_anon": false,
+      "completion_anon": false,
+      "completion_service": true,
+      "assignment_authenticated": true,
+      "completion_authenticated": false
+    },
+    "catalog_hash_before": "149bcc6e7613aacd8fb814f500be406a1e892bfb03bb873a8014e8e995d1add0",
+    "expected_catalog_hash_after": "da0301488002fbe81e6442f3439fb6e93e2020a7be81c3e3a3f090af2a3165ee",
+    "actual_catalog_hash_after": "da0301488002fbe81e6442f3439fb6e93e2020a7be81c3e3a3f090af2a3165ee",
+    "all_compared_catalog_groups_equal": true,
+    "migration_actor": "postgres",
+    "database_owner": "postgres",
+    "timeout_wrapper_rehearsal": "PASS; original DDL bodies unchanged, local lock_timeout=5s/statement_timeout=60s"
+  },
+  "scheduler": {
+    "before": {
+      "job": {
+        "jobid": 1,
+        "active": true,
+        "schedule": "*/5 * * * *",
+        "command_hash": "b11e7b857256356545c43f9b31b78e03"
+      },
+      "config": {
+        "enabled": true,
+        "cron_job_id": 1,
+        "cadence_minutes": 5,
+        "secret_configured": true,
+        "endpoint_is_production": true
+      },
+      "observed_at": "2026-11-19T09:21:16.768765+00:00",
+      "valid_task_leases": 0,
+      "valid_meeting_leases": 0
+    },
+    "paused": {
+      "paused_at": "2026-11-19T09:23:02.673321+00:00",
+      "cron_active": false,
+      "config_enabled": false,
+      "valid_task_leases": 0,
+      "valid_meeting_leases": 0,
+      "pending_dispatch_http_requests": 0
+    },
+    "drained": {
+      "cron_active": false,
+      "task_leases": 0,
+      "pending_http": 0,
+      "config_enabled": false,
+      "meeting_leases": 0,
+      "paused_seconds": 339.803718
+    },
+    "restored": {
+      "cron": {
+        "active": true,
+        "schedule": "*/5 * * * *",
+        "command_hash": "b11e7b857256356545c43f9b31b78e03"
+      },
+      "job_id": 1,
+      "enabled": true,
+      "restored_at": "2026-11-19T09:38:07.698381+00:00",
+      "cadence_minutes": 5,
+      "secret_configured": true
+    },
+    "credentials_rotated": false,
+    "manual_production_dispatch_triggered": false
+  },
+  "http_smoke": {
+    "observed_at": "2026-11-19T09:37:39.052258+00:00",
+    "production_url": "https://rythm-os.com",
+    "authentication": "anonymous/no customer data",
+    "checks": [
+      {
+        "path": "/",
+        "status": 200,
+        "expected": 200,
+        "pass": true
+      },
+      {
+        "path": "/templates",
+        "status": 200,
+        "expected": 200,
+        "pass": true,
+        "agency_present": true
+      },
+      {
+        "path": "/signup?product=ready_company&template=ready_ai_advertising_agency_v1",
+        "status": 200,
+        "expected": 200,
+        "pass": true,
+        "selection_retained": true
+      },
+      {
+        "path": "/api/health",
+        "status": 200,
+        "expected": 200,
+        "pass": true,
+        "health": {
+          "service": "RYTHM Company OS",
+          "status": "ok",
+          "timestamp": "2026-11-19T09:37:18.182Z",
+          "readiness": {
+            "database": true,
+            "controlledDryRunConfiguration": true,
+            "environmentExecutionSwitch": true,
+            "externalActionsLocked": true
+          },
+          "runtime": {
+            "environment": "production",
+            "supabase": "configured",
+            "openai": "configured",
+            "dryRunModel": "configured",
+            "agentExecution": "enabled",
+            "externalActions": "disabled",
+            "monthlyAiBudgetUsd": 25,
+            "timeoutMs": 90000,
+            "maxRetries": 1,
+            "costRatesConfigured": true
+          }
+        }
+      },
+      {
+        "path": "/api/projects/dispatch",
+        "status": 401,
+        "expected": 401,
+        "pass": true
+      },
+      {
+        "path": "/api/projects/live?projectId=00000000-0000-4000-8000-000000000000",
+        "status": 401,
+        "expected": 401,
+        "pass": true
+      },
+      {
+        "path": "/api/projects/roadmap?projectId=00000000-0000-4000-8000-000000000000",
+        "status": 401,
+        "expected": 401,
+        "pass": true
+      },
+      {
+        "path": "/crm",
+        "status": 307,
+        "expected": 307,
+        "pass": true,
+        "redirect": "/login?next=%2Fcrm"
+      }
+    ],
+    "provider_requests": 0
+  },
+  "main_ci": [
+    {
+      "id": 44497512918,
+      "name": "IndexNow",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "42c7d16ebad3dfefca40c51b73dd90f76383637b"
+    },
+    {
+      "id": 44497512874,
+      "name": "CI",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "42c7d16ebad3dfefca40c51b73dd90f76383637b"
+    },
+    {
+      "id": 44497512903,
+      "name": "Production SEO Crawl",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "42c7d16ebad3dfefca40c51b73dd90f76383637b"
+    }
+  ],
+  "observability": {
+    "deployment_id": "dpl_Bi7VX7umMmy1nWc7nnVwY2k3pBqQ",
+    "window": "15m",
+    "levels": [
+      "error",
+      "fatal"
+    ],
+    "group_by": "level",
+    "returned_groups": 0,
+    "drains": "not inspected or modified",
+    "monitoring": "health/anonymous smoke/runtime aggregate observed; no new monitoring service configured"
+  },
+  "additional_ai_test_provider_calls": 0,
+  "paid_test_flag_enabled": false,
+  "customer_rows_copied_or_synthetic_production_accounts_created": false,
+  "synthetic_journey_acceptance": {
+    "full_agency_path": "PASS in native disposable staging",
+    "persistence_tenant_ownership": "PASS in native disposable staging",
+    "critical_navigation_state_permissions": "PASS within tested native staging journey",
+    "native_run": 44480348458
+  },
+  "rehearsal_creator_correction": {
+    "initial_difference": "Three new functions in the local clone used bootstrap owner web_user and different creator default ACLs",
+    "resolution": "Match observed production actor and database owner postgres in offline replay; corrected forward/smoke/inverse all pass; actual production matches corrected expected catalog",
+    "production_acl_weakened_to_fit_test": false
+  },
+  "rollback": {
+    "previous_application_deployment": "dpl_5u6eirwziYrg3pk5gFbY89M4mH3f",
+    "schema_inverse": "docs/security/w10-release-schema-rollback-20261119.sql",
+    "offline_verified": true,
+    "production_executed": false,
+    "requires_fresh_drift_dependency_checks": true
+  },
+  "limitations": [
+    "No real customer journey mutation or load test in production",
+    "Offline schema rehearsal PostgreSQL 17.5/WASM; production PostgreSQL 17.6",
+    "Full Vercel Flags inventory remains 403; effective environment switches observed",
+    "No new full customer-data backup/DR performed; affected schema/policy/grant/template pre-state captured privately"
+  ],
+  "post_release_actor_corrected_rehearsal": {
+    "source": "live production schema catalog, no customer data",
+    "engine": "PGlite/PostgreSQL",
+    "stages": [
+      {
+        "name": "bootstrap",
+        "status": "PASS"
+      },
+      {
+        "name": "tables-and-sequences",
+        "status": "PASS"
+      },
+      {
+        "name": "functions-and-defaults",
+        "status": "PASS"
+      },
+      {
+        "name": "views-constraints-and-indexes",
+        "status": "PASS"
+      },
+      {
+        "name": "policies-triggers-and-owners",
+        "status": "PASS"
+      },
+      {
+        "name": "actual-grants-and-default-acls",
+        "status": "PASS"
+      },
+      {
+        "name": "catalog-equality-before-migrations",
+        "status": "PASS"
+      },
+      {
+        "name": "synthetic-product-fixtures",
+        "status": "PASS"
+      },
+      {
+        "name": "ten-forward-migrations",
+        "status": "PASS"
+      },
+      {
+        "name": "installed-schema-role-and-lifecycle-smoke",
+        "status": "PASS"
+      },
+      {
+        "name": "inverse-migration-rehearsal",
+        "status": "PASS"
+      }
+    ],
+    "network_calls": 0,
+    "customer_rows_copied": 0,
+    "provider_calls": 0,
+    "engine_version": "PostgreSQL 17.5 on wasm32-unknown-linux-gnu, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
+    "engine_version_num": 170005,
+    "catalog_counts": {
+      "enums": 15,
+      "views": 4,
+      "tables": 251,
+      "indexes": 400,
+      "policies": 360,
+      "triggers": 153,
+      "functions": 296,
+      "sequences": 5,
+      "column_acls": 81,
+      "constraints": 1531,
+      "function_acls": 759,
+      "relation_acls": 6046
+    },
+    "catalog_comparisons": [
+      {
+        "kind": "enums",
+        "equal": true,
+        "expected_count": 15,
+        "actual_count": 15
+      },
+      {
+        "kind": "views",
+        "equal": true,
+        "expected_count": 4,
+        "actual_count": 4
+      },
+      {
+        "kind": "tables",
+        "equal": true,
+        "expected_count": 251,
+        "actual_count": 251
+      },
+      {
+        "kind": "indexes",
+        "equal": true,
+        "expected_count": 400,
+        "actual_count": 400
+      },
+      {
+        "kind": "policies",
+        "equal": true,
+        "expected_count": 360,
+        "actual_count": 360
+      },
+      {
+        "kind": "triggers",
+        "equal": true,
+        "expected_count": 153,
+        "actual_count": 153
+      },
+      {
+        "kind": "functions",
+        "equal": true,
+        "expected_count": 296,
+        "actual_count": 296
+      },
+      {
+        "kind": "sequences",
+        "equal": true,
+        "expected_count": 5,
+        "actual_count": 5
+      },
+      {
+        "kind": "column_acls",
+        "equal": true,
+        "expected_count": 81,
+        "actual_count": 81
+      },
+      {
+        "kind": "constraints",
+        "equal": true,
+        "expected_count": 1531,
+        "actual_count": 1531
+      },
+      {
+        "kind": "function_acls",
+        "equal": true,
+        "expected_count": 759,
+        "actual_count": 759
+      },
+      {
+        "kind": "relation_acls",
+        "equal": true,
+        "expected_count": 6046,
+        "actual_count": 6046
+      }
+    ],
+    "catalog_sha256": "149bcc6e7613aacd8fb814f500be406a1e892bfb03bb873a8014e8e995d1add0",
+    "supporting_acl_comparisons": [
+      {
+        "kind": "schema_acls",
+        "equal": true,
+        "count": 38
+      },
+      {
+        "kind": "default_acls",
+        "equal": true,
+        "count": 168
+      }
+    ],
+    "migration_actor": "postgres",
+    "source_database_owner": "postgres",
+    "migrations": [
+      {
+        "path": "supabase/migrations/20261117125000_assisted_activation_integration_department.sql",
+        "sha256": "0fbe1dfe7bc4a43325c3ec47354b5b49722e5139a7bf0ffcec2fe5438e359a88",
+        "status": "PASS"
+      },
+      {
+        "path": "supabase/migrations/20261117125500_agency_template_marketing_specializations.sql",
+        "sha256": "c700faa05508d29515d64c9e2f0c1c5c56abe000e84c9a1886ad2525954f1d06",
+        "status": "PASS"
+      },
+      {
+        "path": "supabase/migrations/20261117130000_crm_contract_customer_scope.sql",
+        "sha256": "858bd22e5e5a64ffa915ea175aa8ae2fa7c8753bd6e7afc00bda2e13d0688df0",
+        "status": "PASS"
+      },
+      {
+        "path": "supabase/migrations/20261117140000_project_workflow_read_grants.sql",
+        "sha256": "9c9dee33bff737f44809ea9e9f9f7861fc9e900a6a716d6db0acf36851474984",
+        "status": "PASS"
+      },
+      {
+        "path": "supabase/migrations/20261118120000_agency_meeting_synthesizer.sql",
+        "sha256": "3f4d65f966a48386c006365edf5d8734f2bc6f9dc65e150fb8adf562eb7e7305",
+        "status": "PASS"
+      },
+      {
+        "path": "supabase/migrations/20261118123000_project_meeting_completion_handoff.sql",
+        "sha256": "1b1d215a068ec78cd969060720279c874a98511192062d714aec6469c498fde6",
+        "status": "PASS"
+      },
+      {
+        "path": "supabase/migrations/20261118133000_owner_project_specialist_assignment.sql",
+        "sha256": "b8e74f08642b0c8fa71c586fc3e3f428cfc9d3cbd369b1630c0d8c5b595566d7",
+        "status": "PASS"
+      },
+      {
+        "path": "supabase/migrations/20261118144000_internal_review_dispatch_continuation.sql",
+        "sha256": "3558820a4600fa9f1c652af6addfd60d71d0c9b1ea8d9f046c368287bebc99bb",
+        "status": "PASS"
+      },
+      {
+        "path": "supabase/migrations/20261118145000_leased_project_meeting_lifecycle.sql",
+        "sha256": "748a79d71404780e4387e6a804bc409a0054c331f6f58002d440971a8e23d74c",
+        "status": "PASS"
+      },
+      {
+        "path": "supabase/migrations/20261118150000_atomic_project_task_completion.sql",
+        "sha256": "fde8ea1fa97a64f2709b6a687c291734750d980c51f487e2e3ff8b6fc3a74a32",
+        "status": "PASS"
+      }
+    ],
+    "new_rpc_acl": {
+      "owner_assign": true,
+      "anon_assign": false,
+      "worker_complete": true,
+      "user_complete": false
+    },
+    "inverse_catalog_comparisons": [
+      {
+        "kind": "enums",
+        "equal": true
+      },
+      {
+        "kind": "views",
+        "equal": true
+      },
+      {
+        "kind": "tables",
+        "equal": true
+      },
+      {
+        "kind": "indexes",
+        "equal": true
+      },
+      {
+        "kind": "policies",
+        "equal": true
+      },
+      {
+        "kind": "triggers",
+        "equal": true
+      },
+      {
+        "kind": "functions",
+        "equal": true
+      },
+      {
+        "kind": "sequences",
+        "equal": true
+      },
+      {
+        "kind": "column_acls",
+        "equal": true
+      },
+      {
+        "kind": "constraints",
+        "equal": true
+      },
+      {
+        "kind": "function_acls",
+        "equal": true
+      },
+      {
+        "kind": "relation_acls",
+        "equal": true
+      }
+    ],
+    "inverse_supporting_acl_comparisons": [
+      {
+        "kind": "schema_acls",
+        "equal": true,
+        "count": 38
+      },
+      {
+        "kind": "default_acls",
+        "equal": true,
+        "count": 168
+      }
+    ]
+  }
+}
