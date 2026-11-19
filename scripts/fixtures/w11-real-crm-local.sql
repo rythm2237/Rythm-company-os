@@ -22,7 +22,7 @@ begin
  perform set_config('request.jwt.claim.sub',manager::text,true);
  -- Synthetic Auth identity was created above with local admin privileges.
  insert into public.organization_members(organization_id,user_id,role,membership_status)
- values(org,member,'member','active');
+ values(org,member,'viewer','active');
  insert into public.crm_accounts(id,organization_id,name,created_by_user_id) values
  (account,org,'W11 Disposable Account',manager),
  (account2,org,'W11 Disposable Other',manager);
