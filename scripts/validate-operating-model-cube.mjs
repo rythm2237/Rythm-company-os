@@ -25,8 +25,10 @@ try{
     assert.equal(await page.locator('.model-cube-primary').evaluate(el=>getComputedStyle(el).animationName),'none');
     await page.waitForFunction(()=>document.querySelector('.operating-model-explorer')?.dataset.cubeEngine==='webgl');
     const scene=page.locator('.studio-cube-canvas');
-    assert.equal(await scene.getAttribute('data-cubies'),'27');
-    assert.ok(Number(await scene.getAttribute('data-rounded-radius'))>0);
+    assert.equal(await scene.getAttribute('data-cubies'),'1');
+    assert.ok(Number(await scene.getAttribute('data-rounded-radius'))>=.28);
+    assert.equal(await scene.getAttribute('data-surface'),'continuous');
+    assert.equal(await scene.getAttribute('data-rotation-mode'),'full-three-axis');
     await page.waitForFunction(()=>Boolean(document.querySelector('.studio-cube-canvas')?.dataset.pose));
     const staticPose=await scene.getAttribute('data-pose');await page.waitForTimeout(150);assert.equal(await scene.getAttribute('data-pose'),staticPose,'Reduced-motion geometry is static');
     const controls=page.locator('.model-cube-options button');
@@ -56,11 +58,13 @@ try{
  await page.goto(origin+'/solutions');
  await page.waitForFunction(()=>document.querySelector('.operating-model-explorer')?.dataset.cubePlaying==='true');
  await page.waitForFunction(()=>document.querySelector('.operating-model-explorer')?.dataset.cubeEngine==='webgl');
- const cube=page.locator('.studio-cube-canvas');await page.waitForFunction(()=>Boolean(document.querySelector('.studio-cube-canvas')?.dataset.pose));const before=await cube.getAttribute('data-pose');
+ const cube=page.locator('.studio-cube-canvas');await page.waitForFunction(()=>Boolean(document.querySelector('.studio-cube-canvas')?.dataset.pose));const before=await cube.getAttribute('data-pose');const anglesBefore=(await cube.getAttribute('data-angles')).split(',').map(Number);
  await page.waitForTimeout(600);const after=await cube.getAttribute('data-pose');assert.notEqual(after,before,'Cube really rotates');
+ const anglesAfter=(await cube.getAttribute('data-angles')).split(',').map(Number);
+ anglesAfter.forEach((value,axis)=>assert.ok(value>anglesBefore[axis],`Real scene rotates on axis ${axis}`));
  await page.waitForTimeout(4000);
  await page.getByRole('button',{name:'Pause cube rotation'}).click();
- await page.waitForTimeout(100);const frozen=await cube.getAttribute('data-pose');await page.waitForTimeout(300);assert.equal(await cube.getAttribute('data-pose'),frozen,'Pause freezes geometry and row motion');
+ await page.waitForTimeout(100);const frozen=await cube.getAttribute('data-pose');await page.waitForTimeout(300);assert.equal(await cube.getAttribute('data-pose'),frozen,'Pause freezes the complete solid body');
  await page.locator('.model-cube-options button').nth(1).click();await page.waitForFunction(()=>document.querySelector('.studio-cube-canvas')?.dataset.selected==='1'&&document.querySelector('.studio-cube-canvas')?.dataset.transitioning==='false');
  await page.locator('.model-cube-options button').nth(2).click();await page.waitForFunction(()=>document.querySelector('.studio-cube-canvas')?.dataset.selected==='2'&&document.querySelector('.studio-cube-canvas')?.dataset.transitioning==='false');
  const resumeFrom=(await cube.getAttribute('data-pose')).split(',').map(Number);
@@ -68,10 +72,10 @@ try{
  const resumed=(await cube.getAttribute('data-pose')).split(',').map(Number);// q and -q encode the same orientation; compare angular distance, not signed components.
  const dot=Math.abs(resumed.slice(0,4).reduce((sum,value,i)=>sum+value*resumeFrom[i],0));
  const angularGap=2*Math.acos(Math.min(1,dot));
- assert.ok(angularGap<.15&&Math.abs(resumed[4]-resumeFrom[4])<.15,`Resume remains continuous: ${angularGap} radians`);
+ assert.ok(angularGap<.15,`Resume remains continuous: ${angularGap} radians`);
  assert.equal(await page.locator('.operating-model-explorer').getAttribute('data-cube-playing'),'true');
  await page.waitForTimeout(3000);await page.screenshot({path:`${output}/motion-desktop.png`});
- evidence.push({engine:'WebGL',cubies:27,motion:'PASS',pause:'PASS',resume:'PASS'});const video=page.video();await c.close();await video.saveAs(`${output}/cube-motion.webm`);
+ evidence.push({engine:'WebGL',cubies:1,surface:'continuous',threeAxisMotion:'PASS',motion:'PASS',pause:'PASS',resume:'PASS'});const video=page.video();await c.close();await video.saveAs(`${output}/cube-motion.webm`);
  const fallback=await context({viewport:{width:1366,height:768},reducedMotion:'reduce'});
  await fallback.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){if(type==='webgl'||type==='webgl2'||type==='experimental-webgl')return null;return get.call(this,type,...args);};});
  const fallbackPage=await fallback.newPage();await fallbackPage.goto(origin+'/solutions');
