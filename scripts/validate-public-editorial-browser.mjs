@@ -8,6 +8,17 @@ const output=process.env.UI_EVIDENCE_DIR||'artifacts/public-editorial';
 await mkdir(output,{recursive:true});
 const browser=await chromium.launch({channel:process.env.CRM_BROWSER_CHANNEL||'chrome'});
 const evidence=[];
+async function assertUnbrokenWords(locator){
+ const broken=await locator.evaluate(el=>{
+  const result=[],walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
+  while(walker.nextNode())for(const match of walker.currentNode.textContent.matchAll(/[A-Za-z]{6,}/g)){
+   const range=document.createRange();range.setStart(walker.currentNode,match.index);range.setEnd(walker.currentNode,match.index+match[0].length);
+   if(range.getClientRects().length>1)result.push(match[0]);
+  }
+  return result;
+ });
+ assert.deepEqual(broken,[],'Heading words must not fragment across lines');
+}
 try{
  for(const [name,width,height]of [['desktop',1920,1080],['laptop',1366,768],['tablet',768,1024],['mobile',390,844],['small-mobile',320,780]]){
   const context=await browser.newContext({viewport:{width,height},reducedMotion:'reduce'});
@@ -22,6 +33,8 @@ try{
    for(const [path,variant]of [['/solutions','team'],['/templates','workbench'],['/security','governance'],['/about','team'],['/ai-agents-for-business','team']]){
     await page.goto(origin+path);await page.locator('.public-hero-artwork').waitFor();
     await page.locator('.public-hero-artwork').evaluate(img=>img.decode());
+    await assertUnbrokenWords(page.locator('.public-page-hero h1'));
+    if(path==='/solutions')await page.screenshot({path:`${output}/${name}-solutions-viewport.png`,animations:'disabled'});
     const metrics=await page.locator('.public-page-hero').evaluate(hero=>{
      const art=hero.querySelector('img'),title=hero.querySelector('h1'),copy=hero.querySelector('.public-hero-aside-copy');
      const r=el=>{const x=el.getBoundingClientRect();return{x:x.x,y:x.y,width:x.width,height:x.height,right:x.right,bottom:x.bottom};};
@@ -36,6 +49,7 @@ try{
    }
    await page.goto(origin+'/demo?surface=agents');
    await page.locator('.demo-agent-grid button').first().waitFor();
+   await assertUnbrokenWords(page.locator('.demo-main-heading h2'));
    const cards=page.locator('.demo-agent-grid button');
    assert.equal(await cards.count(),6,'All six synthetic Agent profiles must be present');
    await page.screenshot({path:`${output}/${name}-demo-standard.png`,fullPage:true,animations:'disabled'});
