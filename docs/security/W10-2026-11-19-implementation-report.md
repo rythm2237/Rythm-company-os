@@ -1,7 +1,7 @@
 # W10 — Agency journey implementation and evidence
 Updated 2026-11-19. **All three acceptance criteria PASS for the tested disposable staging scenario. Owner accepted the W10 staging evidence in conversation on November 19. Production migration, merge and deployment remain unauthorized.**
 
-See the [final release review](W10-2026-11-19-release-review.md): source and targeted live catalog preflight PASS; direct production release remains held pending exact hosted-schema rehearsal.
+See the [final release review](W10-2026-11-19-release-review.md): source, targeted live catalog preflight and live-catalog forward/inverse rehearsal PASS; controlled production rollout awaits separate explicit owner approval.
 
 Branch: `pilot/w10-agency-e2e`. Draft PR [457](https://github.com/rythm2237/Rythm-company-os/pull/457).
 Tested application source: `360323df0c1815e2fdbe41f28a8c1c0c0478d850`.

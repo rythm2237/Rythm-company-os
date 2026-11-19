@@ -1,7 +1,8 @@
--- PROPOSAL ONLY. Never executed by W10 review.
+-- REHEARSED OFFLINE against the live-catalog application-schema clone. Never executed on production.
 -- Captured production baseline: main 55a1377e348c2d9ac0082c8b1f3acbba26acbc45, 2026-11-19.
 -- Requires separate owner approval, fresh catalog comparison, quiescent workers,
 -- prior application restored, and dependency inspection. Do not use CASCADE.
+-- Proof: docs/security/W10-2026-11-19-hosted-schema-rehearsal.md (2026-11-19).
 -- Preserve all customer/workflow records and existing migration history.
 begin;
 set local lock_timeout='5s';

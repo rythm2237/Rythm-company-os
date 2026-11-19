@@ -1,78 +1,52 @@
 # W10 final release review — 2026-11-19
 
 ## Decision
-**Application and targeted production catalog: PASS. Direct production release: HOLD.**
+**Technical W10 gates: PASS. Ready for a separately owner-approved, controlled production rollout.**
 
-The owner explicitly accepted W10 evidence and requested the final release review in this conversation. This accepts the tested staging journey; it does not authorize merge, production DDL, production migration or deployment. PR #457 remains draft and unmerged.
+The owner accepted W10 staging evidence and authorized completion of the remaining rehearsal. The missing-schema-export HOLD is now resolved by the [live-catalog forward/inverse rehearsal](W10-2026-11-19-hosted-schema-rehearsal.md). Merge, production migration and deployment remain unapproved; PR #457 stays draft and unmerged.
 
-The remaining technical release gate is a rehearsal of the ten exact W10 migration payloads against a disposable copy of the **current hosted schema**. The successful W10 E2E used a documented scoped reconstruction. A read-only catalog check reduces compatibility uncertainty; it cannot prove the outcome of executing DDL/triggers on an exact hosted baseline. Do not claim full historical schema parity from the results below.
-
-## Current baseline
-- Branch reviewed: `ef2c31145c750c7cdba981c20d47eae0cf5fc12e`; unchanged application code after fully tested `360323df0c1815e2fdbe41f28a8c1c0c0478d850`.
-- Main and live deployment remain `55a1377e348c2d9ac0082c8b1f3acbba26acbc45`, deployment `dpl_5u6eirwziYrg3pk5gFbY89M4mH3f` READY. Main is an ancestor of the branch; PR mergeable.
-- Production PostgreSQL 17.6; **210** migration ledger entries, latest `20261107200646_w05_block_cached_private_downloads_production_20261107`. W10's ten migrations are not applied.
-- W03 tenant composite constraints are present and validated; W08 is the main baseline.
-- Latest source checks: CI [44482571640](https://github.com/rythm2237/Rythm-company-os/actions/runs/44482571640), public entry [44482571594](https://github.com/rythm2237/Rythm-company-os/actions/runs/44482571594), disposable staging [44482571520](https://github.com/rythm2237/Rythm-company-os/actions/runs/44482571520), provider availability [44482571492](https://github.com/rythm2237/Rythm-company-os/actions/runs/44482571492): all SUCCESS. Last disposable run deliberately has paid AI disabled; the actual model-backed full proof remains [44480348458](https://github.com/rythm2237/Rythm-company-os/actions/runs/44480348458).
-- Production health observed at `2026-11-19T08:13:37.221Z`: ok, provider/model configured, agent execution enabled, external actions disabled/locked. The scheduler is enabled, points to the production domain, has a configured secret hash, and its active cron runs every five minutes. No dispatch or provider request was triggered.
-- Vercel Flags inventory still returns 403; no installed Vercel Flags SDK/import was found in application/package sources. Relevant execution switches are environment-backed and observable in health. Full flag inventory remains unverified; no CLI fallback is installed. Do not infer an empty flag inventory.
-- No customer rows, scheduler credentials, keys or secret values were read into evidence.
-
-## Read-only catalog preflight: PASS
-Executed [scripts/w10-release-catalog-preflight.sql](../../scripts/w10-release-catalog-preflight.sql) through the Supabase connector, production project `dezbacyuvsdrlpmmpjht`.
-
-| Check | Result |
+| Release check | Result |
 | --- | --- |
-| 109 required columns across 14 relations | No missing column |
-| 11 existing callable/trigger interfaces needed by the migrations | No missing function |
-| 12 workflow relations and two contract policies | Present |
-| All checked physical workflow tables retain RLS | PASS |
-| Operating timeline security_invoker | true |
-| Named W03 task/agent composite FK | Present and validated |
-| Five Agency template rows/version 1.0 | Present with empty prior specialization arrays |
-| Five active target specialization mappings | Present |
-| Seven overwritten routine signatures/return types | Compatible with proposed replacements |
-| Owner assignment/capacity unique keys | Existing composite primary keys |
-| Entitlement, meeting, session, action lifecycle triggers | Enabled and bound |
-| Owner assignment RLS | Existing Owner-write policies retained |
+| Actual full Agency journey, desktop and Pixel 7 | PASS — native Supabase/Playwright run [44480348458](https://github.com/rythm2237/Rythm-company-os/actions/runs/44480348458); actual final quantitative documents, refresh/re-login, tenant and Human CEO boundaries |
+| Source build/typecheck/lint/security/browser regressions | PASS — [CI 44486944611](https://github.com/rythm2237/Rythm-company-os/actions/runs/44486944611) at reviewed head `ed0bc4a`; public entry and disposable schema checks also SUCCESS |
+| Live production catalog preflight | PASS — 109 columns, 11 existing interfaces, 12 workflow relations, RLS/invoker/FK checks and five active template bindings |
+| Captured application catalog equality before migration | PASS — 251 tables, 296 functions, 1531 constraints, 360 policies, 153 triggers, indexes/types/views and captured ACLs |
+| Ten checksum-pinned forward migrations on that clone | PASS — all exact payloads applied; five specialization changes and new RPC ACLs asserted |
+| Installed actual-schema Owner/viewer/foreign/service smoke | PASS — tenant visibility, assignment denials, leased meeting lifecycle, persisted atomic completion and immutability |
+| Inverse schema and affected template configuration | PASS — captured catalog and ACL equality restored; synthetic users/tenants rolled back |
+| Live source drift during rehearsal | No drift — full captured source and supporting catalogs re-read unchanged |
+| Production change / publication | NOT EXECUTED; separate owner approval required |
 
-Captured current catalog has service-role EXECUTE on `is_org_owner`; the isolated ACL regression deliberately denies it to exercise the stricter failure case. This confirms a real baseline difference; do not describe isolated ACLs as byte-for-byte production parity.
+## Current baseline and boundaries
+Main/live remain `55a1377e348c2d9ac0082c8b1f3acbba26acbc45`, READY deployment `dpl_5u6eirwziYrg3pk5gFbY89M4mH3f`. Production ledger has 210 entries, latest `20261107200646_w05_block_cached_private_downloads_production_20261107`; W10 payloads are not applied. W03 tenant constraints are validated; W08 is the current main baseline. The tested application source remains `360323df0c1815e2fdbe41f28a8c1c0c0478d850`; subsequent changes are evidence/harness and EOF whitespace only.
 
-Detailed metadata and results: [release preflight evidence](evidence/w10-2026-11-19-release-preflight.json). It contains schema/catalog information, not production customer rows.
+Production health is ok: execution enabled, provider/model configured, external actions disabled/locked. Existing database cron is enabled every five minutes. It was not invoked or changed. AI roadmap capacity was not paused during this phase; its earlier restored state was preserved. No new AI or paid-branch cost occurred.
 
-No exact hosted schema export is present in the repository/workspace. The runtime has no injected PostgreSQL connection, management token, pg_dump or Supabase CLI. The connected SQL catalog endpoint provides read-only checks but is not a PostgreSQL dump/restore connection. A server-side authorized schema-export connection or an existing sanitized schema-only baseline is needed for the remaining rehearsal; never paste connection strings or passwords into chat.
+Vercel Flags inventory returned 403. The app has no installed Vercel Flags SDK/import, and relevant execution switches are environment-backed and observed in health. Full control-plane inventory remains unverified; this is not misrepresented as an empty flag inventory.
 
-## Safe prepared release sequence — not executed
-1. Recheck branch/main/deployment/ledger and run the read-only preflight again. Refuse stale or changed routine signatures, RLS, policies, template versions or FK names.
-2. Obtain a current schema-only export through an authorized server-side database connection and replay the exact W10 migration payloads on a disposable isolated clone. Preserve the hosted baseline; do not rewrite production migration history or run broad `db push --include-all` against the divergent ledger. Repeat the installed-schema authorization tests. Run a synthetic Owner/viewer/foreign-tenant smoke on that clone. Provider use must remain within the existing authorized cumulative budget or stay mocked.
-3. Review the resulting clone proof, current recoverable backup and the exact ordered [migration checksum manifest](evidence/w10-2026-11-19-migration-manifest.json). **Stop if any rehearsal or restore prerequisite fails.**
-4. Obtain separate explicit owner authorization for production migration, merge and deployment. This conversation has not granted it.
-5. Under that approval, quiesce scheduled workers and wait for active leases before applying the ten reviewed payloads in manifest order, with bounded locks and managed migration ledger records. Do not create customer success records or auto-approve Human CEO gates.
-6. Deploy the reviewed application commit after schema changes; verify deployment SHA, health, new RPC ACLs, RLS and a non-billable smoke. Never trigger broad production dispatch as a smoke test.
-7. Restore the previously captured scheduler/runtime state only after checks pass. Preserve external-actions lock and original Human CEO gates.
+The rehearsal is an exact equality check of the enumerated application catalog, not a physical copy of all managed Supabase services. It uses PostgreSQL 17.5/WASM against a 17.6 source; managed network/cron/vault/realtime services, transport login, existing customer data and sequence current values are not replayed. Native Auth/API/mobile evidence comes from the separate real Supabase journey. See the rehearsal report for complete limits. No new performance/load claim or fresh full customer-data backup/DR claim is made.
 
-The ten files are the only W10 database deltas. A single direct merge triggers Vercel application deployment but does not install them. **Do not merge first and expect the application to work against the old schema.**
+## Concrete release sequence — requires explicit owner approval
+1. Recheck main, feature head, deployment, migration ledger, read-only preflight and source drift. Stop on any unexpected delta. Capture the affected routine/policy/grant/template state again, confirm the applicable backup/recovery prerequisites and keep credentials server-side.
+2. Quiesce the existing scheduler through its governed administrative path, wait for active worker leases, and preserve its prior settings. Do not trigger broad dispatch or inspect real customer content as a smoke.
+3. Apply only the ten exact payloads in the [ordered checksum manifest](evidence/w10-2026-11-19-migration-manifest.json), using managed migration records and bounded locks. Do not rewrite historical migration history or run broad `db push --include-all`. Stop and recover from any intermediate failure.
+4. After successful schema verification, merge the exact reviewed PR head and deploy the application. A merge alone can trigger Vercel but does not install Supabase migrations; schema must precede the app.
+5. Verify deployment SHA/health, new RPC ACLs, RLS and a non-billable smoke. Preserve external-action locks and all Human CEO gates.
+6. Restore the captured prior scheduler/runtime state after checks pass, then record production evidence. Never claim deployment from a branch test.
 
-## Rollback preparation
-[Captured inverse schema proposal](w10-release-schema-rollback-20261119.sql) restores the seven actual prior routine bodies, prior contract policy expressions, prior direct authenticated grants and prior Agency template specialization arrays, then removes the three new RPC/helper functions without CASCADE. It is a review artifact, **not executed or validated against an exact hosted clone**. It preserves workflow/customer rows and migration history; it is not a substitute for a recoverable backup.
+## Rollback
+The [captured inverse SQL](w10-release-schema-rollback-20261119.sql) has now been executed on the catalog-equivalent offline clone and restored every compared source definition/grant and the five template arrays. No customer/workflow table is dropped. The three new functions are removed without CASCADE; migration history is preserved.
 
-Before any use: recheck catalog drift, dependency changes and templates; quiesce workers, restore previous app, rehearse inverse SQL on the clone and obtain explicit approval. If a forward migration transaction fails, roll that transaction back. Do not blindly delete workflow records or rewind migration history.
+For an approved production rollback: quiesce workers; restore the previous application deployment; recheck catalog drift/dependencies; apply the reviewed inverse through managed recovery only if still compatible. Stop if new dependent objects or changed template values make the captured inverse stale. Before any release, closing the unmerged PR is sufficient; production has no W10 changes to undo.
 
-## Commands and limits of this review
-- `git ls-remote origin refs/heads/main refs/heads/pilot/w10-agency-e2e`: exact heads above.
-- `git fetch origin main pilot/w10-agency-e2e`; isolated detached review worktree created; existing worktrees preserved.
-- `git merge-base --is-ancestor origin/main HEAD`: PASS.
-- `git diff --name-only 360323df0c1815e2fdbe41f28a8c1c0c0478d850 HEAD`: only CI/public-browser harness and evidence/docs changes.
-- `git diff --check origin/main HEAD` found one extra EOF blank line in the leased-meeting migration. Removed that blank line only; SQL semantics unchanged.
-- `node --import tsx scripts/validate-w10-meeting-lifecycle.ts`: PASS after whitespace cleanup, actual PostgreSQL role/lease/minutes/immutability negative cases.
-- `curl -fsS --max-time 20 https://rythm-os.com/api/health`: PASS, sanitized health only.
-- Catalog metadata queries are SELECT-only. One scheduler metadata probe used an incorrect column name and failed; corrected to the actual `dispatcher_base_url`, then passed. No write occurred.
-- No new provider calls, cost, production DDL, customer mutation, runtime flag change, merge or deployment.
+## Evidence and sign-off
+- [Original implementation and journey report](W10-2026-11-19-implementation-report.md).
+- [Initial read-only preflight](evidence/w10-2026-11-19-release-preflight.json) records the earlier pre-rehearsal HOLD; the latest verdict is this report.
+- [Rehearsal evidence](evidence/w10-2026-11-19-hosted-schema-rehearsal.json) and extraction/replay scripts preserve reproducible commands and catalog fingerprint without committing private definition payloads.
+- [x] Owner accepted W10 staging evidence.
+- [x] Final code/test and targeted live catalog review.
+- [x] Captured live application-schema forward/inverse rehearsal and synthetic real-role smoke.
+- [ ] Explicit owner approval for the ten production migration payloads, PR #457 merge and production deployment.
+- [ ] Just-in-time operator baseline/recovery/quiescence checks and actual post-release verification, only after that approval.
 
-## Sign-off status
-- [x] Owner accepted the W10 staging evidence (conversation 2026-11-19).
-- [x] Final source checks and targeted live catalog preflight reviewed.
-- [ ] Exact hosted schema clone forward/inverse rehearsal and synthetic role smoke.
-- [ ] Current recovery prerequisites and hosted runtime release review.
-- [ ] Separate explicit production migration/merge/deployment approval.
-
-W10 journey acceptance remains PASS in its documented test scope. The release HOLD is an operational deployment gate, not a claim that the tested journey failed.
+All three original W10 acceptance criteria remain PASS within the evidenced synthetic journey. Technical review completion is not owner approval or an automatic production release.
