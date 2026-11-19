@@ -1,0 +1,495 @@
+{
+  "recorded_at": "2026-11-19",
+  "timezone": "Europe/Budapest",
+  "tested_application_commit": "360323df0c1815e2fdbe41f28a8c1c0c0478d850",
+  "baseline": {
+    "main": "55a1377e348c2d9ac0082c8b1f3acbba26acbc45",
+    "production_deployment": "dpl_5u6eirwziYrg3pk5gFbY89M4mH3f",
+    "last_observed_migration": "20261107200646",
+    "production_unchanged": true
+  },
+  "native_e2e": {
+    "run": 44480348458,
+    "job": 135410784267,
+    "status": "success",
+    "profiles": [
+      {
+        "profile": "desktop",
+        "stage": "full_delivery_verified",
+        "organization_id": "250c64b6-43fa-47bc-8a37-000c7736ee10",
+        "project_id": "a5870368-f9ef-4f31-a32b-2df0ee9c192a"
+      },
+      {
+        "profile": "mobile",
+        "stage": "full_delivery_verified",
+        "organization_id": "a44c8565-db75-4fa0-94c9-b430b94f54b9",
+        "project_id": "a062a426-3e71-491c-ad8d-c2acc3032fff"
+      }
+    ],
+    "fixture_services_destroyed_after_reload_and_relogin": true
+  },
+  "artifact": {
+    "id": 14508357674,
+    "sha256": "f48f7c54e305d5785e2282e1179c0482951fb7aa6f34ad01d70ae0e60724f010",
+    "expires_at": "2027-02-17",
+    "url": "https://github.com/rythm2237/Rythm-company-os/actions/runs/44480348458/artifacts/14508357674"
+  },
+  "budget": {
+    "ceiling": 0.4,
+    "reserved": 0.34319239999999995,
+    "actual": 0.05084519999999999,
+    "calls": 22,
+    "outcomes": [
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      },
+      {
+        "status": 200,
+        "code": null,
+        "type": null,
+        "parameter": null
+      }
+    ],
+    "model": "gpt-4.1-mini",
+    "cumulative_recorded_estimate_usd": 0.247436,
+    "authorized_cumulative_ceiling_usd": 1,
+    "measurement": "token estimate, not invoice",
+    "paid_ci_disabled_by_commit": "b61dbae52810d7eebd3679167509220eacb56441"
+  },
+  "ci": {
+    "run": 44480348456,
+    "jobs": [
+      {
+        "name": "crm-browser",
+        "conclusion": "success",
+        "commands": [
+          {
+            "command": "actions/checkout@v4",
+            "conclusion": "success"
+          },
+          {
+            "command": "actions/setup-node@v4",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm ci",
+            "conclusion": "success"
+          },
+          {
+            "command": "google-chrome --version",
+            "conclusion": "success"
+          },
+          {
+            "command": "node --import tsx scripts/validate-w08-auth-browser.ts",
+            "conclusion": "success"
+          },
+          {
+            "command": "node --import tsx scripts/validate-logout-browser.ts",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:crm-sales-browser",
+            "conclusion": "success"
+          },
+          {
+            "command": "node scripts/validate-crm-experience-browser.mjs",
+            "conclusion": "success"
+          },
+          {
+            "command": "actions/upload-artifact@v4",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "build",
+        "conclusion": "success",
+        "commands": [
+          {
+            "command": "actions/checkout@v4",
+            "conclusion": "success"
+          },
+          {
+            "command": "actions/setup-node@v4",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm ci",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:w05",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:w06",
+            "conclusion": "success"
+          },
+          {
+            "command": "actions/upload-artifact@v4",
+            "conclusion": "success"
+          },
+          {
+            "command": "node scripts/w05-inventory-private-storage.mjs",
+            "conclusion": "success"
+          },
+          {
+            "command": "node --import tsx scripts/validate-w08-auth-redirect.ts",
+            "conclusion": "success"
+          },
+          {
+            "command": "node --import tsx scripts/validate-w08-session-restore.ts",
+            "conclusion": "success"
+          },
+          {
+            "command": "node --import tsx scripts/validate-logout.ts",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:company-logo",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:enterprise-crm",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:crm-sales",
+            "conclusion": "success"
+          },
+          {
+            "command": "node --import tsx scripts/validate-w03-document-boundary.ts",
+            "conclusion": "success"
+          },
+          {
+            "command": "node --import tsx scripts/validate-w03-workspace-memory.ts",
+            "conclusion": "success"
+          },
+          {
+            "command": "node scripts/validate-w03-worker.mjs",
+            "conclusion": "success"
+          },
+          {
+            "command": "node scripts/validate-w03-execution-references.mjs",
+            "conclusion": "success"
+          },
+          {
+            "command": "node scripts/validate-w03-benchmark-boundary.mjs",
+            "conclusion": "success"
+          },
+          {
+            "command": "node scripts/validate-w03-oauth-boundary.mjs",
+            "conclusion": "success"
+          },
+          {
+            "command": "node scripts/validate-w03-egress-guard.mjs",
+            "conclusion": "success"
+          },
+          {
+            "command": "node scripts/validate-w03-project-relationships.mjs",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:crm-connected",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:customers",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:company-chart",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:integration-availability",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:commercial-funnel",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:commercial-payment",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:boardroom",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:interactions",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run typecheck",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run lint",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:i18n",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase0",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase1a",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase1b",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase1c",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase1d",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase2",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase2:direct-guard",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase2:rls",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase3",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase4",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase4:adapters",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase5:knowledge",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase5:professional-assessment",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase5:gtm-benchmark",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:phase5:agency-specialist",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:ai-workspace",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:seo-answer-benchmark",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:seo-authority",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:seo-community",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:routing",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run test:software-company",
+            "conclusion": "success"
+          },
+          {
+            "command": "npm run build",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ]
+  },
+  "effective_production_health": {
+    "status": "ok",
+    "timestamp": "2026-11-19T07:23:23.092Z",
+    "readiness": {
+      "database": true,
+      "controlledDryRunConfiguration": true,
+      "environmentExecutionSwitch": true,
+      "externalActionsLocked": true
+    },
+    "runtime": {
+      "environment": "production",
+      "supabase": "configured",
+      "openai": "configured",
+      "dryRunModel": "configured",
+      "agentExecution": "enabled",
+      "externalActions": "disabled",
+      "monthlyAiBudgetUsd": 25,
+      "timeoutMs": 90000,
+      "maxRetries": 1,
+      "costRatesConfigured": true
+    }
+  },
+  "limitations": [
+    "Scoped disposable schema reconstruction, not exact hosted snapshot",
+    "Hosted staging inactive; complete Vercel flag inventory returned 403",
+    "Pixel 7 emulation, not physical device",
+    "Internal synthetic document, not real marketing outcome",
+    "Human release sign-off not given; no merge or production release"
+  ],
+  "public_entry": {
+    "run": 44482022807,
+    "job": 135416293932,
+    "conclusion": "success",
+    "commit": "b61dbae52810d7eebd3679167509220eacb56441",
+    "assertions": [
+      "2026-11-19T07:48:16.4500606Z PASS W10 public agency entry (desktop): template selection survives reload",
+      "2026-11-19T07:48:24.2985023Z PASS W10 public agency entry (mobile): template selection survives reload"
+    ]
+  },
+  "followup_ci": {
+    "run": 44482022865,
+    "conclusion": "success",
+    "application_unchanged": true
+  }
+}
