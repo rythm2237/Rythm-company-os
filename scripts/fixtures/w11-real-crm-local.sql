@@ -2,6 +2,9 @@
 -- Run ONLY against a locally created synthetic Supabase instance. All writes roll back.
 \set ON_ERROR_STOP on
 begin;
+-- Auth identities are created by the local disposable postgres administrator, not by service_role.
+insert into auth.users(id,email,aud,role)
+values('00000000-0000-4000-8000-000000009101','w11-member@example.test','authenticated','authenticated');
 set local role service_role;
 set local request.jwt.claim.role = 'service_role';
 
@@ -17,7 +20,7 @@ begin
  where m.role='owner' and m.membership_status='active' order by m.created_at limit 1;
  if org is null or manager is null then raise exception 'W11: synthetic Owner fixture missing';end if;
  perform set_config('request.jwt.claim.sub',manager::text,true);
- insert into auth.users(id,email,aud,role) values(member,'w11-member@example.test','authenticated','authenticated');
+ -- Synthetic Auth identity was created above with local admin privileges.
  insert into public.organization_members(organization_id,user_id,role,membership_status)
  values(org,member,'member','active');
  insert into public.crm_accounts(id,organization_id,name,created_by_user_id) values
