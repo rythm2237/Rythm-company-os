@@ -22,7 +22,7 @@
 .marketing-site .demo-agent-grid .demo-agent-identity { min-width: 0; }
 .marketing-site .demo-agent-grid .demo-agent-identity strong { font-size: 1rem; line-height: 1.35; word-break: normal; }
 .marketing-site .demo-agent-grid .demo-agent-identity small { font-size: .875rem; line-height: 1.45; white-space: normal; overflow-wrap: break-word; }
-.marketing-site .demo-agent-grid .demo-agent-activity { grid-column: 2 / -1; margin: 0; font-size: .875rem; line-height: 1.55; overflow-wrap: break-word; }
+.marketing-site .demo-agent-grid .demo-agent-activity { grid-column: 2 / -1; margin: 0; font-size: .875rem; line-height: 1.55; color: #59677d; overflow-wrap: break-word; }
 .marketing-site .demo-agent-grid .demo-status { font-size: .8125rem; white-space: nowrap; }
 
 @media (max-width: 1150px) {
@@ -34,9 +34,24 @@
 }
 @media (max-width: 760px) {
   .marketing-site .public-page-hero.with-editorial-art { gap: 24px; }
-  .marketing-site .public-page-hero.with-editorial-art h1 { font-size: clamp(2.6rem, 10vw, 3.7rem); }
+  .marketing-site .public-page-hero.with-editorial-art h1 { font-size: clamp(2rem, 10.5vw, 3.7rem); }
   .public-hero-aside { gap: 18px; }
   .public-hero-artwork { max-height: 240px; }
   .marketing-site .demo-agent-grid .ui-button-content { grid-template-columns: 40px minmax(0, 1fr); }
   .marketing-site .demo-agent-grid .demo-status { grid-column: 2; justify-self: start; white-space: normal; }
+}
+
+/* Hidden public navigation must not leave its mobile header space in the Demo. */
+.marketing-site .is-experience-mode .marketing-stage { padding-top: 0; }
+
+/* On touch layouts the guide has its own row, clear of the page heading. */
+@media (max-width: 1100px) {
+  .marketing-site .marketing-stage > .marketing-guide-floating {
+    position: relative;
+    inset: auto;
+    width: max-content;
+    max-width: calc(100% - 40px);
+    margin: 12px 20px 0 auto;
+  }
+  .marketing-site .public-page-hero.with-editorial-art { padding-top: 28px; }
 }

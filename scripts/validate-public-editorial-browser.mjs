@@ -27,6 +27,8 @@ try{
      const r=el=>{const x=el.getBoundingClientRect();return{x:x.x,y:x.y,width:x.width,height:x.height,right:x.right,bottom:x.bottom};};
      return {art:r(art),title:r(title),copy:r(copy),source:art.getAttribute('src'),decorative:art.alt==='',overflow:document.documentElement.scrollWidth>innerWidth+1};
     });
+    const guide=await page.locator('.marketing-guide-floating').boundingBox();
+    if(guide)assert.ok(guide.y+guide.height<=metrics.title.y||guide.x>=metrics.title.right||guide.x+guide.width<=metrics.title.x,'Guide launcher must not cover the heading');
     assert.ok(metrics.source.includes(variant));assert.ok(metrics.decorative);assert.ok(metrics.art.width>150&&metrics.art.height>100);assert.ok(!metrics.overflow,`${name} ${path} horizontal overflow`);
     assert.ok(metrics.art.bottom<=metrics.copy.y+1,'Artwork cannot obscure product/policy copy');
     await page.locator('.public-page-hero').screenshot({path:`${output}/${name}-${path.split('/').pop()}.png`,animations:'disabled'});
@@ -41,12 +43,16 @@ try{
    await page.locator('.marketing-shell.is-experience-mode').waitFor();
    await page.waitForFunction(()=>Math.abs(document.querySelector('.marketing-stage').getBoundingClientRect().x)<1);
    assert.equal(await cards.count(),6);
+   const workspace=await page.locator('.demo-workspace').boundingBox();
+   assert.ok(Math.abs(workspace.y)<1,'Immersive Demo must not reserve space for the hidden public header');
    const sizes=await cards.evaluateAll(buttons=>buttons.map(b=>{
     const name=b.querySelector('.demo-agent-identity'),content=b.querySelector('.ui-button-content');const r=b.getBoundingClientRect(),n=name.getBoundingClientRect(),c=content.getBoundingClientRect();
     return {width:r.width,height:r.height,identityWidth:n.width,contentWidth:c.width,scrollWidth:b.scrollWidth,clientWidth:b.clientWidth};
    }));
    for(const s of sizes){assert.ok(s.identityWidth>=80,`${name}: collapsed Agent identity ${s.identityWidth}`);assert.ok(s.height<240,`${name}: excessively tall Agent card ${s.height}`);assert.ok(s.scrollWidth<=s.clientWidth+1,`${name}: Agent content overflow`);}
    await page.screenshot({path:`${output}/${name}-demo-agents.png`,fullPage:true,animations:'disabled'});
+   await cards.first().scrollIntoViewIfNeeded();
+   await page.locator('.demo-agent-grid').screenshot({path:`${output}/${name}-demo-card-grid.png`,animations:'disabled'});
    await cards.first().click();await page.locator('.demo-agent-panel').waitFor();
    assert.ok(await page.locator('.demo-agent-panel h3').innerText());
    await page.getByRole('button',{name:'Close Agent profile',exact:true}).click();
