@@ -92,16 +92,20 @@ AS $$begin
  if new.project_id is not null and not exists(select 1 from public.projects where id=new.project_id and organization_id=new.organization_id and customer_id is not distinct from new.customer_id) then raise exception 'Project customer mismatch';end if;
  if new.contract_id is not null and not exists(select 1 from public.project_contracts where id=new.contract_id and organization_id=new.organization_id and customer_id is not distinct from new.customer_id) then raise exception 'Contract customer mismatch';end if;
  if new.project_id is not null and new.contract_id is not null and not exists(select 1 from public.project_contract_links where organization_id=new.organization_id and project_id=new.project_id and contract_id=new.contract_id) then raise exception 'The selected contract is not linked to this project';end if;
- if tg_table_name='finance_transactions' and new.invoice_id is not null and not exists(
-   select 1 from public.finance_invoices i where i.organization_id=new.organization_id and i.id=new.invoice_id
-   and i.customer_id is not distinct from new.customer_id and i.project_id is not distinct from new.project_id
-   and i.contract_id is not distinct from new.contract_id
- ) then raise exception 'Transaction invoice attribution mismatch';end if;
- if tg_table_name='finance_invoices' and tg_op='UPDATE'
-   and (new.customer_id,new.project_id,new.contract_id) is distinct from (old.customer_id,old.project_id,old.contract_id)
-   and exists(select 1 from public.finance_transactions t where t.organization_id=new.organization_id and t.invoice_id=new.id
-    and (t.customer_id,t.project_id,t.contract_id) is distinct from (new.customer_id,new.project_id,new.contract_id))
- then raise exception 'Invoice attribution conflicts with posted transactions';end if;
+ if tg_table_name='finance_transactions' then
+  if new.invoice_id is not null and not exists(
+    select 1 from public.finance_invoices i where i.organization_id=new.organization_id and i.id=new.invoice_id
+     and i.customer_id is not distinct from new.customer_id and i.project_id is not distinct from new.project_id
+     and i.contract_id is not distinct from new.contract_id
+  ) then raise exception 'Transaction invoice attribution mismatch';end if;
+ elsif tg_table_name='finance_invoices' then
+  if tg_op='UPDATE' then
+   if (new.customer_id,new.project_id,new.contract_id) is distinct from (old.customer_id,old.project_id,old.contract_id)
+    and exists(select 1 from public.finance_transactions t where t.organization_id=new.organization_id and t.invoice_id=new.id
+     and (t.customer_id,t.project_id,t.contract_id) is distinct from (new.customer_id,new.project_id,new.contract_id))
+   then raise exception 'Invoice attribution conflicts with posted transactions';end if;
+  end if;
+ end if;
  return new;
 end $$;
 
