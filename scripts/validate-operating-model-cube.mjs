@@ -45,15 +45,18 @@ try{
   }catch(error){await page.screenshot({path:`${output}/${profile}-failure.png`,fullPage:true}).catch(()=>{});throw error;}
   finally{await c.close();}
  }
- const c=await context({viewport:{width:1440,height:1000},reducedMotion:'no-preference'}),page=await c.newPage();
+ const c=await context({viewport:{width:1440,height:1000},reducedMotion:'no-preference',recordVideo:{dir:output,size:{width:1280,height:900}}}),page=await c.newPage();
  await page.goto(origin+'/solutions');
  await page.waitForFunction(()=>document.querySelector('.operating-model-explorer')?.dataset.cubePlaying==='true');
  const cube=page.locator('.model-cube');const before=await cube.evaluate(el=>getComputedStyle(el).transform);
  await page.waitForTimeout(600);const after=await cube.evaluate(el=>getComputedStyle(el).transform);assert.notEqual(after,before,'Cube really rotates');
+ await page.waitForTimeout(4000);
  await page.getByRole('button',{name:'Pause cube rotation'}).click();
  const frozen=await cube.evaluate(el=>getComputedStyle(el).transform);await page.waitForTimeout(300);assert.equal(await cube.evaluate(el=>getComputedStyle(el).transform),frozen,'Pause freezes orientation');
+ await page.locator('.model-cube-options button').nth(1).click();await page.waitForTimeout(1500);
+ await page.locator('.model-cube-options button').nth(2).click();await page.waitForTimeout(1500);
  await page.getByRole('button',{name:'Play cube rotation'}).click();
  assert.equal(await page.locator('.operating-model-explorer').getAttribute('data-cube-playing'),'true');
- await page.screenshot({path:`${output}/motion-desktop.png`,animations:'disabled'});
- evidence.push({motion:'PASS',pause:'PASS',resume:'PASS'});await c.close();
+ await page.waitForTimeout(3000);await page.screenshot({path:`${output}/motion-desktop.png`});
+ evidence.push({motion:'PASS',pause:'PASS',resume:'PASS'});const video=page.video();await c.close();await video.saveAs(`${output}/cube-motion.webm`);
 }finally{await writeFile(`${output}/evidence.json`,JSON.stringify(evidence,null,2));await browser.close();}

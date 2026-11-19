@@ -68,3 +68,5 @@
 }
 
 .model-cube-motion:disabled { cursor: default; opacity: .7; }
+
+@media (max-width: 760px) { .model-cube-options button, .model-cube-motion { min-height: 44px; } }

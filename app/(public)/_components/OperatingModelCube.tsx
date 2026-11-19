@@ -61,7 +61,7 @@ export default function OperatingModelCube({ variant, children }: { variant: "so
     <div className="model-cube-stage" aria-hidden="true">
       <div className="model-cube-orbit model-cube-orbit-one" /><div className="model-cube-orbit model-cube-orbit-two" />
       <div className="model-cube-floor" />
-      <div className={`model-cube${playing ? " is-rotating" : ""}`} ref={cube} style={{ transform: frozen ?? `rotateX(-18deg) rotateY(${-selected * 90}deg)`, transition: frozen ? "none" : undefined }}>
+      <div className={`model-cube${playing ? " is-rotating" : ""}`} ref={cube} style={{ transform: frozen ?? `rotateX(-18deg) rotateY(${-selected * 90 - 24}deg)`, transition: frozen ? "none" : undefined }}>
         {faces.map((face, index) => <div className={`model-cube-face model-cube-side-${index}`} key={face.id}>
           <div className="model-cube-face-top"><span>RYTHM / {variant === "solutions" ? "OPERATING MODEL" : "COMPANY TEMPLATE"}</span><span>0{index + 1}</span></div>
           <h3>{face.name}</h3>
