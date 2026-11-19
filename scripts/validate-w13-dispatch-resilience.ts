@@ -89,6 +89,15 @@ try{
     "select last_status,consecutive_failures,last_failed_step,last_error_code from public.project_dispatch_runtime"
   );
   assert.deepEqual(state.rows[0],{last_status:"degraded",consecutive_failures:1,last_failed_step:"health",last_error_code:"UPSTREAM_UNAVAILABLE"});
+  const failureEvents=await db.query<{trace_id:string;dispatch_status:string;failed_step:string;error_code:string}>(
+    "select trace_id::text,dispatch_status,failed_step,error_code from public.project_dispatch_failure_events"
+  );
+  assert.deepEqual(failureEvents.rows,[{trace_id:winner,dispatch_status:"degraded",failed_step:"health",error_code:"UPSTREAM_UNAVAILABLE"}],
+    "durable dispatch alert must be correlated and sanitized");
+  const acl=await db.query<{allowed:boolean}>(
+    "select has_table_privilege('anon','public.project_dispatch_failure_events','SELECT') as allowed"
+  );
+  assert.equal(acl.rows[0].allowed,false,"anonymous users must not see dispatch alert ledger");
 
   const next=randomUUID();
   assert.equal((await db.query<{ok:boolean}>("select public.acquire_project_dispatch_lease_v1($1::uuid,360) as ok",[next])).rows[0].ok,true);
