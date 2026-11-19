@@ -5,6 +5,7 @@
 create table if not exists public.project_dispatch_runtime (
   id boolean primary key default true check (id),
   active_trace_id uuid,
+  last_failure_trace_id uuid,
   lease_expires_at timestamptz,
   last_started_at timestamptz,
   last_finished_at timestamptz,
@@ -20,6 +21,18 @@ alter table public.project_dispatch_runtime enable row level security;
 revoke all on public.project_dispatch_runtime from public, anon, authenticated;
 -- Keep this operational status server-only. No client grants or public policies.
 grant select on public.project_dispatch_runtime to service_role;
+
+-- Durable, non-sensitive alert ledger survives short-lived Vercel runtime logs.
+create table if not exists public.project_dispatch_failure_events (
+  trace_id uuid primary key,
+  failed_at timestamptz not null default now(),
+  dispatch_status text not null check (dispatch_status in ('degraded','failed')),
+  failed_step text not null,
+  error_code text not null
+);
+alter table public.project_dispatch_failure_events enable row level security;
+revoke all on public.project_dispatch_failure_events from public, anon, authenticated;
+grant select on public.project_dispatch_failure_events to service_role;
 
 create or replace function public.acquire_project_dispatch_lease_v1(
   p_trace_id uuid, p_lease_seconds integer default 360
@@ -60,7 +73,8 @@ create or replace function public.complete_project_dispatch_lease_v1(
   p_error_code text default null
 ) returns boolean
 language plpgsql security definer set search_path = ''
-as $$
+as $
+declare v_updated boolean;
 begin
   if p_trace_id is null or p_status not in ('healthy','degraded','failed') then
     raise exception 'Invalid dispatcher completion request';
@@ -69,6 +83,7 @@ begin
   update public.project_dispatch_runtime
   set active_trace_id = null,
       lease_expires_at = null,
+      last_failure_trace_id = case when p_status = 'healthy' then last_failure_trace_id else p_trace_id end,
       last_finished_at = now(),
       last_status = p_status,
       last_failed_step = case when p_status = 'healthy' then null else left(p_failed_step, 64) end,
@@ -76,7 +91,23 @@ begin
       consecutive_failures = case when p_status = 'healthy' then 0 else consecutive_failures + 1 end
   where id = true and active_trace_id = p_trace_id;
 
-  return found;
+  v_updated := found;
+  if v_updated and p_status <> 'healthy' then
+    insert into public.project_dispatch_failure_events(trace_id,dispatch_status,failed_step,error_code)
+    values(
+      p_trace_id,p_status,
+      case when coalesce(p_failed_step,'') ~ '^[a-z][a-z0-9_]{0,63}
+end;
+$$;
+revoke all on function public.complete_project_dispatch_lease_v1(uuid,text,text,text) from public, anon, authenticated;
+grant execute on function public.complete_project_dispatch_lease_v1(uuid,text,text,text) to service_role;
+ then p_failed_step else 'dispatch' end,
+      case when p_error_code in ('STEP_FAILED','BUDGET_DEFERRED','UPSTREAM_UNAVAILABLE','UNEXPECTED_FAILURE')
+        then p_error_code else 'STEP_FAILED' end
+    ) on conflict (trace_id) do nothing;
+  end if;
+
+  return v_updated;
 end;
 $$;
 revoke all on function public.complete_project_dispatch_lease_v1(uuid,text,text,text) from public, anon, authenticated;
