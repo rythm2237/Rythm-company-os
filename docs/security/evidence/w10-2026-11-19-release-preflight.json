@@ -1,0 +1,1868 @@
+{
+  "observed_on": "2026-11-19",
+  "owner_evidence_acceptance": {
+    "accepted": true,
+    "scope": "W10 staging evidence and final release review only",
+    "merge_authorized": false,
+    "production_schema_change_authorized": false,
+    "production_deployment_authorized": false
+  },
+  "review_source": "ef2c31145c750c7cdba981c20d47eae0cf5fc12e",
+  "baseline_main": "55a1377e348c2d9ac0082c8b1f3acbba26acbc45",
+  "production_deployment": "dpl_5u6eirwziYrg3pk5gFbY89M4mH3f",
+  "postgres": "17.6",
+  "migration_ledger": [
+    {
+      "version": "20260812145919",
+      "name": "commercial_security_catalog"
+    },
+    {
+      "version": "20260812150327",
+      "name": "commercial_security_catalog_grant_hardening"
+    },
+    {
+      "version": "20260814173500",
+      "name": "security_definer_execute_hardening"
+    },
+    {
+      "version": "20260814173543",
+      "name": "tenant_table_grant_hardening"
+    },
+    {
+      "version": "20260814212732",
+      "name": "privacy_requests"
+    },
+    {
+      "version": "20260814213224",
+      "name": "api_rate_limits"
+    },
+    {
+      "version": "20260815060013",
+      "name": "consumer_withdrawal_requests"
+    },
+    {
+      "version": "20260815223443",
+      "name": "agent_evaluation_evidence"
+    },
+    {
+      "version": "20260816131942",
+      "name": "agent_identity_level_marketplace_foundation"
+    },
+    {
+      "version": "20260816132830",
+      "name": "agent_valuation_level_ordering"
+    },
+    {
+      "version": "20260816141431",
+      "name": "agent_senior_promotion_framework"
+    },
+    {
+      "version": "20260816141637",
+      "name": "fix_senior_readiness_governance_count"
+    },
+    {
+      "version": "20260817220218",
+      "name": "agent_builder_v2"
+    },
+    {
+      "version": "20260818120424",
+      "name": "agent_attachments_memory"
+    },
+    {
+      "version": "20260818131612",
+      "name": "agent_artifacts"
+    },
+    {
+      "version": "20260818180520",
+      "name": "company_knowledge_foundation"
+    },
+    {
+      "version": "20260819134950",
+      "name": "trusted_agent_knowledge_schema"
+    },
+    {
+      "version": "20260819135252",
+      "name": "trusted_sources_and_blueprints"
+    },
+    {
+      "version": "20260819135409",
+      "name": "role_foundations_v1"
+    },
+    {
+      "version": "20260819135505",
+      "name": "role_specializations_v1"
+    },
+    {
+      "version": "20260819135546",
+      "name": "agent_knowledge_provisioning_functions"
+    },
+    {
+      "version": "20260819141216",
+      "name": "agent_provisioning_guardrails"
+    },
+    {
+      "version": "20260819141728",
+      "name": "transfer_company_knowledge_detachment"
+    },
+    {
+      "version": "20260819171944",
+      "name": "mastery_company_library"
+    },
+    {
+      "version": "20260819173049",
+      "name": "mastery_company_library_grant_hardening"
+    },
+    {
+      "version": "20260819203024",
+      "name": "web_development_professional_specialization"
+    },
+    {
+      "version": "20260820183402",
+      "name": "communication_center_mvp"
+    },
+    {
+      "version": "20260821151712",
+      "name": "native_mailbox_workflow"
+    },
+    {
+      "version": "20260821161431",
+      "name": "resend_shared_mail_domain"
+    },
+    {
+      "version": "20260821162132",
+      "name": "root_domain_mailboxes"
+    },
+    {
+      "version": "20260821172441",
+      "name": "cloudflare_inbound_email"
+    },
+    {
+      "version": "20260822053816",
+      "name": "communication_inbound_transport_live"
+    },
+    {
+      "version": "20260822152816",
+      "name": "company_structure_workforce_communications"
+    },
+    {
+      "version": "20260822155408",
+      "name": "company_workforce_completion"
+    },
+    {
+      "version": "20260822160243",
+      "name": "finance_center_core"
+    },
+    {
+      "version": "20260822190547",
+      "name": "multitenant_billing_payments"
+    },
+    {
+      "version": "20260824150218",
+      "name": "crm_customer_sales_center"
+    },
+    {
+      "version": "20260824160449",
+      "name": "adaptive_agent_routing"
+    },
+    {
+      "version": "20260824183153",
+      "name": "integration_tool_execution"
+    },
+    {
+      "version": "20260824183433",
+      "name": "integration_service_secret_access"
+    },
+    {
+      "version": "20260824192826",
+      "name": "software_company_template"
+    },
+    {
+      "version": "20260825071207",
+      "name": "phase0_security_grant_hardening"
+    },
+    {
+      "version": "20260825091111",
+      "name": "phase1b_routing_modes_telemetry"
+    },
+    {
+      "version": "20260825091238",
+      "name": "phase1b_routing_grant_hardening"
+    },
+    {
+      "version": "20260825100348",
+      "name": "phase1c_request_intelligence_telemetry"
+    },
+    {
+      "version": "20260825163014",
+      "name": "phase1d_feature_scoped_routing_rollout"
+    },
+    {
+      "version": "20260827045514",
+      "name": "phase2_integration_execution_gateway"
+    },
+    {
+      "version": "20260827061351",
+      "name": "phase2_service_role_claim_compatibility"
+    },
+    {
+      "version": "20260827110429",
+      "name": "phase2_validation_idempotency_constraint"
+    },
+    {
+      "version": "20260827125413",
+      "name": "phase3_company_auto_bootstrap_foundation"
+    },
+    {
+      "version": "20260827125429",
+      "name": "phase3_bootstrap_tool_catalog"
+    },
+    {
+      "version": "20260827125513",
+      "name": "phase3_bootstrap_apply_gateway"
+    },
+    {
+      "version": "20260827125521",
+      "name": "phase3_pgcrypto_schema_qualification"
+    },
+    {
+      "version": "20260827125602",
+      "name": "phase3_bootstrap_rpc_anon_hardening"
+    },
+    {
+      "version": "20260827132840",
+      "name": "google_workspace_oauth_credential_envelope"
+    },
+    {
+      "version": "20260828052857",
+      "name": "phase3_google_oauth_refresh_service"
+    },
+    {
+      "version": "20260828070542",
+      "name": "ready_ai_company_library"
+    },
+    {
+      "version": "20260828082649",
+      "name": "ready_company_minimum_standard_part1"
+    },
+    {
+      "version": "20260828082717",
+      "name": "ready_company_minimum_standard_part2"
+    },
+    {
+      "version": "20260828082744",
+      "name": "ready_company_minimum_standard_part3"
+    },
+    {
+      "version": "20260828092443",
+      "name": "generic_business_api_adapter_contract"
+    },
+    {
+      "version": "20260828094047",
+      "name": "generic_business_api_read_validation"
+    },
+    {
+      "version": "20260828110240",
+      "name": "advertising_professional_foundations"
+    },
+    {
+      "version": "20260828110318",
+      "name": "senior_gtm_strategist"
+    },
+    {
+      "version": "20260828111646",
+      "name": "advertising_agency_marketplace_copy"
+    },
+    {
+      "version": "20260829175041",
+      "name": "trusted_professional_knowledge_packs"
+    },
+    {
+      "version": "20260830185043",
+      "name": "gtm_professional_benchmark"
+    },
+    {
+      "version": "20260830185100",
+      "name": "fix_professional_readiness_semantics"
+    },
+    {
+      "version": "20260830185401",
+      "name": "harden_agent_level_readiness_access"
+    },
+    {
+      "version": "20260830193817",
+      "name": "invalidate_capped_gtm_benchmark"
+    },
+    {
+      "version": "20260831014642",
+      "name": "consolidate_canonical_rythm_workforce"
+    },
+    {
+      "version": "20260831044243",
+      "name": "agency_specialist_benchmarks"
+    },
+    {
+      "version": "20260831044257",
+      "name": "communications_specialist_benchmark"
+    },
+    {
+      "version": "20260831060547",
+      "name": "specialist_remediation_readiness"
+    },
+    {
+      "version": "20260831071540",
+      "name": "continuous_agency_level_benchmarks"
+    },
+    {
+      "version": "20260831090700",
+      "name": "workforce_benchmark_coverage"
+    },
+    {
+      "version": "20260831095202",
+      "name": "fullstack_specialist_benchmark_completion_guard"
+    },
+    {
+      "version": "20260831110943",
+      "name": "allow_governed_internal_action_orchestration"
+    },
+    {
+      "version": "20260831111012",
+      "name": "ai_role_path_client_brief_and_action_orchestration_v2"
+    },
+    {
+      "version": "20260831111909",
+      "name": "ai_role_path_live_website_discovery_snapshot"
+    },
+    {
+      "version": "20260902164533",
+      "name": "operational_agent_readiness"
+    },
+    {
+      "version": "20260902164742",
+      "name": "operational_agent_readiness_indexes"
+    },
+    {
+      "version": "20260903060239",
+      "name": "public_referral_analytics"
+    },
+    {
+      "version": "20260903065623",
+      "name": "confirmed_conversion_outcomes"
+    },
+    {
+      "version": "20260909055142",
+      "name": "admin_automation_center"
+    },
+    {
+      "version": "20260909055247",
+      "name": "admin_automation_auth_hardening"
+    },
+    {
+      "version": "20260909164448",
+      "name": "admin_automation_integrations"
+    },
+    {
+      "version": "20260909164630",
+      "name": "admin_automation_integrations_index"
+    },
+    {
+      "version": "20260911175901",
+      "name": "revoke_project_dependency_rpc_public_execute"
+    },
+    {
+      "version": "20260911185811",
+      "name": "configure_crawly_authority_monitoring"
+    },
+    {
+      "version": "20260912194213",
+      "name": "project_operating_system"
+    },
+    {
+      "version": "20260912194230",
+      "name": "project_os_compatibility"
+    },
+    {
+      "version": "20260912194243",
+      "name": "project_os_scheduler_hardening"
+    },
+    {
+      "version": "20260912194312",
+      "name": "project_os_database_scheduler"
+    },
+    {
+      "version": "20260912194330",
+      "name": "project_os_autonomous_meetings"
+    },
+    {
+      "version": "20260912194344",
+      "name": "project_os_knowledge_ingestion"
+    },
+    {
+      "version": "20260912194405",
+      "name": "project_os_proposal_governance"
+    },
+    {
+      "version": "20260912194413",
+      "name": "project_os_terminal_reconciliation"
+    },
+    {
+      "version": "20260912194802",
+      "name": "project_os_security_hardening"
+    },
+    {
+      "version": "20260913223225",
+      "name": "default_integration_department"
+    },
+    {
+      "version": "20260914154827",
+      "name": "project_progress_snapshot"
+    },
+    {
+      "version": "20260914182818",
+      "name": "project_roadmap_baselines"
+    },
+    {
+      "version": "20260914182846",
+      "name": "project_roadmap_progress_backfill"
+    },
+    {
+      "version": "20260914202154",
+      "name": "project_approval_discussions"
+    },
+    {
+      "version": "20260914211057",
+      "name": "project_executive_attention_policy_v2"
+    },
+    {
+      "version": "20260915055743",
+      "name": "customer_integration_catalog_and_requirements"
+    },
+    {
+      "version": "20260915073227",
+      "name": "customer_connection_platform_phase1"
+    },
+    {
+      "version": "20260915073410",
+      "name": "connection_secret_service_boundary"
+    },
+    {
+      "version": "20260915115308",
+      "name": "customer_connection_platform_phase2"
+    },
+    {
+      "version": "20260915115322",
+      "name": "connection_agent_auto_resume"
+    },
+    {
+      "version": "20260915115512",
+      "name": "connection_agent_phase2_hardening"
+    },
+    {
+      "version": "20260915160407",
+      "name": "universal_connection_flight_deck_rollout"
+    },
+    {
+      "version": "20260915202021",
+      "name": "connection_flight_deck_auto_human_handoff"
+    },
+    {
+      "version": "20260915210127",
+      "name": "org_level_resource_selection_autoadvance"
+    },
+    {
+      "version": "20260915211159",
+      "name": "connection_agent_terminal_browser_cleanup"
+    },
+    {
+      "version": "20260916001029",
+      "name": "activate_communication_runtime_triage"
+    },
+    {
+      "version": "20260916001101",
+      "name": "fix_communication_runtime_handoff_source"
+    },
+    {
+      "version": "20260916001131",
+      "name": "fix_communication_runtime_approval_constraints"
+    },
+    {
+      "version": "20260916001203",
+      "name": "fix_communication_notification_severity"
+    },
+    {
+      "version": "20260916070836",
+      "name": "nail_2nya_booking_platform_foundation"
+    },
+    {
+      "version": "20260916071435",
+      "name": "nail_2nya_grant_hardening"
+    },
+    {
+      "version": "20260916071630",
+      "name": "nail_2nya_security_performance_hardening"
+    },
+    {
+      "version": "20260916072136",
+      "name": "nail_2nya_admin_manual_booking_rpc"
+    },
+    {
+      "version": "20260916101116",
+      "name": "nail_2nya_media_asset_store"
+    },
+    {
+      "version": "20260916101216",
+      "name": "remove_unused_nail_2nya_media_asset_store"
+    },
+    {
+      "version": "20260916101504",
+      "name": "nail_2nya_public_media_chunks"
+    },
+    {
+      "version": "20260916101706",
+      "name": "remove_unused_nail_2nya_public_media_chunks"
+    },
+    {
+      "version": "20260916103559",
+      "name": "nail_2nya_live_booking_pwa_admin"
+    },
+    {
+      "version": "20260916103747",
+      "name": "nail_2nya_realtime_admin_events"
+    },
+    {
+      "version": "20260916113715",
+      "name": "nail_2nya_push_delivery_trigger"
+    },
+    {
+      "version": "20260916113739",
+      "name": "nail_2nya_push_trigger_no_secret"
+    },
+    {
+      "version": "20260916113800",
+      "name": "nail_2nya_admin_bootstrap_rotate"
+    },
+    {
+      "version": "20260916113906",
+      "name": "nail_2nya_claim_admin_grant_hardening"
+    },
+    {
+      "version": "20260916175126",
+      "name": "nail_2nya_public_video_chunks_v4"
+    },
+    {
+      "version": "20260917064924",
+      "name": "nail_2nya_public_media_bucket"
+    },
+    {
+      "version": "20260917065004",
+      "name": "nail_2nya_remove_temp_hero_upload_policy"
+    },
+    {
+      "version": "20260921061955",
+      "name": "rythm_ai_workspace_foundation"
+    },
+    {
+      "version": "20260921062011",
+      "name": "rythm_ai_workspace_provider_state_hardening"
+    },
+    {
+      "version": "20260921062038",
+      "name": "rythm_ai_workspace_idempotency_currency"
+    },
+    {
+      "version": "20260921062106",
+      "name": "rythm_ai_workspace_guest_lifecycle"
+    },
+    {
+      "version": "20260921062121",
+      "name": "rythm_ai_workspace_private_files"
+    },
+    {
+      "version": "20260921062147",
+      "name": "web_development_company_commercial_template"
+    },
+    {
+      "version": "20260921062213",
+      "name": "ai_workspace_company_member_access"
+    },
+    {
+      "version": "20260921071614",
+      "name": "ai_workspace_message_idempotency_constraint"
+    },
+    {
+      "version": "20260921094455",
+      "name": "ai_workspace_pricing_trial"
+    },
+    {
+      "version": "20260921094740",
+      "name": "ai_workspace_starter_billing"
+    },
+    {
+      "version": "20260921094843",
+      "name": "ai_workspace_starter_billing"
+    },
+    {
+      "version": "20260921095334",
+      "name": "ai_workspace_trial_upgrade_reconciliation"
+    },
+    {
+      "version": "20260921101731",
+      "name": "ai_workspace_token_pricing_copy"
+    },
+    {
+      "version": "20260921115059",
+      "name": "ai_workspace_plan_tiers_regional_pricing"
+    },
+    {
+      "version": "20260921115518",
+      "name": "ai_workspace_plan_grant_types"
+    },
+    {
+      "version": "20260921115600",
+      "name": "ai_workspace_plan_code_tiers"
+    },
+    {
+      "version": "20260925080731",
+      "name": "bing_webmaster_integration_catalog"
+    },
+    {
+      "version": "20260925131124",
+      "name": "fix_public_ai_workspace_billing_cta"
+    },
+    {
+      "version": "20260925160945",
+      "name": "youtube_connection_adapter"
+    },
+    {
+      "version": "20260925184557",
+      "name": "linkedin_marketing_connection_adapter"
+    },
+    {
+      "version": "20260926074014",
+      "name": "customer_admin_agent_lifecycle"
+    },
+    {
+      "version": "20260926101216",
+      "name": "agency_seo_client_management"
+    },
+    {
+      "version": "20260926101310",
+      "name": "agency_seo_client_management_hardening"
+    },
+    {
+      "version": "20260926101418",
+      "name": "agency_seo_client_management_indexes"
+    },
+    {
+      "version": "20260926124746",
+      "name": "agency_seo_scheduled_monitoring"
+    },
+    {
+      "version": "20260926143202",
+      "name": "customer_admin_privacy_minimization"
+    },
+    {
+      "version": "20260926221427",
+      "name": "company_branding_logos"
+    },
+    {
+      "version": "20260927060117",
+      "name": "2nya_customer_push_tables"
+    },
+    {
+      "version": "20260927060122",
+      "name": "2nya_customer_push_rls"
+    },
+    {
+      "version": "20260927060133",
+      "name": "2nya_customer_push_rpc"
+    },
+    {
+      "version": "20260927060142",
+      "name": "2nya_available_dates_rpc"
+    },
+    {
+      "version": "20260927060158",
+      "name": "2nya_customer_booking_pending"
+    },
+    {
+      "version": "20260927060555",
+      "name": "2nya_push_key_vault"
+    },
+    {
+      "version": "20260927083615",
+      "name": "2nya_admin_portfolio_gallery_v2"
+    },
+    {
+      "version": "20260927084356",
+      "name": "2nya_align_portfolio_seed_with_current_site"
+    },
+    {
+      "version": "20260927095203",
+      "name": "2nya_fix_booking_push_trigger"
+    },
+    {
+      "version": "20260927133631",
+      "name": "nail_2nya_contact_inbox"
+    },
+    {
+      "version": "20260927134254",
+      "name": "nail_2nya_contact_push_claim"
+    },
+    {
+      "version": "20260927184731",
+      "name": "project_autonomy_supervisor_recovery"
+    },
+    {
+      "version": "20260927185532",
+      "name": "project_scheduled_recovery_health_fix"
+    },
+    {
+      "version": "20260927185646",
+      "name": "project_retry_health_resolution"
+    },
+    {
+      "version": "20260928141040",
+      "name": "company_email_tenant_hardening"
+    },
+    {
+      "version": "20260928141059",
+      "name": "tenant_fk_delete_semantics"
+    },
+    {
+      "version": "20260928165350",
+      "name": "enable_managed_outbound_email"
+    },
+    {
+      "version": "20260928174743",
+      "name": "managed_resend_service_boundary"
+    },
+    {
+      "version": "20260929070810",
+      "name": "paid_launch_privileged_function_hardening"
+    },
+    {
+      "version": "20260929131404",
+      "name": "launch_template_operational_readiness"
+    },
+    {
+      "version": "20260929153000",
+      "name": "commercial_template_offer_alignment"
+    },
+    {
+      "version": "20260929170000",
+      "name": "project_approval_atomic_resume"
+    },
+    {
+      "version": "20260929170229",
+      "name": "project_completion_architecture_v2"
+    },
+    {
+      "version": "20260929170348",
+      "name": "project_completion_security_hardening"
+    },
+    {
+      "version": "20260929200427",
+      "name": "assisted_commercial_activation"
+    },
+    {
+      "version": "20260930045419",
+      "name": "project_completion_runtime_guards"
+    },
+    {
+      "version": "20260930045423",
+      "name": "project_completion_rpc_hardening"
+    },
+    {
+      "version": "20260930050917",
+      "name": "project_completion_performance_hardening"
+    },
+    {
+      "version": "20260930051926",
+      "name": "project_completion_reporting_health"
+    },
+    {
+      "version": "20260930051945",
+      "name": "project_kpi_trigger_delete_safety"
+    },
+    {
+      "version": "20260930052501",
+      "name": "project_completion_tool_evidence_indexes"
+    },
+    {
+      "version": "20260930062902",
+      "name": "project_completion_paused_state"
+    },
+    {
+      "version": "20260930204854",
+      "name": "approval_interaction_guards"
+    },
+    {
+      "version": "20261001065114",
+      "name": "approval_loop_policy_precedence"
+    },
+    {
+      "version": "20261006031045",
+      "name": "pending_company_provisioning_trigger_fix"
+    },
+    {
+      "version": "20261021162350",
+      "name": "continuous_program_foundation_20261018"
+    },
+    {
+      "version": "20261021162407",
+      "name": "continuous_program_evaluator_adapter_20261021"
+    },
+    {
+      "version": "20261023101943",
+      "name": "shared_enterprise_crm"
+    },
+    {
+      "version": "20261023123202",
+      "name": "enterprise_customer_sales"
+    },
+    {
+      "version": "20261023125317",
+      "name": "crm_connected_records"
+    },
+    {
+      "version": "20261107050033",
+      "name": "w04_rpc_security_definer_hardening_20261107"
+    },
+    {
+      "version": "20261107050037",
+      "name": "w04_explicit_pg_temp_for_definers_20261107"
+    },
+    {
+      "version": "20261107192219",
+      "name": "w03_project_tenant_relationships_prod_20261107"
+    },
+    {
+      "version": "20261107192221",
+      "name": "w03_agent_memory_attachment_tenant_relations_prod_20261107"
+    },
+    {
+      "version": "20261107192251",
+      "name": "w03_validate_nine_tenant_foreign_keys_prod_20261107"
+    },
+    {
+      "version": "20261107200630",
+      "name": "w05_file_confidentiality_production_20261107"
+    },
+    {
+      "version": "20261107200646",
+      "name": "w05_block_cached_private_downloads_production_20261107"
+    }
+  ],
+  "preflight": {
+    "rls_disabled": [],
+    "missing_columns": [],
+    "missing_functions": [],
+    "missing_relations": [],
+    "agent_tenant_fk_validated": true,
+    "missing_contract_policies": [],
+    "timeline_security_invoker": true,
+    "template_specialization_bindings": [
+      {
+        "target": "b2b_marketing",
+        "version": "1.0",
+        "template": "advertising_account_manager",
+        "active_target_exists": true,
+        "prior_specializations": []
+      },
+      {
+        "target": "content_marketing",
+        "version": "1.0",
+        "template": "advertising_content_specialist",
+        "active_target_exists": true,
+        "prior_specializations": []
+      },
+      {
+        "target": "content_marketing",
+        "version": "1.0",
+        "template": "advertising_copywriter",
+        "active_target_exists": true,
+        "prior_specializations": []
+      },
+      {
+        "target": "performance_marketing",
+        "version": "1.0",
+        "template": "advertising_performance_marketing",
+        "active_target_exists": true,
+        "prior_specializations": []
+      },
+      {
+        "target": "b2b_marketing",
+        "version": "1.0",
+        "template": "advertising_strategy_director",
+        "active_target_exists": true,
+        "prior_specializations": []
+      }
+    ]
+  },
+  "required_column_count": 109,
+  "relations": [
+    {
+      "rls": true,
+      "kind": "r",
+      "name": "company_events",
+      "options": null
+    },
+    {
+      "rls": true,
+      "kind": "r",
+      "name": "entity_relationships",
+      "options": null
+    },
+    {
+      "rls": true,
+      "kind": "r",
+      "name": "meeting_agent_participants",
+      "options": null
+    },
+    {
+      "rls": true,
+      "kind": "r",
+      "name": "meeting_agent_sessions",
+      "options": null
+    },
+    {
+      "rls": true,
+      "kind": "r",
+      "name": "meetings",
+      "options": null
+    },
+    {
+      "rls": true,
+      "kind": "r",
+      "name": "project_activity_events",
+      "options": null
+    },
+    {
+      "rls": true,
+      "kind": "r",
+      "name": "project_agent_capacity",
+      "options": null
+    },
+    {
+      "rls": true,
+      "kind": "r",
+      "name": "project_agents",
+      "options": null
+    },
+    {
+      "rls": true,
+      "kind": "r",
+      "name": "project_contracts",
+      "options": null
+    },
+    {
+      "rls": false,
+      "kind": "v",
+      "name": "project_operating_timeline",
+      "options": [
+        "security_invoker=true"
+      ]
+    },
+    {
+      "rls": true,
+      "kind": "r",
+      "name": "project_progress_events",
+      "options": null
+    },
+    {
+      "rls": true,
+      "kind": "r",
+      "name": "project_task_runs",
+      "options": null
+    }
+  ],
+  "constraints": [
+    {
+      "name": "project_agents_pkey",
+      "table": "project_agents",
+      "validated": true,
+      "definition": "PRIMARY KEY (project_id, agent_id)"
+    },
+    {
+      "name": "project_task_runs_action_tenant_w03_fk",
+      "table": "project_task_runs",
+      "validated": true,
+      "definition": "FOREIGN KEY (action_item_id, organization_id) REFERENCES action_items(id, organization_id) ON DELETE SET NULL (action_item_id)"
+    },
+    {
+      "name": "project_task_runs_agent_tenant_w03_fk",
+      "table": "project_task_runs",
+      "validated": true,
+      "definition": "FOREIGN KEY (assigned_agent_id, organization_id) REFERENCES agents(id, organization_id) ON DELETE SET NULL (assigned_agent_id)"
+    },
+    {
+      "name": "project_task_runs_execution_id_task_key_key",
+      "table": "project_task_runs",
+      "validated": true,
+      "definition": "UNIQUE (execution_id, task_key)"
+    },
+    {
+      "name": "project_task_runs_execution_tenant_w03_fk",
+      "table": "project_task_runs",
+      "validated": true,
+      "definition": "FOREIGN KEY (execution_id, project_id, organization_id) REFERENCES project_executions(id, project_id, organization_id) ON DELETE CASCADE"
+    },
+    {
+      "name": "project_task_runs_organization_id_idempotency_key_key",
+      "table": "project_task_runs",
+      "validated": true,
+      "definition": "UNIQUE (organization_id, idempotency_key)"
+    },
+    {
+      "name": "project_task_runs_pkey",
+      "table": "project_task_runs",
+      "validated": true,
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "project_task_runs_project_tenant_w03_fk",
+      "table": "project_task_runs",
+      "validated": true,
+      "definition": "FOREIGN KEY (project_id, organization_id) REFERENCES projects(id, organization_id) ON DELETE CASCADE"
+    },
+    {
+      "name": "project_agent_capacity_pkey",
+      "table": "project_agent_capacity",
+      "validated": true,
+      "definition": "PRIMARY KEY (project_id, agent_id)"
+    }
+  ],
+  "policies": [
+    {
+      "cmd": "SELECT",
+      "qual": "is_org_member(organization_id)",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "project_activity_events",
+      "permissive": "PERMISSIVE",
+      "policyname": "project_activity_events_member_read",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "ALL",
+      "qual": "is_org_owner(organization_id)",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "project_activity_events",
+      "permissive": "PERMISSIVE",
+      "policyname": "project_activity_events_owner_write",
+      "schemaname": "public",
+      "with_check": "is_org_owner(organization_id)"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "is_org_member(organization_id)",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "project_agent_capacity",
+      "permissive": "PERMISSIVE",
+      "policyname": "project_agent_capacity_member_read",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "ALL",
+      "qual": "is_org_owner(organization_id)",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "project_agent_capacity",
+      "permissive": "PERMISSIVE",
+      "policyname": "project_agent_capacity_owner_write",
+      "schemaname": "public",
+      "with_check": "is_org_owner(organization_id)"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "is_org_member(organization_id)",
+      "roles": [
+        "public"
+      ],
+      "tablename": "project_agents",
+      "permissive": "PERMISSIVE",
+      "policyname": "project_agents_member_read",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "ALL",
+      "qual": "is_org_owner(organization_id)",
+      "roles": [
+        "public"
+      ],
+      "tablename": "project_agents",
+      "permissive": "PERMISSIVE",
+      "policyname": "project_agents_owner_write",
+      "schemaname": "public",
+      "with_check": "is_org_owner(organization_id)"
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "project_contracts",
+      "permissive": "PERMISSIVE",
+      "policyname": "crm_create",
+      "schemaname": "public",
+      "with_check": "crm_can(organization_id, 'contract.create'::text, 'contract'::text, id)"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "crm_can(organization_id, 'contract.read'::text, 'contract'::text, id)",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "project_contracts",
+      "permissive": "PERMISSIVE",
+      "policyname": "crm_read",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "crm_can(organization_id, 'contract.update'::text, 'contract'::text, id)",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "project_contracts",
+      "permissive": "PERMISSIVE",
+      "policyname": "crm_update",
+      "schemaname": "public",
+      "with_check": "crm_can(organization_id, 'contract.update'::text, 'contract'::text, id)"
+    }
+  ],
+  "triggers": [
+    {
+      "name": "meeting_lifecycle_guardrails",
+      "table": "meetings",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER meeting_lifecycle_guardrails BEFORE UPDATE ON public.meetings FOR EACH ROW EXECUTE FUNCTION enforce_meeting_lifecycle()"
+    },
+    {
+      "name": "action_item_lifecycle_guardrails",
+      "table": "action_items",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER action_item_lifecycle_guardrails BEFORE UPDATE ON public.action_items FOR EACH ROW EXECUTE FUNCTION enforce_action_item_lifecycle()"
+    },
+    {
+      "name": "meeting_session_enabled_agents_guard",
+      "table": "meeting_agent_sessions",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER meeting_session_enabled_agents_guard BEFORE UPDATE OF status ON public.meeting_agent_sessions FOR EACH ROW EXECUTE FUNCTION enforce_enabled_agents_before_session_run()"
+    },
+    {
+      "name": "agents_active_entitlement_guard",
+      "table": "agents",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER agents_active_entitlement_guard BEFORE INSERT OR DELETE OR UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION enforce_active_commercial_entitlement()"
+    },
+    {
+      "name": "departments_active_entitlement_guard",
+      "table": "departments",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER departments_active_entitlement_guard BEFORE INSERT OR DELETE OR UPDATE ON public.departments FOR EACH ROW EXECUTE FUNCTION enforce_active_commercial_entitlement()"
+    },
+    {
+      "name": "company_builder_drafts_active_entitlement_guard",
+      "table": "company_builder_drafts",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER company_builder_drafts_active_entitlement_guard BEFORE INSERT OR DELETE OR UPDATE ON public.company_builder_drafts FOR EACH ROW EXECUTE FUNCTION enforce_active_commercial_entitlement()"
+    }
+  ],
+  "role_grants": [
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_progress_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "INSERT",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_progress_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "SELECT",
+      "with_hierarchy": "YES"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_progress_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "UPDATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_progress_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "DELETE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_progress_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRUNCATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_progress_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "REFERENCES",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_progress_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRIGGER",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "company_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "INSERT",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "company_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "SELECT",
+      "with_hierarchy": "YES"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "company_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "UPDATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "company_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "DELETE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "company_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRUNCATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "company_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "REFERENCES",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "company_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRIGGER",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "entity_relationships",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "INSERT",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "entity_relationships",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "SELECT",
+      "with_hierarchy": "YES"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "entity_relationships",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "UPDATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "entity_relationships",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "DELETE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "entity_relationships",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRUNCATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "entity_relationships",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "REFERENCES",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "entity_relationships",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRIGGER",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_operating_timeline",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "INSERT",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_operating_timeline",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "SELECT",
+      "with_hierarchy": "YES"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_operating_timeline",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "UPDATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_operating_timeline",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "DELETE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_operating_timeline",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRUNCATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_operating_timeline",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "REFERENCES",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_operating_timeline",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRIGGER",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agents",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "INSERT",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agents",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "SELECT",
+      "with_hierarchy": "YES"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agents",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "UPDATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agents",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "DELETE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agents",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRUNCATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agents",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "REFERENCES",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agents",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRIGGER",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agent_capacity",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "INSERT",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agent_capacity",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "SELECT",
+      "with_hierarchy": "YES"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agent_capacity",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "UPDATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agent_capacity",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "DELETE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agent_capacity",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRUNCATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agent_capacity",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "REFERENCES",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_agent_capacity",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRIGGER",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_activity_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "INSERT",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_activity_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "SELECT",
+      "with_hierarchy": "YES"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_activity_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "UPDATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_activity_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "DELETE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_activity_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRUNCATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_activity_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "REFERENCES",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "project_activity_events",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRIGGER",
+      "with_hierarchy": "NO"
+    }
+  ],
+  "functions": [
+    {
+      "name": "crm_can",
+      "config": [
+        "search_path=\"\""
+      ],
+      "return_type": "boolean",
+      "anon_execute": false,
+      "identity_args": "p_organization_id uuid, p_capability text, p_resource_type text, p_resource_id uuid",
+      "service_execute": true,
+      "security_definer": false,
+      "authenticated_execute": true
+    },
+    {
+      "name": "enforce_action_item_lifecycle",
+      "config": [
+        "search_path=public"
+      ],
+      "return_type": "trigger",
+      "anon_execute": true,
+      "identity_args": "",
+      "service_execute": true,
+      "security_definer": false,
+      "authenticated_execute": true
+    },
+    {
+      "name": "enforce_active_commercial_entitlement",
+      "config": [
+        "search_path=public"
+      ],
+      "return_type": "trigger",
+      "anon_execute": false,
+      "identity_args": "",
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "name": "enforce_enabled_agents_before_session_run",
+      "config": [
+        "search_path=public"
+      ],
+      "return_type": "trigger",
+      "anon_execute": true,
+      "identity_args": "",
+      "service_execute": true,
+      "security_definer": false,
+      "authenticated_execute": true
+    },
+    {
+      "name": "enforce_meeting_lifecycle",
+      "config": [
+        "search_path=public"
+      ],
+      "return_type": "trigger",
+      "anon_execute": true,
+      "identity_args": "",
+      "service_execute": true,
+      "security_definer": false,
+      "authenticated_execute": true
+    },
+    {
+      "name": "has_active_organization_entitlement",
+      "config": [
+        "search_path=public, pg_temp"
+      ],
+      "return_type": "boolean",
+      "anon_execute": false,
+      "identity_args": "target_org_id uuid",
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": true
+    },
+    {
+      "name": "is_org_owner",
+      "config": [
+        "search_path=public, pg_temp"
+      ],
+      "return_type": "boolean",
+      "anon_execute": false,
+      "identity_args": "target_org uuid",
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": true
+    },
+    {
+      "name": "reconcile_project_execution_terminal_states_v1",
+      "config": [
+        "search_path=public"
+      ],
+      "return_type": "integer",
+      "anon_execute": false,
+      "identity_args": "",
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "name": "claim_project_autonomous_meeting_jobs_v1",
+      "config": [
+        "search_path=public"
+      ],
+      "return_type": "SETOF project_autonomous_meeting_jobs",
+      "anon_execute": false,
+      "identity_args": "worker_id text, claim_limit integer, lease_seconds integer",
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "name": "claim_project_task_runs_v1",
+      "config": [
+        "search_path=public"
+      ],
+      "return_type": "SETOF project_task_runs",
+      "anon_execute": false,
+      "identity_args": "worker_id text, claim_limit integer, lease_seconds integer",
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    }
+  ],
+  "scheduler": {
+    "cron_jobs": [
+      {
+        "name": "rythm-project-os-dispatcher",
+        "active": true,
+        "schedule": "*/5 * * * *",
+        "uses_wrapper": true
+      }
+    ],
+    "scheduler": {
+      "enabled": true,
+      "cadence_minutes": 5,
+      "secret_hash_present": true,
+      "endpoint_is_production": true
+    }
+  },
+  "runs": [
+    {
+      "id": 44482571492,
+      "name": "W10 provider access",
+      "status": "completed",
+      "conclusion": "success",
+      "run_number": 33,
+      "jobs_url": "https://api.github.com/repos/rythm2237/Rythm-company-os/actions/runs/44482571492/jobs",
+      "logs_url": "https://api.github.com/repos/rythm2237/Rythm-company-os/actions/runs/44482571492/logs",
+      "workflow_id": 421737596
+    },
+    {
+      "id": 44482571594,
+      "name": "W10 public Agency entry",
+      "status": "completed",
+      "conclusion": "success",
+      "run_number": 79,
+      "jobs_url": "https://api.github.com/repos/rythm2237/Rythm-company-os/actions/runs/44482571594/jobs",
+      "logs_url": "https://api.github.com/repos/rythm2237/Rythm-company-os/actions/runs/44482571594/logs",
+      "workflow_id": 421251759
+    },
+    {
+      "id": 44482571640,
+      "name": "CI",
+      "status": "completed",
+      "conclusion": "success",
+      "run_number": 1967,
+      "jobs_url": "https://api.github.com/repos/rythm2237/Rythm-company-os/actions/runs/44482571640/jobs",
+      "logs_url": "https://api.github.com/repos/rythm2237/Rythm-company-os/actions/runs/44482571640/logs",
+      "workflow_id": 327559529
+    },
+    {
+      "id": 44482571520,
+      "name": "W10 disposable staging schema",
+      "status": "completed",
+      "conclusion": "success",
+      "run_number": 76,
+      "jobs_url": "https://api.github.com/repos/rythm2237/Rythm-company-os/actions/runs/44482571520/jobs",
+      "logs_url": "https://api.github.com/repos/rythm2237/Rythm-company-os/actions/runs/44482571520/logs",
+      "workflow_id": 421266664
+    }
+  ],
+  "flags": {
+    "control_plane_inventory": "403 forbidden",
+    "runtime_observed": {
+      "agentExecution": "enabled",
+      "externalActions": "disabled",
+      "dryRunModel": "configured"
+    },
+    "sdk_usage_found_in_app": false,
+    "cli_fallback_available": false
+  },
+  "exact_hosted_schema_migration_rehearsal": "NOT VERIFIED",
+  "production_changed": false,
+  "verdict": "APPLICATION_AND_TARGET_CATALOG_PASS; DIRECT_PRODUCTION_RELEASE_HELD_PENDING_EXACT_BASELINE_REHEARSAL"
+}
