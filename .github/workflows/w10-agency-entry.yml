@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 12
     env:
       NEXT_TELEMETRY_DISABLED: '1'
+      CRM_BROWSER_CHANNEL: chrome
       NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_w10_anonymous_fixture
       RYTHM_AGENT_EXECUTION_ENABLED: 'false'
@@ -28,7 +29,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: google-chrome --version
       - run: npm run build
       - name: Verify desktop and mobile entry
         run: |

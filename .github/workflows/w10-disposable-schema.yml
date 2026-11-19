@@ -193,9 +193,9 @@ jobs:
           RYTHM_AGENT_EXECUTION_ENABLED: 'true'
           RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
           NEXT_TELEMETRY_DISABLED: '1'
-          # Paid execution is authorized for this one PR update only. Later updates run without a provider key.
-          W10_LIVE_AI: ${{ github.event.before == '79fba9d12138646986851e68097211b395fae24a' && github.run_attempt == 1 && 'true' || 'false' }}
-          W10_PROVIDER_KEY: ${{ github.event.before == '79fba9d12138646986851e68097211b395fae24a' && github.run_attempt == 1 && secrets.OPENAI_API_KEY || '' }}
+          # Paid acceptance evidence is archived; routine CI must not spend.
+          W10_LIVE_AI: 'false'
+          W10_PROVIDER_KEY: ''
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/w10-disposable"

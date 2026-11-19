@@ -3,7 +3,7 @@ import { chromium, devices } from "playwright";
 
 const origin = "http://127.0.0.1:3000";
 const template = "ready_ai_advertising_agency_v1";
-const browser = await chromium.launch();
+const browser = await chromium.launch({ channel: process.env.CRM_BROWSER_CHANNEL || undefined });
 
 try {
   for (const [profile, options] of [
