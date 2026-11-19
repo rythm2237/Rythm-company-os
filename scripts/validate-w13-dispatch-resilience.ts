@@ -11,7 +11,7 @@ const route=source("app/api/projects/dispatch/route.ts");
 const tasks=source("lib/projects/project-work-v2.ts");
 const meetings=source("lib/projects/project-autonomous-meetings.ts");
 const proposals=source("lib/projects/project-proposal-execution.ts");
-const migration=source("supabase/migrations/20261118150000_project_dispatch_resilience.sql");
+const migration=source("supabase/migrations/20261119113000_project_dispatch_resilience.sql");
 
 // Deterministic synthetic 502 / 503 / 504 + backoff tests. No network, AI, or external actions.
 assert.equal(isTransientUpstreamFailure({status:502}),true);
