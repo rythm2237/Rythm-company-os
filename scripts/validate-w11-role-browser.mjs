@@ -78,6 +78,8 @@ export async function verifyW11RoleBrowser({
 
     const beforeExport = await viewer.request.get(app+"/api/crm/customers/export?page=1",{maxRedirects:0});
     check(beforeExport.status()===403,"viewer real HTTP CSV export denied 403");
+    const privacyExport = await viewer.request.get(app+"/api/privacy/export?organizationId="+organizationId,{maxRedirects:0});
+    check(privacyExport.status()===403,"viewer organization privacy export denied 403");
     const ownerExport = await ownerPage.request.get(app+"/api/crm/customers/export?page=1");
     check(ownerExport.status()===200,"owner CSV export HTTP 200");
     const exported=await ownerExport.text();
@@ -89,13 +91,29 @@ export async function verifyW11RoleBrowser({
       contract_id:contractId, internal_reference:financeReference,
       customer_name:"Synthetic W11 Client",total:321.45,currency:"EUR",status:"draft",
     }).select("id").single(),"Create synthetic invoice in disposable staging");
+    // The sales pipeline is another finance dashboard and must remain RLS-filtered.
+    let stages=ok(await admin.from("crm_pipeline_stages").select("code")
+      .eq("organization_id",organizationId).order("sequence_no").limit(1),"Read synthetic sales stages");
+    if(!stages.length){
+      const stage=ok(await admin.from("crm_pipeline_stages").insert({
+        organization_id:organizationId,code:"qualified",name:"Qualified",sequence_no:20,
+        probability:25,is_closed:false,is_won:false,
+      }).select("code").single(),"Seed missing sales stage in isolated organization");
+      stages=[stage];
+    }
+    ok(await admin.from("crm_opportunities").insert({
+      organization_id:organizationId,account_id:customerId,name:marker,
+      stage_code:stages[0].code,value:98765,currency:"EUR",probability:50,
+    }).select("id").single(),"Create synthetic restricted opportunity");
     const directInvoice = ok(await memberClient.from("finance_invoices").select("id").eq("id",invoice.id),
       "Viewer invoice RLS without grant");
     check(directInvoice.length===0,"viewer cannot query invoice through real PostgREST");
-    const secretFree = await browserText("/crm?search="+encodeURIComponent(financeReference));
+    const secretFree = await browserText("/crm?q="+encodeURIComponent(financeReference));
     check(!secretFree.includes(financeReference),"customer directory/search has no invoice identifier");
     const hiddenInvoiceText=await browserText(customerPath+"?tab=finance");
     check(!hiddenInvoiceText.includes(financeReference),"viewer finance HTML excludes invoice identifier");
+    const hiddenPipeline=await browserText("/crm/pipeline");
+    check(!hiddenPipeline.includes(marker),"viewer pipeline hides restricted opportunity");
     const hiddenForecastText=await browserText("/crm/reports");
     check(!hiddenForecastText.includes(marker)&&hiddenForecastText.includes("Company financial reporting requires"),
       "viewer dashboard cannot reveal financial values");
@@ -115,6 +133,8 @@ export async function verifyW11RoleBrowser({
     const memberFinanceGrant=await grant("user",memberId,"finance.read","customer",customerId);
     const allowedInvoices=ok(await memberClient.from("finance_invoices").select("id").eq("id",invoice.id),"Viewer finance grant");
     check(allowedInvoices.length===1,"customer-scoped finance.read exposes only allowed invoice");
+    const grantedPipeline=await browserText("/crm/pipeline");
+    check(grantedPipeline.includes(marker),"customer finance grant reveals only authorized pipeline item");
     const allowedFinance=await browserText(customerPath+"?tab=finance");
     check(allowedFinance.includes(financeReference),"viewer browser sees explicitly permitted invoice");
     const scopedReport=await browserText("/crm/reports");
@@ -122,6 +142,8 @@ export async function verifyW11RoleBrowser({
     await revoke(memberFinanceGrant);
     check(ok(await memberClient.from("finance_invoices").select("id").eq("id",invoice.id),
       "Viewer finance after revoke").length===0,"revoked finance.read immediately removes PostgREST invoice");
+    const revokedPipeline=await browserText("/crm/pipeline");
+    check(!revokedPipeline.includes(marker),"revoked finance removes opportunity from pipeline");
     const revokedFinance=await browserText(customerPath+"?tab=finance");
     check(!revokedFinance.includes(financeReference),"revoked finance invoice absent from HTML");
     check((await viewer.request.get(app+"/api/crm/customers/export")).status()===403,
