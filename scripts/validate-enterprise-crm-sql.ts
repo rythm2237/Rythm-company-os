@@ -162,7 +162,7 @@ try{
  await asUser(owner,`insert into finance_invoices(id,organization_id,customer_id,project_id,contract_id,internal_reference,total) values('${linkedInvoice}','${org}','${customer}','${project2}','${contract}','W11-LINKED',50) returning id`);
  await assert.rejects(
   ()=>asUser(owner,`delete from project_contract_links where project_id='${project2}' and contract_id='${contract}' returning contract_id`),
-  /Cannot remove a contract-project link referenced by financial records/
+  /Cannot remove a contract-project link referenced by financial or confidential records/
  );
  assert.equal(Number(await value(`select count(*) from project_contract_links where project_id='${project2}' and contract_id='${contract}'`)),1,"Rejected link deletion is atomic");
  await asUser(owner,`update finance_invoices set status='issued' where id='${linkedInvoice}' returning id`);
