@@ -49,7 +49,7 @@ begin
   exists(select 1 from public.project_contracts child where child.organization_id=new.organization_id and child.amendment_of=new.id and child.customer_id is distinct from new.customer_id)
  ) then raise exception 'Cannot reassign customer while linked commercial records refer to another customer';end if;
  return new;
-end $;
+end $$;
 
 create or replace function crm_private.link_guard() returns trigger language plpgsql security definer set search_path='' as $$
 begin
@@ -103,7 +103,7 @@ AS $$begin
     and (t.customer_id,t.project_id,t.contract_id) is distinct from (new.customer_id,new.project_id,new.contract_id))
  then raise exception 'Invoice attribution conflicts with posted transactions';end if;
  return new;
-end $;
+end $$;
 
 -- Assignment history is append-only even for privileged service writes.
 create function crm_private.w11_reject_manager_history_mutation() returns trigger
