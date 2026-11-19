@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
+const StudioCubeScene = dynamic(() => import("./StudioCubeScene"), { ssr: false });
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
 import { PUBLIC_TEMPLATES, SOLUTION_PATHS } from "@/lib/public-experience/content";
 
@@ -38,6 +40,7 @@ function AgentComposition({ roles, governance = false }: { roles: string[]; gove
 export default function OperatingModelCube({ variant, children }: { variant: "solutions" | "templates"; children?: ReactNode }) {
   const items = variant === "solutions" ? solutions : templates;
   const [selected, setSelected] = useState(0);
+  const [engine, setEngine] = useState<"loading" | "webgl" | "fallback">("loading");
   const [playing, setPlaying] = useState(false);
   const [reduced, setReduced] = useState(true);
   const [frozen, setFrozen] = useState<string>();
@@ -80,9 +83,10 @@ export default function OperatingModelCube({ variant, children }: { variant: "so
       </div>
     );
   }
-  return <div className={`operating-model-explorer is-${variant}`} data-cube-playing={playing}>
+  return <div className={`operating-model-explorer is-${variant}`} data-cube-playing={playing} data-cube-engine={engine}>
     <div className="model-cube-caption"><span className="model-cube-status" />{variant === "solutions" ? "ONE OS. THREE OPERATING MODELS." : "YOUR NEXT AI COMPANY."}</div>
-    <div className="model-cube-stage" aria-hidden="true">
+    <div className={`model-cube-stage${engine === "webgl" ? " is-webgl-ready" : ""}`} aria-hidden="true">
+      <StudioCubeScene key={variant} variant={variant} faces={faces} selected={selected} playing={playing} reduced={reduced} onEngineChange={setEngine} />
       <div className="model-cube-orbit model-cube-orbit-one" /><div className="model-cube-orbit model-cube-orbit-two" />
       <div className="model-cube-floor" />
       {renderBody()}

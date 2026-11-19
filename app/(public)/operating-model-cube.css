@@ -104,3 +104,15 @@
   .model-cube-face h3 { -webkit-text-stroke-width: .12px; text-shadow: 0 -1px 0 #fff, .4px .65px 0 #a8b6d0, .8px 1.3px 0 #8c9dba, 1.2px 2.2px 2px #20385c38; }
   .model-cube-side-1 h3, .model-cube-side-2 h3 { text-shadow: 0 -1px 0 #fff9, .4px .65px 0 #9aaacc, .8px 1.3px 0 #7187b0, 1.2px 2.2px 2px #020c2466; }
 }
+
+/* Physical rounded cubies, studio-lit in WebGL; CSS geometry remains a no-WebGL fallback. */
+.studio-cube-canvas { position: absolute; inset: 0; z-index: 2; }
+.studio-cube-canvas canvas { display: block; width: 100%; height: 100%; }
+.model-cube-stage:not(.is-webgl-ready) .studio-cube-canvas { visibility: hidden; }
+.model-cube-stage.is-webgl-ready > .model-cube-primary,
+.model-cube-stage.is-webgl-ready > .model-cube-reflection,
+.model-cube-stage.is-webgl-ready > .model-cube-floor,
+.model-cube-stage.is-webgl-ready > .model-cube-orbit { visibility: hidden; }
+.marketing-site .public-page-hero.with-model-cube { background: radial-gradient(ellipse at 83% 23%, #e6edf780 0%, #f7f9fc00 46%); }
+.operating-model-explorer { --cube-stage-height: 450px; }
+@media (max-width: 760px) { .operating-model-explorer { --cube-stage-height: 340px; } }
