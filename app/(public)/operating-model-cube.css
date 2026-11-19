@@ -95,7 +95,7 @@
 .model-cube-agents rect { filter: drop-shadow(0 1px 1px #22365b18); }
 .model-cube-floor { top: calc(var(--cube-floor-y) - 15px); bottom: auto; left: 10%; width: 80%; height: 32px; background: radial-gradient(ellipse at 50% 50%, #1223424d 0%, #30497724 32%, #6472e80a 62%, transparent 75%); filter: blur(6px); }
 .model-cube-floor::after { content: ""; position: absolute; inset: 8px 19%; border-radius: 50%; background: #11234735; filter: blur(4px); }
-.model-cube-reflection { position: absolute; inset: 0; perspective: 1100px; transform-origin: 50% 0; transform: translateY(calc(var(--cube-floor-y) * 2)) scaleY(-1); opacity: .18; filter: blur(1.2px); mask-image: linear-gradient(to bottom, transparent 55%, #000 92%); -webkit-mask-image: linear-gradient(to bottom, transparent 55%, #000 92%); pointer-events: none; }
+.model-cube-reflection { position: absolute; inset: 0; perspective: 1100px; transform-origin: 50% 0; transform: translateY(calc(var(--cube-floor-y) * 1.25)) scaleY(-.25); opacity: .16; filter: blur(1.5px); mask-image: linear-gradient(to bottom, transparent 42%, #000 92%); -webkit-mask-image: linear-gradient(to bottom, transparent 42%, #000 92%); pointer-events: none; }
 .model-cube-orbit { opacity: .4; }
 @media (max-width: 760px) {
   .operating-model-explorer { --cube-stage-height: 325px; }
