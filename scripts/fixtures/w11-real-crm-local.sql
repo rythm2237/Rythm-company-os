@@ -75,7 +75,7 @@ begin
  begin
   update public.finance_invoices set project_id=project_b where id=invoice;
  exception when others then
-  if sqlerrm like '%Invoice attribution conflicts with posted transactions%' then was_denied:=true;else raise;end if;
+  if sqlerrm like '%Invoice attribution conflicts with posted transactions%' or sqlerrm like '%Issued invoice identity and relationships are historical records%' then was_denied:=true;else raise;end if;
  end;
  if not was_denied then raise exception 'W11: invoice payment attribution rewrite permitted';end if;
 
