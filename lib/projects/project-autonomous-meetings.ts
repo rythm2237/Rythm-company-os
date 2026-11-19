@@ -173,8 +173,8 @@ async function runMeeting(supabase:SupabaseClient,job:any){
   await supabase.from("project_autonomous_meeting_jobs").update({status:"completed",result:{meeting_id:meeting.id,session_id:session.data.id,summary:data.executive_summary,recommendation:data.recommendation,cost_usd:totalCost},lease_owner:null,lease_expires_at:null,updated_at:now}).eq("id",job.id).eq("lease_owner",job.lease_owner);
 }
 
-export async function dispatchAutonomousProjectMeetings(supabase:SupabaseClient,workerId=`project-meeting-${randomUUID()}`){
-  const claimed=await supabase.rpc("claim_project_autonomous_meeting_jobs_v1",{worker_id:workerId,claim_limit:2,lease_seconds:240});
+export async function dispatchAutonomousProjectMeetings(supabase:SupabaseClient,workerId=`project-meeting-${randomUUID()}`,claimLimit=2){
+  const claimed=await supabase.rpc("claim_project_autonomous_meeting_jobs_v1",{worker_id:workerId,claim_limit:Math.max(1,Math.min(claimLimit,2)),lease_seconds:240});
   if(claimed.error)throw new Error(claimed.error.message);
   const results:Array<{id:string;status:string;error?:string}>=[];
   for(const job of claimed.data??[]){

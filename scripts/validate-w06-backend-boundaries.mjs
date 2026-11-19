@@ -47,9 +47,13 @@ const database = {
     }
     throw Error("UNEXPECTED_DB_TABLE_" + table);
   },
-  async rpc() {
+  async rpc(name) {
     state.projectOperations++;
     if (state.failProject) throw Error("TENANT_B_PRIVATE_CUSTOMER_CONTENT");
+    // Synthetic W13 singleton lease: the dispatcher must acquire/release it
+    // before/after performing privileged work. No tenant or provider data.
+    if (name === "acquire_project_dispatch_lease_v1" ||
+        name === "complete_project_dispatch_lease_v1") return { data: true, error: null };
     return { data: 0, error: null };
   },
 };

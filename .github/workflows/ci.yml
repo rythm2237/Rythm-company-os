@@ -18,6 +18,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run test:w13
       - run: npm run test:w05
       - run: npm run test:w06
       - uses: actions/upload-artifact@v4
