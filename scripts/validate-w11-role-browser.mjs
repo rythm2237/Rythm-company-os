@@ -162,6 +162,11 @@ export async function verifyW11RoleBrowser({
     check(Boolean(unauthorizedAgent.error),"agent with no domain grants cannot retrieve sensitive context");
     const agentCustomer=await grant("agent",agentId,"customer.read","customer",customerId);
     const agentContract=await grant("agent",agentId,"contract.read","customer",customerId);
+    const operationalWithoutHuman=ok(await admin.rpc("crm_agent_customer_context",{
+      p_organization_id:organizationId,p_customer_id:customerId,p_agent_id:agentId,p_user_id:null,
+      p_include_contracts:false,p_include_finance:false,
+    }),"Unassigned operational-only agent context");
+    check(operationalWithoutHuman.id===customerId,"operational agent facts work without initiating user");
     const permittedAgent=ok(await admin.rpc("crm_agent_customer_context",{
       p_organization_id:organizationId,p_customer_id:customerId,p_agent_id:agentId,p_user_id:ownerId,
       p_include_contracts:true,p_include_finance:false,
@@ -173,6 +178,11 @@ export async function verifyW11RoleBrowser({
     });
     check(Boolean(withoutFinance.error),"agent cannot elevate contract grant to finance");
     const agentFinance=await grant("agent",agentId,"finance.read","customer",customerId);
+    const nullHumanConfidential=await admin.rpc("crm_agent_customer_context",{
+      p_organization_id:organizationId,p_customer_id:customerId,p_agent_id:agentId,p_user_id:null,
+      p_include_contracts:true,p_include_finance:true,
+    });
+    check(Boolean(nullHumanConfidential.error),"agent finance grant cannot bypass missing initiating human");
     const withoutHumanFinance=await admin.rpc("crm_agent_customer_context",{
       p_organization_id:organizationId,p_customer_id:customerId,p_agent_id:agentId,p_user_id:memberId,
       p_include_contracts:false,p_include_finance:true,
