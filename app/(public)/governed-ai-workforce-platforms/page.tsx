@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE_NAME, SITE_ORIGIN } from "@/lib/seo/site";
@@ -56,9 +57,9 @@ export default function GovernedAiWorkforcePlatformsPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <nav className="public-breadcrumbs" aria-label="Breadcrumb"><Link href="/">{SITE_NAME}</Link><span aria-hidden="true">/</span><span aria-current="page">Governed AI Workforce Platforms</span></nav>
 
-      <section className="public-page-hero knowledge-hero">
+      <section className="public-page-hero knowledge-hero with-editorial-art">
         <div><p className="marketing-kicker">DIRECT ANSWER</p><h1>What are governed AI workforce platforms?</h1></div>
-        <p>Governed AI workforce platforms coordinate multiple specialized AI roles while making human authority, permissions, risk limits, approvals, and execution evidence explicit. The important distinction is not simply whether a product can run several agents, but whether the organization can control what those agents may decide and execute.</p>
+        <PublicHeroAside variant="workbench"><p>Governed AI workforce platforms coordinate multiple specialized AI roles while making human authority, permissions, risk limits, approvals, and execution evidence explicit. The important distinction is not simply whether a product can run several agents, but whether the organization can control what those agents may decide and execute.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section knowledge-section">

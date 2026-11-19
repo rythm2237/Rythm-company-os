@@ -1,3 +1,4 @@
+import PublicHeroAside, { illustrationForPath } from "@/app/(public)/_components/PublicHeroAside";
 import Link from "next/link";
 import PublicPageStructuredData from "@/components/brand/PublicPageStructuredData";
 
@@ -63,12 +64,12 @@ export default function PublicKnowledgePage({ content }: Props) {
           <span aria-current="page">{content.breadcrumbLabel}</span>
         </nav>
 
-        <section className="public-page-hero knowledge-hero">
+        <section className="public-page-hero knowledge-hero with-editorial-art">
           <div>
             <p className="marketing-kicker">{content.kicker}</p>
             <h1>{content.title}</h1>
           </div>
-          <p>{content.summary}</p>
+          <PublicHeroAside variant={illustrationForPath(content.path)}><p>{content.summary}</p></PublicHeroAside>
         </section>
 
         {content.definition ? (

@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import { SubmitButton } from "@/components/ui/Button";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -40,9 +41,9 @@ export default async function EnterprisePage({ searchParams }: Props) {
         path="/enterprise"
       />
       <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">ENTERPRISE AI WORKFORCE</p><h1>Deploy governed AI teams inside the organization you already have.</h1></div>
-        <p>Combine human leadership, AI managers and specialists, departmental knowledge, approval boundaries, auditability, and executive oversight through a controlled Enterprise Beta.</p>
+        <PublicHeroAside variant="team"><p>Combine human leadership, AI managers and specialists, departmental knowledge, approval boundaries, auditability, and executive oversight through a controlled Enterprise Beta.</p></PublicHeroAside>
       </section>
       <section className="marketing-section enterprise-model">
         <div className="enterprise-hierarchy" aria-label="Example Enterprise AI workforce hierarchy">

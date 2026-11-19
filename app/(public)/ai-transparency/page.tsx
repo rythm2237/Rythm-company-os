@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicMetadata } from "@/lib/seo/site";
@@ -7,9 +8,9 @@ export const metadata: Metadata = createPublicMetadata("/ai-transparency");
 export default function AiTransparencyPage() {
   return (
     <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">AI TRANSPARENCY</p><h1>What RYTHM AI does, what data it can use, and where human authority remains mandatory.</h1></div>
-        <p>Effective 14 August 2026. RYTHM Company OS uses clearly identified AI Agents and AI-assisted workflows for analysis, drafting, meetings, recommendations, and structured operational support. AI output is not presented as an undisclosed human decision.</p>
+        <PublicHeroAside variant="governance"><p>Effective 14 August 2026. RYTHM Company OS uses clearly identified AI Agents and AI-assisted workflows for analysis, drafting, meetings, recommendations, and structured operational support. AI output is not presented as an undisclosed human decision.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">

@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PUBLIC_TEMPLATES } from "@/lib/public-experience/content";
@@ -20,9 +21,9 @@ export default async function PublicTemplatesPage() {
 
   return (
     <main>
-      <section className="public-page-hero templates-hero">
+      <section className="public-page-hero templates-hero with-editorial-art">
         <div><p className="marketing-kicker">READY COMPANY DISCOVERY</p><h1>Choose from the same governed company catalog that RYTHM provisions.</h1><p>Reserve your company, then request assisted B2B activation. Signup does not place an order or charge you.</p></div>
-        <div><p>The Ready Companies below mirror the current Production catalog. Choosing one preserves your intent through account setup and commercial activation; provisioning remains tenant-isolated and approval-governed.</p><Link className="marketing-text-link" href="/demo?surface=templates">Explore the operating model in Demo <span aria-hidden="true">→</span></Link></div>
+        <PublicHeroAside variant="workbench"><div><p>The Ready Companies below mirror the current Production catalog. Choosing one preserves your intent through account setup and commercial activation; provisioning remains tenant-isolated and approval-governed.</p><Link className="marketing-text-link" href="/demo?surface=templates">Explore the operating model in Demo <span aria-hidden="true">→</span></Link></div></PublicHeroAside>
       </section>
       <section className="marketing-section public-template-grid" aria-label="Public company templates">
         {PUBLIC_TEMPLATES.map((template) => {

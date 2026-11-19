@@ -1,0 +1,48 @@
+name: Public editorial and Demo UI
+on:
+  pull_request:
+    paths:
+      - 'app/(public)/**'
+      - 'components/ui/Button.tsx'
+      - 'app/interactions.css'
+      - 'public/illustrations/**'
+      - 'scripts/validate-public-editorial-browser.mjs'
+      - '.github/workflows/public-editorial-ui.yml'
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ui_fixture
+      RYTHM_AGENT_EXECUTION_ENABLED: 'false'
+      RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
+      CRM_BROWSER_CHANNEL: chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: google-chrome --version
+      - run: npm run build
+      - name: Desktop, laptop, tablet and mobile browser replay
+        run: |
+          set -euo pipefail
+          npm run start -- --hostname 127.0.0.1 --port 3000 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 25 --retry-connrefused --retry-delay 2 http://127.0.0.1:3000/solutions -o /dev/null
+          node scripts/validate-public-editorial-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-editorial-browser
+          path: artifacts/public-editorial
+          if-no-files-found: ignore

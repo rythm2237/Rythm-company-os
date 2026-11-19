@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE_NAME, SITE_ORIGIN } from "@/lib/seo/site";
@@ -56,9 +57,9 @@ export default function VirtualCompanyAiEmployeesPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <nav className="public-breadcrumbs" aria-label="Breadcrumb"><Link href="/">{SITE_NAME}</Link><span aria-hidden="true">/</span><span aria-current="page">Virtual Company with AI Employees</span></nav>
 
-      <section className="public-page-hero knowledge-hero">
+      <section className="public-page-hero knowledge-hero with-editorial-art">
         <div><p className="marketing-kicker">DIRECT ANSWER</p><h1>What are the alternatives for running a virtual company with AI employees?</h1></div>
-        <p>You can combine individual AI assistants, workflow automation platforms, agent frameworks, enterprise agent suites, or use an AI company operating system. If the goal is a persistent virtual organization rather than isolated tasks, evaluate whether the platform can represent roles, reporting, shared context, collaboration, human authority, approvals, and accountable execution.</p>
+        <PublicHeroAside variant="team"><p>You can combine individual AI assistants, workflow automation platforms, agent frameworks, enterprise agent suites, or use an AI company operating system. If the goal is a persistent virtual organization rather than isolated tasks, evaluate whether the platform can represent roles, reporting, shared context, collaboration, human authority, approvals, and accountable execution.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section knowledge-section">

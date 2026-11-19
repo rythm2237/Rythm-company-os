@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicMetadata } from "@/lib/seo/site";
@@ -7,9 +8,9 @@ export const metadata: Metadata = createPublicMetadata("/consumer-rights");
 export default function ConsumerRightsPage() {
   return (
     <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">CONSUMER RIGHTS</p><h1>Consumer information for RYTHM digital services and distance contracts.</h1></div>
-        <p>Effective 15 August 2026. This page applies when you contract with Tayyebialashti Yaser E.V. / RYTHM Company OS as a consumer, meaning for purposes outside your trade, business, craft, or profession.</p>
+        <PublicHeroAside variant="governance"><p>Effective 15 August 2026. This page applies when you contract with Tayyebialashti Yaser E.V. / RYTHM Company OS as a consumer, meaning for purposes outside your trade, business, craft, or profession.</p></PublicHeroAside>
       </section>
       <section className="marketing-section enterprise-model">
         <div className="enterprise-capabilities"><p className="marketing-kicker">TRADER</p><h2>Who you contract with.</h2><ul><li>Tayyebialashti Yaser E.V. / RYTHM Company OS.</li><li>Registered address: 1143 Budapest, Gizella út 35, Hungary.</li><li>Hungarian tax number: 48332376-1-42.</li><li>Individual entrepreneur registration number: 58642889.</li><li>Consumer/legal email: <a href="mailto:legal@rythm-os.com">legal@rythm-os.com</a>.</li><li>Support email: <a href="mailto:support@rythm-os.com">support@rythm-os.com</a>.</li></ul></div>

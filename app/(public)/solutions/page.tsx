@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SOLUTION_PATHS } from "@/lib/public-experience/content";
@@ -8,9 +9,9 @@ export const metadata: Metadata = createPublicMetadata("/solutions");
 export default function SolutionsPage() {
   return (
     <main>
-      <section className="public-page-hero solutions-hero">
+      <section className="public-page-hero solutions-hero with-editorial-art">
         <div><p className="marketing-kicker">SOLUTIONS</p><h1>Start from the operating model you need—not from internal product architecture.</h1></div>
-        <p>Choose a path only after you understand the difference between a predefined AI company, a self-designed company, and an enterprise workforce deployment.</p>
+        <PublicHeroAside variant="team"><p>Choose a path only after you understand the difference between a predefined AI company, a self-designed company, and an enterprise workforce deployment.</p></PublicHeroAside>
       </section>
       <section className="marketing-section solution-path-list">
         {SOLUTION_PATHS.map((path, index) => (

@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicMetadata } from "@/lib/seo/site";
@@ -7,9 +8,9 @@ export const metadata: Metadata = createPublicMetadata("/terms");
 export default function TermsPage() {
   return (
     <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">TERMS OF SERVICE</p><h1>Terms for using RYTHM Company OS during the Public Beta.</h1></div>
-        <p>Effective 15 August 2026. These Terms govern access to the public website, Demo, account areas, and paid or assisted Public Beta services unless a signed order, enterprise agreement, or the Consumer Terms state otherwise.</p>
+        <PublicHeroAside variant="governance"><p>Effective 15 August 2026. These Terms govern access to the public website, Demo, account areas, and paid or assisted Public Beta services unless a signed order, enterprise agreement, or the Consumer Terms state otherwise.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">

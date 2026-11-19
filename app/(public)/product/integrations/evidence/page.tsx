@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -44,14 +45,14 @@ export default function IntegrationEvidencePage() {
         <span aria-current="page">Evidence</span>
       </nav>
 
-      <section className="public-page-hero knowledge-hero">
+      <section className="public-page-hero knowledge-hero with-editorial-art">
         <div>
           <p className="marketing-kicker">VERIFIABLE INTEGRATION EVIDENCE</p>
           <h1>Implemented provider contracts, without inflated partnership claims.</h1>
         </div>
-        <p>
+        <PublicHeroAside variant="workbench"><p>
           This register documents provider integrations represented in the current RYTHM execution gateway. It distinguishes implemented technical capability from customer availability, marketplace approval, certification, or official partnership.
-        </p>
+        </p></PublicHeroAside>
       </section>
 
       <section className="knowledge-definition" aria-label="Evidence claim boundary">

@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE_NAME, SITE_ORIGIN, SOCIAL_IMAGE_PATH } from "@/lib/seo/site";
@@ -84,11 +85,11 @@ export default function AiWorkforceSoftwarePage() {
         <Link href="/">RYTHM Company OS</Link><span aria-hidden="true">/</span><span aria-current="page">AI Workforce Software</span>
       </nav>
 
-      <section className="public-page-hero knowledge-hero">
+      <section className="public-page-hero knowledge-hero with-editorial-art">
         <div><p className="marketing-kicker">DIRECT ANSWER</p><h1>What software can create an AI workforce for a business?</h1></div>
-        <p>
+        <PublicHeroAside variant="workbench"><p>
           Businesses can choose among AI agent builders, workflow automation platforms, enterprise agent suites, and AI company operating systems. RYTHM Company OS is designed for organizations that want multiple specialized AI roles to operate inside a company structure with human authority, approvals, shared context, and traceable execution.
-        </p>
+        </p></PublicHeroAside>
       </section>
 
       <section className="marketing-section knowledge-section">

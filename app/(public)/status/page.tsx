@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicPageStructuredData from "@/components/brand/PublicPageStructuredData";
@@ -52,17 +53,17 @@ export default function StatusPage() {
         dateModified="2026-09-03"
       />
 
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div>
           <p className="marketing-kicker">SYSTEM STATUS</p>
           <h1>Current Production readiness, without invented uptime claims.</h1>
         </div>
-        <div>
+        <PublicHeroAside variant="governance"><div>
           <p>
             This page publishes the current configuration-readiness signals that RYTHM can verify from Production. It does not represent a contractual SLA, synthetic uptime history, or continuous dependency probe.
           </p>
           <p className="contact-notice">Observed {reviewedDate} UTC</p>
-        </div>
+        </div></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">

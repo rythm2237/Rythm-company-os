@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import ConsumerWithdrawalForm from "@/components/consumer-withdrawal-form";
@@ -8,9 +9,9 @@ export const metadata: Metadata = createPublicMetadata("/withdrawal");
 export default function WithdrawalPage() {
   return (
     <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">WITHDRAW FROM CONTRACT</p><h1>Exercise an eligible consumer withdrawal right online.</h1></div>
-        <p>This function is continuously available for RYTHM consumer distance contracts. It is provided in addition to other lawful ways of sending an unequivocal withdrawal statement.</p>
+        <PublicHeroAside variant="governance"><p>This function is continuously available for RYTHM consumer distance contracts. It is provided in addition to other lawful ways of sending an unequivocal withdrawal statement.</p></PublicHeroAside>
       </section>
       <section className="marketing-section enterprise-model">
         <ConsumerWithdrawalForm />

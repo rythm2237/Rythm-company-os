@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicPageStructuredData from "@/components/brand/PublicPageStructuredData";
@@ -27,16 +28,16 @@ export default function AboutPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(founderProfile).replace(/</g, "\\u003c") }}
         type="application/ld+json"
       />
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div>
           <p className="marketing-kicker">ABOUT RYTHM COMPANY OS</p>
           <h1>A governed AI workforce platform built around human authority.</h1>
         </div>
-        <div><p>
+        <PublicHeroAside variant="team"><div><p>
           RYTHM Company OS helps a Human CEO build and operate specialized AI Agent teams
           with shared Company Memory, structured meetings, approvals, and traceable execution.
           It is currently available as a Public Beta.
-        </p><p className="contact-notice">Reviewed 4 September 2026</p></div>
+        </p><p className="contact-notice">Reviewed 4 September 2026</p></div></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">

@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicPageStructuredData from "@/components/brand/PublicPageStructuredData";
@@ -17,9 +18,9 @@ export default function SupportPage() {
         breadcrumbLabel="Support"
         dateModified="2026-09-03"
       />
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">RYTHM SUPPORT</p><h1>Get to the right recovery or support path without guessing.</h1></div>
-        <div><p>Public Beta support separates account recovery, product questions, commercial requests, and security reports so each request follows the correct boundary.</p><p className="contact-notice">Reviewed 3 September 2026</p></div>
+        <PublicHeroAside variant="workbench"><div><p>Public Beta support separates account recovery, product questions, commercial requests, and security reports so each request follows the correct boundary.</p><p className="contact-notice">Reviewed 3 September 2026</p></div></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">

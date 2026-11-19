@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicMetadata } from "@/lib/seo/site";
@@ -7,9 +8,9 @@ export const metadata: Metadata = createPublicMetadata("/consumer-terms");
 export default function ConsumerTermsPage() {
   return (
     <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">CONSUMER TERMS</p><h1>Terms for individual consumers purchasing RYTHM digital services.</h1></div>
-        <p>Effective 15 August 2026. These Consumer Terms supplement the general Terms of Service when you purchase for purposes outside your trade, business, craft, or profession. Mandatory consumer law always prevails where it gives you stronger rights.</p>
+        <PublicHeroAside variant="governance"><p>Effective 15 August 2026. These Consumer Terms supplement the general Terms of Service when you purchase for purposes outside your trade, business, craft, or profession. Mandatory consumer law always prevails where it gives you stronger rights.</p></PublicHeroAside>
       </section>
       <section className="marketing-section enterprise-model">
         <div className="enterprise-capabilities"><p className="marketing-kicker">TRADER & CONTRACT</p><h2>Your contract is with Tayyebialashti Yaser E.V.</h2><ul><li>RYTHM Company OS is operated by Tayyebialashti Yaser E.V., 1143 Budapest, Gizella út 35, Hungary.</li><li>Tax number: 48332376-1-42. Individual entrepreneur registration number: 58642889.</li><li>The specific service, total consumer price, payment method, duration and start date shown in checkout form part of your contract.</li><li>These terms, the checkout confirmation, the Privacy Policy and the Consumer Rights notice form the general consumer contract framework.</li></ul></div>

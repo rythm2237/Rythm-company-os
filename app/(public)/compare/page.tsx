@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicPageStructuredData from "@/components/brand/PublicPageStructuredData";
@@ -12,7 +13,7 @@ export default function ComparePage() {
       <PublicPageStructuredData path="/compare" name="Compare RYTHM Company OS" description="Fair, source-linked comparisons between RYTHM Company OS and current AI Agent, AI workforce, and multi-agent platforms." breadcrumbLabel="Compare" dateModified={COMPARISON_REVIEW_DATE} />
       <main className="knowledge-page">
         <nav className="public-breadcrumbs" aria-label="Breadcrumb"><Link href="/">RYTHM Company OS</Link><span aria-hidden="true">/</span><span aria-current="page">Compare</span></nav>
-        <section className="public-page-hero knowledge-hero"><div><p className="marketing-kicker">PLATFORM COMPARISONS</p><h1>Compare RYTHM by operating model, governance, and buyer fit.</h1></div><p>These comparisons separate verified competitor facts from RYTHM product facts and link changing claims to official sources. They are decision support, not winner-by-feature-count pages.</p></section>
+        <section className="public-page-hero knowledge-hero with-editorial-art"><div><p className="marketing-kicker">PLATFORM COMPARISONS</p><h1>Compare RYTHM by operating model, governance, and buyer fit.</h1></div><PublicHeroAside variant="workbench"><p>These comparisons separate verified competitor facts from RYTHM product facts and link changing claims to official sources. They are decision support, not winner-by-feature-count pages.</p></PublicHeroAside></section>
         <section className="marketing-section knowledge-section">
           <div className="marketing-section-heading"><p className="marketing-kicker">CURRENT COMPARISONS</p><h2>Start with the platform closest to your buying shortlist.</h2></div>
           <div className="knowledge-card-grid comparison-link-grid">

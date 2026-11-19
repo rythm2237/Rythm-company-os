@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicMetadata } from "@/lib/seo/site";
@@ -7,9 +8,9 @@ export const metadata: Metadata = createPublicMetadata("/data-requests");
 export default function DataRequestsPage() {
   return (
     <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">DATA REQUESTS</p><h1>Exercise privacy rights or request a customer-data export or deletion.</h1></div>
-        <p>RYTHM provides an electronic request channel for access, correction, deletion, restriction, objection, and portability requests. We normally respond without undue delay and within the timeframe required by applicable data-protection law.</p>
+        <PublicHeroAside variant="governance"><p>RYTHM provides an electronic request channel for access, correction, deletion, restriction, objection, and portability requests. We normally respond without undue delay and within the timeframe required by applicable data-protection law.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">

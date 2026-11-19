@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicMetadata } from "@/lib/seo/site";
@@ -7,9 +8,9 @@ export const metadata: Metadata = createPublicMetadata("/privacy");
 export default function PrivacyPolicyPage() {
   return (
     <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">PRIVACY POLICY</p><h1>How RYTHM handles personal data during the Public Beta.</h1></div>
-        <p>Effective 15 August 2026. This notice explains the current data-processing practices of RYTHM Company OS and the rights available to individuals whose personal data is processed.</p>
+        <PublicHeroAside variant="governance"><p>Effective 15 August 2026. This notice explains the current data-processing practices of RYTHM Company OS and the rights available to individuals whose personal data is processed.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">

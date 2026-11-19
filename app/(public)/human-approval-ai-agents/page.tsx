@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE_NAME, SITE_ORIGIN, SOCIAL_IMAGE_PATH } from "@/lib/seo/site";
@@ -84,11 +85,11 @@ export default function HumanApprovalAiAgentsPage() {
         <Link href="/">RYTHM Company OS</Link><span aria-hidden="true">/</span><span aria-current="page">Human Approval for AI Agents</span>
       </nav>
 
-      <section className="public-page-hero knowledge-hero">
+      <section className="public-page-hero knowledge-hero with-editorial-art">
         <div><p className="marketing-kicker">DIRECT ANSWER</p><h1>How should human approval work for consequential AI agent actions?</h1></div>
-        <p>
+        <PublicHeroAside variant="governance"><p>
           A governed AI system should separate proposing an action from having authority to execute it. When an action can materially affect people, money, legal obligations, security, external systems, or important company operations, the system can require an authorized human to review the proposal and grant explicit, action-specific approval before execution.
-        </p>
+        </p></PublicHeroAside>
       </section>
 
       <section className="marketing-section knowledge-section">

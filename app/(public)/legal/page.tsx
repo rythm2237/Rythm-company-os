@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicMetadata } from "@/lib/seo/site";
@@ -7,9 +8,9 @@ export const metadata: Metadata = createPublicMetadata("/legal");
 export default function LegalNoticePage() {
   return (
     <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">LEGAL NOTICE</p><h1>RYTHM Company OS is operated by a Hungarian individual entrepreneur.</h1></div>
-        <p>This notice identifies the service provider behind RYTHM and the official channels for commercial, legal, privacy, security, billing, and support matters.</p>
+        <PublicHeroAside variant="governance"><p>This notice identifies the service provider behind RYTHM and the official channels for commercial, legal, privacy, security, billing, and support matters.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">

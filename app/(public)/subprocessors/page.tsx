@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicMetadata } from "@/lib/seo/site";
@@ -34,9 +35,9 @@ const subprocessors = [
 export default function SubprocessorsPage() {
   return (
     <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">SUBPROCESSOR REGISTER</p><h1>Infrastructure providers that may process customer personal data for RYTHM.</h1></div>
-        <p>Effective 14 August 2026. This register reflects the current Public Beta architecture verified in the RYTHM application and deployment stack. It is updated when a material processor is added, removed, or its role materially changes.</p>
+        <PublicHeroAside variant="governance"><p>Effective 14 August 2026. This register reflects the current Public Beta architecture verified in the RYTHM application and deployment stack. It is updated when a material processor is added, removed, or its role materially changes.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">

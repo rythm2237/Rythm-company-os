@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicMetadata } from "@/lib/seo/site";
@@ -7,9 +8,9 @@ export const metadata: Metadata = createPublicMetadata("/cookies");
 export default function CookieNoticePage() {
   return (
     <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">COOKIE & STORAGE NOTICE</p><h1>RYTHM currently uses essential browser storage, not advertising trackers.</h1></div>
-        <p>Effective 14 August 2026. This notice explains cookies, local storage, and similar browser technologies used by the current Public Beta.</p>
+        <PublicHeroAside variant="governance"><p>Effective 14 August 2026. This notice explains cookies, local storage, and similar browser technologies used by the current Public Beta.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">

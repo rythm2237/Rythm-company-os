@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicPageStructuredData from "@/components/brand/PublicPageStructuredData";
@@ -18,9 +19,9 @@ export default function SecurityPage() {
         path="/security"
       />
       <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">SECURITY</p><h1>Security is enforced through identity, tenant boundaries, entitlements, and governed actions.</h1></div>
-        <p>This page describes the current Public Beta security posture. It is a technical overview, not a certification or contractual security schedule. Reviewed 1 September 2026.</p>
+        <PublicHeroAside variant="governance"><p>This page describes the current Public Beta security posture. It is a technical overview, not a certification or contractual security schedule. Reviewed 1 September 2026.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">

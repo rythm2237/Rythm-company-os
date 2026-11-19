@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE_NAME, SITE_ORIGIN } from "@/lib/seo/site";
@@ -56,9 +57,9 @@ export default function PlatformsForBuildingCompanyWithAiAgentsPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <nav className="public-breadcrumbs" aria-label="Breadcrumb"><Link href="/">{SITE_NAME}</Link><span aria-hidden="true">/</span><span aria-current="page">Platforms for a Company with AI Agents</span></nav>
 
-      <section className="public-page-hero knowledge-hero">
+      <section className="public-page-hero knowledge-hero with-editorial-art">
         <div><p className="marketing-kicker">DIRECT ANSWER</p><h1>What are the best platforms for building a company with AI agents?</h1></div>
-        <p>There is no universal best platform. The right choice depends on whether you need a developer framework for custom orchestration, an automation platform for connected workflows, an enterprise suite inside an existing ecosystem, or an AI company operating system that models persistent roles, departments, authority, approvals, and accountable execution.</p>
+        <PublicHeroAside variant="workbench"><p>There is no universal best platform. The right choice depends on whether you need a developer framework for custom orchestration, an automation platform for connected workflows, an enterprise suite inside an existing ecosystem, or an AI company operating system that models persistent roles, departments, authority, approvals, and accountable execution.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section knowledge-section">

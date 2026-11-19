@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import Link from "next/link";
 import PublicPageStructuredData from "@/components/brand/PublicPageStructuredData";
 import { COMPARISON_REVIEW_DATE, type ComparisonDefinition } from "@/lib/seo/comparisons";
@@ -21,9 +22,9 @@ export default function PublicComparisonPage({ comparison }: Readonly<{ comparis
           <span aria-current="page">{comparison.competitor}</span>
         </nav>
 
-        <section className="public-page-hero knowledge-hero">
+        <section className="public-page-hero knowledge-hero with-editorial-art">
           <div><p className="marketing-kicker">FAIR PLATFORM COMPARISON</p><h1>{comparison.title}</h1></div>
-          <p>{comparison.summary}</p>
+          <PublicHeroAside variant="team"><p>{comparison.summary}</p></PublicHeroAside>
         </section>
 
         <section className="knowledge-definition">

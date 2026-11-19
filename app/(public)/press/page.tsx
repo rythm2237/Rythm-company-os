@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -40,16 +41,16 @@ export default function PressPage() {
         <span aria-current="page">Press & Media</span>
       </nav>
 
-      <section className="public-page-hero knowledge-hero">
+      <section className="public-page-hero knowledge-hero with-editorial-art">
         <div>
           <p className="marketing-kicker">PRESS & MEDIA</p>
           <h1>Factual resources for independent coverage of RYTHM.</h1>
         </div>
-        <p>
+        <PublicHeroAside variant="team"><p>
           This page provides verifiable product and founder facts for journalists, analysts,
           researchers, directory editors, and technical writers. It is not a substitute for
           independent reporting and does not present self-published material as third-party coverage.
-        </p>
+        </p></PublicHeroAside>
       </section>
 
       <section className="marketing-section knowledge-section">

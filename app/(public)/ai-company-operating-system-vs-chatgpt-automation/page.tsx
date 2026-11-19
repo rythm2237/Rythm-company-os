@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE_NAME, SITE_ORIGIN, SOCIAL_IMAGE_PATH } from "@/lib/seo/site";
@@ -84,11 +85,11 @@ export default function AiCompanyOsVsChatgptAutomationPage() {
         <Link href="/">RYTHM Company OS</Link><span aria-hidden="true">/</span><span aria-current="page">Company OS vs ChatGPT and Automation</span>
       </nav>
 
-      <section className="public-page-hero knowledge-hero">
+      <section className="public-page-hero knowledge-hero with-editorial-art">
         <div><p className="marketing-kicker">DIRECT ANSWER</p><h1>How is an AI company operating system different from ChatGPT or workflow automation?</h1></div>
-        <p>
+        <PublicHeroAside variant="team"><p>
           Chat-based AI helps a person reason or create through a conversation. Workflow automation connects triggers, logic, and actions. An AI company operating system adds a persistent organizational layer: specialized AI roles, shared company context, reporting relationships, meetings, permissions, human decision rights, approvals, and governed execution.
-        </p>
+        </p></PublicHeroAside>
       </section>
 
       <section className="marketing-section knowledge-section">

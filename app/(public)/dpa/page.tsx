@@ -1,3 +1,4 @@
+import PublicHeroAside from "@/app/(public)/_components/PublicHeroAside";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPublicMetadata } from "@/lib/seo/site";
@@ -7,9 +8,9 @@ export const metadata: Metadata = createPublicMetadata("/dpa");
 export default function DpaPage() {
   return (
     <main>
-      <section className="public-page-hero enterprise-hero">
+      <section className="public-page-hero enterprise-hero with-editorial-art">
         <div><p className="marketing-kicker">DATA PROCESSING ADDENDUM</p><h1>GDPR processing terms for customer personal data handled by RYTHM.</h1></div>
-        <p>Effective 14 August 2026. This Public Beta DPA is intended to apply where a customer acts as controller and Tayyebialashti Yaser E.V. / RYTHM Company OS acts as processor for personal data submitted to the service. A signed enterprise agreement or negotiated DPA controls where it expressly replaces these terms.</p>
+        <PublicHeroAside variant="governance"><p>Effective 14 August 2026. This Public Beta DPA is intended to apply where a customer acts as controller and Tayyebialashti Yaser E.V. / RYTHM Company OS acts as processor for personal data submitted to the service. A signed enterprise agreement or negotiated DPA controls where it expressly replaces these terms.</p></PublicHeroAside>
       </section>
 
       <section className="marketing-section enterprise-model">
