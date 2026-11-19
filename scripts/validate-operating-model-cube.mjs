@@ -61,11 +61,14 @@ try{
  await page.waitForTimeout(4000);
  await page.getByRole('button',{name:'Pause cube rotation'}).click();
  await page.waitForTimeout(100);const frozen=await cube.getAttribute('data-pose');await page.waitForTimeout(300);assert.equal(await cube.getAttribute('data-pose'),frozen,'Pause freezes geometry and row motion');
- await page.locator('.model-cube-options button').nth(1).click();await page.waitForTimeout(1500);
- await page.locator('.model-cube-options button').nth(2).click();await page.waitForTimeout(1500);
+ await page.locator('.model-cube-options button').nth(1).click();await page.waitForFunction(()=>document.querySelector('.studio-cube-canvas')?.dataset.selected==='1'&&document.querySelector('.studio-cube-canvas')?.dataset.transitioning==='false');
+ await page.locator('.model-cube-options button').nth(2).click();await page.waitForFunction(()=>document.querySelector('.studio-cube-canvas')?.dataset.selected==='2'&&document.querySelector('.studio-cube-canvas')?.dataset.transitioning==='false');
  const resumeFrom=(await cube.getAttribute('data-pose')).split(',').map(Number);
  await page.getByRole('button',{name:'Play cube rotation'}).click();
- const resumed=(await cube.getAttribute('data-pose')).split(',').map(Number);assert.ok(resumed.every((v,i)=>Math.abs(v-resumeFrom[i])<.15),'Resume starts from the selected orientation');
+ const resumed=(await cube.getAttribute('data-pose')).split(',').map(Number);// q and -q encode the same orientation; compare angular distance, not signed components.
+ const dot=Math.abs(resumed.slice(0,4).reduce((sum,value,i)=>sum+value*resumeFrom[i],0));
+ const angularGap=2*Math.acos(Math.min(1,dot));
+ assert.ok(angularGap<.15&&Math.abs(resumed[4]-resumeFrom[4])<.15,`Resume remains continuous: ${angularGap} radians`);
  assert.equal(await page.locator('.operating-model-explorer').getAttribute('data-cube-playing'),'true');
  await page.waitForTimeout(3000);await page.screenshot({path:`${output}/motion-desktop.png`});
  evidence.push({engine:'WebGL',cubies:27,motion:'PASS',pause:'PASS',resume:'PASS'});const video=page.video();await c.close();await video.saveAs(`${output}/cube-motion.webm`);

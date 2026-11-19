@@ -186,6 +186,7 @@ export default function StudioCubeScene(props: Props) {
       }
       if (dirty) renderer.render(scene, camera);
       element.dataset.selected = String(current.selected);
+      element.dataset.transitioning = String(transitioning);
       element.dataset.pose = [rig.quaternion.x, rig.quaternion.y, rig.quaternion.z, rig.quaternion.w, upperRow.rotation.y].map((value) => value.toFixed(5)).join(",");
     }
     frame = requestAnimationFrame(animate);
