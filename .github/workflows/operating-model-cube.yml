@@ -1,18 +1,21 @@
-name: Operating model cube preview
+name: Public cube and Demo verification
 on:
   pull_request:
+    types: [opened, synchronize, reopened, closed]
     paths:
       - 'app/(public)/**'
       - 'lib/public-experience/content.ts'
       - 'lib/public-experience/cube-motion.ts'
       - 'lib/public-experience/assets/**'
       - 'scripts/validate-cube-motion.ts'
+      - 'scripts/validate-public-demo-layout.mjs'
       - 'scripts/validate-operating-model-cube.mjs'
       - '.github/workflows/operating-model-cube.yml'
 permissions:
   contents: read
 jobs:
   browser:
+    if: github.event.action != 'closed'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -40,9 +43,56 @@ jobs:
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
           curl -fsS --retry 25 --retry-connrefused --retry-delay 2 http://127.0.0.1:3000/solutions -o /dev/null
           node scripts/validate-operating-model-cube.mjs
+          node scripts/validate-public-demo-layout.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: operating-model-cube
-          path: artifacts/operating-model-cube
+          path: |
+            artifacts/operating-model-cube
+            artifacts/public-demo
+          if-no-files-found: ignore
+
+  production:
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CRM_BROWSER_CHANNEL: chrome
+      RELEASE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+      CUBE_BROWSER_ORIGIN: https://rythm-os.com
+      UI_PREVIEW_ORIGIN: https://rythm-os.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install ffmpeg
+      - name: Wait for the public cube release
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl -fsS --max-time 20 "https://rythm-os.com/solutions?release=${RELEASE_SHA}" -o /tmp/public-release.html && rg -q "data-public-build=\"${RELEASE_SHA}\"" /tmp/public-release.html; then
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'Production did not expose the public cube within the release window.'
+          exit 1
+      - name: Read-only desktop and mobile production replay
+        run: |
+          node scripts/validate-operating-model-cube.mjs
+          node scripts/validate-public-demo-layout.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-production-smoke
+          path: |
+            artifacts/operating-model-cube
+            artifacts/public-demo
           if-no-files-found: ignore

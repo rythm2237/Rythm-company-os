@@ -8,10 +8,11 @@ import "./knowledge.css";
 import "./public-mobile-hardening-v2.css";
 import "./guided-tour-hardening.css";
 import "./operating-model-cube.css";
+import "./public-demo-layout.css";
 
 export default function PublicLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className="marketing-site">
+    <div className="marketing-site" data-public-build={process.env.VERCEL_GIT_COMMIT_SHA || undefined}>
       <PublicReferralObserver />
       <PublicShell>{children}</PublicShell>
     </div>

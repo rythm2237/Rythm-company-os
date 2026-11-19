@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {chromium} from 'playwright';
 
-const origin='http://127.0.0.1:3000';
+const origin=process.env.CUBE_BROWSER_ORIGIN||'http://127.0.0.1:3000';
+assert.ok(origin==='http://127.0.0.1:3000'||origin==='https://rythm-os.com','Only synthetic localhost or the public production site');
 const output='artifacts/operating-model-cube';
 await mkdir(output,{recursive:true});
 const browser=await chromium.launch({channel:process.env.CRM_BROWSER_CHANNEL||'chrome',args:['--enable-unsafe-swiftshader']});
@@ -10,7 +11,7 @@ const evidence=[];
 async function context(options){
  const c=await browser.newContext(options);
  await c.addInitScript(()=>{localStorage.setItem('rythm-public-guide-v3','dismissed');localStorage.setItem('rythm-public-education-locale-v1','en');});
- await c.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+ await c.route('**/*',route=>new URL(route.request().url()).origin===origin&&['GET','HEAD'].includes(route.request().method())?route.continue():route.abort());
  return c;
 }
 try{

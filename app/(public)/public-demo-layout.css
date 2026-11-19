@@ -1,0 +1,21 @@
+/* Button wraps children in .ui-button-content: that wrapper owns the card grid. */
+.marketing-site .demo-agent-grid .ui-button { display: block; position: relative; width: 100%; min-width: 0; height: auto; text-align: start; white-space: normal; }
+.marketing-site .demo-agent-grid .ui-button-content { display: grid; width: 100%; min-width: 0; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; justify-content: normal; gap: 10px 12px; }
+.marketing-site .demo-agent-grid .ui-button-progress { position: absolute; inset: 0; pointer-events: none; }
+.marketing-site .demo-agent-grid .demo-agent-identity { min-width: 0; }
+.marketing-site .demo-agent-grid .demo-agent-identity strong { font-size: 1rem; line-height: 1.35; word-break: normal; }
+.marketing-site .demo-agent-grid .demo-agent-identity small { font-size: .875rem; line-height: 1.45; white-space: normal; overflow-wrap: break-word; }
+.marketing-site .demo-agent-grid .demo-agent-activity { grid-column: 2 / -1; margin: 0; font-size: .875rem; line-height: 1.55; color: #59677d; overflow-wrap: break-word; }
+.marketing-site .demo-agent-grid .demo-status { font-size: .8125rem; white-space: nowrap; }
+
+@media (max-width: 1150px) {
+  .marketing-site .demo-agent-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .marketing-site .demo-main-heading h2 { font-size: clamp(1.7rem, 8.5vw, 2.4rem); text-wrap: balance; overflow-wrap: normal; word-break: normal; }
+  .marketing-site .demo-agent-grid .ui-button-content { grid-template-columns: 40px minmax(0, 1fr); }
+  .marketing-site .demo-agent-grid .demo-status { grid-column: 2; justify-self: start; white-space: normal; }
+}
+
+/* Hidden public navigation must not reserve a header gap in immersive Demo mode. */
+.marketing-site .is-experience-mode .marketing-stage { padding-top: 0; }
