@@ -120,4 +120,32 @@ create trigger w11_manager_history_append_only before update or delete
  on public.project_manager_history for each row execute function crm_private.w11_reject_manager_history_mutation();
 revoke truncate on public.project_manager_history from authenticated,service_role;
 
+-- W11: service-only access is not a substitute for an initiating human
+-- approval on private contract/finance context. Null-user operational facts stay available.
+create or replace function public.crm_agent_customer_context(p_organization_id uuid,p_customer_id uuid,p_agent_id uuid,p_user_id uuid default null,p_include_contracts boolean default false,p_include_finance boolean default false) returns jsonb
+language plpgsql security definer set search_path='' as $
+declare result jsonb;begin
+ -- Agent-only operational context is allowed. Confidential context must always
+ -- be bound to an active initiating human with the exact matching grant.
+ if (coalesce(p_include_contracts,false) or coalesce(p_include_finance,false)) and p_user_id is null then
+  raise exception 'Initiating human authorization required for confidential CRM context';
+ end if;
+ if not exists(select 1 from public.agents where id=p_agent_id and organization_id=p_organization_id and enabled) then raise exception 'Agent unavailable';end if;
+ if not crm_private.has_capability(p_organization_id,'customer.read','customer',p_customer_id,'agent',p_agent_id) or
+ (p_user_id is not null and not exists(select 1 from public.organization_members where organization_id=p_organization_id and user_id=p_user_id and membership_status='active')) then raise exception 'Customer authorization required';end if;
+ select jsonb_build_object('id',id,'name',name,'status',customer_status,'industry',industry,'preferred_language',preferred_language) into result from public.crm_accounts where id=p_customer_id and organization_id=p_organization_id;
+ if result is null then raise exception 'Customer unavailable';end if;
+ if p_include_contracts then
+  if not crm_private.has_capability(p_organization_id,'contract.read','customer',p_customer_id,'agent',p_agent_id) or (p_user_id is not null and not crm_private.has_capability(p_organization_id,'contract.read','customer',p_customer_id,'user',p_user_id)) then raise exception 'Contract authorization required';end if;
+  result:=result||jsonb_build_object('contracts',(select coalesce(jsonb_agg(jsonb_build_object('id',id,'identifier',contract_number,'status',contract_status,'scope',scope_description)),'[]') from public.project_contracts where organization_id=p_organization_id and customer_id=p_customer_id));
+ end if;
+ if p_include_finance then
+  if not crm_private.has_capability(p_organization_id,'finance.read','customer',p_customer_id,'agent',p_agent_id) or (p_user_id is not null and not crm_private.has_capability(p_organization_id,'finance.read','customer',p_customer_id,'user',p_user_id)) then raise exception 'Finance authorization required';end if;
+  result:=result||jsonb_build_object('invoices',(select coalesce(jsonb_agg(jsonb_build_object('id',id,'currency',currency,'total',total,'amount_paid',amount_paid,'status',status)),'[]') from public.finance_invoices where organization_id=p_organization_id and customer_id=p_customer_id));
+ end if;
+ return result;
+end $;
+revoke all on function public.crm_agent_customer_context(uuid,uuid,uuid,uuid,boolean,boolean) from public,anon,authenticated;
+grant execute on function public.crm_agent_customer_context(uuid,uuid,uuid,uuid,boolean,boolean) to service_role;
+
 commit;
