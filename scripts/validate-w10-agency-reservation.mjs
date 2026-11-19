@@ -447,7 +447,7 @@ try {
           .eq("organization_id", org.id).eq("project_id", projectId).eq("waiting_on_approval_id", reviewApprovals[0].id).single(), "Read governed finalization task");
         assert.equal(finalTask.status, "waiting_for_approval");
         await page.goto(app + "/projects/operating?project=" + projectId + "&view=decisions");
-        await page.getByLabel("Decision reason for " + reviewApprovals[0].title, { exact: true }).fill("Accept this internal review and authorize only the final synthetic KPI document.");
+        await page.getByLabel("Decision reason for " + reviewApprovals[0].title, { exact: true }).fill("Accept this internal review. Produce the final internal KPI document now using the project assumptions of 1000 impressions, 50 clicks and 10 purchases, with the CTR and conversion calculations. This authorizes completion of that document, not another approval request or meeting.");
         const reviewResponse = page.waitForResponse(r => new URL(r.url()).pathname === "/api/projects/live" && r.request().method() === "POST");
         await page.getByRole("button", { name: "Approve & continue", exact: true }).click();
         assert.equal((await reviewResponse).ok(), true, "Post-meeting Human CEO approval must persist");
@@ -465,6 +465,8 @@ try {
         assert.match(artifactText, /CTR|click[- ]through/i, "Persisted KPI output must include click-through work");
         assert.match(artifactText, /conversion|CVR/i, "Persisted KPI output must include conversion work");
         assert.match(artifactText, /1[,\s]?000/, "The generated artifact must use the supplied synthetic evidence");
+        assert.match(artifactText, /5(?:\.0+)?\s*%|0\.05/, "Final approved content must calculate CTR, not merely request a later document");
+        assert.match(artifactText, /20(?:\.0+)?\s*%|0\.20?\b/, "Final approved content must calculate purchase-per-click conversion");
         outputs.push(output);
         const savedApproval = result(await admin.from("approval_requests").select("status,approver_user_id").eq("id", reviewApprovals[0].id).single(), "Read recorded Human CEO decision");
         assert.equal(savedApproval.status, "approved");

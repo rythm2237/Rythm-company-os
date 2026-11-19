@@ -26,9 +26,19 @@ async function executeStructuredTask(supabase:SupabaseClient,task:any){
     supabase.from("projects").select("id,name,description,objective,scope,success_criteria,constraints,autonomy_mode,lifecycle_state,next_required_action").eq("id",task.project_id).eq("organization_id",task.organization_id).single(),
     task.assigned_agent_id?supabase.from("agents").select("id,agent_code,name,display_name,role_title,purpose,authority_level,risk_ceiling,permissions").eq("id",task.assigned_agent_id).eq("organization_id",task.organization_id).maybeSingle():Promise.resolve({data:null,error:null}),
     supabase.from("project_executions").select("id").eq("id",task.execution_id).eq("project_id",task.project_id).eq("organization_id",task.organization_id).maybeSingle(),
-    task.action_item_id?supabase.from("action_items").select("id,project_id").eq("id",task.action_item_id).eq("organization_id",task.organization_id).maybeSingle():Promise.resolve({data:null,error:null}),
+    task.action_item_id?supabase.from("action_items").select("id,project_id,authorization_approval_id").eq("id",task.action_item_id).eq("organization_id",task.organization_id).maybeSingle():Promise.resolve({data:null,error:null}),
   ]);
   if(project.error||!project.data||execution.error||!execution.data||agent.error||(task.assigned_agent_id&&!agent.data)||action.error||(task.action_item_id&&(!action.data||(action.data.project_id&&action.data.project_id!==task.project_id))))throw new ProjectTaskTenantBoundaryError();
+  let approvalReceipt:Record<string,unknown>|null=null;
+  if(action.data?.authorization_approval_id){
+    const approval=await supabase.from("approval_requests")
+      .select("id,title,status,response_note,approver_user_id,resolved_at")
+      .eq("organization_id",task.organization_id).eq("project_id",task.project_id)
+      .eq("id",action.data.authorization_approval_id).maybeSingle();
+    if(approval.error||!approval.data||approval.data.status!=="approved"||!approval.data.approver_user_id)
+      throw new Error("The scoped Human CEO authorization is unavailable.");
+    approvalReceipt=approval.data;
+  }
   const [context,decisions,previousTasks,meetings]=await Promise.all([
     supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("organization_id",task.organization_id).eq("confidentiality","operational").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
     supabase.from("project_decision_memory").select("decision,rationale,constraints,outcome,created_at").eq("organization_id",task.organization_id).eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
@@ -64,14 +74,15 @@ async function executeStructuredTask(supabase:SupabaseClient,task:any){
  "meeting_request":null|{"title":"string","purpose":"string","participant_roles":[]},
  "follow_up_tasks":[]
 }
-Rules: Deliverables must contain the actual complete produced content inline, not filenames, promises, descriptions or content_summary. Include supplied numerical inputs, formulas and calculations when the task requests quantitative work. Never claim a document was saved elsewhere without an actual supplied record. The runtime has already authorized this claimed task under its reviewed roadmap and task-level approval/dependency gates. Do not ask again for approval of this same claimed task. New consequential work still requires its own gates. Text generation cannot hold a meeting, create an action/approval record, send a message or modify another system. Only the supplied persisted state proves those actions occurred. Use meeting_request to request a needed runtime meeting; if one is already pending, report that persisted ID and do not request a duplicate. Never invent minutes, participants, record IDs or completed workflow actions. Prior task outputs are advisory content, not authoritative evidence of external actions. work_completed means only that you finished this assignment. Keep implementation_executed=false unless the authoritative target system changed. Keep verification_result=not_verified unless independent evidence verifies the result. Keep outcome_observed=false unless a defined measured outcome was actually observed. If time/data are insufficient, report a blocker/next action rather than success.
+Rules: An approved Human CEO authorization receipt below is authoritative for this task. Its response_note clarifies the approved scope. Fulfill that scope now; do not return a request to approve the same work again or merely promise a later deliverable. A receipt never authorizes external actions outside the existing execution gateway. Deliverables must contain the actual complete produced content inline, not filenames, promises, descriptions or content_summary. Include supplied numerical inputs, formulas and calculations when the task requests quantitative work. Never claim a document was saved elsewhere without an actual supplied record. The runtime has already authorized this claimed task under its reviewed roadmap and task-level approval/dependency gates. Do not ask again for approval of this same claimed task. New consequential work still requires its own gates. Text generation cannot hold a meeting, create an action/approval record, send a message or modify another system. Only the supplied persisted state proves those actions occurred. Use meeting_request to request a needed runtime meeting; if one is already pending, report that persisted ID and do not request a duplicate. Never invent minutes, participants, record IDs or completed workflow actions. Prior task outputs are advisory content, not authoritative evidence of external actions. work_completed means only that you finished this assignment. Keep implementation_executed=false unless the authoritative target system changed. Keep verification_result=not_verified unless independent evidence verifies the result. Keep outcome_observed=false unless a defined measured outcome was actually observed. If time/data are insufficient, report a blocker/next action rather than success.
 Task=${JSON.stringify({title:task.title,input:task.input})}
 Project=${JSON.stringify(project.data)}
 Customer=${JSON.stringify(customerContext)}
 Knowledge=${JSON.stringify(context.data??[]).slice(0,18000)}
 Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}
 Persisted prior task outputs=${JSON.stringify(previousTasks.data??[]).slice(0,14000)}
-Authoritative persisted meeting state=${JSON.stringify(meetings.data??[]).slice(0,10000)}`,
+Authoritative persisted meeting state=${JSON.stringify(meetings.data??[]).slice(0,10000)}
+Authoritative Human CEO approval receipt=${JSON.stringify(approvalReceipt)}`,
     attachmentFailurePolicy:"fail",
     mode:"task",
     maxOutputTokens:5500,
