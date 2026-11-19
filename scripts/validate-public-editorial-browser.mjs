@@ -34,9 +34,13 @@ try{
    }
    await page.goto(origin+'/demo?surface=agents');
    await page.locator('.demo-agent-grid button').first().waitFor();
-   const enter=page.getByRole('button',{name:'Enter Experience Mode',exact:true});
-   if(await enter.isVisible())await enter.click();
-   const cards=page.locator('.demo-agent-grid button');assert.ok(await cards.count()>=7);
+   const cards=page.locator('.demo-agent-grid button');
+   assert.equal(await cards.count(),6,'All six synthetic Agent profiles must be present');
+   await page.screenshot({path:`${output}/${name}-demo-standard.png`,fullPage:true,animations:'disabled'});
+   await page.getByRole('button',{name:'Enter Experience Mode',exact:true}).click();
+   await page.locator('.marketing-shell.is-experience-mode').waitFor();
+   await page.waitForFunction(()=>Math.abs(document.querySelector('.marketing-stage').getBoundingClientRect().x)<1);
+   assert.equal(await cards.count(),6);
    const sizes=await cards.evaluateAll(buttons=>buttons.map(b=>{
     const name=b.querySelector('.demo-agent-identity'),content=b.querySelector('.ui-button-content');const r=b.getBoundingClientRect(),n=name.getBoundingClientRect(),c=content.getBoundingClientRect();
     return {width:r.width,height:r.height,identityWidth:n.width,contentWidth:c.width,scrollWidth:b.scrollWidth,clientWidth:b.clientWidth};
@@ -47,7 +51,10 @@ try{
    assert.ok(await page.locator('.demo-agent-panel h3').innerText());
    await page.getByRole('button',{name:'Close Agent profile',exact:true}).click();
    await page.locator('.demo-agent-panel').waitFor({state:'hidden'});
-   evidence.push({profile:name,path:'/demo?surface=agents',cards:sizes,profileInteraction:'PASS'});
+   await page.getByRole('button',{name:'Exit Experience Mode',exact:true}).click();
+   await page.locator('.marketing-shell.is-experience-mode').waitFor({state:'detached'});
+   assert.equal(await cards.count(),6);
+   evidence.push({profile:name,path:'/demo?surface=agents',cards:sizes,profileInteraction:'PASS',experienceToggle:'PASS'});
    console.log(`PASS public editorial + Demo Agent layout/profile (${name}, ${width}x${height})`);
   }catch(error){await page.screenshot({path:`${output}/${name}-failure.png`,fullPage:true}).catch(()=>{});throw error;}
   finally{await context.close();}
