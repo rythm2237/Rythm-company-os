@@ -7,6 +7,7 @@ import "./experience-mobile-fix.css";
 import "./knowledge.css";
 import "./public-mobile-hardening-v2.css";
 import "./guided-tour-hardening.css";
+import "./operating-model-cube.css";
 
 export default function PublicLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
