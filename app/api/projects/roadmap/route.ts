@@ -1,3 +1,4 @@
+import { compileRoadmapTasks } from "@/lib/projects/roadmap-task-graph";
 import { NextResponse } from "next/server";
 import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-context";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -45,6 +46,11 @@ export async function POST(request:Request){
       return NextResponse.json({ok:true,mode:"revision_requested"});
     }
     if(body.action!=="approve_and_start")return NextResponse.json({ok:false,error:"Unsupported roadmap action."},{status:400});
+
+    const review=await getLatestProjectRoadmap(service,auth.organizationId,projectId);
+    if(!review||review.id!==roadmapId)return NextResponse.json({ok:false,error:"Roadmap is not the current review version."},{status:409});
+    try{compileRoadmapTasks(review.phases);}
+    catch{return NextResponse.json({ok:false,error:"Roadmap task dependencies need revision. Request changes before approval.",code:"ROADMAP_GRAPH_INVALID"},{status:422});}
 
     const roadmap=await approveProjectRoadmap(service,auth.organizationId,projectId,roadmapId,auth.user.id);if(!roadmap)throw new Error("Unable to approve roadmap.");
 

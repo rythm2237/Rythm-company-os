@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getApprovedProjectRoadmap, type RoadmapTask } from "@/lib/projects/project-roadmap";
+import { compileRoadmapTasks } from "@/lib/projects/roadmap-task-graph";
+import { getApprovedProjectRoadmap } from "@/lib/projects/project-roadmap";
 
 /**
  * Starts durable project execution from the manager-approved roadmap baseline.
@@ -44,51 +45,7 @@ export async function startProjectExecutionWithoutGlobalGate(
     .maybeSingle();
   if (latest.error) throw new Error(`Unable to read project execution history: ${latest.error.message}`);
 
-  const phaseByTaskKey = new Map<string, { phaseId: string; phaseKey: string; task: RoadmapTask }>();
-  for (const phase of roadmap.phases) {
-    if (!phase.id) continue;
-    for (const task of phase.tasks) {
-      const executionKey = `${phase.key}:${task.key}`.slice(0, 180);
-      if (phaseByTaskKey.has(executionKey)) throw new Error(`Duplicate roadmap task key: ${executionKey}`);
-      phaseByTaskKey.set(executionKey, { phaseId: phase.id, phaseKey: phase.key, task });
-    }
-  }
-
-  const unresolvedTasks = [...phaseByTaskKey.entries()].map(([executionKey, value]) => ({
-    ...value.task,
-    key: executionKey,
-    rawTaskKey: value.task.key,
-    phaseId: value.phaseId,
-    phaseKey: value.phaseKey,
-  }));
-  if (!unresolvedTasks.length) throw new Error("The approved roadmap has no executable tasks. Revise the roadmap before starting execution.");
-
-  const executionKeys = new Set(unresolvedTasks.map((task) => task.key));
-  const keysByRawTask = new Map<string, string[]>();
-  for (const task of unresolvedTasks) {
-    const matches = keysByRawTask.get(task.rawTaskKey) ?? [];
-    matches.push(task.key);
-    keysByRawTask.set(task.rawTaskKey, matches);
-  }
-
-  const tasks = unresolvedTasks.map((task) => ({
-    ...task,
-    dependencies: task.dependencies.map((dependency) => {
-      const dep = String(dependency).trim();
-      if (!dep) throw new Error(`Roadmap task ${task.key} contains an empty dependency.`);
-      if (executionKeys.has(dep)) return dep;
-
-      const samePhaseKey = `${task.phaseKey}:${dep}`;
-      if (executionKeys.has(samePhaseKey)) return samePhaseKey;
-
-      const globalMatches = keysByRawTask.get(dep) ?? [];
-      if (globalMatches.length === 1) return globalMatches[0];
-      if (globalMatches.length > 1) {
-        throw new Error(`Roadmap dependency ${dep} for ${task.key} is ambiguous across phases. Use an explicit phase:task key.`);
-      }
-      throw new Error(`Roadmap dependency ${dep} for ${task.key} does not exist in the approved roadmap.`);
-    }),
-  }));
+  const tasks = compileRoadmapTasks(roadmap.phases);
 
   const executionNo = Number(latest.data?.execution_no ?? 0) + 1;
   const now = new Date().toISOString();
@@ -221,7 +178,7 @@ export async function startProjectExecutionWithoutGlobalGate(
       waiting_on_approval_id: approvalId,
       work_weight: Math.max(0.1, Number(task.workWeight || 1)),
       idempotency_key: `project:${projectId}:execution:${executionNo}:task:${task.key}`,
-      input: { description: task.description, risk: task.risk, roadmap_id: roadmap.id, roadmap_version: roadmap.version, roadmap_phase_id: task.phaseId, roadmap_phase_key: task.phaseKey },
+      input: { description: task.description, risk: task.risk, satisfied_governance_dependencies: task.roadmapApprovalDependency ? ["approved_roadmap_baseline"] : [], roadmap_id: roadmap.id, roadmap_version: roadmap.version, roadmap_phase_id: task.phaseId, roadmap_phase_key: task.phaseKey },
     });
     if (taskRun.error) throw new Error(`Unable to create project task: ${taskRun.error.message}`);
   }

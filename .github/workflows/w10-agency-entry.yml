@@ -1,0 +1,41 @@
+name: W10 public Agency entry
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/w10-agency-entry.yml'
+      - 'scripts/validate-w10-agency-entry.mjs'
+      - 'app/(public)/templates/**'
+      - 'app/(auth)/signup/**'
+      - 'lib/commercial/selection.ts'
+permissions:
+  contents: read
+jobs:
+  agency-entry:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      CRM_BROWSER_CHANNEL: chrome
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_w10_anonymous_fixture
+      RYTHM_AGENT_EXECUTION_ENABLED: 'false'
+      RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: google-chrome --version
+      - run: npm run build
+      - name: Verify desktop and mobile entry
+        run: |
+          set -euo pipefail
+          npm run start -- --hostname 127.0.0.1 --port 3000 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 25 --retry-connrefused --retry-delay 2 http://127.0.0.1:3000/templates -o /dev/null
+          node scripts/validate-w10-agency-entry.mjs

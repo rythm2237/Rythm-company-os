@@ -1,0 +1,252 @@
+name: W10 disposable staging schema
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/w10-disposable-schema.yml'
+      - 'supabase/migrations/**'
+      - 'scripts/validate-w10-agency-reservation.mjs'
+      - 'scripts/w10-budget-proxy.mjs'
+permissions:
+  contents: read
+jobs:
+  disposable-schema:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: w02-staging
+    env:
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@v3.2.0
+        with:
+          version: '2.108.0'
+      - name: Bootstrap from repository migrations on a fresh runner
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/w10-disposable"
+          mkdir -p "$stage"
+          cd "$stage"
+          supabase init
+          sed -i '/^\[auth\]$/,/^\[/ s|^site_url = .*|site_url = "http://localhost:3000"|' supabase/config.toml
+          sed -i '/^\[auth\]$/,/^\[/ s|^additional_redirect_urls = .*|additional_redirect_urls = ["http://localhost:3000/auth/callback", "http://localhost:3000/auth/callback?**"]|' supabase/config.toml
+          sed -i '/^\[auth.email\]$/,/^\[/ s/^enable_confirmations = .*/enable_confirmations = true/' supabase/config.toml
+          cp -R "$GITHUB_WORKSPACE/supabase/migrations" supabase/
+          # The initial organization seed expects a CEO identity to exist.
+          # Supply a synthetic, credential-free identity in this temporary copy.
+          cat > supabase/migrations/202608050000_w10_synthetic_seed_owner.sql <<'SQL'
+          insert into auth.users (id, email, aud, role)
+          values ('30f4573e-e045-4740-b8d9-8bd7b592df46', 'w10-seed@example.test', 'authenticated', 'authenticated');
+          SQL
+          # Preserve the legacy replay order while giving suffixed files
+          # numeric versions accepted by the CLI in this disposable copy.
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import re
+
+          migrations = Path("supabase/migrations")
+          preflights = {"202608060002a", "202608060004a"}
+          for migration in list(migrations.glob("*.sql")):
+              version, name = migration.name.split("_", 1)
+              match = re.fullmatch(r"(\d+)([a-z]?)", version)
+              revision, suffix = match.groups()
+              order = 0 if version in preflights else 1 if not suffix else ord(suffix) - 95
+              replay_version = revision.ljust(14, "0") + f"{order:02d}"
+              target = migrations / f"{replay_version}_{name}"
+              if target.exists():
+                  raise RuntimeError(f"Replay migration collision: {target.name}")
+              migration.rename(target)
+          PYTHON
+          # Historical sample-project backfill references a timestamp absent
+          # from the original briefs schema. Keep the status update in replay.
+          sed -i "/^update public.project_strategy_briefs$/ { n; s/^set status='completed', updated_at=now()$/set status='completed'/; }" \
+            supabase/migrations/*_first_strategy_cycle.sql
+          # This historical data transfer requires two pre-existing live tenants.
+          rm supabase/migrations/*_consolidate_canonical_rythm_workforce.sql
+          # The later operational-readiness migration keeps this incomplete
+          # Web Development overlay in preview; apply that maturity at insert.
+          sed -i "s/,'stable',false,/,'preview',false,/" supabase/migrations/*_web_development_company_commercial_template.sql
+          # The unrelated 2nya booking site has its own baseline schema.
+          rm supabase/migrations/*_2nya_*.sql
+          sed -i '/^revoke all on function public\.nail_2nya_/d' supabase/migrations/*_paid_launch_privileged_function_hardening.sql
+          sed -i "/^ *'public\.nail_2nya_/d" supabase/migrations/*_w04_explicit_pg_temp_for_definers.sql
+          sed -i "s/cardinality(funcs)<>52/cardinality(funcs)<>42/; s/expected exactly 52 reviewed/expected exactly 42 non-booking reviewed/" supabase/migrations/*_w04_explicit_pg_temp_for_definers.sql
+          # The hosted cron digest is absent from the repository baseline.
+          sed -i '/on function public\.generate_communication_daily_digest()/d' supabase/migrations/*_paid_launch_privileged_function_hardening.sql
+          # Local Storage ownership prevents COMMENT ON POLICY; retain the policy itself.
+          sed -i '/^comment on policy w05_no_private_authenticated_direct_get/,+1d' supabase/migrations/*_w05_block_cached_private_downloads.sql
+          supabase start
+          psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
+          -- Mirror the hosted Data API's read grants for the reservation flow.
+          -- Authenticated requests still pass through the existing RLS policies.
+          grant select on public.organizations, public.organization_members,
+            public.organization_entitlements, public.customer_profiles,
+            public.organization_branding, public.company_templates,
+            public.agent_templates, public.organization_template_installations,
+            public.company_template_workflows, public.company_template_meeting_types,
+            public.company_template_integration_requirements, public.organization_setup_dependencies,
+            public.agents to authenticated, service_role;
+          grant select on public.crm_accounts, public.project_contracts,
+            public.projects, public.project_contract_links to service_role;
+          grant select, insert on public.projects, public.project_contract_links to authenticated;
+          grant select, insert, update on public.action_items to authenticated;
+          grant select on public.action_items to service_role;
+          grant select on public.approval_requests, public.decisions to authenticated;
+          grant update on public.approval_requests to authenticated;
+          grant select on public.meeting_legal_reviews, public.meeting_agent_sessions,
+            public.meeting_agent_messages, public.meeting_agent_participants, public.meetings to authenticated;
+          -- Manual governed meeting creation uses normal Owner RLS policies.
+          grant insert, update, delete on public.meetings, public.meeting_agent_sessions,
+            public.meeting_agent_participants to authenticated;
+          grant update on public.projects to authenticated;
+          grant insert on public.company_events, public.entity_relationships,
+            public.project_progress_events to authenticated;
+          grant usage, select on all sequences in schema public to authenticated;
+          grant insert on public.organization_members to service_role;
+          grant all on all tables in schema public to service_role;
+          grant usage, select on all sequences in schema public to service_role;
+          grant update on public.agents to authenticated;
+          -- Reproduce hosted Data API grants; every listed table must retain RLS.
+          do $$
+          declare table_name text;
+          begin
+            foreach table_name in array array['project_readiness_assessments','project_agents',
+              'project_agent_capacity','project_roadmaps','project_roadmap_phases','project_executions',
+              'project_task_runs','project_activity_events','project_context_documents',
+              'project_decision_memory','project_autonomous_meeting_jobs','project_proposals',
+              'project_scope_versions','project_clarification_requests','agent_asset_profiles','departments','meetings','meeting_agent_sessions','meeting_agent_participants'] loop
+              if not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
+                where n.nspname='public' and c.relname=table_name and c.relrowsecurity) then
+                raise exception 'Required RLS missing: %', table_name;
+              end if;
+              execute format('grant select on public.%I to authenticated', table_name);
+            end loop;
+          end $$;
+          -- Catalog-neutral identity check, scoped to this disposable runner only.
+          create function public.w10_runtime_role_v1() returns text
+            language sql security invoker set search_path='' as $$select auth.role()$$;
+          revoke all on function public.w10_runtime_role_v1() from public, anon, authenticated;
+          grant execute on function public.w10_runtime_role_v1() to service_role;
+          -- Exercise the complete installed trigger chain, before paying for AI.
+          -- All fixture rows roll back; they do not count as journey evidence.
+          begin;
+          set local role service_role;
+          set local request.jwt.claim.role='service_role';
+          do $$
+          declare org_id uuid; manager_id uuid; project_id uuid:=gen_random_uuid(); meeting_id uuid:=gen_random_uuid(); action_id uuid:=gen_random_uuid(); execution_id uuid:=gen_random_uuid(); task_id uuid:=gen_random_uuid();
+          begin
+            select organization_id,user_id into org_id,manager_id from public.organization_members
+              where role='owner' and membership_status='active' limit 1;
+            perform set_config('request.jwt.claim.sub',manager_id::text,true);
+            insert into public.projects(id,organization_id,project_code,name,status,autonomy_mode,primary_manager_user_id,engagement_type)
+              values(project_id,org_id,'W10-LIFECYCLE-REGRESSION','Disposable lifecycle regression','active','approval_required',manager_id,'internal');
+            perform set_config('request.jwt.claim.sub','',true);
+            if auth.uid() is not null or auth.role()<>'service_role' then raise exception 'Regression worker must have service role and no Owner identity'; end if;
+            insert into public.meetings(id,organization_id,project_id,title,purpose,status,involvement_mode)
+              values(meeting_id,org_id,project_id,'Disposable internal review','Exercise installed lifecycle triggers','draft','AUTONOMOUS');
+            insert into public.project_autonomous_meeting_jobs(organization_id,project_id,meeting_id,status,lease_owner,lease_expires_at)
+              values(org_id,project_id,meeting_id,'running','w10-regression',now()+interval '5 minutes');
+            update public.meetings set status='running',started_at=now() where id=meeting_id;
+            update public.meetings set status='completed',ended_at=now(),minutes='{"executive_summary":"Disposable installed-schema regression"}' where id=meeting_id;
+            insert into public.project_executions(id,organization_id,project_id,execution_no,status,started_at,started_by_user_id)
+              values(execution_id,org_id,project_id,1,'running',now(),manager_id);
+            insert into public.action_items(id,organization_id,project_id,title,status,priority)
+              values(action_id,org_id,project_id,'Disposable linked action','open',3);
+            insert into public.project_task_runs(id,organization_id,project_id,execution_id,action_item_id,task_key,title,status,lease_owner,lease_expires_at,idempotency_key)
+              values(task_id,org_id,project_id,execution_id,action_id,'w10-regression','Disposable task output','running','w10-regression',now()+interval '5 minutes',task_id::text);
+            perform public.complete_project_task_work_v1(task_id,org_id,project_id,'w10-regression',
+              '{"summary":"Disposable persisted output","deliverables":[{"title":"KPI","content":"1000 impressions; CTR=5%; conversion=20%"}]}',
+              '{"blockers":[],"evidence":[],"verification_result":"not_verified","implementation_executed":false,"outcome_observed":false}');
+            if not exists(select 1 from public.action_items a where a.id=action_id and a.status='completed') then
+              raise exception 'Linked action did not complete atomically';
+            end if;
+            raise notice 'PASS W10 installed-schema leased meeting and atomic task/action completion; fixture will roll back';
+          end $$;
+          rollback;
+          notify pgrst, 'reload schema';
+          do $$
+          begin
+            if to_regclass('public.crm_accounts') is null then
+              raise exception 'CRM accounts schema missing';
+            end if;
+            if not exists (
+              select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'public' and p.proname = 'provision_commercial_company_v1'
+            ) then
+              raise exception 'Agency reservation RPC missing';
+            end if;
+          end $$;
+          SQL
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --check scripts/validate-w10-agency-reservation.mjs && node --check scripts/w10-budget-proxy.mjs && node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-meeting-content.ts && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts && node --import tsx scripts/validate-w10-meeting-lifecycle.ts && node --import tsx scripts/validate-w10-internal-dispatch.ts && node --import tsx scripts/validate-w10-task-completion.ts && node --import tsx scripts/validate-w10-roadmap-graph.ts && node scripts/validate-w10-roadmap-boundary.mjs && node scripts/validate-w10-task-approval-context.mjs && node --import tsx scripts/validate-w10-team-assignment.ts && node scripts/validate-w10-meeting-approval-boundary.mjs
+      - run: google-chrome --version
+      - name: Verify reservation and re-login against disposable Auth
+        env:
+          CRM_BROWSER_CHANNEL: chrome
+          AUTH_SITE_ORIGIN: http://localhost:3000
+          RYTHM_ENV: staging
+          RYTHM_AGENT_EXECUTION_ENABLED: 'true'
+          RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
+          NEXT_TELEMETRY_DISABLED: '1'
+          # Paid acceptance evidence is archived; routine CI must not spend.
+          W10_LIVE_AI: 'false'
+          W10_PROVIDER_KEY: ''
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/w10-disposable"
+          supabase status -o env > "$RUNNER_TEMP/w10-local.env"
+          chmod 600 "$RUNNER_TEMP/w10-local.env"
+          source "$RUNNER_TEMP/w10-local.env"
+          rm "$RUNNER_TEMP/w10-local.env"
+          test "$API_URL" = http://127.0.0.1:54321
+          export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
+          export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$ANON_KEY"
+          cd "$GITHUB_WORKSPACE"
+          proxy_pid=""
+          if test "$W10_LIVE_AI" = true; then
+            test -n "$W10_PROVIDER_KEY"
+            node scripts/w10-budget-proxy.mjs &
+            proxy_pid=$!
+            export OPENAI_API_KEY=sk-w10-loopback-only
+            export OPENAI_BASE_URL=http://127.0.0.1:3199/v1
+            export RYTHM_DRY_RUN_MODEL=gpt-4.1-mini
+          else
+            unset OPENAI_API_KEY OPENAI_BASE_URL RYTHM_DRY_RUN_MODEL
+          fi
+          echo "W10 live provider execution: $W10_LIVE_AI"
+          export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          export CRON_SECRET="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+          unset W10_PROVIDER_KEY
+          ./node_modules/.bin/next build
+          ./node_modules/.bin/next start --hostname localhost --port 3000 &
+          app_pid=$!
+          trap 'kill "$app_pid" "$proxy_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 25 --retry-connrefused --retry-delay 2 http://localhost:3000/login -o /dev/null
+          W10_LOCAL_SERVICE_KEY="$SERVICE_ROLE_KEY" node scripts/validate-w10-agency-reservation.mjs
+      - name: Print sanitized synthetic evidence
+        if: always()
+        run: |
+          node - <<'JS'
+          const fs=require("node:fs");
+          for(const [marker,path] of [["W10_BUDGET_JSON","test-results/w10-budget.json"],["W10_EVIDENCE_JSON","test-results/w10-evidence.json"]]){
+            if(fs.existsSync(path))console.log(marker+" "+JSON.stringify(JSON.parse(fs.readFileSync(path,"utf8"))).replace(/sk-[A-Za-z0-9_-]{12,}/g,"[redacted]"));
+          }
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: w10-budget
+          path: test-results/
+          if-no-files-found: ignore
+      - name: Remove disposable services
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/w10-disposable/supabase/config.toml"; then
+            cd "$RUNNER_TEMP/w10-disposable"
+            supabase stop --no-backup
+          fi

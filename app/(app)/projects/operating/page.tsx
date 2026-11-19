@@ -1,3 +1,4 @@
+import { ProjectTaskResults } from "@/components/projects/project-task-results";
 import { assignManager } from "@/app/(app)/crm/actions";
 import { ProjectApprovalProvider, ProjectApprovalCount, ProjectAttentionHeading, ProjectApprovalList } from "@/components/projects/ProjectApprovalState";
 import Link from "next/link";
@@ -16,7 +17,7 @@ import { ContinuousProgramPanel, type ProgramReadModel, type ReviewReadModel, ty
 
 export const dynamic="force-dynamic";
 type View="overview"|"roadmap"|"work"|"activity"|"decisions"|"files"|"results"|"advanced";
-type Props={searchParams:Promise<{project?:string;view?:string;taskStatus?:string;taskAgent?:string;planning?:string;activityFilter?:string;programSaved?:string;programError?:string}>};
+type Props={searchParams:Promise<{project?:string;view?:string;taskStatus?:string;taskAgent?:string;planning?:string;activityFilter?:string;programSaved?:string;programError?:string;teamSaved?:string;teamError?:string}>};
 const views:Array<{key:View;label:string}>=[{key:"overview",label:"Overview"},{key:"roadmap",label:"Roadmap"},{key:"work",label:"Work"},{key:"activity",label:"Activity"},{key:"decisions",label:"Decisions"},{key:"files",label:"Files"},{key:"results",label:"Results"},{key:"advanced",label:"Advanced"}];
 const legacyViews:Record<string,View>={live:"advanced",agents:"advanced",tasks:"work",approvals:"decisions",actions:"work"};
 const label=(value:string)=>value.replaceAll("_"," ").replaceAll("."," · ");
@@ -24,6 +25,22 @@ const formatDate=(value:string|null|undefined)=>value?new Intl.DateTimeFormat("e
 function payloadSummary(item:WorkflowTimelineItem){const p=item.payload??{};const explicit=[p.event_label,p.label,p.reason,p.next_step,p.after_state].find(v=>typeof v==="string"&&v.trim());return typeof explicit==="string"?explicit:label(item.event_type);}
 function destinationForRelationship(edge:EntityRelationship,projectId:string){const c=[edge.source_type,edge.target_type];if(c.includes("meeting")||c.includes("meeting_session")||c.includes("decision")||c.includes("legal_review"))return "/meetings/room";if(c.includes("action_item"))return `/actions?project=${projectId}`;if(c.includes("memory_record"))return "/memory";return `/projects/operating?project=${projectId}&view=overview`;}
 async function ownerContext(){const {supabase,user,organizationId}=await requireOwnerOrganizationContext();return {supabase,user,organizationId};}
+
+async function assignProjectSpecialist(formData:FormData){
+  "use server";
+  const {supabase,organizationId}=await ownerContext();
+  const projectId=String(formData.get("projectId")??"");
+  const agentId=String(formData.get("agentId")??"");
+  const allocation=Number(formData.get("allocationPercent"));
+  const {data:project}=await supabase.from("projects").select("id").eq("organization_id",organizationId).eq("id",projectId).maybeSingle();
+  if(!project)redirect("/projects?error=Project%20not%20available.");
+  const destination=`/projects/operating?project=${encodeURIComponent(projectId)}&view=advanced`;
+  if(!Number.isInteger(allocation)||allocation<1||allocation>100)redirect(`${destination}&teamError=1`);
+  const {error}=await supabase.rpc("assign_project_specialist_v1",{p_project_id:projectId,p_agent_id:agentId,p_allocation_percent:allocation});
+  if(error){console.error("project_specialist_assignment_failed",{code:error.code});redirect(`${destination}&teamError=1`);}
+  revalidatePath("/projects/operating");
+  redirect(`${destination}&teamSaved=1`);
+}
 
 async function submitContinuousProposalForApproval(formData:FormData) {
   "use server";
@@ -121,7 +138,7 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     supabase.from("project_clarification_requests").select("id,question,reason,input_type,options,materiality,status").eq("project_id",project.id).eq("status","open").order("created_at"),
     supabase.from("project_scope_versions").select("*").eq("project_id",project.id).order("version",{ascending:false}).limit(1).maybeSingle(),
     supabase.from("project_executions").select("*").eq("project_id",project.id).order("execution_no",{ascending:false}).limit(1).maybeSingle(),
-    supabase.from("project_task_runs").select("id,execution_id,task_key,title,status,priority,assigned_agent_id,attempt_count,max_attempts,error_class,error_message,started_at,completed_at,updated_at,agents(agent_code,display_name,name)").eq("project_id",project.id).order("priority").order("created_at"),
+    supabase.from("project_task_runs").select("id,execution_id,task_key,title,status,priority,assigned_agent_id,attempt_count,max_attempts,error_class,error_message,started_at,completed_at,updated_at,agents:agents!project_task_runs_agent_tenant_w03_fk(agent_code,display_name,name)").eq("project_id",project.id).order("priority").order("created_at"),
     supabase.from("project_agents").select("assignment_role,status,authority_scope,agents(id,agent_code,display_name,name,role_title)").eq("project_id",project.id),
     supabase.from("project_proposals").select("*").eq("project_id",project.id).order("created_at",{ascending:false}),
     supabase.from("project_activity_events").select("*").eq("project_id",project.id).order("created_at",{ascending:false}).limit(60),
@@ -132,6 +149,12 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     supabase.from("meetings").select("id",{count:"exact",head:true}).eq("project_id",project.id),supabase.from("decisions").select("id",{count:"exact",head:true}).eq("project_id",project.id),supabase.from("approval_requests").select("id,status,title,summary,risk_level,created_at",{count:"exact"}).eq("project_id",project.id),
     supabase.from("action_items").select("id,title,status,priority,updated_at,assigned_agent_id").eq("project_id",project.id).order("updated_at",{ascending:false}),
   ]);
+  const generatedOutputs=activeView==="results" ? await supabase.from("project_task_runs")
+    .select("id,title,completed_at,safe_result").eq("organization_id",organizationId).eq("project_id",project.id)
+    .eq("status","completed").order("completed_at",{ascending:false}).limit(30) : {data:[],error:null};
+  const assignableAgents=activeView==="advanced"&&role==="owner" ? await supabase.from("agents")
+    .select("id,agent_code,display_name,name").eq("organization_id",organizationId).eq("enabled",true)
+    .eq("agent_status","enabled").not("agent_code","in","(T-001,RYTHM-COMMS)").order("agent_code") : {data:[],error:null};
   const openClarifications=clarifications.data??[];const latestReadiness=readiness.data;const latestScope=scope.data;const latestExecution=execution.data;const allTaskRows=tasks.data??[];
   const taskRows=latestExecution?allTaskRows.filter((task:any)=>task.execution_id===latestExecution.id):allTaskRows;
   const proposalRows=proposals.data??[];const attention=proposalRows.filter((p:any)=>["ready_for_executive","needs_revision","internal_review"].includes(p.status));const pendingApprovalRows=(approvals.data??[]).filter((a:any)=>a.status==="pending");
@@ -156,6 +179,7 @@ export default async function ProjectOperatingPage({searchParams}:Props){
     :onHold?"Review the open governance holds before resuming execution."
     :isContinuous?"Monitor verified outcomes and complete scheduled reviews."
     :"Review the latest roadmap milestone and outstanding work.";
+  const objectiveText=String(project.objective||project.description||"Governed autonomous project.");
   const navCount=(view:View)=>view==="work"?taskRows.length+(projectActions.data?.length??0):view==="decisions"?pendingApprovalRows.length:view==="files"?(documents.data?.length??0):view==="activity"?(activity.data?.length??0):null;
   return <ProjectApprovalProvider key={`${project.id}:${activeView}`} initialApprovals={pendingApprovalRows}><main className="command-shell">
     <section className="panel" style={{marginBottom:18}} aria-label="Project accountability"><div className="crm-fields"><div><small>Customer</small><p>{crmCustomer.data?<Link href={`/crm/${crmCustomer.data.id}`}>{crmCustomer.data.name}</Link>:project.engagement_type==="external"?"Customer unavailable":"Internal project"}</p></div><div><small>Accountable manager</small><p>{crmManager.data?.display_name||(project.primary_manager_user_id?"Assigned manager":"Reconciliation required")}</p></div></div><details><summary>Reassign manager & history</summary><form action={assignManager} className="auth-form"><input type="hidden" name="project_id" value={project.id}/><label>Primary manager<select name="manager_id" required defaultValue={project.primary_manager_user_id||""}><option value="" disabled>Select one manager</option>{crmMembers.data?.map(m=><option key={m.user_id} value={m.user_id}>{m.display_name||m.user_id}</option>)}</select></label><label>Reason<input name="reason"/></label><SubmitButton>Assign manager</SubmitButton></form>{managerHistory.data?.map(h=><p key={h.id}>{new Date(h.created_at).toLocaleString("en-GB")} · {crmMembers.data?.find(m=>m.user_id===h.new_manager_user_id)?.display_name||h.new_manager_user_id} · {h.reason}</p>)}</details></section>
@@ -164,7 +188,8 @@ export default async function ProjectOperatingPage({searchParams}:Props){
         <Link href="/projects" className="project-detail-back">← All projects</Link>
         <p className="eyebrow">PROJECT · {project.project_code}{isContinuous?" · CONTINUOUS PROGRAM":""}</p>
         <h1>{project.name}</h1>
-        <p className="subtitle project-detail-objective">{project.objective||project.description||"Governed autonomous project."}</p>
+        <p className="subtitle project-detail-objective">{objectiveText.length>280?`${objectiveText.slice(0,280)}…`:objectiveText}</p>
+        {objectiveText.length>280?<details className="project-detail-objective"><summary>Full objective</summary><p style={{whiteSpace:"pre-wrap"}}>{objectiveText}</p></details>:null}
       </div>
       <div className="project-detail-header-side">
         <span className={onHold?"project-state-label is-blocked":"project-state-label"}>{projectHealthLabel}</span>
@@ -236,7 +261,15 @@ export default async function ProjectOperatingPage({searchParams}:Props){
       <section className="panel project-view-panel"><div className="project-card-metrics"><div><span>Meetings</span><strong>{meetings.count??0}</strong></div><div><span>Decisions</span><strong>{decisions.count??0}</strong></div><div><span>Approvals</span><strong>{approvals.count??0}</strong></div><div><span>Workflow state</span><strong>{label(workflowState)}</strong></div><div><span>Open health events</span><strong>{health.data?.length??0}</strong></div><div><span>Last activity</span><strong>{formatDate(progress.lastActivityAt)}</strong></div></div></section>
     </>:null}
 
-    {activeView==="advanced"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project-only team</p><h2>Assigned AI specialists</h2></div><span className="pill">{agents.length} agents</span></div><div className="data-list">{agents.map((row:any)=>{const agent=Array.isArray(row.agents)?row.agents[0]:row.agents;return <div className="data-row" key={agent?.id??row.assignment_role}><div><strong>{agent?.display_name||agent?.name||"Agent"}</strong><span>{agent?.role_title||row.assignment_role} · {agent?.agent_code||"AI"}</span></div><span className="pill">{row.status}</span></div>})}{!agents.length?<p className="subtitle">The project team forms after analysis.</p>:null}</div></section>:null}
+    {activeView==="advanced"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project-only team</p><h2>Assigned AI specialists</h2></div><span className="pill">{agents.length} agents</span></div>
+      {params.teamSaved?<p className="form-success">Specialist assigned to this project.</p>:null}
+      {params.teamError?<p role="alert" className="form-error">Specialist could not be assigned. Choose an enabled company specialist and an allocation from 1 to 100.</p>:null}
+      {role==="owner"?<form action={assignProjectSpecialist} aria-label="Assign project specialist" role="form" className="auth-form">
+        <input type="hidden" name="projectId" value={project.id}/>
+        <label htmlFor="project-specialist-agent">Enabled specialist</label><select id="project-specialist-agent" name="agentId" required defaultValue=""><option value="" disabled>Select a specialist</option>{(assignableAgents.data??[]).map(agent=><option key={agent.id} value={agent.id}>{agent.display_name||agent.name} · {agent.agent_code}</option>)}</select>
+        <label htmlFor="project-specialist-capacity">Capacity allocation (%)</label><input id="project-specialist-capacity" name="allocationPercent" type="number" min="1" max="100" defaultValue="25" required/>
+        <SubmitButton>Assign specialist</SubmitButton><p className="security-note">Only enabled company specialists can join this project team.</p>
+      </form>:null}<div className="data-list">{agents.map((row:any)=>{const agent=Array.isArray(row.agents)?row.agents[0]:row.agents;return <div className="data-row" key={agent?.id??row.assignment_role}><div><strong>{agent?.display_name||agent?.name||"Agent"}</strong><span>{agent?.role_title||row.assignment_role} · {agent?.agent_code||"AI"}</span></div><span className="pill">{row.status}</span></div>})}{!agents.length?<p className="subtitle">The project team forms after analysis.</p>:null}</div></section>:null}
 
     {activeView==="work"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Execution graph</p><h2>Project tasks</h2></div><span className="pill">{filteredTasks.length}/{taskRows.length}</span></div><form method="get" className="project-task-filters"><input type="hidden" name="project" value={project.id}/><input type="hidden" name="view" value="work"/><label>Status<select name="taskStatus" defaultValue={selectedStatus}><option value="all">All statuses</option>{[...new Set(taskRows.map((task:any)=>task.status))].map(status=><option key={status} value={status}>{label(status)}</option>)}</select></label><label>Agent<select name="taskAgent" defaultValue={selectedAgent}><option value="all">All agents</option>{agents.map((row:any)=>{const agent=Array.isArray(row.agents)?row.agents[0]:row.agents;return <option key={agent?.id??row.assignment_role} value={agent?.id}>{agent?.display_name||agent?.name||row.assignment_role}</option>})}</select></label><button>Apply filters</button></form><div className="data-list">{filteredTasks.map((task:any)=><div className="data-row" key={task.id}><div><strong>{task.title}</strong><span>{task.agents?.agent_code??"Unassigned"} · attempt {task.attempt_count}/{task.max_attempts}{task.error_message?` · ${task.error_message}`:""}</span></div><span className="pill">{label(task.status)}</span></div>)}</div></section>:null}
 
@@ -246,6 +279,7 @@ export default async function ProjectOperatingPage({searchParams}:Props){
 
     {activeView==="decisions"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Governance</p><h2>Project decisions</h2></div><Link href="/inbox?category=decisions">Open Inbox</Link></div><ProjectApprovalList/></section>:null}
     {activeView==="results"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Outcomes</p><h2>Results and deliverables</h2></div></div>{roadmap?.phases.filter(phase=>phase.status==="completed").length?<div className="data-list">{roadmap.phases.filter(phase=>phase.status==="completed").map(phase=><div className="data-row" key={phase.key}><div><strong>{phase.title}</strong><span>{phase.deliverables.join(", ")}</span></div><span className="pill">Completed</span></div>)}</div>:<p className="empty-state">Results will appear as roadmap milestones are completed.</p>}</section>:null}
+    {activeView==="results" ? generatedOutputs.error ? <p role="alert">Generated outputs could not be loaded. Please retry.</p> : <ProjectTaskResults tasks={generatedOutputs.data??[]}/> : null}
     {activeView==="files"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project Knowledge</p><h2>Files, resources and scoped connections</h2></div><span className="pill">{(documents.data??[]).length+(resources.data??[]).length+(bindings.data??[]).length} items</span></div><div className="project-card-metrics"><div><span>Files</span><strong>{documents.data?.length??0}</strong></div><div><span>Resources</span><strong>{resources.data?.length??0}</strong></div><div><span>Connections</span><strong>{bindings.data?.length??0}</strong></div></div><div className="data-list">{(documents.data??[]).map((document:any)=><div className="data-row" key={document.id}><div><strong>{document.file_name}</strong><span>{label(document.category)} · {document.extraction_status} · {formatDate(document.created_at)}</span></div>{document.legal_document?<span className="pill">Legal</span>:null}</div>)}{(resources.data??[]).map((resource:any)=><div className="data-row" key={resource.id}><div><strong>{resource.name}</strong><span>{resource.resource_type} · {resource.access_status}</span></div></div>)}{(bindings.data??[]).map((binding:any)=><div className="data-row" key={binding.id}><div><strong>{binding.display_name}</strong><span>{binding.resource_type} · {binding.resource_ref}</span></div><span className="pill">{binding.access_status}</span></div>)}</div></section>:null}
 
     {activeView==="activity"?<section className="panel project-view-panel"><div className="panel-heading"><div><p className="label">Project history</p><h2>Activity</h2></div><span className="pill">{visibleActivity.length} updates</span></div><nav className="simple-inbox-filters" aria-label="Activity filters">{["important","all","agent","system"].map(filter=><Link key={filter} aria-current={activityFilter===filter?"page":undefined} href={`/projects/operating?project=${project.id}&view=activity&activityFilter=${filter}`}>{filter==="all"?"All activity":filter==="important"?"Important":filter==="agent"?"Agent activity":"System activity"}</Link>)}</nav><div className="data-list">{visibleActivity.map((event:any)=><div className="data-row" key={event.id}><div><strong>{event.headline}</strong><span>{event.detail||label(event.event_type)} · {formatDate(event.created_at)}</span></div></div>)}{!visibleActivity.length?<p className="empty-state">No activity in this view yet.</p>:null}</div></section>:null}

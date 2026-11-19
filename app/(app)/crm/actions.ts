@@ -37,6 +37,7 @@ export async function saveContract(fd:FormData) {
  const status=text(fd,"contract_status",40)||"draft";
  const payload={customer_id:customerId,contract_number:text(fd,"contract_number",160),contract_status:status,contract_start_date:text(fd,"contract_start_date",10)||null,contract_end_date:text(fd,"contract_end_date",10)||null,renewal_date:text(fd,"renewal_date",10)||null,scope_description:text(fd,"scope_description",8000)||null,amendment_of:text(fd,"amendment_of",36)||null,updated_at:new Date().toISOString()};
  const result=id?await supabase.from("project_contracts").update(payload).eq("organization_id",organizationId).eq("id",id).eq("customer_id",customerId).select("id").single():await supabase.from("project_contracts").insert({...payload,organization_id:organizationId}).select("id").single();
+ if(result.error) console.error("crm_contract_save_failed",{code:result.error.code});
  done(`/crm/${customerId}`,!!result.error);
 }
 export async function logCustomerActivity(fd:FormData) {

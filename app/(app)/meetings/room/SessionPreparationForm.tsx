@@ -1,5 +1,6 @@
 "use client";
 
+import { isMeetingSynthesizer, selectMeetingSynthesizer } from "@/lib/meetings/synthesis-policy";
 import { Button } from "@/components/ui/Button";
 
 import Link from "next/link";
@@ -39,7 +40,7 @@ export function clearMeetingDraft(meetingId:string){
 }
 
 export default function SessionPreparationForm({meetingId,agents,action}:Props){
-  const initialSelected=useMemo(()=>agents.filter(a=>a.enabled&&preferredCodes.has(a.agent_code)).map(a=>a.id),[agents]);
+  const initialSelected=useMemo(()=>agents.filter(a=>a.enabled&&(preferredCodes.has(a.agent_code)||isMeetingSynthesizer(a))).map(a=>a.id),[agents]);
   const [draft,setDraft]=useState<Draft>({decisionQuestion:DEFAULT_QUESTION,agentIds:initialSelected,language:"English",rounds:"2",budgetCapUsd:"1.5"});
   const [hydrated,setHydrated]=useState(false);
   const [validation,setValidation]=useState("");
@@ -67,14 +68,14 @@ export default function SessionPreparationForm({meetingId,agents,action}:Props){
   },[draft,hydrated,meetingId]);
 
   const enabledAgents=agents.filter(a=>a.enabled);
-  const b001=enabledAgents.find(a=>a.agent_code==="B-001");
+  const synthesizer=selectMeetingSynthesizer(enabledAgents);
   const selectedEnabled=draft.agentIds.filter(id=>enabledAgents.some(a=>a.id===id));
   const toggleAgent=(id:string)=>setDraft(d=>({...d,agentIds:d.agentIds.includes(id)?d.agentIds.filter(x=>x!==id):[...d.agentIds,id]}));
 
   const validate=()=>{
     if(draft.decisionQuestion.trim().length<10)return "Enter a decision question of at least 10 characters.";
     if(selectedEnabled.length<2)return "Select at least two enabled Agents for the meeting.";
-    if(!b001||!draft.agentIds.includes(b001.id))return "B-001 Executive Orchestrator is required for governed synthesis.";
+    if(!synthesizer||!draft.agentIds.includes(synthesizer.id))return "An Executive Orchestrator or Strategy Director is required for governed synthesis.";
     return "";
   };
 
@@ -91,12 +92,12 @@ export default function SessionPreparationForm({meetingId,agents,action}:Props){
         <span className={styles.selectionCount}>{selectedEnabled.length} selected</span>
       </div>
       {agents.length===0?<div className={styles.agentEmptyState}>
-        <div><strong>No Agents are available in this company yet.</strong><p>A real governed meeting needs at least two enabled Agents, including B-001 Executive Orchestrator. Nothing is hidden here: this organization currently has no Agent records.</p></div>
+        <div><strong>No Agents are available in this company yet.</strong><p>A real governed meeting needs at least two enabled Agents, including an Executive Orchestrator or Strategy Director. Nothing is hidden here: this organization currently has no Agent records.</p></div>
         <Link href="/agents" className="secondary-button">Open Agent organization</Link>
       </div>:<div className={styles.agentPickerGrid}>
         {agents.map(agent=>{
           const checked=draft.agentIds.includes(agent.id);
-          const required=agent.agent_code==="B-001";
+          const required=agent.id===synthesizer?.id;
           return <label key={agent.id} className={`${styles.agentPickCard} ${checked?styles.agentPickSelected:""} ${!agent.enabled?styles.agentPickDisabled:""}`}>
             <input type="checkbox" name="agentIds" value={agent.id} disabled={!agent.enabled} checked={checked} onChange={()=>toggleAgent(agent.id)}/>
             <span className={styles.agentPickText}><strong>{agent.agent_code} · {agent.display_name??agent.name}</strong><small>{agent.role_title} · {agent.enabled?"Enabled":"Paused"}</small></span>
@@ -104,7 +105,7 @@ export default function SessionPreparationForm({meetingId,agents,action}:Props){
           </label>;
         })}
       </div>}
-      {agents.length>0&&!b001?<p className={styles.inlineWarning}>B-001 is not available or enabled in this organization. A governed session cannot be prepared until it is provisioned.</p>:null}
+      {agents.length>0&&!synthesizer?<p className={styles.inlineWarning}>An Executive Orchestrator or Strategy Director is not available or enabled in this organization. A governed session cannot be prepared until it is provisioned.</p>:null}
     </section>
 
     <div className={styles.prepSettingsGrid}>
@@ -114,7 +115,7 @@ export default function SessionPreparationForm({meetingId,agents,action}:Props){
     </div>
     {validation?<p className={styles.inlineError} role="alert">{validation}</p>:null}
     <Button type="submit" disabled={agents.length===0}>Prepare governed Agent session</Button>
-    <p className="security-note">Only enabled Agents may be selected. B-001 is required for synthesis. Preparing a session authorizes internal model analysis only; it does not authorize browsing, external actions, deployment, messaging, or transactions.</p>
+    <p className="security-note">Only enabled Agents may be selected. An Executive Orchestrator or Strategy Director is required for synthesis. Preparing a session authorizes internal model analysis only; it does not authorize browsing, external actions, deployment, messaging, or transactions.</p>
   </form>;
 }
 

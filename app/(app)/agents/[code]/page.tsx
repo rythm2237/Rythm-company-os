@@ -20,12 +20,13 @@ async function setAgentRuntime(formData:FormData){
   const {supabase,user,organizationId}=await requireOwnerOrganizationContext();
   const agentId=String(formData.get("agentId")??"");
   const requestedEnabled=String(formData.get("enabled")??"")==="true";
-  const {data:agent}=await supabase.from("agents").select("id,agent_code,enabled").eq("id",agentId).eq("organization_id",organizationId).maybeSingle();
+  const {data:agent}=await supabase.from("agents").select("id,agent_code,enabled,agent_status").eq("id",agentId).eq("organization_id",organizationId).maybeSingle();
   if(!agent) return;
   if(agent.agent_code==="T-001") redirect("/agents/t-001");
-  if(Boolean(agent.enabled)===requestedEnabled) return;
-  const {error}=await supabase.from("agents").update({enabled:requestedEnabled}).eq("id",agentId).eq("organization_id",organizationId);
-  if(error){console.error("agent_runtime_state_update_failed",{agentId,error});redirect(`/agents/${agent.agent_code.toLowerCase()}?error=Agent%20runtime%20state%20could%20not%20be%20updated.`);}
+  const agentStatus=requestedEnabled?"enabled":"paused";
+  if(Boolean(agent.enabled)===requestedEnabled&&agent.agent_status===agentStatus) return;
+  const {error}=await supabase.from("agents").update({enabled:requestedEnabled,agent_status:agentStatus}).eq("id",agentId).eq("organization_id",organizationId);
+  if(error){console.error("agent_runtime_state_update_failed",{agentId,code:error.code});redirect(`/agents/${agent.agent_code.toLowerCase()}?error=Agent%20runtime%20state%20could%20not%20be%20updated.`);}
   await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:requestedEnabled?"agent.runtime_enabled":"agent.runtime_paused",object_type:"agent",object_id:agentId,risk_level:"medium",payload:{agent_code:agent.agent_code,enabled:requestedEnabled,human_authority:"Human CEO / Owner",external_actions:false}});
   revalidatePath("/agents");revalidatePath(`/agents/${agent.agent_code.toLowerCase()}`);revalidatePath("/meetings/room");
 }
