@@ -9,7 +9,7 @@ on:
       - 'lib/projects/project-supervisor.ts'
       - 'lib/projects/project-proposal-execution.ts'
       - 'lib/projects/project-tool-execution.ts'
-      - 'supabase/migrations/20261118150000_project_dispatch_resilience.sql'
+      - 'supabase/migrations/20261119113000_project_dispatch_resilience.sql'
       - 'scripts/validate-w13-dispatch-resilience.ts'
       - 'scripts/validate-w06-backend-boundaries.mjs'
       - '.github/workflows/w13-dispatch-offline.yml'
