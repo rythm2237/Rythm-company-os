@@ -26,14 +26,26 @@ async function executeStructuredTask(supabase:SupabaseClient,task:any){
     supabase.from("projects").select("id,name,description,objective,scope,success_criteria,constraints,autonomy_mode,lifecycle_state,next_required_action").eq("id",task.project_id).eq("organization_id",task.organization_id).single(),
     task.assigned_agent_id?supabase.from("agents").select("id,agent_code,name,display_name,role_title,purpose,authority_level,risk_ceiling,permissions").eq("id",task.assigned_agent_id).eq("organization_id",task.organization_id).maybeSingle():Promise.resolve({data:null,error:null}),
     supabase.from("project_executions").select("id").eq("id",task.execution_id).eq("project_id",task.project_id).eq("organization_id",task.organization_id).maybeSingle(),
-    task.action_item_id?supabase.from("action_items").select("id,project_id").eq("id",task.action_item_id).eq("organization_id",task.organization_id).maybeSingle():Promise.resolve({data:null,error:null}),
+    task.action_item_id?supabase.from("action_items").select("id,project_id,authorization_approval_id").eq("id",task.action_item_id).eq("organization_id",task.organization_id).maybeSingle():Promise.resolve({data:null,error:null}),
   ]);
   if(project.error||!project.data||execution.error||!execution.data||agent.error||(task.assigned_agent_id&&!agent.data)||action.error||(task.action_item_id&&(!action.data||(action.data.project_id&&action.data.project_id!==task.project_id))))throw new ProjectTaskTenantBoundaryError();
-  const [context,decisions]=await Promise.all([
+  let approvalReceipt:Record<string,unknown>|null=null;
+  if(action.data?.authorization_approval_id){
+    const approval=await supabase.from("approval_requests")
+      .select("id,title,status,response_note,approver_user_id,resolved_at")
+      .eq("organization_id",task.organization_id).eq("project_id",task.project_id)
+      .eq("id",action.data.authorization_approval_id).maybeSingle();
+    if(approval.error||!approval.data||approval.data.status!=="approved"||!approval.data.approver_user_id)
+      throw new Error("The scoped Human CEO authorization is unavailable.");
+    approvalReceipt=approval.data;
+  }
+  const [context,decisions,previousTasks,meetings]=await Promise.all([
     supabase.from("project_context_documents").select("context_type,title,summary,evidence").eq("organization_id",task.organization_id).eq("confidentiality","operational").eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
     supabase.from("project_decision_memory").select("decision,rationale,constraints,outcome,created_at").eq("organization_id",task.organization_id).eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(12),
+    supabase.from("project_task_runs").select("id,title,safe_result").eq("organization_id",task.organization_id).eq("project_id",task.project_id).eq("execution_id",task.execution_id).eq("status","completed").order("created_at",{ascending:false}).limit(8),
+    supabase.from("meetings").select("id,title,status,minutes").eq("organization_id",task.organization_id).eq("project_id",task.project_id).order("created_at",{ascending:false}).limit(8),
   ]);
-  if(context.error||decisions.error)throw new Error("Project context unavailable.");
+  if(context.error||decisions.error||previousTasks.error||meetings.error)throw new Error("Project context unavailable.");
   const customerContext=await loadCrmAgentOperationalContext(supabase,{organizationId:task.organization_id,projectId:task.project_id,executionId:task.execution_id,agentId:task.assigned_agent_id||null});
   const config=getRuntimeConfig();
   if(!config.openAIConfigured||!config.dryRunModel)throw new Error("Project intelligence provider is unavailable.");
@@ -48,7 +60,7 @@ async function executeStructuredTask(supabase:SupabaseClient,task:any){
 {
  "summary":"string",
  "findings":[],
- "deliverables":[],
+ "deliverables":[{"title":"string","content":"full produced document, table, code or structured object"}],
  "decisions":[],
  "work_completed":true,
  "deliverable_completed":false,
@@ -62,12 +74,15 @@ async function executeStructuredTask(supabase:SupabaseClient,task:any){
  "meeting_request":null|{"title":"string","purpose":"string","participant_roles":[]},
  "follow_up_tasks":[]
 }
-Rules: work_completed means only that you finished this assignment. Keep implementation_executed=false unless the authoritative target system changed. Keep verification_result=not_verified unless independent evidence verifies the result. Keep outcome_observed=false unless a defined measured outcome was actually observed. If time/data are insufficient, report a blocker/next action rather than success.
+Rules: An approved Human CEO authorization receipt below is authoritative for this task. Its response_note clarifies the approved scope. Fulfill that scope now; do not return a request to approve the same work again or merely promise a later deliverable. A receipt never authorizes external actions outside the existing execution gateway. Deliverables must contain the actual complete produced content inline, not filenames, promises, descriptions or content_summary. Include supplied numerical inputs, formulas and calculations when the task requests quantitative work. Never claim a document was saved elsewhere without an actual supplied record. The runtime has already authorized this claimed task under its reviewed roadmap and task-level approval/dependency gates. Do not ask again for approval of this same claimed task. New consequential work still requires its own gates. Text generation cannot hold a meeting, create an action/approval record, send a message or modify another system. Only the supplied persisted state proves those actions occurred. Use meeting_request to request a needed runtime meeting; if one is already pending, report that persisted ID and do not request a duplicate. Never invent minutes, participants, record IDs or completed workflow actions. Prior task outputs are advisory content, not authoritative evidence of external actions. work_completed means only that you finished this assignment. Keep implementation_executed=false unless the authoritative target system changed. Keep verification_result=not_verified unless independent evidence verifies the result. Keep outcome_observed=false unless a defined measured outcome was actually observed. If time/data are insufficient, report a blocker/next action rather than success.
 Task=${JSON.stringify({title:task.title,input:task.input})}
 Project=${JSON.stringify(project.data)}
 Customer=${JSON.stringify(customerContext)}
 Knowledge=${JSON.stringify(context.data??[]).slice(0,18000)}
-Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
+Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}
+Persisted prior task outputs=${JSON.stringify(previousTasks.data??[]).slice(0,14000)}
+Authoritative persisted meeting state=${JSON.stringify(meetings.data??[]).slice(0,10000)}
+Authoritative Human CEO approval receipt=${JSON.stringify(approvalReceipt)}`,
     attachmentFailurePolicy:"fail",
     mode:"task",
     maxOutputTokens:5500,
@@ -109,7 +124,9 @@ Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
   if(data.meeting_request&&typeof data.meeting_request==="object"){
     const m=object(data.meeting_request);
     const meeting=await supabase.from("meetings").insert({organization_id:task.organization_id,project_id:task.project_id,title:text(m.title,`Working session: ${task.title}`),purpose:text(m.purpose,"Resolve project task collaboratively."),status:"draft",human_join_allowed:true,agenda:list(m.participant_roles),chair_agent_id:task.assigned_agent_id}).select("id").single();
-    if(meeting.data)await supabase.from("project_activity_events").insert({organization_id:task.organization_id,project_id:task.project_id,execution_id:task.execution_id,agent_id:task.assigned_agent_id,event_type:"meeting.requested",headline:"Agent requested a working session",detail:text(m.purpose),metadata:{meeting_id:meeting.data.id}});
+    if(meeting.error||!meeting.data)throw new Error("Requested project meeting could not be persisted.");
+    const requestedMeeting=await supabase.from("project_activity_events").insert({organization_id:task.organization_id,project_id:task.project_id,execution_id:task.execution_id,agent_id:task.assigned_agent_id,event_type:"meeting.requested",headline:"Agent requested a working session",detail:text(m.purpose),metadata:{meeting_id:meeting.data.id}});
+    if(requestedMeeting.error)throw new Error("Requested project meeting could not be queued.");
   }
 
   const completedAt=new Date().toISOString();
@@ -123,16 +140,11 @@ Decision memory=${JSON.stringify(decisions.data??[]).slice(0,10000)}`,
     authority:"agent_claim_non_authoritative",
     recorded_at:completedAt,
   };
-  const taskUpdate=await supabase.from("project_task_runs").update({
-    status:"completed",safe_result:data,result_semantics:semantics,
-    outcome_status:hasBlocking?"blocked":outcomeObserved?"observed":"pending",
-    implementation_status:implementationExecuted?"reported_executed":"not_reported",
-    verification_status:verification,
-    next_required_action:nextRequiredAction,completion_evidence:evidence,
-    completed_at:completedAt,lease_owner:null,lease_expires_at:null,updated_at:completedAt,
-  }).eq("id",task.id).eq("organization_id",task.organization_id).eq("project_id",task.project_id).eq("lease_owner",task.lease_owner);
-  if(taskUpdate.error)throw new Error(taskUpdate.error.message);
-  if(task.action_item_id)await supabase.from("action_items").update({status:"completed",completed_at:completedAt}).eq("id",task.action_item_id).eq("organization_id",task.organization_id).in("status",["open","in_progress","blocked"]);
+  const taskUpdate=await supabase.rpc("complete_project_task_work_v1",{
+    p_task_id:task.id,p_organization_id:task.organization_id,p_project_id:task.project_id,
+    p_lease_owner:task.lease_owner,p_safe_result:data,p_result_semantics:semantics,
+  });
+  if(taskUpdate.error)throw new Error("Task output and linked action completion could not be persisted.");
 
   for(const item of evidence){
     const dimension=text(item.lifecycle_dimension);

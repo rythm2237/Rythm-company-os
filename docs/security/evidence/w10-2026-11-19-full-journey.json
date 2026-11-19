@@ -1,0 +1,269 @@
+[
+  {
+    "profile": "desktop",
+    "organization_id": "250c64b6-43fa-47bc-8a37-000c7736ee10",
+    "owner_user_id": "3342926f-d11f-47b3-8adc-12d662ba586d",
+    "customer_id": "b4c49b9d-2aae-4f7f-8556-c2cacf8818f5",
+    "contract_id": "b6d1d40d-bd99-4424-b34d-0f577b5de8d0",
+    "project_id": "a5870368-f9ef-4f31-a32b-2df0ee9c192a",
+    "action_id": "d187f851-c30e-455f-aeab-7e45044ef800",
+    "department_ids": [
+      "83803ac2-c90e-4049-a586-413e804cecac",
+      "29a6bece-c4db-4165-8a4e-74773a308065",
+      "2050f9fe-6afe-490e-940f-abdf1f3a4cbf",
+      "415d8c2b-634a-46c9-9f43-dc332d315a46",
+      "b01df0d5-5fad-4389-8c16-4e0ffffe672f",
+      "dc574c39-39ae-4669-96de-ae6af61cfb2f",
+      "bb45afb6-938c-405a-ad88-45bd302e2270",
+      "943f1fec-390a-45ec-8a11-77fc436c90cd"
+    ],
+    "agent_ids": [
+      "2b452c4f-f4e3-43ba-ba05-8d72457adace",
+      "4bd92cc7-1961-4c85-beda-44f4a13c800a",
+      "5317675a-d086-4abe-9c45-f6c154f637fd",
+      "5ba9e899-8a28-4a11-ba80-edf90e26b089",
+      "5da532cc-4029-4790-9f43-cca0ad942704",
+      "64a212e9-de95-4491-8cc6-7d6980d45290",
+      "7d4b047b-e3d4-46f5-86f3-ce4f6cd6ae65",
+      "86f18dc4-733e-4631-a935-79ed7c55962d",
+      "9b8dfb1b-a21f-41ed-a60b-2844acdcc4b4",
+      "aba32e73-d826-4560-ba04-9f5a6e6210d7",
+      "b51e0dda-5c5e-435e-8852-78a16a8dce24"
+    ],
+    "stage": "full_delivery_verified",
+    "live_provider_execution": true,
+    "assigned_specialist_ids": [
+      "5da532cc-4029-4790-9f43-cca0ad942704",
+      "aba32e73-d826-4560-ba04-9f5a6e6210d7"
+    ],
+    "review_action_status": "completed",
+    "manual_meeting_id": "128f46d4-a7d5-47ec-8437-67122b117a16",
+    "manual_session_id": "98dade80-64e9-44fa-b100-a868354dd821",
+    "delivery": {
+      "roadmap_id": "b5fec056-7989-46c6-82ba-68d2d168ef3e",
+      "approval_ids": [
+        "3e477098-1437-427d-8244-f06069fc67cb",
+        "088b4d18-5f8a-41d5-8dd6-46f8ff20b789"
+      ],
+      "review_session_id": "b0ba3a5a-85ea-4abc-a1cd-c33881292b02",
+      "transcript_ids": [
+        "78df81c9-e22a-4022-88a0-b2a8c2efc7e9",
+        "a873425a-e919-4985-a211-bcb783aaa9bc",
+        "d0086ab5-d328-42cf-b7f8-6a7497bf7d8d"
+      ],
+      "outputs": [
+        {
+          "id": "b9e03ef8-f6bb-4ff7-9e63-e9eb8b7ee211",
+          "organization_id": "250c64b6-43fa-47bc-8a37-000c7736ee10",
+          "status": "completed",
+          "summary": "Initial draft measurement plan and KPI table created for the synthetic vegan cafe campaign using supplied synthetic assumptions (1000 impressions, 50 clicks, 10 purchases). The plan explicitly defines the primary KPIs (CTR and conversion rate) with formulas and assumptions, aligned with project constraints and scope.",
+          "deliverables": [
+            {
+              "title": "Initial Draft Measurement Plan and KPI Table",
+              "content": "Measurement Plan for Vegan Cafe Campaign (Synthetic Data Assumptions)\n\n1. Campaign Overview:\n- Campaign Target: Adults aged 25-45 in Budapest\n- Product: Vegan lunches at a fictional cafe\n- Data Context: Offline measurement using synthetic assumptions with no real data integrations\n\n2. Synthetic Assumptions:\n- Impressions: 1000\n- Clicks: 50\n- Purchases: 10\n\n3. Key Performance Indicators (KPIs) and Formulas:\n\n| KPI               | Description                         | Formula                         | Calculated Value |\n|-------------------|-----------------------------------|---------------------------------|------------------|\n| Click-Through Rate (CTR)  | Percentage of impressions that result in a click | CTR = (Clicks / Impressions) * 100% | (50 / 1000) * 100% = 5.0% |\n| Conversion Rate (CVR)     | Percentage of clicks that convert to purchases | CVR = (Purchases / Clicks) * 100%   | (10 / 50) * 100% = 20.0% |\n\n4. Measurement Objectives:\n- Measure user engagement through CTR to understand campaign appeal.\n- Measure effectiveness in driving purchases with CVR.\n- Use synthetic numbers as baseline for future real-data comparison.\n\n5. Assumptions Explicitly Labelled:\n- All impressions, clicks, and purchases figures are synthetic and not from real campaign data.\n- Offline measurement approach; no external data or integrations.\n\n6. Recommendations:\n- Use this plan as baseline for internal reviews and development.\n- Await final approval to produce finalized KPI document.\n- Prepare for internal review meeting with both Analytics Specialist and Strategy Director to validate assumptions and formulas.\n"
+            }
+          ]
+        },
+        {
+          "id": "bc7a7d41-c81e-49be-ac7e-b1401dbf01cb",
+          "organization_id": "250c64b6-43fa-47bc-8a37-000c7736ee10",
+          "status": "completed",
+          "summary": "Prepared the formal request for Human CEO approval to start the roadmap for the vegan cafe campaign measurement project, enabling the commencement of the internal review meeting and subsequent finalization action.",
+          "deliverables": [
+            {
+              "title": "Human CEO Approval Request for Roadmap Start",
+              "content": "Requesting Human CEO approval for the roadmap start of the synthetic vegan cafe campaign offline measurement project. This approval authorizes commencement of the internal review meeting with both designated specialists to review the initial draft measurement plan and KPI table, followed by a single finalization action requiring Human CEO approval before producing the finalized KPI document. The roadmap is scoped as a single phase with one outline task, compliant with governance dependency requirements. External actions remain constrained and will not proceed without further Human CEO authorization."
+            }
+          ]
+        },
+        {
+          "id": "3520c330-76ef-4a4a-a967-8ed80316dbb9",
+          "organization_id": "250c64b6-43fa-47bc-8a37-000c7736ee10",
+          "status": "completed",
+          "summary": "Attempted to execute the internal review meeting for the synthetic vegan cafe campaign measurement plan draft involving Analytics Specialist and Strategy Director. The meeting is currently recorded as running, but completion depends on authorized Human CEO approval receipt which is not available.",
+          "deliverables": [
+            {
+              "title": "Internal Review Meeting Status",
+              "content": "The internal review meeting to discuss the initial draft measurement plan and key performance indicator (KPI) table for the synthetic vegan cafe campaign is currently in progress but incomplete. The meeting involves the Analytics Specialist and Strategy Director reviewing assumptions, KPI formulas, and project scope as mandated by the project roadmap. No minutes or final outputs from the meeting have been recorded yet as the meeting remains open."
+            }
+          ]
+        },
+        {
+          "id": "a311dcd3-85d0-4967-8e7c-d36c3d2f8742",
+          "organization_id": "250c64b6-43fa-47bc-8a37-000c7736ee10",
+          "status": "completed",
+          "summary": "Human CEO approval received to proceed with internal review meeting and finalize the KPI document for the synthetic vegan cafe campaign measurement plan using the specified synthetic assumptions and KPIs.",
+          "deliverables": [
+            {
+              "title": "Final KPI Measurement Plan for Synthetic Vegan Cafe Campaign",
+              "content": "Final Measurement Plan for Vegan Cafe Campaign (Synthetic Data Assumptions)\n\n1. Campaign Overview:\n- Target Audience: Adults aged 25-45 in Budapest\n- Product: Vegan lunches at a fictional vegan cafe\n- Measurement Context: Offline synthetic data assumptions only; no real data or external integrations\n\n2. Synthetic Assumptions:\n- Total Impressions: 1000\n- Total Clicks: 50\n- Total Purchases: 10\n\n3. Key Performance Indicators (KPIs) with Formulas and Calculations:\n\n| KPI                  | Description                                    | Formula                               | Calculated Value   |\n|----------------------|------------------------------------------------|-------------------------------------|--------------------|\n| Click-Through Rate (CTR) | Percentage of impressions resulting in a click | CTR = (Clicks / Impressions) * 100% | (50 / 1000) * 100% = 5.0% |\n| Conversion Rate (CVR)     | Percentage of clicks resulting in a purchase    | CVR = (Purchases / Clicks) * 100%   | (10 / 50) * 100% = 20.0%  |\n\n4. Measurement Objectives:\n- Assess user engagement by measuring CTR to gauge ad appeal.\n- Evaluate campaign effectiveness in converting clicks to purchases through CVR.\n- Establish a synthetic baseline for internal comparison with potential future real data.\n\n5. Explicit Assumptions:\n- All metrics (impressions, clicks, purchases) are purely synthetic and hypothetical.\n- Offline measurement strategy; no real-time data feeds or integrations.\n\n6. Recommendations:\n- Use this finalized KPI measurement plan document as the authoritative baseline internal reference.\n- Integrate these KPIs into campaign performance discussions and strategic planning.\n- Await further CEO authorizations for any real campaign activations or data integrations.\n\nThis document finalizes the internal KPI framework, authorized by Human CEO approval received for advancing beyond the draft and internal review stages."
+            }
+          ]
+        }
+      ],
+      "review_meeting_ids": [
+        "dcc3beda-6e10-4b64-9743-304fc70f79b1"
+      ],
+      "review_meetings": [
+        {
+          "id": "dcc3beda-6e10-4b64-9743-304fc70f79b1",
+          "organization_id": "250c64b6-43fa-47bc-8a37-000c7736ee10",
+          "status": "completed",
+          "minutes": {
+            "risks": [
+              "Delay in Human CEO approval will block all project progress and risk timeline slippage.",
+              "Reliance on synthetic data and no external integration limits realism and stakeholder confidence in the measurement plan.",
+              "The project’s dependency on only two specialists could constrain scheduling and workload management."
+            ],
+            "decision": "Proceed with the internal review meeting as the next step, contingent on Human CEO approval of the roadmap initiation. The meeting will include both Analytics Specialist and Strategy Director to review the draft, produce meeting minutes, and create a finalization action requiring CEO approval. No further internal or external steps will be initiated without this final approval.",
+            "consensus": "Approval to proceed with the internal review meeting based on the completed initial draft measurement plan and KPI table using synthetic data assumptions is unanimous. Both specialists endorse validating KPI formulas, assumptions, and alignment with offline measurement objectives prior to formalizing the plan.",
+            "action_items": [
+              {
+                "risk": "High risk of delay if not approved promptly.",
+                "title": "Approve Proceeding to Internal Review Meeting",
+                "description": "Approve and authorize the initiation of the internal review meeting involving Analytics Specialist and Strategy Director to review the draft measurement plan and KPI table, validating assumptions and KPI formulas before finalization.",
+                "needs_approval": false,
+                "owner_agent_id": "ANALYTICS_SPECIALIST"
+              }
+            ],
+            "disagreements": [],
+            "recommendation": "Submit the formal request to the Human CEO for approval to start the roadmap, enabling the scheduled internal review meeting. In that meeting, ensure thorough critique of synthetic assumptions and KPI definitions to strengthen the measurement plan's strategic fit. After the meeting, prepare a clear, single finalization action document for CEO approval to finalize the KPI plan.",
+            "executive_summary": "Both Analytics Specialist and Strategy Director agree that the initial draft measurement plan and KPI table for the synthetic vegan cafe campaign meet the project's scope and constraints. They support proceeding with an internal review meeting involving both specialists to critically evaluate and refine the draft before producing a finalization action for Human CEO approval. The meeting and finalization action align with project governance requiring CEO sign-off before advancing."
+          }
+        }
+      ]
+    }
+  },
+  {
+    "profile": "mobile",
+    "organization_id": "a44c8565-db75-4fa0-94c9-b430b94f54b9",
+    "owner_user_id": "40bd8234-ad72-49e7-9630-c487d51e7c34",
+    "customer_id": "e593880c-d9ab-45df-8458-74ea6b8f1f2c",
+    "contract_id": "7513c210-ce96-4276-ae06-e3a2017b03f4",
+    "project_id": "a062a426-3e71-491c-ad8d-c2acc3032fff",
+    "action_id": "37094109-aad3-4017-a759-7beb178790ab",
+    "department_ids": [
+      "eefc3909-e505-4976-a83c-2590fd8fda8a",
+      "33f7023d-c611-4e88-9a16-70101498017d",
+      "e335464c-6a25-4de6-8c8a-2c1e1f3717fc",
+      "adb90717-06ab-45a6-98fc-79334b96220b",
+      "14bd856d-7e8f-456d-ba72-ccf4af5f95e4",
+      "0e812ac0-f4ec-4a87-aa95-aa3e3b94e8e1",
+      "d3fb9425-72e6-49fc-a98f-c87ef46ab9bb",
+      "cb938354-cd56-4784-a4fe-c90b524888ce"
+    ],
+    "agent_ids": [
+      "0fa1f59c-5ce8-45e5-98d2-ab7321943aca",
+      "184de2d6-6835-40c7-b194-e1b0624dd4d3",
+      "226af9ec-d19f-4b86-aabe-0f3ecdd8de9b",
+      "4f389564-e521-4355-ac56-c03a48e9018e",
+      "6a01faa6-9628-4bf1-bd58-acca9d5afc0d",
+      "80b8218b-059d-421c-aafa-7ea26bdcf74e",
+      "86a6b449-95d6-485e-86fe-aecad6f2e23d",
+      "90446f82-5634-41f8-a686-45a044682c61",
+      "b42a30c0-a7ad-4937-87b6-c6f315132e6a",
+      "d7ba94bc-f2ff-4b8f-80b9-f490902076c9",
+      "f17d921c-f586-470d-b9fe-427061bcd22d"
+    ],
+    "stage": "full_delivery_verified",
+    "live_provider_execution": true,
+    "assigned_specialist_ids": [
+      "86a6b449-95d6-485e-86fe-aecad6f2e23d",
+      "80b8218b-059d-421c-aafa-7ea26bdcf74e"
+    ],
+    "review_action_status": "completed",
+    "manual_meeting_id": "226159dd-5348-48ea-81e4-3a9b68ecd8f7",
+    "manual_session_id": "c1a817ea-83c2-4356-b94d-141120956b98",
+    "delivery": {
+      "roadmap_id": "5a1653cf-e803-408f-b061-edea8dfa8616",
+      "approval_ids": [
+        "dc52e382-b871-4df1-8b5d-193e674d0ac8"
+      ],
+      "review_session_id": "ebe19507-8461-4642-ac1c-edd4bac62932",
+      "transcript_ids": [
+        "389eddfe-af67-49b2-b62c-f5a9e53f6045",
+        "fe4f8104-f079-4e55-a2ac-5fc4fea3a993",
+        "f8c9b380-4d63-4780-89ff-d655f0c43ddc"
+      ],
+      "outputs": [
+        {
+          "id": "1a6f43db-ead4-4707-9375-943b903e03ac",
+          "organization_id": "a44c8565-db75-4fa0-94c9-b430b94f54b9",
+          "status": "completed",
+          "summary": "Scheduled internal review meeting titled 'Internal Review Meeting for Draft KPI Measurement Plan' involving the Analytics Specialist and Strategy Director. The meeting purpose is to review and validate the drafted KPI measurement table using synthetic assumptions, ensuring accuracy and project alignment before creating the finalization action.",
+          "deliverables": [
+            {
+              "title": "Internal Review Meeting Schedule",
+              "content": {
+                "title": "Internal Review Meeting for Draft KPI Measurement Plan",
+                "status": "scheduled",
+                "purpose": "Review and validate the drafted KPI measurement table using synthetic assumptions to ensure accuracy and project alignment before creating finalization action.",
+                "meeting_id": "fc69e37d-e13b-4ceb-9b22-81b911446daf",
+                "participant_roles": [
+                  "Analytics Specialist",
+                  "Strategy Director"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "0e680760-3e9a-486d-b9a3-56d63d7926d5",
+          "organization_id": "a44c8565-db75-4fa0-94c9-b430b94f54b9",
+          "status": "completed",
+          "summary": "Drafted KPI measurement plan using synthetic assumptions for a fictional vegan cafe campaign targeting adults aged 25-45 in Budapest. Developed a concise KPI table including formulas and clearly labeled assumptions based on fixed inputs: 1000 impressions, 50 clicks, and 10 purchases. This plan meets the project constraints with no external data or integration and is prepared for internal review by assigned specialists.",
+          "deliverables": [
+            {
+              "title": "Synthetic Assumptions KPI Measurement Table",
+              "content": "KPI Measurement Plan for Synthetic Vegan Cafe Campaign\n\nAssumptions:\n- Total Impressions (I): 1000\n- Total Clicks (C): 50\n- Total Purchases (P): 10\n\nKPIs:\n1. Click-Through Rate (CTR): Measures the percentage of impressions that result in clicks.\n   Formula: CTR = (Clicks / Impressions) * 100\n   Calculation: CTR = (50 / 1000) * 100 = 5%\n\n2. Conversion Rate (CVR): Measures the percentage of clicks that convert into purchases.\n   Formula: CVR = (Purchases / Clicks) * 100\n   Calculation: CVR = (10 / 50) * 100 = 20%\n\nSummary Table:\n| KPI              | Formula                  | Calculation         | Value |\n|------------------|--------------------------|---------------------|-------|\n| Click-Through Rate (CTR) | (Clicks / Impressions) * 100 | (50 / 1000) * 100          | 5%    |\n| Conversion Rate (CVR)     | (Purchases / Clicks) * 100   | (10 / 50) * 100             | 20%   |\n\nNotes:\n- All values are based on synthetic fixed assumptions; no external data used.\n- Impressions represent the total number of ad displays.\n- Clicks represent user engagement leading to website visits.\n- Purchases represent completed transactions relevant to campaign goals.\n- Formulas are standard digital marketing metrics adapted for offline measurement context.\n\nThis KPI table is ready for internal review by assigned analytics and strategy specialists to verify alignment with project objectives before proceeding to finalization."
+            }
+          ]
+        },
+        {
+          "id": "e9f0910e-dd4c-4ced-8bca-15d61a52c688",
+          "organization_id": "a44c8565-db75-4fa0-94c9-b430b94f54b9",
+          "status": "completed",
+          "summary": "Final internal KPI measurement document produced for the synthetic vegan cafe campaign based on approved internal review outcomes and CEO authorization. The document clearly states synthetic assumptions, KPI formulas, calculations, and relevant notes aligned with project constraints.",
+          "deliverables": [
+            {
+              "title": "Final KPI Measurement Document for Synthetic Vegan Cafe Campaign",
+              "content": "Final KPI Measurement Plan for Synthetic Vegan Cafe Campaign\n\nAssumptions:\n- Total Impressions (I): 1000\n- Total Clicks (C): 50\n- Total Purchases (P): 10\n\nKPIs:\n1. Click-Through Rate (CTR): Measures the percentage of impressions that result in clicks.\n   Formula: CTR = (Clicks / Impressions) * 100\n   Calculation: CTR = (50 / 1000) * 100 = 5%\n\n2. Conversion Rate (CVR): Measures the percentage of clicks that convert into purchases.\n   Formula: CVR = (Purchases / Clicks) * 100\n   Calculation: CVR = (10 / 50) * 100 = 20%\n\nSummary Table:\n| KPI                       | Formula                      | Calculation             | Value |\n|---------------------------|------------------------------|-------------------------|-------|\n| Click-Through Rate (CTR)  | (Clicks / Impressions) * 100 | (50 / 1000) * 100       | 5%    |\n| Conversion Rate (CVR)     | (Purchases / Clicks) * 100   | (10 / 50) * 100         | 20%   |\n\nNotes:\n- All KPI values are derived solely from synthetic assumptions as specified.\n- No external data or integration used, compliant with project scope.\n- Impressions represent ad exposure count.\n- Clicks represent user engagements on the campaign.\n- Purchases reflect completed transactions related to the campaign goals.\n- The formulas used are standard metrics adapted to the offline synthetic measurement context.\n\nThis document is the finalized internal KPI measurement plan for the synthetic vegan cafe campaign, approved by relevant specialists and endorsed by Human CEO authorization."
+            }
+          ]
+        }
+      ],
+      "review_meeting_ids": [
+        "fc69e37d-e13b-4ceb-9b22-81b911446daf"
+      ],
+      "review_meetings": [
+        {
+          "id": "fc69e37d-e13b-4ceb-9b22-81b911446daf",
+          "organization_id": "a44c8565-db75-4fa0-94c9-b430b94f54b9",
+          "status": "completed",
+          "minutes": {
+            "risks": [
+              "Potential ambiguity in formula interpretation by reviewers without clear examples.",
+              "Dependency on Human CEO approval at two stages could cause delays if clarity issues arise.",
+              "The synthetic nature limits real-world applicability but aligns with project scope.",
+              "Insufficient detail in the meeting minutes may necessitate rework after CEO approval, which is not permitted."
+            ],
+            "decision": "Schedule the internal review meeting involving both Analytics Specialist and Strategy Director to review the draft KPI measurement plan. The meeting will confirm the assumptions and formulas, document comprehensive minutes, and prepare the finalization action for CEO approval with no further meetings or task creations.",
+            "consensus": "There is unanimous agreement that the internal review meeting should be scheduled promptly with both specialists to validate assumptions, formulas, and alignment. The meeting should produce detailed minutes capturing all feedback and agreed adjustments. Following this, a single finalization action will be created, requesting Human CEO approval before the final KPI document is produced. This approach respects project constraints and the CEO's retention of consequential authority.",
+            "action_items": [
+              {
+                "risk": "Medium risk that insufficient review detail may require rework after CEO approval, which is disallowed.",
+                "title": "Internal Review Meeting for Draft KPI Measurement Plan",
+                "description": "Organize and conduct a meeting involving the Analytics Specialist and Strategy Director to review the drafted KPI measurement plan for the synthetic vegan cafe campaign, confirm assumptions, KPI formulas, and business alignment, and document detailed minutes. Prepare a finalization action based on meeting outcomes to be submitted for Human CEO approval without proposing additional meetings or tasks.",
+                "needs_approval": false,
+                "owner_agent_id": "ANALYTICS_SPECIALIST"
+              }
+            ],
+            "disagreements": [],
+            "recommendation": "Proceed immediately to organize the internal review meeting with assigned specialists. Focus on ensuring clarity of synthetic assumptions, KPI formulas, and business relevance. Meticulously document meeting minutes to support the finalization action, thus enabling efficient CEO review and approval in one step.",
+            "executive_summary": "Both Analytics Specialist and Strategy Director agree that the drafted KPI measurement plan for the synthetic vegan cafe campaign is well-constructed, clearly stating synthetic assumptions (1000 impressions, 50 clicks, 10 purchases) and using standard formulas for CTR and conversion rate (CVR). The plan aligns with project constraints and sets a solid foundation for review and subsequent finalization. Both specialists emphasize the importance of thorough documentation during the internal review to ensure clarity and avoid misinterpretations, as no further meetings or actions can follow the CEO's approval of the finalization action."
+          }
+        }
+      ]
+    }
+  }
+]

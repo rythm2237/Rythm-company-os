@@ -1,0 +1,40 @@
+2026-11-19T07:33:42.7716084Z NOTICE:  PASS W10 installed-schema leased meeting and atomic task/action completion; fixture will roll back
+2026-11-19T07:34:24.1336628Z PASS W10 meeting synthesis: Agency and legacy leads accepted; ordinary, paused, unauthorized and foreign-tenant participants rejected by actual PostgreSQL trigger
+2026-11-19T07:34:24.4064396Z PASS W10 project outputs: persisted content, structured deliverables, escaping, malformed payload and empty state
+2026-11-19T07:34:24.6120114Z PASS W10 readable meeting content: exact persisted quotes/newlines, advisory decision labels, no model approval/ID authority, legacy fallback and literal text
+2026-11-19T07:34:24.9387406Z PASS W10 provider compatibility: real SDK payload omits unsupported GPT-4 reasoning, preserves reasoning models and output/storage limits; no provider network call
+2026-11-19T07:34:26.8787001Z PASS W10 meeting handoff: actual PostgreSQL holds originating execution, preserves approval wait, ignores foreign jobs, completes idempotently and enforces service-only ACL
+2026-11-19T07:34:28.7693269Z PASS W10 actual PostgreSQL meeting lifecycle: active leased same-tenant worker only, viewer/foreign/expired/CEO-required denials, minutes and immutability, normal Owner preserved
+2026-11-19T07:34:30.6975678Z PASS W10 actual PostgreSQL internal dispatch: agent-only completion blocker continues authorized work; explicit pause/HOLD/manual blocker, missing dependency, pending approval, foreign execution/meeting and CEO-required session stay stopped; service-only helper
+2026-11-19T07:34:32.6865653Z PASS W10 actual PostgreSQL atomic task/action completion: persisted content, own leased tenant, foreign/expired/unapproved denials, forced-write rollback, immutable final action and service-only RPC without Owner helper access
+2026-11-19T07:34:32.9257737Z PASS W10 roadmap graph: exact already-required baseline gate, preserved extra approval and real dependency, missing/client/ambiguous/cyclic/duplicate denials
+2026-11-19T07:34:33.0070152Z PASS W10 actual roadmap API: invalid/cyclic/missing graph returns 422 before approval/write, reviewable state retained, stale/foreign rejected, own baseline gate reaches normal approved start
+2026-11-19T07:34:33.0593656Z PASS W10 actual task worker: persisted approved Human CEO direction reaches provider; pending, foreign and lookup-error receipts stop before provider/completion; no foreign note leakage
+2026-11-19T07:34:34.9118916Z PASS W10 team assignment: actual PostgreSQL owner upsert/capacity/history, viewer/anonymous/foreign/paused/entitlement/range denials and atomic rollback
+2026-11-19T07:34:34.9936420Z PASS W10 actual meeting worker: tenant-bound internal review, normalized risk, persisted Human CEO gate and fail-closed lifecycle, participants, transcript, recommendation, session, minutes and approval write failures; no formal decision auto-approval (synthetic provider/persistence adapters)
+2026-11-19T07:35:59.8379684Z PASS W10 Agency reservation (desktop): pending entitlement and Owner persisted across a fresh login
+2026-11-19T07:35:59.8862946Z PASS W10 assisted activation (desktop): active entitlement persisted
+2026-11-19T07:36:00.8308351Z PASS W10 workforce (desktop): persisted departments and tenant-bound specialists
+2026-11-19T07:36:10.6693252Z PASS W10 action (desktop): task creation and transition survive refresh
+2026-11-19T07:36:12.0804347Z PASS W10 roles (desktop): member sees customer and cannot read or create contract
+2026-11-19T07:36:19.7161506Z PASS W10 project team (desktop): Owner UI assignments and capacity persist under tenant RLS
+2026-11-19T07:36:31.9708849Z PASS W10 live analysis (desktop): actual provider output persisted
+2026-11-19T07:36:48.1593670Z PASS W10 Human CEO gates (desktop): roadmap and 1 additional task authorizations persisted
+2026-11-19T07:37:34.9033219Z PASS W10 generated delivery (desktop): persisted outputs, reviewed meeting, approvals, refresh and re-login
+2026-11-19T07:37:38.2210400Z PASS W10 Agency Boardroom (desktop): browser-created meeting, strategy synthesis, explicit participants and refresh
+2026-11-19T07:37:39.4738654Z PASS W10 review task (desktop): Owner completion and immutable final state survive refresh
+2026-11-19T07:37:39.4756252Z PASS W10 CRM and project (desktop): persisted brief, customer, contract and accountable project
+2026-11-19T07:37:39.4765492Z PASS W10 Agency provision (desktop): recorded template installation
+2026-11-19T07:37:41.6705405Z PASS W10 Agency reservation (mobile): pending entitlement and Owner persisted across a fresh login
+2026-11-19T07:37:41.6969498Z PASS W10 assisted activation (mobile): active entitlement persisted
+2026-11-19T07:37:42.4655541Z PASS W10 workforce (mobile): persisted departments and tenant-bound specialists
+2026-11-19T07:37:57.9553073Z PASS W10 action (mobile): task creation and transition survive refresh
+2026-11-19T07:37:59.0611431Z PASS W10 roles (mobile): member sees customer and cannot read or create contract
+2026-11-19T07:38:08.4785830Z PASS W10 project team (mobile): Owner UI assignments and capacity persist under tenant RLS
+2026-11-19T07:38:19.9019207Z PASS W10 live analysis (mobile): actual provider output persisted
+2026-11-19T07:38:33.4289450Z PASS W10 Human CEO gates (mobile): roadmap and 0 additional task authorizations persisted
+2026-11-19T07:39:45.4039216Z PASS W10 generated delivery (mobile): persisted outputs, reviewed meeting, approvals, refresh and re-login
+2026-11-19T07:39:51.0722781Z PASS W10 Agency Boardroom (mobile): browser-created meeting, strategy synthesis, explicit participants and refresh
+2026-11-19T07:39:54.5432239Z PASS W10 review task (mobile): Owner completion and immutable final state survive refresh
+2026-11-19T07:39:54.5435718Z PASS W10 CRM and project (mobile): persisted brief, customer, contract and accountable project
+2026-11-19T07:39:54.5436389Z PASS W10 Agency provision (mobile): recorded template installation

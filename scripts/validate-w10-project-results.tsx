@@ -1,0 +1,19 @@
+import assert from "node:assert/strict";
+import React from "react";
+import {renderToStaticMarkup} from "react-dom/server";
+import {ProjectTaskResults} from "../components/projects/project-task-results";
+(globalThis as typeof globalThis & {React:typeof React}).React=React;
+const html=renderToStaticMarkup(<ProjectTaskResults tasks={[{id:"synthetic",title:"<script>title</script>",completed_at:"2026-11-18T12:00:00Z",safe_result:{summary:"<img src=x onerror=alert(1)>",deliverables:["CTR = clicks / impressions",{assumption:"<script>content</script>"}]}}]}/>);
+assert.ok(html.includes("CTR = clicks / impressions"));
+assert.ok(html.includes("&lt;script&gt;content&lt;/script&gt;"));
+assert.ok(!html.includes("<script>"));
+assert.ok(!html.includes("<img src=x"));
+assert.ok(html.includes("Review the evidence before accepting"));
+assert.ok(renderToStaticMarkup(<ProjectTaskResults tasks={[{id:"invalid",title:"Invalid payload",completed_at:null,safe_result:null}]}/>).includes("Invalid payload"));
+assert.ok(renderToStaticMarkup(<ProjectTaskResults tasks={[]}/>).includes("No completed task outputs"));
+console.log("PASS W10 project outputs: persisted content, structured deliverables, escaping, malformed payload and empty state");
+
+const document=renderToStaticMarkup(<ProjectTaskResults tasks={[{id:"document",title:"Approved KPI",completed_at:null,safe_result:{deliverables:[{title:"Final KPI document",content:"CTR = 5%\nConversion = 20%"}]}}]}/>);
+assert.ok(document.includes("<h4>Final KPI document</h4>"));
+assert.ok(document.includes("CTR = 5%\nConversion = 20%"));
+assert.ok(!document.includes('\\nConversion'),"Read the saved document, not an escaped JSON wrapper");

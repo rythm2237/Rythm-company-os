@@ -1,5 +1,7 @@
 "use client";
 
+import { readableMeetingMessage } from "@/lib/meetings/message-content";
+
 import { Button } from "@/components/ui/Button";
 
 import Image from "next/image";
@@ -261,16 +263,17 @@ export default function DeliberationConsole({
     finally { setLegalReviewRunning(false); }
   };
 
-  const latest = [...messages].slice(-20).reverse();
-  const lastAgentMessage = [...messages].reverse().find((m) => !["CEO", "SYSTEM"].includes(m.speakerCode));
+  const displayMessages = useMemo(() => messages.map(message => ({ ...message, content: readableMeetingMessage(message.content) })), [messages]);
+  const latest = [...displayMessages].slice(-20).reverse();
+  const lastAgentMessage = [...displayMessages].reverse().find((m) => !["CEO", "SYSTEM"].includes(m.speakerCode));
   const currentRound = lastAgentMessage?.roundNo ?? 1;
   const active = participants.find((p) => p.agentCode === activeSpeaker);
   const completed = status === "completed";
   const lastMessage = messages.at(-1);
   const chairHasFloor = canRun && paused && lastMessage?.speakerCode === "CEO";
-  const synthesis = [...messages].reverse().find((m) => m.messageType === "synthesis");
-  const recentChallenges = [...messages].filter((m) => m.messageType === "challenge").slice(-3);
-  const recentPositions = [...messages].filter((m) => m.messageType === "position").slice(-3);
+  const synthesis = [...displayMessages].reverse().find((m) => m.messageType === "synthesis");
+  const recentChallenges = [...displayMessages].filter((m) => m.messageType === "challenge").slice(-3);
+  const recentPositions = [...displayMessages].filter((m) => m.messageType === "position").slice(-3);
   const slideDeck = useMemo(() => [
     { eyebrow: "MEETING OBJECTIVE", title: decisionQuestion, bullets: meetingAgenda.length ? meetingAgenda : ["Clarify the decision to be made.", "Surface strategic and operational constraints.", "Challenge assumptions before recommendation."], footer: "Human CEO retains final authority." },
     { eyebrow: `ROUND ${currentRound} · POSITIONS`, title: "Current executive positions", bullets: recentPositions.length ? recentPositions.map((m) => `${m.speakerName}: ${m.content}`) : ["Positions will appear as Agents complete governed turns."], footer: "Only authorized meeting participants are represented in this room." },
@@ -385,7 +388,7 @@ export default function DeliberationConsole({
 
     <aside aria-label="Meeting notes and governance" inert={!railOpen || endConfirm} className={`${styles.liveRail} ${railOpen ? styles.liveRailOpen : ""}`}>
       <nav className={styles.railTabs}><Button className={railMode === "transcript" ? styles.railTabActive : ""} onClick={() => setRailMode("transcript")}>Live</Button><Button className={railMode === "summary" ? styles.railTabActive : ""} onClick={() => setRailMode("summary")}>Summary</Button><Button className={railMode === "governance" ? styles.railTabActive : ""} onClick={() => setRailMode("governance")}>Governance</Button><Button aria-label="Close meeting panel" onClick={() => setRailOpen(false)}>×</Button></nav>
-      {railMode === "transcript" ? <div className={styles.railScroll}><div className={styles.railTools}><select value={recipient} onChange={(e) => setRecipient(e.target.value)}><option value="ALL">To: Everyone</option>{participants.map((agent) => <option key={agent.id} value={agent.agentCode}>To: {agent.name}</option>)}</select><input ref={ceoInputRef} value={ceoText} onChange={(e) => setCeoText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendCeoContribution(); } }} placeholder="Message, question, challenge or direction…" /><Button onClick={() =>sendCeoContribution()} disabled={ceoSending || ceoText.trim().length < 2}>{ceoSending ? "Sending…" : "Send"}</Button></div>{latest.length ? latest.map((m, index) => <article key={`${m.turnIndex}-${index}`} className={`${styles.liveMessage} ${m.speakerCode === "CEO" ? styles.liveMessageCeo : ""}`}><div><strong>{m.speakerName}</strong><span>R{m.roundNo}</span></div><p>{m.content}</p></article>) : <p className={styles.railEmpty}>No transcript yet. Use Next Action or Play to begin.</p>}</div> : null}
+      {railMode === "transcript" ? <div className={styles.railScroll}><div className={styles.railTools}><select value={recipient} onChange={(e) => setRecipient(e.target.value)}><option value="ALL">To: Everyone</option>{participants.map((agent) => <option key={agent.id} value={agent.agentCode}>To: {agent.name}</option>)}</select><input ref={ceoInputRef} value={ceoText} onChange={(e) => setCeoText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendCeoContribution(); } }} placeholder="Message, question, challenge or direction…" /><Button onClick={() =>sendCeoContribution()} disabled={ceoSending || ceoText.trim().length < 2}>{ceoSending ? "Sending…" : "Send"}</Button></div>{latest.length ? latest.map((m, index) => <article key={`${m.turnIndex}-${index}`} className={`${styles.liveMessage} ${m.speakerCode === "CEO" ? styles.liveMessageCeo : ""}`}><div><strong>{m.speakerName}</strong><span>R{m.roundNo}</span></div><p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{m.content}</p></article>) : <p className={styles.railEmpty}>No transcript yet. Use Next Action or Play to begin.</p>}</div> : null}
       {railMode === "summary" ? <div className={styles.railScroll}><div className={styles.railTools}><select value={summaryLanguage} onChange={(e) => setSummaryLanguage(e.target.value)}><option value="__meeting__">Meeting language</option><option value="English">English</option><option value="German">German</option><option value="Hungarian">Hungarian</option><option value="__other__">Other…</option></select>{summaryLanguage === "__other__" ? <input value={customSummaryLanguage} onChange={(e) => setCustomSummaryLanguage(e.target.value)} placeholder="Language" /> : null}<Button onClick={() =>requestSummary()} disabled={summarizing || messages.length < 2}>{summarizing ? "Working…" : "Generate summary"}</Button></div><div className={styles.summaryPane}>{summary || "No summary generated yet."}</div></div> : null}
       {railMode === "governance" ? <div className={styles.railScroll}><div className={styles.governancePane}><strong>Human CEO authority</strong><p>No Agent can finalize consequential decisions or authorize external actions.</p><strong>Legal triage</strong><p>{legalTriageReason || legalTriage}</p>{legalTriage === "recommended" && !legalReview ? <Button onClick={requestLegalReview} disabled={legalReviewRunning}>{legalReviewRunning ? "Running A-106…" : "Run A-106 review"}</Button> : null}{legalReview ? <><strong>{legalReview.outcome}</strong><p>{legalReview.executive_note}</p><p>{legalReview.risk_summary}</p></> : null}<p>Budget cap: ${budgetCapUsd.toFixed(2)}</p>{meetingState === "completed" ? <Button onClick={() => setDismissed(true)}>Open Human CEO decision form</Button> : null}</div></div> : null}
     </aside>

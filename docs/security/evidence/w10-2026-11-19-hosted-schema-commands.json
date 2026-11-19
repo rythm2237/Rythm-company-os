@@ -1,0 +1,45 @@
+{
+  "recorded_on": "2026-11-19",
+  "production_mutations": 0,
+  "provider_calls": 0,
+  "commands": [
+    {
+      "command": "npm view @electric-sql/pglite@0.3.14 version",
+      "result": "PASS; registry returned 0.3.14"
+    },
+    {
+      "command": "npm install --prefix ../w10-pg17 --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.3.14",
+      "result": "Installation PASS; rehearsal NOT accepted because this build lacks required pgcrypto bundle"
+    },
+    {
+      "command": "npm install --prefix ../w10-pg17 --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.4.2",
+      "result": "PASS; temporary package only, verified PostgreSQL 17.5"
+    },
+    {
+      "command": "node --check scripts/rehearse-w10-hosted-schema.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "node scripts/rehearse-w10-hosted-schema.mjs ../w10-hosted-catalog.private.json ../w10-hosted-extra.private.json ../w10-hosted-catalog-query.private.sql ../w10-wrong-major-summary.json",
+      "result": "Expected rejection PASS: PostgreSQL 18, exit 1 at bootstrap; final verifier fails closed"
+    },
+    {
+      "command": "W10_PGLITE_MODULE=file:///workspace/scratch/ceb65cf6d403/w10-pg17/node_modules/@electric-sql/pglite/dist/index.js node scripts/rehearse-w10-hosted-schema.mjs ../w10-hosted-catalog.private.json ../w10-hosted-extra.private.json ../w10-hosted-catalog-query.private.sql ../w10-hosted-clone-summary.json",
+      "result": "PASS final execution, exit 0; all 11 phases, exact source/inverse catalog equality and role smoke"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    },
+    {
+      "command": "git ls-remote origin refs/heads/main refs/heads/pilot/w10-agency-e2e",
+      "result": "main 55a1377; branch ed0bc4a before evidence commit"
+    }
+  ],
+  "intermediate_rehearsal_failures_not_accepted": [
+    "Exporter initially omitted standalone unique indexes referenced by FKs; corrected the export filter and ordering",
+    "Private crm_private routines were not initially included; added their definitions and ACLs",
+    "Default test engine was PostgreSQL 18 and added incompatible NOT NULL catalog entries; final proof pins a PostgreSQL 17 build",
+    "Synthetic lookup rows for Associate level and a full-gate completion policy were absent from the empty cloned schema; seeded synthetic dictionary rows, with all original triggers enabled"
+  ]
+}
