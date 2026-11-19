@@ -17,7 +17,14 @@ export function ProjectTaskResults({ tasks }: { tasks: TaskOutput[] }) {
         <h3>{task.title}</h3>
         {task.completed_at ? <time dateTime={task.completed_at}>{new Date(task.completed_at).toLocaleString("en-GB")}</time> : null}
         {typeof output.summary === "string" ? <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{output.summary}</p> : null}
-        {deliverables.map((item, index) => <pre key={index} style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxWidth: "100%" }}>{typeof item === "string" ? item : JSON.stringify(item, null, 2)}</pre>)}
+        {deliverables.map((item, index) => {
+          const record = item && typeof item === "object" && !Array.isArray(item) ? item as Record<string, unknown> : null;
+          const body = record && Object.prototype.hasOwnProperty.call(record, "content") ? record.content : item;
+          return <div key={index} style={{ minWidth: 0 }}>
+            {typeof record?.title === "string" ? <h4>{record.title}</h4> : null}
+            <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxWidth: "100%" }}>{typeof body === "string" ? body : JSON.stringify(body, null, 2)}</pre>
+          </div>;
+        })}
       </article>;
     }) : <p className="empty-state">No completed task outputs have been recorded.</p>}
   </section>;

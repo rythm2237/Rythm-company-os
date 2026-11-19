@@ -12,3 +12,8 @@ assert.ok(html.includes("Review the evidence before accepting"));
 assert.ok(renderToStaticMarkup(<ProjectTaskResults tasks={[{id:"invalid",title:"Invalid payload",completed_at:null,safe_result:null}]}/>).includes("Invalid payload"));
 assert.ok(renderToStaticMarkup(<ProjectTaskResults tasks={[]}/>).includes("No completed task outputs"));
 console.log("PASS W10 project outputs: persisted content, structured deliverables, escaping, malformed payload and empty state");
+
+const document=renderToStaticMarkup(<ProjectTaskResults tasks={[{id:"document",title:"Approved KPI",completed_at:null,safe_result:{deliverables:[{title:"Final KPI document",content:"CTR = 5%\nConversion = 20%"}]}}]}/>);
+assert.ok(document.includes("<h4>Final KPI document</h4>"));
+assert.ok(document.includes("CTR = 5%\nConversion = 20%"));
+assert.ok(!document.includes('\\nConversion'),"Read the saved document, not an escaped JSON wrapper");
