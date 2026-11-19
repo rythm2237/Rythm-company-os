@@ -67,7 +67,10 @@ begin
  end;
  if not was_denied then raise exception 'W11: financial contract link deletion permitted';end if;
 
- perform public.crm_record_invoice_payment(invoice,10,'w11-disposable-receipt-key');
+ -- Ledger row is a synthetic posted transaction, not a payment-provider operation.
+ insert into public.finance_transactions(organization_id,customer_id,project_id,contract_id,invoice_id,
+  transaction_type,status,category,description,amount,currency,source_type)
+ values(org,account,project_a,contract,invoice,'revenue','posted','invoice','W11 disposable ledger',10,'EUR','manual');
  was_denied:=false;
  begin
   update public.finance_invoices set project_id=project_b where id=invoice;
