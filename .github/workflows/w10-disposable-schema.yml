@@ -5,6 +5,7 @@ on:
       - '.github/workflows/w10-disposable-schema.yml'
       - 'supabase/migrations/**'
       - 'scripts/validate-w10-agency-reservation.mjs'
+      - 'scripts/validate-w11-role-browser.mjs'
       - 'scripts/w10-budget-proxy.mjs'
 permissions:
   contents: read
