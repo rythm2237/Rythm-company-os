@@ -148,6 +148,13 @@ try{
   assert.equal(stateAfter.data.last_status,"degraded");
   assert.equal(stateAfter.data.consecutive_failures,1);
   assert.equal(stateAfter.data.active_trace_id,null);
+  const failureEvent=await api.from("project_dispatch_failure_events")
+    .select("trace_id,dispatch_status,failed_step,error_code")
+    .eq("trace_id",failed.traceId).maybeSingle();
+  assert.equal(failureEvent.error,null,"sanitized failure event must be queryable by service role");
+  assert.deepEqual(failureEvent.data,{
+    trace_id:failed.traceId,dispatch_status:"degraded",failed_step:"health",error_code:"STEP_FAILED",
+  },"durable failure ledger must contain trace ID and fixed labels only");
 
   // Reset the staging-only status to healthy, leave no running lease or fixture.
   state.remaining502=0;
