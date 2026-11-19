@@ -1,0 +1,55 @@
+name: W13 Hosted Staging Dispatch Lease and 502 (owner-authorized, no Production)
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: w13-hosted-staging
+  cancel-in-progress: false
+
+jobs:
+  hosted-staging:
+    if: ${{ github.event.label.name == 'w13-staging-authorized' && github.event.pull_request.number == 458 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'pilot/w13-dispatch-resilience' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: w02-staging
+    env:
+      W13_STAGING_REF: ${{ vars.W02_STAGING_REF }}
+      W13_STAGING_SUPABASE_URL: ${{ vars.W02_STAGING_SUPABASE_URL }}
+      W13_STAGING_SERVICE_ROLE_KEY: ${{ secrets.W02_STAGING_SERVICE_ROLE_KEY }}
+      W13_STAGING_ANON_KEY: ${{ secrets.W02_STAGING_ANON_KEY }}
+      RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
+      RYTHM_AGENT_EXECUTION_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Enforce staging project, branch and protected credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$W13_STAGING_REF" = "viqjdgohtxqkrdgwtull"
+          test "$W13_STAGING_SUPABASE_URL" = "https://viqjdgohtxqkrdgwtull.supabase.co"
+          test -n "$W13_STAGING_SERVICE_ROLE_KEY"
+          test -n "$W13_STAGING_ANON_KEY"
+          test "$RYTHM_EXTERNAL_ACTIONS_ENABLED" = 'false'
+          test "$RYTHM_AGENT_EXECUTION_ENABLED" = 'false'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install isolated test dependencies
+        run: npm ci --ignore-scripts
+      - name: Validate offline W13 contract first
+        run: npm run test:w13
+      - name: Execute hosted staging lease, upstream 502 and trace regression
+        run: node scripts/validate-w13-hosted-staging.mjs
+      - name: Sanitize completion evidence
+        if: always()
+        run: |
+          echo "W13 hosted staging checks used only protected staging variables; no production API, customer data, or third-party actions."
