@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { devices } from "playwright";
 
 // Browser + actual local Auth/PostgREST, no mocks and no production endpoints.
 // Called only from the W10 disposable Supabase journey, after its synthetic
@@ -19,7 +20,9 @@ export async function verifyW11RoleBrowser({
     return value.data;
   };
   const check = (condition,label) => {assert.ok(condition,label); evidence.checks.push(label);};
-  const context = await browser.newContext({ viewport: {width:1280,height:900}, acceptDownloads:false });
+  const context = await browser.newContext(profile === "mobile"
+    ? { ...devices["Pixel 7"], acceptDownloads:false }
+    : { viewport: {width:1280,height:900}, acceptDownloads:false });
   context.setDefaultTimeout(30000);
   await context.route("**/*", route => {
     const u = new URL(route.request().url());
