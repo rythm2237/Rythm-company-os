@@ -141,7 +141,8 @@ export default function StudioCubeScene(props: Props) {
     const contactMaterial = new THREE.MeshBasicMaterial({ map: shadowTexture, transparent: true, depthWrite: false }); materials.push(contactMaterial);
     const contact = new THREE.Mesh(new THREE.PlaneGeometry(5.8, 5.8), contactMaterial); contact.rotation.x = -Math.PI / 2; contact.position.y = -2.215; scene.add(contact);
 
-    let visible = true, disposed = false, lost = false, phase = 0, lastTime = 0, frame = 0, lastSelected = props.selected, transitioning = false;
+    let visible = true, disposed = false, lost = false, phase = 0, lastTime = 0, frame = 0, lastSelected = props.selected, transitioning = false, yaw = -.12, pitch = .1, roll = .02;
+    const rotation = new THREE.Euler();
     const target = new THREE.Quaternion(), pointer = new THREE.Vector2(), smoothedPointer = new THREE.Vector2();
     function resize() {
       const { width, height } = element.getBoundingClientRect();
@@ -168,17 +169,18 @@ export default function StudioCubeScene(props: Props) {
       }
       let dirty = false;
       if (transitioning) {
-        if (current.reduced) { rig.quaternion.copy(target); upperRow.rotation.y = 0; transitioning = false; }
+        if (current.reduced) { yaw = -current.selected * Math.PI / 2 - .12; pitch = .1; roll = .02; rig.quaternion.copy(target); upperRow.rotation.y = 0; transitioning = false; }
         else {
           rig.quaternion.slerp(target, 1 - Math.exp(-dt * 5)); upperRow.rotation.y *= Math.exp(-dt * 6);
-          if (rig.quaternion.angleTo(target) < .001 && Math.abs(upperRow.rotation.y) < .001) { rig.quaternion.copy(target); upperRow.rotation.y = 0; transitioning = false; }
+          if (rig.quaternion.angleTo(target) < .001 && Math.abs(upperRow.rotation.y) < .001) { yaw = -current.selected * Math.PI / 2 - .12; pitch = .1; roll = .02; rig.quaternion.copy(target); upperRow.rotation.y = 0; transitioning = false; }
         }
         dirty = true;
       } else if (current.playing && !current.reduced) {
         phase += dt; smoothedPointer.lerp(pointer, 1 - Math.exp(-dt * 3));
-        rig.rotation.y += dt * .105;
-        rig.rotation.x += (.13 + .085 * Math.sin(phase * .33) + smoothedPointer.y * .07 - rig.rotation.x) * (1 - Math.exp(-dt * 2));
-        rig.rotation.z += (.045 * Math.sin(phase * .25) + smoothedPointer.x * .05 - rig.rotation.z) * (1 - Math.exp(-dt * 2));
+        yaw += dt * .105;
+        pitch += (.13 + .085 * Math.sin(phase * .33) + smoothedPointer.y * .07 - pitch) * (1 - Math.exp(-dt * 2));
+        roll += (.045 * Math.sin(phase * .25) + smoothedPointer.x * .05 - roll) * (1 - Math.exp(-dt * 2));
+        rig.quaternion.setFromEuler(rotation.set(pitch, yaw, roll));
         const slice = Math.pow((1 - Math.cos(phase * .43)) / 2, 2) * Math.PI / 2;
         upperRow.rotation.y += (slice - upperRow.rotation.y) * (1 - Math.exp(-dt * 4)); dirty = true;
       }
