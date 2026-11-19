@@ -65,12 +65,10 @@ export default function OperatingModelCube({ variant, children }: { variant: "so
   const model = items[selected];
   const faces = [...items];
   if (variant === "solutions") faces.push({ id: "authority", name: "Human authority", label: "Control", detail: "Consequential decisions stay with people.", roles: ["Review", "Approve", "Trace"], href: "/human-approval-ai-agents", cta: "Human approval" });
-  return <div className={`operating-model-explorer is-${variant}`} data-cube-playing={playing}>
-    <div className="model-cube-caption"><span className="model-cube-status" />{variant === "solutions" ? "ONE OS. THREE OPERATING MODELS." : "YOUR NEXT AI COMPANY."}</div>
-    <div className="model-cube-stage" aria-hidden="true">
-      <div className="model-cube-orbit model-cube-orbit-one" /><div className="model-cube-orbit model-cube-orbit-two" />
-      <div className="model-cube-floor" />
-      <div className={`model-cube${playing ? " is-rotating" : ""}`} ref={cube} style={{ transform: frozen ?? `rotateX(-18deg) rotateY(${-selected * 90 - 24}deg)`, transition: frozen ? "none" : undefined, "--cube-start": `${spinStart}deg` } as CSSProperties}>
+  function renderBody(reflected = false) {
+    return (
+      <div className={`model-cube ${reflected ? "model-cube-ghost" : "model-cube-primary"}${playing ? " is-rotating" : ""}`} ref={reflected ? undefined : cube} style={{ transform: frozen ?? `rotateX(-18deg) rotateY(${-selected * 90 - 24}deg)`, transition: frozen ? "none" : undefined, "--cube-start": `${spinStart}deg` } as CSSProperties}>
+        {["", "rotateY(90deg) ", "rotateY(180deg) ", "rotateY(-90deg) ", "rotateX(90deg) ", "rotateX(-90deg) "].map((orientation, index) => <i key={index} className="model-cube-core" style={{ transform: `${orientation}translateZ(calc(var(--cube-half) - 5px))` }} />)}
         {faces.map((face, index) => <div className={`model-cube-face model-cube-side-${index}`} key={face.id}>
           <div className="model-cube-face-top"><span>RYTHM / {variant === "solutions" ? "OPERATING MODEL" : "COMPANY TEMPLATE"}</span><span>0{index + 1}</span></div>
           <h3>{face.name}</h3>
@@ -80,6 +78,15 @@ export default function OperatingModelCube({ variant, children }: { variant: "so
         <div className="model-cube-face model-cube-top"><span>COMPANY OS</span><svg viewBox="0 0 120 120" fill="none"><path d="M60 24 92 60 60 96 28 60Z M60 24v72M28 60h64" stroke="currentColor" strokeWidth="2"/><circle cx="60" cy="60" r="9" fill="var(--cube-cyan)"/>{[[60,24],[92,60],[60,96],[28,60]].map(([x,y])=><circle key={`${x}-${y}`} cx={x} cy={y} r="5" fill="currentColor"/>)}</svg><small>CONTEXT · AGENTS · GOVERNANCE</small></div>
         <div className="model-cube-face model-cube-bottom"><span>TRACEABLE WORK</span></div>
       </div>
+    );
+  }
+  return <div className={`operating-model-explorer is-${variant}`} data-cube-playing={playing}>
+    <div className="model-cube-caption"><span className="model-cube-status" />{variant === "solutions" ? "ONE OS. THREE OPERATING MODELS." : "YOUR NEXT AI COMPANY."}</div>
+    <div className="model-cube-stage" aria-hidden="true">
+      <div className="model-cube-orbit model-cube-orbit-one" /><div className="model-cube-orbit model-cube-orbit-two" />
+      <div className="model-cube-floor" />
+      {renderBody()}
+      <div className="model-cube-reflection">{renderBody(true)}</div>
     </div>
     <div className="model-cube-controls">
       <span>Explore each face</span>

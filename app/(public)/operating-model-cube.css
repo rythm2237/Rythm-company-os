@@ -70,3 +70,37 @@
 .model-cube-motion:disabled { cursor: default; opacity: .7; }
 
 @media (max-width: 760px) { .model-cube-options button, .model-cube-motion { min-height: 44px; } }
+
+/* Satin shells, edge lighting and a softly reflecting studio floor. */
+.operating-model-explorer { --cube-stage-height: 420px; --cube-floor-y: calc(var(--cube-stage-height) * .42 + var(--cube-edge) * .8); }
+.model-cube-stage { height: var(--cube-stage-height); overflow: hidden; }
+.model-cube { top: 42%; }
+.model-cube-core { position: absolute; inset: 1px; border-radius: 12px; background: linear-gradient(135deg, #dfe6f5, #a1aec9 48%, #354563); backface-visibility: hidden; box-shadow: inset 1px 1px 3px #fff9, inset -2px -2px 4px #101e3e55; }
+.model-cube-face {
+  border-radius: 16px;
+  border-color: #bdc8de;
+  background: radial-gradient(ellipse at 12% 0%, #fff 0%, #ffffff55 28%, transparent 65%), linear-gradient(135deg, #fcfdff 5%, #e6ecf8 65%, #ced8ec);
+  box-shadow: inset 2px 2px 2px #fffffff5, inset -3px -3px 5px #8d9dbe55, inset 0 0 0 5px #f7faff70;
+}
+.model-cube-face::before { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 1px solid #fff9; box-shadow: inset 0 1px 1px #fff, inset 0 -2px 3px #1c30592b; pointer-events: none; }
+.model-cube-face::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(115deg, #ffffff24 0%, transparent 35%, transparent 66%, #6176a21a); pointer-events: none; }
+.model-cube-face > * { position: relative; z-index: 1; }
+.model-cube-side-1 { background: radial-gradient(ellipse at 0% 0%, #62769d66, transparent 62%), linear-gradient(145deg, #233552, #101b30 65%, #0b1220); border-color: #536582; box-shadow: inset 2px 2px 3px #d2e0ff4d, inset -3px -3px 6px #020915aa, inset 0 0 0 5px #a5bbdf12; }
+.model-cube-side-1::before { border-color: #a1b8df55; box-shadow: inset 0 1px 2px #c8d9ff66, inset 0 -2px 4px #01081788; }
+.model-cube-side-2 { background: radial-gradient(ellipse at 8% 0%, #aab7ff80, transparent 58%), linear-gradient(145deg, #7a87e9, #5364c9 60%, #35478f); border-color: #9caff2; box-shadow: inset 2px 2px 3px #e6ebff88, inset -3px -3px 6px #17285977, inset 0 0 0 5px #b8c5ff25; }
+.model-cube-top { background: radial-gradient(ellipse at 20% 12%, #fff, #e1e9f8 60%, #bac9e4); color: #445b94; }
+.model-cube-bottom { background: #192740; }
+.model-cube-face h3 { color: #263b5d; font-weight: 800; text-shadow: 0 -1px 0 #fff, .45px .75px 0 #a8b6d0, .9px 1.5px 0 #9baac4, 1.35px 2.25px 0 #8c9dba, 1.7px 3.5px 3px #20385c38; -webkit-text-stroke: .2px #233858; }
+.model-cube-side-1 h3, .model-cube-side-2 h3 { color: #f5f8ff; -webkit-text-stroke-color: #e8efff; text-shadow: 0 -1px 0 #fff9, .45px .75px 0 #9aaacc, .9px 1.5px 0 #7187b0, 1.35px 2.25px 0 #4a608a, 1.7px 3.5px 3px #020c2466; }
+.model-cube-agents rect { filter: drop-shadow(0 1px 1px #22365b18); }
+.model-cube-floor { top: calc(var(--cube-floor-y) - 15px); bottom: auto; left: 10%; width: 80%; height: 32px; background: radial-gradient(ellipse at 50% 50%, #1223424d 0%, #30497724 32%, #6472e80a 62%, transparent 75%); filter: blur(6px); }
+.model-cube-floor::after { content: ""; position: absolute; inset: 8px 19%; border-radius: 50%; background: #11234735; filter: blur(4px); }
+.model-cube-reflection { position: absolute; inset: 0; perspective: 1100px; transform-origin: 50% 0; transform: translateY(calc(var(--cube-floor-y) * 2)) scaleY(-1); opacity: .18; filter: blur(1.2px); mask-image: linear-gradient(to bottom, transparent 55%, #000 92%); -webkit-mask-image: linear-gradient(to bottom, transparent 55%, #000 92%); pointer-events: none; }
+.model-cube-orbit { opacity: .4; }
+@media (max-width: 760px) {
+  .operating-model-explorer { --cube-stage-height: 325px; }
+  .model-cube-face { border-radius: 12px; }
+  .model-cube-core { border-radius: 9px; }
+  .model-cube-face h3 { -webkit-text-stroke-width: .12px; text-shadow: 0 -1px 0 #fff, .4px .65px 0 #a8b6d0, .8px 1.3px 0 #8c9dba, 1.2px 2.2px 2px #20385c38; }
+  .model-cube-side-1 h3, .model-cube-side-2 h3 { text-shadow: 0 -1px 0 #fff9, .4px .65px 0 #9aaacc, .8px 1.3px 0 #7187b0, 1.2px 2.2px 2px #020c2466; }
+}

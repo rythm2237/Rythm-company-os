@@ -21,8 +21,11 @@ try{
     await page.goto(origin+path);
     const explorer=page.locator('.operating-model-explorer');await explorer.waitFor();
     assert.equal(await explorer.getAttribute('data-cube-playing'),'false','Respect reduced motion');
-    assert.equal(await page.locator('.model-cube-face').count(),6);
-    assert.equal(await page.locator('.model-cube').evaluate(el=>getComputedStyle(el).animationName),'none');
+    assert.equal(await page.locator('.model-cube-primary > .model-cube-face').count(),6);
+    assert.equal(await page.locator('.model-cube-primary').evaluate(el=>getComputedStyle(el).animationName),'none');
+    assert.equal(await page.locator('.model-cube-reflection .model-cube-ghost').count(),1,'Mirrored body is present');
+    const surface=await page.locator('.model-cube-primary .model-cube-face').first().evaluate(el=>({radius:parseFloat(getComputedStyle(el).borderRadius),relief:getComputedStyle(el.querySelector('h3')).textShadow}));
+    assert.ok(surface.radius>=10&&surface.relief!=='none','Rounded surfaces and raised lettering');
     const controls=page.locator('.model-cube-options button');
     assert.equal(await controls.count(),path==='/solutions'?3:4);
     for(let i=0;i<await controls.count();i++){
@@ -48,11 +51,12 @@ try{
  const c=await context({viewport:{width:1440,height:1000},reducedMotion:'no-preference',recordVideo:{dir:output,size:{width:1280,height:900}}}),page=await c.newPage();
  await page.goto(origin+'/solutions');
  await page.waitForFunction(()=>document.querySelector('.operating-model-explorer')?.dataset.cubePlaying==='true');
- const cube=page.locator('.model-cube');const before=await cube.evaluate(el=>getComputedStyle(el).transform);
+ const cube=page.locator('.model-cube-primary');const before=await cube.evaluate(el=>getComputedStyle(el).transform);
  await page.waitForTimeout(600);const after=await cube.evaluate(el=>getComputedStyle(el).transform);assert.notEqual(after,before,'Cube really rotates');
  await page.waitForTimeout(4000);
  await page.getByRole('button',{name:'Pause cube rotation'}).click();
  const frozen=await cube.evaluate(el=>getComputedStyle(el).transform);await page.waitForTimeout(300);assert.equal(await cube.evaluate(el=>getComputedStyle(el).transform),frozen,'Pause freezes orientation');
+ assert.equal(await page.locator('.model-cube-ghost').evaluate(el=>getComputedStyle(el).transform),frozen,'Reflection freezes with the cube');
  await page.locator('.model-cube-options button').nth(1).click();await page.waitForTimeout(1500);
  await page.locator('.model-cube-options button').nth(2).click();await page.waitForTimeout(1500);
  const resumeFrom=await cube.evaluate(el=>new DOMMatrixReadOnly(getComputedStyle(el).transform).m11);
