@@ -9,6 +9,7 @@ on:
       - 'lib/public-experience/assets/**'
       - 'scripts/validate-cube-motion.ts'
       - 'scripts/validate-public-demo-layout.mjs'
+      - 'scripts/verify-public-release.mjs'
       - 'scripts/validate-operating-model-cube.mjs'
       - '.github/workflows/operating-model-cube.yml'
 permissions:
@@ -77,7 +78,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 60); do
-            if curl -fsS --max-time 20 "https://rythm-os.com/solutions?release=${RELEASE_SHA}" -o /tmp/public-release.html && rg -q "data-public-build=\"${RELEASE_SHA}\"" /tmp/public-release.html; then
+            if curl -fsS --max-time 20 "https://rythm-os.com/solutions?release=${RELEASE_SHA}" -o /tmp/public-release.html && node scripts/verify-public-release.mjs /tmp/public-release.html; then
               exit 0
             fi
             sleep 15
