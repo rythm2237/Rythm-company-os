@@ -83,7 +83,7 @@ begin
  begin
   update public.finance_transactions set project_id=project_b where organization_id=org and invoice_id=invoice;
  exception when others then
-  if sqlerrm like '%Transaction invoice attribution mismatch%' then was_denied:=true;else raise;end if;
+  if sqlerrm like '%Transaction invoice attribution mismatch%' or sqlerrm like '%Payment must use its invoice relationships%' then was_denied:=true;else raise;end if;
  end;
  if not was_denied then raise exception 'W11: payment ledger attribution rewrite permitted';end if;
 
