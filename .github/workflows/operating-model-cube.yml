@@ -26,6 +26,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx playwright install ffmpeg
       - run: npm run build
       - name: Verify cube interaction and responsive pages
         run: |
