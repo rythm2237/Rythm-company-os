@@ -187,6 +187,9 @@ try{
   ()=>db.exec(`delete from project_manager_history where project_id='${project}'`),
   /Project manager assignment history is immutable/
  );
+ // The preceding AI dual-principal test deliberately granted this member finance.read.
+ // Revoke it before asserting the denial path; previously authorized reads are expected.
+ await asUser(owner,`update crm_access_grants set revoked_at=now() where principal_id='${member}' and capability='finance.read' and revoked_at is null returning id`);
  assert.equal(Number(await asUser(member,"select count(*)::int from finance_invoices")),0,"Unprivileged user cannot see linked invoices");
  assert.equal(Number(await asUser(member,"select count(*)::int from project_contracts")),0,"Revoked user cannot see linked contracts");
  assert.equal(Number(await asUser(outsider,"select count(*)::int from projects")),0,"Foreign tenant cannot see projects");
