@@ -55,8 +55,9 @@ create or replace function crm_private.link_guard() returns trigger language plp
 begin
  if tg_op='DELETE' or (tg_op='UPDATE' and (new.organization_id,new.project_id,new.contract_id) is distinct from (old.organization_id,old.project_id,old.contract_id)) then
   if exists(select 1 from public.finance_invoices i where i.organization_id=old.organization_id and i.project_id=old.project_id and i.contract_id=old.contract_id)
-     or exists(select 1 from public.finance_transactions t where t.organization_id=old.organization_id and t.project_id=old.project_id and t.contract_id=old.contract_id) then
-   raise exception 'Cannot remove a contract-project link referenced by financial records';
+     or exists(select 1 from public.finance_transactions t where t.organization_id=old.organization_id and t.project_id=old.project_id and t.contract_id=old.contract_id)
+     or exists(select 1 from public.project_documents d where d.organization_id=old.organization_id and d.project_id=old.project_id and d.contract_id=old.contract_id) then
+   raise exception 'Cannot remove a contract-project link referenced by financial or confidential records';
   end if;
   if tg_op='DELETE' then return old;end if;
  end if;
@@ -113,5 +114,6 @@ end $$;
 revoke all on function crm_private.w11_reject_manager_history_mutation() from public,anon,authenticated;
 create trigger w11_manager_history_append_only before update or delete
  on public.project_manager_history for each row execute function crm_private.w11_reject_manager_history_mutation();
+revoke truncate on public.project_manager_history from authenticated,service_role;
 
 commit;
