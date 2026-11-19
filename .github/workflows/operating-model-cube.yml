@@ -5,6 +5,7 @@ on:
       - 'app/(public)/**'
       - 'lib/public-experience/content.ts'
       - 'lib/public-experience/cube-motion.ts'
+      - 'lib/public-experience/assets/**'
       - 'scripts/validate-cube-motion.ts'
       - 'scripts/validate-operating-model-cube.mjs'
       - '.github/workflows/operating-model-cube.yml'

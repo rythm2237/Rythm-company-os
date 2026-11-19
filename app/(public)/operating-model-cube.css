@@ -116,3 +116,15 @@
 .marketing-site .public-page-hero.with-model-cube { background: radial-gradient(ellipse at 83% 23%, #e6edf780 0%, #f7f9fc00 46%); }
 .operating-model-explorer { --cube-stage-height: 450px; }
 @media (max-width: 760px) { .operating-model-explorer { --cube-stage-height: 340px; } }
+
+/* Uniform midnight satin, also on the CSS fallback; reflections share its pose. */
+.model-cube-face, .model-cube-top, .model-cube-bottom {
+  background: radial-gradient(ellipse at 10% 0%, #62769d55, transparent 62%), linear-gradient(145deg, #233552, #20304d 65%, #15233c);
+  color: #dce6f6; border-color: #536582;
+  box-shadow: inset 2px 2px 3px #d2e0ff4d, inset -3px -3px 6px #020915aa;
+}
+.model-cube-face h3 { color: #dce6f6; -webkit-text-stroke-color: #b9cbe6; text-shadow: 0 -1px 0 #fff9, .6px 1px 0 #52698b, 1px 2px 0 #253b5d, 1.5px 3px 3px #020915aa; }
+.model-cube-floor, .model-cube-floor::after { background: none; }
+.model-cube-reflection { opacity: .3; filter: blur(.7px); }
+.operating-model-explorer { --cube-stage-height: 540px; }
+@media (max-width: 760px) { .operating-model-explorer { --cube-stage-height: 410px; } }

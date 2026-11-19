@@ -29,8 +29,14 @@ try{
     assert.ok(Number(await scene.getAttribute('data-rounded-radius'))>=.28);
     assert.equal(await scene.getAttribute('data-surface'),'continuous');
     assert.equal(await scene.getAttribute('data-rotation-mode'),'full-three-axis');
+    assert.deepEqual((await scene.getAttribute('data-face-colors')).split(','),Array(6).fill('#20304d'),'Every face uses the same Rythm navy');
+    assert.equal(await scene.getAttribute('data-title-geometry'),'extruded-bevel');
+    assert.ok(Number(await scene.getAttribute('data-title-depth'))>0,'Titles have actual depth');
+    assert.equal(await scene.getAttribute('data-reflection-mode'),'planar-camera');
+    assert.ok(Number(await scene.getAttribute('data-reflection-frames'))>0,'Mirror camera really renders');
     await page.waitForFunction(()=>Boolean(document.querySelector('.studio-cube-canvas')?.dataset.pose));
     const staticPose=await scene.getAttribute('data-pose');await page.waitForTimeout(150);assert.equal(await scene.getAttribute('data-pose'),staticPose,'Reduced-motion geometry is static');
+    assert.equal(await scene.getAttribute('data-reflection-pose'),staticPose,'Static reflection matches the real body');
     const controls=page.locator('.model-cube-options button');
     assert.equal(await controls.count(),path==='/solutions'?3:4);
     for(let i=0;i<await controls.count();i++){
@@ -58,13 +64,16 @@ try{
  await page.goto(origin+'/solutions');
  await page.waitForFunction(()=>document.querySelector('.operating-model-explorer')?.dataset.cubePlaying==='true');
  await page.waitForFunction(()=>document.querySelector('.operating-model-explorer')?.dataset.cubeEngine==='webgl');
- const cube=page.locator('.studio-cube-canvas');await page.waitForFunction(()=>Boolean(document.querySelector('.studio-cube-canvas')?.dataset.pose));const before=await cube.getAttribute('data-pose');const anglesBefore=(await cube.getAttribute('data-angles')).split(',').map(Number);
+ const cube=page.locator('.studio-cube-canvas');await page.waitForFunction(()=>Boolean(document.querySelector('.studio-cube-canvas')?.dataset.pose));const before=await cube.getAttribute('data-pose');const anglesBefore=(await cube.getAttribute('data-angles')).split(',').map(Number);const reflectionBefore=Number(await cube.getAttribute('data-reflection-frames'));
  await page.waitForTimeout(600);const after=await cube.getAttribute('data-pose');assert.notEqual(after,before,'Cube really rotates');
  const anglesAfter=(await cube.getAttribute('data-angles')).split(',').map(Number);
  anglesAfter.forEach((value,axis)=>assert.ok(value>anglesBefore[axis],`Real scene rotates on axis ${axis}`));
+ assert.ok(Number(await cube.getAttribute('data-reflection-frames'))>reflectionBefore,'Mirrored camera updates during rotation');
  await page.waitForTimeout(4000);
  await page.getByRole('button',{name:'Pause cube rotation'}).click();
  await page.waitForTimeout(100);const frozen=await cube.getAttribute('data-pose');await page.waitForTimeout(300);assert.equal(await cube.getAttribute('data-pose'),frozen,'Pause freezes the complete solid body');
+ assert.equal(await cube.getAttribute('data-reflection-pose'),frozen,'Reflection freezes on the same orientation');
+ const frozenFrames=await cube.getAttribute('data-reflection-frames');await page.waitForTimeout(200);assert.equal(await cube.getAttribute('data-reflection-frames'),frozenFrames,'Paused mirror does not keep rendering');
  await page.locator('.model-cube-options button').nth(1).click();await page.waitForFunction(()=>document.querySelector('.studio-cube-canvas')?.dataset.selected==='1'&&document.querySelector('.studio-cube-canvas')?.dataset.transitioning==='false');
  await page.locator('.model-cube-options button').nth(2).click();await page.waitForFunction(()=>document.querySelector('.studio-cube-canvas')?.dataset.selected==='2'&&document.querySelector('.studio-cube-canvas')?.dataset.transitioning==='false');
  const resumeFrom=(await cube.getAttribute('data-pose')).split(',').map(Number);
@@ -75,7 +84,7 @@ try{
  assert.ok(angularGap<.15,`Resume remains continuous: ${angularGap} radians`);
  assert.equal(await page.locator('.operating-model-explorer').getAttribute('data-cube-playing'),'true');
  await page.waitForTimeout(3000);await page.screenshot({path:`${output}/motion-desktop.png`});
- evidence.push({engine:'WebGL',cubies:1,surface:'continuous',threeAxisMotion:'PASS',motion:'PASS',pause:'PASS',resume:'PASS'});const video=page.video();await c.close();await video.saveAs(`${output}/cube-motion.webm`);
+ evidence.push({engine:'WebGL',cubies:1,surface:'continuous',threeAxisMotion:'PASS',navyFaces:'PASS',extrudedTitles:'PASS',planarReflection:'PASS',reflectionPause:'PASS',motion:'PASS',pause:'PASS',resume:'PASS'});const video=page.video();await c.close();await video.saveAs(`${output}/cube-motion.webm`);
  const fallback=await context({viewport:{width:1366,height:768},reducedMotion:'reduce'});
  await fallback.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){if(type==='webgl'||type==='webgl2'||type==='experimental-webgl')return null;return get.call(this,type,...args);};});
  const fallbackPage=await fallback.newPage();await fallbackPage.goto(origin+'/solutions');
