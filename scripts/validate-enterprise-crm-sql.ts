@@ -42,6 +42,7 @@ try{
  await db.exec("alter table project_documents add column context_document_id uuid; alter table project_context_documents enable row level security;alter table project_document_chunks enable row level security;alter table project_contracts enable row level security; alter table project_documents enable row level security; create policy documents_member on project_documents for all to authenticated using(public.is_org_member(organization_id)) with check(public.is_org_owner(organization_id)); grant all on project_documents to authenticated;");
  await db.exec(tableFrom("supabase/migrations/20260822173000_company_structure_workforce_communications.sql","notifications"));
  await db.exec(readFileSync("supabase/migrations/20261022153241_shared_enterprise_crm.sql","utf8"));
+ await db.exec(readFileSync("supabase/migrations/20261119174000_w11_crm_relationship_invariants.sql","utf8"));
  assert.equal(await value(`select crm_reconciliation_required from projects where id='${project}'`),true,"Legacy owners must remain unassigned");
  await asUser(owner,`insert into crm_accounts(id,organization_id,name) values('${customer}','${org}','Customer') returning id`);
  assert.equal(await asUser(member,"select count(*)::int from crm_accounts"),1);
@@ -147,6 +148,49 @@ try{
  await db.exec(`grant select on project_document_chunks to authenticated;create policy chunks_member on project_document_chunks for select to authenticated using(public.is_org_member(organization_id));insert into project_document_chunks(id,organization_id,document_id) values('${id(15)}','${org}','${doc}')`);
  assert.equal(await value(`select confidentiality from project_document_chunks where document_id='${doc}'`),'contract');
  assert.equal(await asUser(owner,"select count(*)::int from project_document_chunks"),0,"Even owner cannot retrieve confidential chunks through shared knowledge");
+ // W11: PostgreSQL rejects parent drift, link deletion and fabricated financial attribution.
+ const otherCustomer=id(16),linkedInvoice=id(17);
+ await asUser(owner,`insert into crm_accounts(id,organization_id,name) values('${otherCustomer}','${org}','Another Customer') returning id`);
+ await assert.rejects(
+  ()=>asUser(owner,`update project_contracts set customer_id='${otherCustomer}' where id='${contract}' returning id`),
+  /Cannot reassign customer while linked commercial records/
+ );
+ await assert.rejects(
+  ()=>asUser(owner,`update projects set customer_id='${otherCustomer}' where id='${project2}' returning id`),
+  /Reconcile linked commercial records/
+ );
+ await asUser(owner,`insert into finance_invoices(id,organization_id,customer_id,project_id,contract_id,internal_reference,total) values('${linkedInvoice}','${org}','${customer}','${project2}','${contract}','W11-LINKED',50) returning id`);
+ await assert.rejects(
+  ()=>asUser(owner,`delete from project_contract_links where project_id='${project2}' and contract_id='${contract}' returning contract_id`),
+  /Cannot remove a contract-project link referenced by financial records/
+ );
+ assert.equal(Number(await value(`select count(*) from project_contract_links where project_id='${project2}' and contract_id='${contract}'`)),1,"Rejected link deletion is atomic");
+ await asUser(owner,`update finance_invoices set status='issued' where id='${linkedInvoice}' returning id`);
+ await asUser(owner,`select crm_record_invoice_payment('${linkedInvoice}',10,'w11-receipt-017')`);
+ await assert.rejects(
+  ()=>asUser(owner,`update finance_invoices set project_id='${project3}' where id='${linkedInvoice}' returning id`),
+  /Invoice attribution conflicts with posted transactions/
+ );
+ await assert.rejects(
+  ()=>asUser(owner,`update finance_transactions set project_id='${project3}' where invoice_id='${linkedInvoice}' returning id`),
+  /Transaction invoice attribution mismatch/
+ );
+ await assert.rejects(
+  ()=>db.exec(`insert into project_documents(id,organization_id,project_id,contract_id,customer_id,category,file_name,storage_path) values('${id(18)}','${org}','${project}','${contract}','${customer}','contract','wrong-chain.pdf','private-w11')`),
+  /Document project and customer mismatch|Document contract is not linked to project/
+ );
+ await assert.rejects(
+  ()=>db.exec(`update project_manager_history set reason='TAMPER' where project_id='${project}'`),
+  /Project manager assignment history is immutable/
+ );
+ await assert.rejects(
+  ()=>db.exec(`delete from project_manager_history where project_id='${project}'`),
+  /Project manager assignment history is immutable/
+ );
+ assert.equal(Number(await asUser(member,"select count(*)::int from finance_invoices")),0,"Unprivileged user cannot see linked invoices");
+ assert.equal(Number(await asUser(member,"select count(*)::int from project_contracts")),0,"Revoked user cannot see linked contracts");
+ assert.equal(Number(await asUser(outsider,"select count(*)::int from projects")),0,"Foreign tenant cannot see projects");
+ console.log("W11: parent drift, deletion, payment-ledger consistency, private documents, manager history and revoked/foreign tenant negatives PASS.");
  console.log("Enterprise CRM: real PostgreSQL migration, tenant RLS, explicit grants, revocation, membership, project integrity, reconciliation, contract approvals, timeline, attachments and audit tests passed.");
  await verifySales(db,asUser,denied);
  await verifyConnectedRecords(db,asUser,denied);
