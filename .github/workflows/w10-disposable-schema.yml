@@ -185,6 +185,13 @@ jobs:
           test -f scripts/fixtures/w13-real-queue-local.sql
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
             -v ON_ERROR_STOP=1 -f scripts/fixtures/w13-real-queue-local.sql
+      - name: W11 real CRM relational invariant and restricted-member RLS (disposable local PostgreSQL)
+        if: ${{ github.head_ref == 'pilot/w11-crm-contract-accountability' }}
+        run: |
+          set -euo pipefail
+          test -f scripts/fixtures/w11-real-crm-local.sql
+          psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
+            -v ON_ERROR_STOP=1 -f scripts/fixtures/w11-real-crm-local.sql
       - uses: actions/setup-node@v4
         with:
           node-version: 22
