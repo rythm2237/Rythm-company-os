@@ -123,7 +123,7 @@ revoke truncate on public.project_manager_history from authenticated,service_rol
 -- W11: service-only access is not a substitute for an initiating human
 -- approval on private contract/finance context. Null-user operational facts stay available.
 create or replace function public.crm_agent_customer_context(p_organization_id uuid,p_customer_id uuid,p_agent_id uuid,p_user_id uuid default null,p_include_contracts boolean default false,p_include_finance boolean default false) returns jsonb
-language plpgsql security definer set search_path='' as $
+language plpgsql security definer set search_path='' as $$
 declare result jsonb;begin
  -- Agent-only operational context is allowed. Confidential context must always
  -- be bound to an active initiating human with the exact matching grant.
@@ -144,7 +144,7 @@ declare result jsonb;begin
   result:=result||jsonb_build_object('invoices',(select coalesce(jsonb_agg(jsonb_build_object('id',id,'currency',currency,'total',total,'amount_paid',amount_paid,'status',status)),'[]') from public.finance_invoices where organization_id=p_organization_id and customer_id=p_customer_id));
  end if;
  return result;
-end $;
+end $$;
 revoke all on function public.crm_agent_customer_context(uuid,uuid,uuid,uuid,boolean,boolean) from public,anon,authenticated;
 grant execute on function public.crm_agent_customer_context(uuid,uuid,uuid,uuid,boolean,boolean) to service_role;
 
