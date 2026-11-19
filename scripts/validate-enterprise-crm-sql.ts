@@ -107,6 +107,10 @@ try{
  await denied(owner,`select crm_agent_customer_context('${org}','${customer}','${agent}','${owner}',false,false)`);
  await grant("customer.read",agent,"agent","customer",customer);
  await db.exec("set role service_role");
+ await assert.rejects(
+  ()=>value(`select crm_agent_customer_context('${org}','${customer}','${agent}',null,false,true)`),
+  /Initiating human authorization required for confidential CRM context/
+ );
  const agentContext=await value(`select crm_agent_customer_context('${org}','${customer}','${agent}','${member}',false,false)`);
  assert.equal((agentContext as {name:string}).name,"Customer");
  await assert.rejects(()=>value(`select crm_agent_customer_context('${org}','${customer}','${agent}','${member}',false,true)`),/Finance authorization/);
