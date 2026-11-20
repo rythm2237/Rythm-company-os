@@ -94,9 +94,9 @@ async function bundled(path, modules) {
       },
     }],
   });
-  const module = { exports: {} };
-  new Function("require", "module", "exports", output.outputFiles[0].text)(importer, module, module.exports);
-  return module.exports;
+  const loaded = { exports: {} };
+  new Function("require", "module", "exports", output.outputFiles[0].text)(importer, loaded, loaded.exports);
+  return loaded.exports;
 }
 function newTask(extra = {}) {
   const id = randomUUID();
