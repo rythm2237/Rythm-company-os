@@ -32,7 +32,9 @@ assert.match(executor, /for \(const task of data \?\? \[\]\)/, "Dispatcher must 
 assert.doesNotMatch(executor, /eval\(|new Function|child_process/, "Automation handlers must not execute arbitrary code.");
 
 assert.match(crawlyMonitoring, /process\.env\.CRAWLY_API_KEY/);
-assert.match(crawlyMonitoring, /https:\/\/www\.getcrawly\.com\/api\/v1\/backlinks/);
+assert.match(crawlyMonitoring, /const CRAWLY_HOST = "www\\.getcrawly\\.com"/);
+assert.match(crawlyMonitoring, /CRAWLY_BASE = `https:\/\/\\$\\{CRAWLY_HOST\\}\/api\/v1`/);
+assert.match(crawlyMonitoring, /fetchCrawlyJson\("backlinks"/);
 assert.match(crawlyMonitoring, /allowedHosts: \[CRAWLY_HOST\]/, "Crawly network access must remain host allowlisted.");
 assert.match(crawlyMonitoring, /Authorization: `Bearer \$\{apiKey\}`/);
 assert.match(crawlyMonitoring, /maxRedirects: 0/, "Crawly provider requests must not follow redirects.");
