@@ -5,6 +5,7 @@ on:
       - '.github/workflows/w10-disposable-schema.yml'
       - 'supabase/migrations/**'
       - 'scripts/validate-w10-agency-reservation.mjs'
+      - 'scripts/validate-w11-role-browser.mjs'
       - 'scripts/w10-budget-proxy.mjs'
 permissions:
   contents: read
@@ -185,12 +186,19 @@ jobs:
           test -f scripts/fixtures/w13-real-queue-local.sql
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
             -v ON_ERROR_STOP=1 -f scripts/fixtures/w13-real-queue-local.sql
+      - name: W11 real CRM relational invariant and restricted-member RLS (disposable local PostgreSQL)
+        if: ${{ github.head_ref == 'pilot/w11-crm-contract-accountability' }}
+        run: |
+          set -euo pipefail
+          test -f scripts/fixtures/w11-real-crm-local.sql
+          psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
+            -v ON_ERROR_STOP=1 -f scripts/fixtures/w11-real-crm-local.sql
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --check scripts/validate-w10-agency-reservation.mjs && node --check scripts/w10-budget-proxy.mjs && node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-meeting-content.ts && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts && node --import tsx scripts/validate-w10-meeting-lifecycle.ts && node --import tsx scripts/validate-w10-internal-dispatch.ts && node --import tsx scripts/validate-w10-task-completion.ts && node --import tsx scripts/validate-w10-roadmap-graph.ts && node scripts/validate-w10-roadmap-boundary.mjs && node scripts/validate-w10-task-approval-context.mjs && node --import tsx scripts/validate-w10-team-assignment.ts && node scripts/validate-w10-meeting-approval-boundary.mjs
+      - run: node --check scripts/validate-w10-agency-reservation.mjs && node --check scripts/validate-w11-role-browser.mjs && node --check scripts/w10-budget-proxy.mjs && node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-meeting-content.ts && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts && node --import tsx scripts/validate-w10-meeting-lifecycle.ts && node --import tsx scripts/validate-w10-internal-dispatch.ts && node --import tsx scripts/validate-w10-task-completion.ts && node --import tsx scripts/validate-w10-roadmap-graph.ts && node scripts/validate-w10-roadmap-boundary.mjs && node scripts/validate-w10-task-approval-context.mjs && node --import tsx scripts/validate-w10-team-assignment.ts && node scripts/validate-w10-meeting-approval-boundary.mjs
       - run: google-chrome --version
       - name: Verify reservation and re-login against disposable Auth
         env:
@@ -202,6 +210,7 @@ jobs:
           NEXT_TELEMETRY_DISABLED: '1'
           # Paid acceptance evidence is archived; routine CI must not spend.
           W10_LIVE_AI: 'false'
+          W11_ROLE_BROWSER: ${{ github.head_ref == 'pilot/w11-crm-contract-accountability' }}
           W10_PROVIDER_KEY: ''
         run: |
           set -euo pipefail

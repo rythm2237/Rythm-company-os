@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { chromium, devices } from "playwright";
+import { verifyW11RoleBrowser } from "./validate-w11-role-browser.mjs";
 
 mkdirSync("test-results", { recursive: true });
 const evidence = [];
@@ -548,6 +549,16 @@ try {
       console.log("PASS W10 review task (" + profile + "): Owner completion and immutable final state survive refresh");
       Object.assign(recordEvidence, { review_action_status: "completed", manual_meeting_id: manualMeetingId, manual_session_id: manualSessionId, delivery: deliveryEvidence, stage: deliveryEvidence ? "full_delivery_verified" : "core_and_manual_only" });
       writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
+      if (process.env.W11_ROLE_BROWSER === "true") {
+        const checks = await verifyW11RoleBrowser({
+          browser, ownerPage:page, admin, memberClient, memberEmail, memberPassword,
+          memberId:member.id, ownerId:user.id, organizationId:org.id,
+          customerId, customerName, contractId:contract.id, contractNumber, projectId, profile,
+        });
+        recordEvidence.w11_role_browser = { passed: checks.checks.length, synthetic_only: true };
+        writeFileSync(`test-results/w11-role-${profile}.json`, JSON.stringify(checks, null, 2));
+        writeFileSync("test-results/w10-evidence.json", JSON.stringify(evidence, null, 2));
+      }
       isolatedOrganizations.push({ projectId, customerId, contractId: contract.id, departmentIds: departments.map(d => d.id), agentIds: workforce.map(a => a.id), sessionIds: [manualSessionId, ...(deliveryEvidence ? [deliveryEvidence.review_session_id] : [])] });
       console.log(`PASS W10 CRM and project (${profile}): persisted brief, customer, contract and accountable project`);
       console.log(`PASS W10 Agency provision (${profile}): recorded template installation`);
