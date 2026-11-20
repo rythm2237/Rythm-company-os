@@ -67,11 +67,7 @@ export async function signup(formData: FormData) {
   });
 
   if (error) {
-    console.error("customer_signup_failed", {
-      code: error.code ?? null,
-      status: error.status ?? null,
-      message: error.message,
-    });
+    console.warn("customer_signup_failed");
     redirect(`${signupPath}&error=${encodeURIComponent(signupErrorMessage(error))}`);
   }
 

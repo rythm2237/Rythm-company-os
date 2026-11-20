@@ -3,6 +3,7 @@ import { resolveOwnerApiOrganizationContext } from "@/lib/auth/api-organization-
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { startProjectExecutionWithoutGlobalGate } from "@/lib/projects/project-execution-start";
 import { createProjectRoadmapDraft, getApprovedProjectRoadmap, getLatestProjectRoadmap } from "@/lib/projects/project-roadmap";
+import { pilotTraceId, pilotTraceHeaders, recordPilotSignal } from "@/lib/observability/pilot";
 
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
@@ -43,7 +44,8 @@ export async function POST(request:Request){
     await service.from("audit_events").insert({organization_id:auth.organizationId,actor_type:"user",actor_user_id:auth.user.id,event_type:"project.execution.authorized",object_type:"project",object_id:projectId,risk_level:"medium",payload:{execution_id:execution.id,execution_no:execution.execution_no,task_count:"taskCount" in execution?execution.taskCount:null,roadmap_id:approved.id,roadmap_version:approved.version,global_readiness_gate:false}});
     return NextResponse.json({ok:true,mode:"execution_started",execution,roadmap:{id:approved.id,version:approved.version,status:approved.status}});
   }catch{
-    console.error("project_run_failed");
-    return NextResponse.json({ok:false,error:"Unable to run project."},{status:500,headers:{"Cache-Control":"no-store"}});
+    const traceId=pilotTraceId();
+    recordPilotSignal({traceId,surface:"background_jobs",severity:"P1",outcome:"degraded",code:"UPSTREAM_UNAVAILABLE",httpStatus:500});
+    return NextResponse.json({ok:false,error:"Unable to run project."},{status:500,headers:pilotTraceHeaders(traceId)});
   }
 }
