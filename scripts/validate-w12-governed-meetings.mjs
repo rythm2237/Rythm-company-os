@@ -100,6 +100,9 @@ try {
   assert.equal(action.payload.authorization_approval_id,"approval-12");
   assert.equal(task.payload.status,"waiting_for_approval");
   assert.equal(task.payload.waiting_on_approval_id,"approval-12");
+  const completedMinutes=safe.writes.find(w=>w.table==="meetings"&&w.operation==="update"&&w.payload.status==="completed");
+  assert.equal(completedMinutes.payload.minutes.evidence_review.status,"human_review_required");
+  assert.equal(completedMinutes.payload.minutes.evidence_review.human_review_required,true);
   const learning=safe.writes.find(w=>w.table==="project_context_documents"&&w.operation==="upsert");
   assert.ok(learning,"AI generated knowledge must be tracked");
   assert.equal(learning.payload.status,"pending_review","Unsupported claims cannot become validated facts");
