@@ -21,7 +21,7 @@ assert.equal(vercel.crons?.length, 1, "Hobby plan must keep one dispatcher cron.
 assert.equal(vercel.crons?.[0]?.path, "/api/admin/automation/dispatch");
 assert.match(vercel.crons?.[0]?.schedule ?? "", /^\d+ \d+ \* \* \*$/, "Dispatcher must run no more than daily on Hobby.");
 assert.match(dispatchRoute, /process\.env\.CRON_SECRET/);
-assert.match(dispatchRoute, /authorization !== `Bearer \$\{secret\}`/);
+assert.match(dispatchRoute, /timingSafeEqual/, "Cron auth must use constant-time secret comparison.");
 assert.match(dispatchRoute, /status: 401/);
 
 for (const handler of ["system_health", "seo_site_health", "ai_usage_cost", "security_health", "core_web_vitals", "search_index_monitoring", "authority_monitoring"]) {
