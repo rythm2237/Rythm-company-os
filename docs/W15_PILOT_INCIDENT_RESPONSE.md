@@ -37,7 +37,7 @@ Status: **feature-branch implementation; delivery and hosted staging not yet acc
 | P1 | Partial scheduler failures, critical feature degraded, recurrent high error budget burn | 60 minutes | On-call investigates, notify project owner on continued degradation |
 | P2 | Isolated lower-impact failures with workaround | Next business day | Queue for normal triage |
 
-**Roster not yet assigned.** Human owner must enter a primary engineer, backup, contact method, time zone, and an acknowledged paging endpoint before any claim of operational on-call. An unattended log line is not a delivered alert.
+**Accountable project owner:** the repository owner `rythm2237` is the accountable review contact, **not** an assumed active pager/on-call engineer. **Roster not yet assigned.** Human owner must enter a primary engineer, backup, contact method, time zone, and an acknowledged paging endpoint before any claim of operational on-call. An unattended log line is not a delivered alert.
 
 ## Incident procedure (tabletop script)
 
@@ -52,6 +52,14 @@ Status: **feature-branch implementation; delivery and hosted staging not yet acc
 ### Synthetic exercise (automated offline)
 
 `npm run test:w15`: creates a fake P0 billing outage, sends its fixed eight-field record to an **in-memory collector**, asserts no fake token/email/URL leakage, verifies routing, budget math and acknowledgement/containment progression. This is **NOT** a real alert sent to any human.
+
+### Hosted isolated preview synthetic error gate
+
+- Dedicated endpoint: `GET /api/internal/w15/synthetic-outage`, **only when** `VERCEL_ENV=preview` and `VERCEL_GIT_COMMIT_REF=pilot/w15-incident-observability`.
+- Does not call Supabase, any provider, AI, billing, emails, customer services, or external actions. Returns a synthetic HTTP 503 and `X-Trace-Id`, and writes exactly one allowlisted P0 `SYNTHETIC_OUTAGE` incident to the server runtime logger.
+- It is protected by the current Vercel preview SSO setting; check protection before exercising. Production and all other branches return 404.
+- Verify actual Preview response and correlating Vercel Runtime Logs within Hobby plan's **one-hour retention**. Filter for `rythm_pilot_incident_v1`; redact output before retaining evidence. **No actual paging occurs from this endpoint.**
+- The probe must never be reused as an uptime denominator or counted as a customer incident.
 
 ### Hosted staging delivery gate (pending)
 

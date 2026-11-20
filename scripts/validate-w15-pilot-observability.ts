@@ -62,5 +62,11 @@ assert.ok(!callback.includes("message: userError"), "auth callback should not lo
 assert.ok(webhook.includes('code:"BILLING_RUNTIME_FAILURE"'), "billing failures emit safe P0 signals");
 assert.ok(aiChat.includes('code:"AI_RUNTIME_FAILURE"'), "AI tool failure emits safe event");
 assert.ok(!instrumentation.includes("JSON.stringify(_err)"), "exception contents never logged by new instrumentation");
+const syntheticRoute = readFileSync("app/api/internal/w15/synthetic-outage/route.ts", "utf8");
+assert.ok(syntheticRoute.includes('process.env.VERCEL_ENV !== "preview"'), "must never run in Production");
+assert.ok(syntheticRoute.includes('process.env.VERCEL_GIT_COMMIT_REF !== "pilot/w15-incident-observability"'), "branch locked");
+assert.ok(syntheticRoute.includes('code: "SYNTHETIC_OUTAGE"'), "fixed safe signal");
+assert.ok(syntheticRoute.includes("status: 503"), "injected synthetic service failure");
+assert.ok(!/(serviceClient|createServerSupabaseClient|fetch\()/.test(syntheticRoute), "probe must have no database or network calls");
 console.log("W15 OFFLINE PASS: P0 synthetic collector, 8-field redaction, SLO budget, routing, dispatcher instrumentation and tabletop.");
 console.log("W15 NOTICE: synthetic collector is not proof of provider alert delivery or hosted staging outage.");
