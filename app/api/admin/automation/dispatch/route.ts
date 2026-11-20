@@ -28,14 +28,14 @@ export async function GET(request: Request) {
       code: "AUTOMATION_TASK_FAILURE", httpStatus: 503, durationMs: Date.now() - started,
     });
     return NextResponse.json(
-      { ok: failed === 0, traceId, dispatched: results.length, failed, skipped },
+      { ok: failed === 0, dispatched: results.length, failed, skipped },
       { status: failed ? 503 : 200, headers },
     );
   } catch {
     recordPilotSignal({
       traceId, surface: "scheduler", severity: "P0", outcome: "failed",
-      code: "DISPATCH_UNAVAILABLE", httpStatus: 503, durationMs: Date.now() - started,
+      code: "DISPATCH_UNAVAILABLE", httpStatus: 500, durationMs: Date.now() - started,
     });
-    return NextResponse.json({ ok: false, traceId, error: "Automation dispatcher failed." }, { status: 503, headers });
+    return NextResponse.json({ ok: false, error: "Automation dispatcher failed." }, { status: 500, headers });
   }
 }
