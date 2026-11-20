@@ -187,7 +187,7 @@ async function writeLifecycleEvent(
   });
   if (error)
     throw new Error(
-      `Execution lifecycle could not be recorded: ${error.message}`,
+      "Execution lifecycle could not be recorded.",
     );
 }
 
@@ -258,10 +258,14 @@ export async function requestToolExecution(
           .maybeSingle()
       : Promise.resolve({ data: null }),
   ])) as any[];
+  if (intent.requestedBy === "agent" && !intent.agentId)
+    throw new Error("Agent execution requires a tenant-scoped Agent.");
   if (!integration)
     throw new Error("Integration is not available to this company.");
   // The service client bypasses RLS. Resolve every caller-supplied parent in
   // this company before recording even a denied execution proposal.
+  if (membership?.membership_status !== "active")
+    throw new Error("Execution requester is not an active member of this company.");
   if (intent.agentId && !agent)
     throw new Error("Execution context is not available to this company.");
   for (const [table, id] of [
@@ -368,6 +372,8 @@ export async function requestToolExecution(
     ],
     requiredScopes: meta.requiredScopes,
     humanApprovalRequired:
+      meta.readWrite === "write" ||
+      meta.externalSideEffect ||
       meta.approvalPolicy !== "not_required" ||
       grant?.approval_mode === "approval_required" ||
       autonomyRequiresApproval,
@@ -549,23 +555,33 @@ export async function requestToolExecution(
       "id,organization_id,correlation_id,agent_id,requested_by_user_id,risk_level,status,approval_request_id,policy_reason_code,execution_mode",
     )
     .single();
-  if (error?.code === "23505") {
+  if (error?.code === "23505" && decision.allowed) {
     const { data: existing } = await supabase
       .from("tool_execution_requests")
       .select("id,status,approval_request_id,policy_reason_code,execution_mode")
       .eq("organization_id", intent.organizationId)
       .eq("idempotency_key", idempotencyKey)
+      .eq("requested_by_user_id", intent.userId)
+      .eq("integration_id", intent.integrationId)
+      .eq("tool", toolId)
+      .eq("capability_key", intent.capabilityKey)
+      .eq("payload_digest", payloadDigest)
+      .filter("agent_id", intent.agentId ? "eq" : "is", intent.agentId ?? null)
+      .filter("project_id", intent.projectId ? "eq" : "is", intent.projectId ?? null)
+      .filter("meeting_id", intent.meetingId ? "eq" : "is", intent.meetingId ?? null)
+      .filter("session_id", intent.sessionId ? "eq" : "is", intent.sessionId ?? null)
+      .filter("originating_request_id", intent.originatingRequestId ? "eq" : "is", intent.originatingRequestId ?? null)
+      .filter("target_ref", intent.targetRef ? "eq" : "is", intent.targetRef ?? null)
       .maybeSingle();
     if (existing) return { ...existing, duplicate: true };
   }
   if (error || !stored)
     throw new Error(
-      error?.message ?? "Execution request could not be recorded.",
+      "Execution request could not be recorded.",
     );
   await writeLifecycleEvent(supabase, stored, "requested", stored.status, {
     tool: toolId,
     operation: intent.capabilityKey,
-    target: intent.targetRef ?? null,
     reasonCode: decision.reasonCode,
     mode: rollout.mode,
   });
@@ -639,7 +655,7 @@ export async function requestToolExecution(
       .single();
     if (approvalError || !approval)
       throw new Error(
-        approvalError?.message ?? "Approval request could not be created.",
+        "Approval request could not be created.",
       );
     await supabase
       .from("tool_execution_requests")
@@ -689,10 +705,12 @@ export async function syncToolExecutionApproval(
     .eq("organization_id", organizationId)
     .eq("id", executionRequestId)
     .maybeSingle();
-  if (!request?.approval_request_id) return request;
+  if (!request?.approval_request_id || request.status !== "waiting_approval") return request;
   const { data: approval } = await supabase
     .from("approval_requests")
     .select("status,expires_at,execution_scope_digest,consumed_at")
+    .eq("subject_type", "tool_execution")
+    .eq("subject_id", request.id)
     .eq("organization_id", organizationId)
     .eq("id", request.approval_request_id)
     .maybeSingle();
@@ -702,6 +720,7 @@ export async function syncToolExecutionApproval(
     next = "expired";
   else if (
     approval.status === "approved" &&
+    Boolean(request.approval_scope_digest) &&
     approval.execution_scope_digest === request.approval_scope_digest &&
     !approval.consumed_at
   )
@@ -710,11 +729,16 @@ export async function syncToolExecutionApproval(
   else if (approval.status === "cancelled" || approval.status === "expired")
     next = "expired";
   if (next !== request.status) {
-    await supabase
+    const transition = await supabase
       .from("tool_execution_requests")
       .update({ status: next, approval_status: approval.status })
       .eq("id", request.id)
-      .eq("organization_id", organizationId);
+      .eq("organization_id", organizationId)
+      .eq("status", "waiting_approval")
+      .select("id")
+      .maybeSingle();
+    if (transition.error) throw new Error("Execution approval could not be synchronized.");
+    if (!transition.data) return request;
     await writeLifecycleEvent(
       supabase,
       request,

@@ -12,7 +12,7 @@ on:
         required: true
         default: routes
         type: choice
-        options: [routes, oauth, public, extended]
+        options: [routes, oauth, public, extended, w07]
 
 permissions:
   contents: read
@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   verify-staging:
-    if: ${{ github.event.inputs.confirm_staging_only == 'W03-STAGING-ONLY' && (github.ref == 'refs/heads/test/w03-tenant-isolation-evidence' || github.ref == 'refs/heads/security/w06-service-role-backend-boundaries' || github.ref == 'refs/heads/main') }}
+    if: ${{ github.event.inputs.confirm_staging_only == 'W03-STAGING-ONLY' && (github.ref == 'refs/heads/test/w03-tenant-isolation-evidence' || github.ref == 'refs/heads/security/w06-service-role-backend-boundaries' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/security/w07-agent-tool-memory') }}
     environment: w02-staging
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -57,6 +57,9 @@ jobs:
       - name: Run W06 privileged-boundary regressions on the reviewed branch
         if: ${{ github.ref == 'refs/heads/security/w06-service-role-backend-boundaries' || github.ref == 'refs/heads/main' }}
         run: npm run test:w06
+      - name: Run W07 agent and approval regressions
+        if: ${{ github.ref == 'refs/heads/security/w07-agent-tool-memory' }}
+        run: npm run test:w07
       - name: Wait for restored staging health
         run: |
           node --input-type=module <<'JS'
@@ -78,11 +81,18 @@ jobs:
           W03_FIXTURE_RUN=41343124808 node scripts/fixtures/w03-staging.mjs quarantine-partial
       - name: Create fresh W03 identities and fixtures
         run: node scripts/fixtures/w03-staging.mjs setup
+      - name: Install Chromium for W07 approval UI verification
+        if: ${{ inputs.matrix == 'w07' && github.ref == 'refs/heads/security/w07-agent-tool-memory' }}
+        run: npx playwright install --with-deps chromium
       - name: Authenticated RLS and HTTP matrix
         env:
           W03_MATRIX: ${{ inputs.matrix }}
         run: |
-          case "$W03_MATRIX" in routes|oauth|public|extended) ;; *) exit 1 ;; esac
+          case "$W03_MATRIX" in
+            routes|oauth|public|extended) ;;
+            w07) test "$GITHUB_REF" = "refs/heads/security/w07-agent-tool-memory" ;;
+            *) exit 1 ;;
+          esac
           node scripts/fixtures/w03-live.mjs "--${W03_MATRIX}-only"
       - name: Quarantine W03 identities preserving audit history
         if: always()

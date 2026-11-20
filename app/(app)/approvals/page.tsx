@@ -201,7 +201,7 @@ async function resolveApproval(formData: FormData) {
       object_type: "approval_request",
       object_id: approvalId,
       risk_level: approval.risk_level,
-      payload: { title: approval.title, attempted_resolution: resolution },
+      payload: { attempted_resolution: resolution },
     });
 
     redirect(
@@ -226,7 +226,7 @@ async function resolveApproval(formData: FormData) {
 
   if (error || !resolved) {
     redirect(
-      `/approvals?approval=${approvalId}&error=${encodeURIComponent(error?.message ?? "Approval could not be resolved.")}`,
+      `/approvals?approval=${approvalId}&error=${encodeURIComponent("Approval could not be resolved.")}`,
     );
   }
 
@@ -239,9 +239,7 @@ async function resolveApproval(formData: FormData) {
     object_id: approvalId,
     risk_level: approval.risk_level,
     payload: {
-      title: approval.title,
       resolution,
-      response_note: responseNote,
       human_authority: "Human CEO / Owner",
       resolved_at: resolvedAt,
     },
