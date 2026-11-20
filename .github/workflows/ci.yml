@@ -19,6 +19,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:w13
+      - run: npm run test:w14
       - run: npm run test:w12
       - run: npm run test:w07
       - run: npm run test:w05

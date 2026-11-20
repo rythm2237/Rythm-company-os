@@ -21,7 +21,7 @@ assert.equal(vercel.crons?.length, 1, "Hobby plan must keep one dispatcher cron.
 assert.equal(vercel.crons?.[0]?.path, "/api/admin/automation/dispatch");
 assert.match(vercel.crons?.[0]?.schedule ?? "", /^\d+ \d+ \* \* \*$/, "Dispatcher must run no more than daily on Hobby.");
 assert.match(dispatchRoute, /process\.env\.CRON_SECRET/);
-assert.match(dispatchRoute, /authorization !== `Bearer \$\{secret\}`/);
+assert.match(dispatchRoute, /timingSafeEqual/, "Cron auth must use constant-time secret comparison.");
 assert.match(dispatchRoute, /status: 401/);
 
 for (const handler of ["system_health", "seo_site_health", "ai_usage_cost", "security_health", "core_web_vitals", "search_index_monitoring", "authority_monitoring"]) {
@@ -32,7 +32,9 @@ assert.match(executor, /for \(const task of data \?\? \[\]\)/, "Dispatcher must 
 assert.doesNotMatch(executor, /eval\(|new Function|child_process/, "Automation handlers must not execute arbitrary code.");
 
 assert.match(crawlyMonitoring, /process\.env\.CRAWLY_API_KEY/);
-assert.match(crawlyMonitoring, /https:\/\/www\.getcrawly\.com\/api\/v1\/backlinks/);
+assert.ok(crawlyMonitoring.includes('const CRAWLY_HOST = "www.getcrawly.com"'));
+assert.ok(crawlyMonitoring.includes('CRAWLY_BASE = `https://${CRAWLY_HOST}/api/v1`'));
+assert.match(crawlyMonitoring, /fetchCrawlyJson\("backlinks"/);
 assert.match(crawlyMonitoring, /allowedHosts: \[CRAWLY_HOST\]/, "Crawly network access must remain host allowlisted.");
 assert.match(crawlyMonitoring, /Authorization: `Bearer \$\{apiKey\}`/);
 assert.match(crawlyMonitoring, /maxRedirects: 0/, "Crawly provider requests must not follow redirects.");

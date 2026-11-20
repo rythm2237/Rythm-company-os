@@ -1,4 +1,5 @@
 import "server-only";
+import { AutomationRetryExhausted, classifyAutomationFailure, executeWithSafeRetry } from "@/lib/admin/automation/retry-policy";
 import { createAnalyticsAdminClient } from "@/lib/supabase/analytics-admin";
 import { runCoreWebVitalsMonitoring, runSearchConsoleMonitoring } from "@/lib/admin/automation/google-monitoring";
 import { runCrawlyAuthorityMonitoring } from "@/lib/admin/automation/crawly-monitoring";
@@ -16,9 +17,12 @@ type AutomationTask = {
   enabled: boolean;
   configuration_status: "ready" | "needs_configuration" | "blocked";
   config: Record<string, unknown> | null;
+  max_retries: number;
+  risk_level: "low" | "medium" | "high" | "critical";
+  requires_approval: boolean;
 };
 
-type HandlerResult = { status?: "succeeded" | "skipped"; summary: string; output?: Record<string, unknown> };
+type HandlerResult = { status?: "succeeded" | "skipped" | "failed"; summary: string; output?: Record<string, unknown> };
 
 const SITE_ORIGIN = "https://rythm-os.com";
 const DISPATCH_HOUR_UTC = 5;
@@ -71,6 +75,7 @@ async function systemHealth(): Promise<HandlerResult> {
   ]);
   const ok = !database.error && production.ok;
   return {
+    status: ok ? "succeeded" : "failed",
     summary: ok ? "Database and canonical production are reachable." : "One or more platform health checks failed.",
     output: { database: { ok: !database.error, organizationCount: database.count ?? null, error: database.error?.message ?? null }, production },
   };
@@ -82,6 +87,7 @@ async function seoSiteHealth(task: AutomationTask): Promise<HandlerResult> {
   const checks = await Promise.all(["/robots.txt", "/sitemap.xml", ...paths].map(fetchCheck));
   const failures = checks.filter((check) => !check.ok);
   return {
+    status: failures.length === 0 ? "succeeded" : "failed",
     summary: failures.length === 0 ? `SEO/GEO/AEO surface check passed for ${checks.length} endpoints.` : `${failures.length} of ${checks.length} SEO/GEO/AEO surface checks failed.`,
     output: { origin: SITE_ORIGIN, checks, failures: failures.map((item) => item.path) },
   };
@@ -117,6 +123,7 @@ async function securityHealth(): Promise<HandlerResult> {
   if (risky.error) throw new Error("Automation risk lookup failed.");
   const unsafe = risky.data ?? [];
   return {
+    status: unsafe.length === 0 ? "succeeded" : "failed",
     summary: unsafe.length === 0 ? "Admin automation guardrail check passed." : `${unsafe.length} high-risk automation tasks are enabled without approval gating.`,
     output: { enabledPlatformAdmins: admins.count ?? null, unsafeAutomationTasks: unsafe },
   };
@@ -144,7 +151,7 @@ async function agencySeoDailyMonitoring(task: AutomationTask): Promise<HandlerRe
     .order("updated_at", { ascending: true })
     .limit(maxSites);
   if (error) throw new Error("Automation database operation failed.");
-  if (!sites?.length) return { status: "skipped", summary: "No active Agency SEO client websites are configured.", output: { processed: 0 } };
+  if (!sites?.length) return { status: "skipped", summary: "No active Agency SEO client websites are configured.", output: { processed: 0, skipReason: "no_active_sites" } };
 
   const results: Array<Record<string, unknown>> = [];
   for (const site of sites) {
@@ -179,6 +186,7 @@ async function agencySeoDailyMonitoring(task: AutomationTask): Promise<HandlerRe
   const failed = results.filter((item) => item.status === "failed").length;
   const alerts = results.filter((item) => item.notificationCreated === true).length;
   return {
+    status: failed > 0 ? "failed" : "succeeded",
     summary: `Agency SEO scheduled monitoring processed ${results.length} client site${results.length === 1 ? "" : "s"}; ${failed} failed; ${alerts} alert${alerts === 1 ? "" : "s"} created.`,
     output: { processed: results.length, failed, alerts, maxSites, results },
   };
@@ -190,7 +198,7 @@ async function configurationRequired(task: AutomationTask): Promise<HandlerResul
   return {
     status: "skipped",
     summary: `${task.name} needs an authorized external provider before it can run.`,
-    output: { configurationStatus: task.configuration_status, providerState: "CONFIGURATION_REQUIRED", requiredProvider, requiredEnvironment },
+    output: { skipReason: task.configuration_status === "blocked" ? "configuration_blocked" : "configuration_required", configurationStatus: task.configuration_status, providerState: "CONFIGURATION_REQUIRED", requiredProvider, requiredEnvironment },
   };
 }
 
@@ -205,59 +213,141 @@ const handlers: Record<string, (task: AutomationTask) => Promise<HandlerResult>>
   agency_seo_daily_monitoring: agencySeoDailyMonitoring,
 };
 
+/**
+ * Every attempted trigger creates an auditable terminal record. Manual invocations must
+ * first pass the platform-admin server action and include its authenticated actor id.
+ * Provider calls never run when a task is disabled, approval-gated or disconnected.
+ */
 export async function executeAutomationTask(taskId: string, triggerType: AutomationTrigger, initiatedBy?: string | null) {
+  if (triggerType === "manual" && !initiatedBy) throw new Error("MANUAL_TRIGGER_REQUIRES_PLATFORM_ADMIN");
   const admin = createAnalyticsAdminClient();
-  if (!admin) throw new Error("Supabase service-role environment is unavailable.");
+  if (!admin) throw new Error("Automation database connection is unavailable.");
   const { data: task, error: taskError } = await admin.from("automation_tasks").select("*").eq("id", taskId).single();
-  if (taskError || !task) throw new Error(taskError?.message ?? "Automation task not found.");
+  if (taskError || !task) throw new Error("Automation task could not be loaded.");
   const typedTask = task as AutomationTask;
-  if (!typedTask.enabled && triggerType !== "manual") return { skipped: true, reason: "disabled" };
 
-  const { data: run, error: runError } = await admin.from("automation_task_runs").insert({ task_id: taskId, trigger_type: triggerType, initiated_by: initiatedBy ?? null, status: "queued" }).select("id").single();
-  if (runError) {
-    if (runError.code === "23505") return { skipped: true, reason: "already_running" };
-    throw new Error("Automation task execution failed.");
+  const { data: run, error: runError } = await admin.from("automation_task_runs")
+    .insert({ task_id: taskId, trigger_type: triggerType, initiated_by: initiatedBy ?? null, status: "queued" }).select("id").single();
+  if (runError?.code === "23505") {
+    // The partial unique index protects the active execution. A terminal skipped row
+    // is allowed alongside it and makes concurrent triggers observable.
+    const now = new Date().toISOString();
+    const summary = "Duplicate trigger skipped: this task already has an active run.";
+    const { data: duplicate, error: duplicateError } = await admin.from("automation_task_runs")
+      .insert({ task_id: taskId, trigger_type: triggerType, initiated_by: initiatedBy ?? null,
+        status: "skipped", started_at: now, finished_at: now, duration_ms: 0,
+        summary, output: { skipReason: "already_running" } }).select("id").single();
+    if (duplicateError || !duplicate) throw new Error("Automation duplicate-trigger audit failed.");
+    return { runId: duplicate.id, status: "skipped" as const, summary };
   }
+  if (runError || !run) throw new Error("Automation run could not be queued.");
 
   const startedAt = new Date();
-  await admin.from("automation_task_runs").update({ status: "running", started_at: startedAt.toISOString() }).eq("id", run.id);
+  let attempts = 1;
   try {
-    const handler = handlers[typedTask.handler_key];
-    if (!handler) throw new Error(`No allowlisted automation handler exists for ${typedTask.handler_key}.`);
-    const result = typedTask.configuration_status === "ready" ? await handler(typedTask) : await configurationRequired(typedTask);
+    const { error: startError } = await admin.from("automation_task_runs")
+      .update({ status: "running", started_at: startedAt.toISOString() }).eq("id", run.id);
+    if (startError) throw new Error("Automation database run-state update failed.");
+
+    let result: HandlerResult;
+    if (!typedTask.enabled) {
+      result = { status: "skipped", summary: "Task disabled; execution was not started.",
+        output: { skipReason: "task_disabled" } };
+    } else if (typedTask.requires_approval || typedTask.risk_level === "high" || typedTask.risk_level === "critical") {
+      result = { status: "skipped", summary: "Human approval is required before this task can run.",
+        output: { skipReason: "approval_required" } };
+    } else if (typedTask.configuration_status !== "ready") {
+      result = await configurationRequired(typedTask);
+    } else {
+      let providerReady = true;
+      if (typedTask.handler_key === "search_index_monitoring") {
+        const { data: connection, error: connectionError } = await admin.from("platform_integrations")
+          .select("status,enabled").eq("provider_key", "google_search_console").maybeSingle();
+        if (connectionError) throw new Error("Automation database provider-readiness lookup failed.");
+        providerReady = connection?.status === "connected" && connection.enabled === true;
+      }
+      if (!providerReady) {
+        result = { status: "skipped", summary: "Search Console is disconnected; reconnect its read-only authorization.",
+          output: { skipReason: "provider_disconnected", provider: "google_search_console" } };
+      } else {
+        const handler = handlers[typedTask.handler_key];
+        if (!handler) throw new Error("Automation handler is not allowlisted.");
+        const execution = await executeWithSafeRetry(() => handler(typedTask), {
+          handlerKey: typedTask.handler_key,
+          maxRetries: typedTask.max_retries,
+          onAttempt: async (attempt) => {
+            const { error: attemptError } = await admin.from("automation_task_runs")
+              .update({ attempt }).eq("id", run.id);
+            if (attemptError) throw new Error("Automation database attempt update failed.");
+          },
+        });
+        result = execution.value;
+        attempts = execution.attempts;
+      }
+    }
+
     const finishedAt = new Date();
     const status = result.status ?? "succeeded";
-    await Promise.all([
-      admin.from("automation_task_runs").update({ status, finished_at: finishedAt.toISOString(), duration_ms: finishedAt.getTime() - startedAt.getTime(), summary: result.summary, output: result.output ?? {} }).eq("id", run.id),
-      admin.from("automation_tasks").update({ last_run_at: finishedAt.toISOString(), next_run_at: typedTask.enabled ? nextRun(typedTask.schedule_mode, finishedAt) : null, updated_at: finishedAt.toISOString() }).eq("id", taskId),
-    ]);
+    const output = status === "skipped"
+      ? { ...result.output, skipReason: typeof result.output?.skipReason === "string" ? result.output.skipReason : "handler_skipped" }
+      : result.output ?? {};
+    const { error: terminalError } = await admin.from("automation_task_runs").update({
+      status, attempt: attempts, finished_at: finishedAt.toISOString(),
+      duration_ms: finishedAt.getTime() - startedAt.getTime(),
+      summary: result.summary, output,
+      error_message: status === "failed" ? "AUTOMATION_CHECK_FAILED" : null,
+    }).eq("id", run.id);
+    if (terminalError) throw new Error("Automation database terminal-state update failed.");
+
+    const { error: scheduleError } = await admin.from("automation_tasks").update({
+      last_run_at: finishedAt.toISOString(),
+      next_run_at: typedTask.enabled ? nextRun(typedTask.schedule_mode, finishedAt) : null,
+      updated_at: finishedAt.toISOString(),
+    }).eq("id", taskId);
+    if (scheduleError) {
+      // The run is already terminal; never execute the handler again because a
+      // bookkeeping write failed. Record degraded dispatch in server logs.
+      console.error("automation_schedule_metadata_failed", { runId: run.id });
+      throw new Error("Automation database schedule update failed.");
+    }
     return { runId: run.id, status, summary: result.summary };
   } catch (error) {
+    const failureCode = error instanceof AutomationRetryExhausted
+      ? error.failureCode : classifyAutomationFailure(error);
+    attempts = error instanceof AutomationRetryExhausted ? error.attempts : attempts;
     const finishedAt = new Date();
-    const message = "Automation execution failed.";
-    await Promise.all([
-      admin.from("automation_task_runs").update({ status: "failed", finished_at: finishedAt.toISOString(), duration_ms: finishedAt.getTime() - startedAt.getTime(), error_message: message }).eq("id", run.id),
-      admin.from("automation_tasks").update({ last_run_at: finishedAt.toISOString(), next_run_at: typedTask.enabled ? nextRun(typedTask.schedule_mode, finishedAt) : null, updated_at: finishedAt.toISOString() }).eq("id", taskId),
-    ]);
-    throw error;
+    const { error: ledgerError } = await admin.from("automation_task_runs").update({
+      status: "failed", attempt: attempts, finished_at: finishedAt.toISOString(),
+      duration_ms: finishedAt.getTime() - startedAt.getTime(),
+      summary: `Automation failed (${failureCode}); operator review required.`,
+      error_message: failureCode,
+      output: { failureCode, attempts, retryable: false },
+    }).eq("id", run.id);
+    if (ledgerError) console.error("automation_failure_ledger_unavailable", { runId: run.id });
+    const { error: scheduleError } = await admin.from("automation_tasks").update({
+      last_run_at: finishedAt.toISOString(),
+      next_run_at: typedTask.enabled ? nextRun(typedTask.schedule_mode, finishedAt) : null,
+      updated_at: finishedAt.toISOString(),
+    }).eq("id", taskId);
+    if (scheduleError) console.error("automation_failure_schedule_unavailable", { runId: run.id });
+    throw new Error(`AUTOMATION_${failureCode}`);
   }
 }
 
 export async function dispatchDueAutomationTasks() {
   const admin = createAnalyticsAdminClient();
-  if (!admin) throw new Error("Supabase service-role environment is unavailable.");
-  const { data, error } = await admin.from("automation_tasks").select("id").eq("enabled", true).eq("configuration_status", "ready").lte("next_run_at", new Date().toISOString()).order("next_run_at").limit(10);
-  if (error) throw new Error("Automation database operation failed.");
-  const results = [];
+  if (!admin) throw new Error("Automation database connection is unavailable.");
+  const { data, error } = await admin.from("automation_tasks").select("id")
+    .eq("enabled", true).eq("configuration_status", "ready")
+    .lte("next_run_at", new Date().toISOString()).order("next_run_at").limit(10);
+  if (error) throw new Error("Automation database due-task lookup failed.");
+  const results: Array<{ taskId: string; status: string; summary: string }> = [];
   for (const task of data ?? []) {
     try {
-      results.push(await executeAutomationTask(task.id, "scheduled", null));
-    } catch (taskError) {
-      results.push({
-        taskId: task.id,
-        status: "failed",
-        error: "Scheduled automation failed.",
-      });
+      const result = await executeAutomationTask(task.id, "scheduled", null);
+      results.push({ taskId: task.id, status: result.status, summary: result.summary });
+    } catch {
+      results.push({ taskId: task.id, status: "failed", summary: "Scheduled automation failed; inspect the run ledger." });
     }
   }
   return results;
