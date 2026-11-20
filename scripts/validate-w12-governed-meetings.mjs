@@ -24,7 +24,7 @@ const compiled = await build({
   entryPoints:["lib/projects/project-autonomous-meetings.ts"], bundle:true, platform:"node",
   format:"cjs", write:false, packages:"external",
   plugins:[{name:"w12-inert-provider",setup(builder){
-    builder.onResolve({filter:/^@\\/lib\\/ai\\/request-gateway$/},()=>({path:"fake",namespace:"w12"}));
+    builder.onResolve({filter:new RegExp("^@/lib/ai/request-gateway$")},()=>({path:"fake",namespace:"w12"}));
     builder.onLoad({filter:/.*/,namespace:"w12"},()=>({loader:"js",contents:"export const executeAiRequest = "+fakeProvider.toString()}));
   }}]
 });
