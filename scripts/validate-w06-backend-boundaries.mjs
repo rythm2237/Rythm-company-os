@@ -131,8 +131,8 @@ try {
     { taskId: "private-tenant-B", status: "failed", error: sensitive },
   ];
   const success = await automation.GET(get(testSecret));
-  assert.equal(success.status, 200);
-  assert.deepEqual(await success.json(), { ok: true, dispatched: 2, failed: 1 });
+  assert.equal(success.status, 503, "failed scheduled runs must cause a visible degraded response");
+  assert.deepEqual(await success.json(), { ok: false, dispatched: 2, failed: 1, skipped: 0 });
   assert.match(success.headers.get("cache-control"), /no-store/);
   state.failAutomation = true;
   const failed = await automation.GET(get(testSecret));
