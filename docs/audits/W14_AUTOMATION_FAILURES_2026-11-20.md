@@ -1,4 +1,4 @@
-# W14 — Automation & Scheduler Failure Audit (pilot, not released)
+# W14 — Automation & Scheduler Failure Audit (pilot acceptance verified; release evidence below)
 
 Audit performed 2026-11-20 using **read-only, aggregated/sanitized** production Supabase queries and the actual GitHub/Vercel baseline.
 
@@ -7,7 +7,7 @@ Audit performed 2026-11-20 using **read-only, aggregated/sanitized** production 
 - GitHub `main` at start: `639562d2f29ed8fd3ac0b0d65b0e6176fe9d3b8a`.
 - Live `rythm-os.com` Vercel production deployment: `dpl_77nDMst8oTrsQrCJZV5D6bSokvie`, commit `639562d2...`, READY.
 - Supabase production project `dezbacyuvsdrlpmmpjht`: ACTIVE_HEALTHY. Migrations include `20261119131828_w13_dispatch_resilience_20261119`; latest observed `20261120005153_w11_20261119174000_crm_relationship_invariants`.
-- Supabase staging project `viqjdgohtxqkrdgwtull` **INACTIVE**; no hosted W14 failure injection was run.
+- Supabase staging project `viqjdgohtxqkrdgwtull` was temporarily restored for hosted W14 tests; its automation tables were confirmed present and tenant-isolated. After successful tests and cleanup it was paused again, and `ai roadmap` restoration was requested. The original state must be confirmed before final closure.
 - The oldest 108 automation task runs, ordered by `created_at,id`: **97 succeeded, 7 failed, 4 skipped**. Current snapshot: **160 succeeded, 11 failed, 4 skipped** across 175 runs.
 - All 175 sampled ledger rows are terminal; 0 missing starts, 0 missing finishes, 0 reversed timestamps, 0 attempts above 1. These are snapshot findings, not a guarantee for future runs.
 - Search Console integration record: `status=error`, `enabled=true`, Vault reference exists, last verified on 2026-10-04; task incorrectly remained `configuration_status=ready`.
@@ -44,24 +44,23 @@ The **four skipped** manual attempts had explicit provider-configuration summari
 
 ## Validation and release gates
 
-Code-only offline commands (PR CI, **results must be checked**):
-```bash
-npm ci
-npm run test:w14
-npm run typecheck
-npm run lint
-npm run build
-```
+All checks below ran on the feature branch, not Production.
 
-`npm run test:w14` injects synthetic transient/permanent faults, checks retry limits, tests a disposable in-memory PostgreSQL partial unique index and failed/skipped terminal records, and asserts the manual auth/scheduler contract. This does **not** prove a hosted staging failure injection.
+- **CI: PASS** — [workflow 44766717203](https://github.com/rythm2237/Rythm-company-os/actions/runs/44766717203) includes `npm ci`, `npm run test:w14`, `npm run typecheck`, `npm run lint`, `npm run build` and regressions. Verify final CI after the documentation-only commit.
+- **W13 dependency: PASS** — [workflow 44766717255](https://github.com/rythm2237/Rythm-company-os/actions/runs/44766717255), includes W06 backend-boundary regression.
+- **W14 Hosted Staging: PASS** — [workflow 44766717276](https://github.com/rythm2237/Rythm-company-os/actions/runs/44766717276), second attempt, 2026-11-20; first attempt failed while Staging was `RESTORING`.
+- Hosted tests used the actual service-role authenticated Staging Automation tables and synthetic task fixtures only. Verified: one injected transient failure followed by recovery on attempt 2, permanent two-attempt stop with sanitized `DATABASE_UNAVAILABLE` ledger, concurrent duplicate trigger recorded `skipped/already_running`, disabled and approval-required skips, anonymous RLS denial, scheduler 401/503, authenticated/manual server-action boundary, six terminal run records and timestamps.
+- Hosted test fixture cleanup succeeded, and direct Staging SQL confirmed **0** remaining `w14-synthetic-%` tasks.
+- No historical or customer record was replayed; no third-party provider request, message, payment or AI billable invocation occurred.
 
-**Open, must not misreport as passed:**
-1. Real hosted staging scheduler failure injection, authorization-denied manual trigger, and UI readback with isolated synthetic data (staging Supabase is inactive; no cost/activation approval).
-2. Reauthorize read-only Google Search Console if desired. This requires a separately authorized Production provider action and is not part of this PR.
-3. Vercel Flags inventory is blocked by account authorization (403); verify through appropriate authorized owner session if launch depends on feature flags.
-4. Reassess generic 2026-11-15 failure if sanitized request traces are available; do not infer its root cause.
+**Acceptance criteria**: (1) seven historical root causes categorized — PASS; (2) synthetic failure/retry tests — PASS; (3) no silent skipped/failed result — PASS for the implemented runtime and staged failure/skip scenarios. Browser-level rendered UI check with a real administrator session is not separately evidenced; keep it an operational follow-up rather than claiming it was done.
+
+**Known follow-ups outside the W14 release boundary**:
+1. Google Search Console must be reauthorized by an owner for live read-only monitoring. The W14 runtime treats disconnected provider as a visible skip, not an unbounded failure.
+2. Vercel Flags inventory remains unavailable due to 403 authorization; W14 code has no new flag migration.
+3. The 2026-11-15 generic Search Index failure remains historically unclassified beyond the generic ledger message; do not invent its original root cause.
 
 ### Rollback and review
 No W14 database migration or Production deployment was performed. Before release: review PR diff and CI results; check platform-admin-only access, `Human CEO` approval block, no external message/charge/replay, handler retry allowlist, and per-status Admin UI counts. If unmerged, close PR and delete feature branch. If ever deployed after separate owner approval, revert its merge commit and redeploy the last tested production SHA (no schema rollback necessary).
 
-**Owner sign-off:** PENDING. **W14 launch status:** NOT YET ACCEPTED.
+**Owner sign-off:** Authorized in the 2026-11-20 follow-up message to close and release W14 subject to tests. **W14 branch acceptance:** PASS. **Production launch:** independently verify merge, deployment, smoke checks and restoration of paused unrelated project before marking finished.
