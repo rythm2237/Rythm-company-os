@@ -63,6 +63,28 @@ export default async function AdminAutomationCenterPage({ searchParams }: Props)
         </div>
       </section>
 
+      <section className="admin-panel" aria-label="Automation run status">
+        <div className="admin-panel-heading"><div><p className="admin-kicker">RUN INTEGRITY</p><h2>All-time execution status</h2></div><span>{totalRuns} recorded runs</span></div>
+        <p role={failedCount ? "alert" : "status"}><strong>{failedCount} failed</strong> · <strong>{skippedCount} skipped</strong> · {Math.max(0, totalRuns - failedCount - skippedCount)} other runs. All outcomes remain in the audit history.</p>
+        <h3>Recent failed and skipped runs</h3>
+        <div className="admin-run-list">
+          {incidents.length ? incidents.map((run) => {
+            const task = tasks.find((item) => item.id === run.task_id);
+            const details = run.output && typeof run.output === "object" && !Array.isArray(run.output)
+              ? run.output as Record<string, unknown> : {};
+            const reason = typeof details.skipReason === "string" ? details.skipReason : typeof details.failureCode === "string" ? details.failureCode : null;
+            return <article key={run.id}>
+              <div><strong>{task?.name ?? "Automation task"}</strong>
+                <span>{redactSecretText(run.summary ?? run.error_message ?? "Outcome recorded.", 300)}</span>
+                {reason ? <small>Reason: {reason.replaceAll("_", " ")}</small> : null}
+                <small>{run.trigger_type} trigger</small>
+              </div>
+              <div><span className={`admin-status admin-status-${run.status}`}>{run.status}</span><time>{new Date(run.created_at).toLocaleString("en-GB", { timeZone: "Europe/Budapest" })}</time></div>
+            </article>;
+          }) : <p className="admin-empty">No failed or skipped runs recorded.</p>}
+        </div>
+      </section>
+
       <section className="admin-panel">
         <div className="admin-panel-heading"><div><p className="admin-kicker">AUTOMATION TASKS</p><h2>Manual + scheduled operations</h2></div><span>{tasks.length} registered tasks</span></div>
         <div className="automation-table-wrap"><table className="automation-table"><thead><tr><th>Task</th><th>State</th><th>Schedule</th><th>Last / next run</th><th>Controls</th></tr></thead><tbody>
@@ -85,6 +107,13 @@ export default async function AdminAutomationCenterPage({ searchParams }: Props)
           const task = tasks.find((item) => item.id === run.task_id);
           return <article key={run.id}><div><strong>{task?.name ?? "Automation task"}</strong><span>{redactSecretText(run.summary ?? run.error_message ?? "Execution created.", 300)}</span><small>{run.trigger_type} trigger</small></div><div><span className={`admin-status admin-status-${run.status}`}>{run.status}</span><time>{new Date(run.created_at).toLocaleString("en-GB", { timeZone: "Europe/Budapest" })}</time></div></article>;
         }) : <p className="admin-empty">No runs yet.</p>}</div>
+        <nav aria-label="Automation history pagination" className="admin-panel-heading">
+          <span>Page {page} · {totalRuns} total runs</span>
+          <span>
+            {page > 1 ? <Link href={`/admin/automation?page=${page - 1}`}>Previous runs</Link> : null}
+            {page * pageSize < totalRuns ? <Link href={`/admin/automation?page=${page + 1}`}>Next runs</Link> : null}
+          </span>
+        </nav>
       </section>
     </main>
   );
