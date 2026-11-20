@@ -11,9 +11,12 @@ function meetingActionRisk(value:unknown){
   return ["low","medium","high","critical"].includes(risk)?risk:"high";
 }
 
-/** New work proposed by a meeting is outside the approved roadmap baseline. */
+/** Every NEW meeting-proposed work item is outside the approved roadmap baseline.
+ * Neither an autonomy mode nor a model-provided risk/needs_approval value is a CEO receipt. */
 export function projectMeetingActionNeedsApproval(autonomyMode:string, action:{needs_approval?:unknown;risk?:unknown}){
-  return autonomyMode==="approval_required" || ["high","critical"].includes(meetingActionRisk(action.risk)) || Boolean(action.needs_approval);
+  void autonomyMode;
+  void action;
+  return true;
 }
 
 function parseStructuredJson(value:string):Record<string,unknown>{
