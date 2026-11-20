@@ -288,10 +288,13 @@ export async function executeAutomationTask(taskId: string, triggerType: Automat
 
     const finishedAt = new Date();
     const status = result.status ?? "succeeded";
+    const output = status === "skipped"
+      ? { ...result.output, skipReason: typeof result.output?.skipReason === "string" ? result.output.skipReason : "handler_skipped" }
+      : result.output ?? {};
     const { error: terminalError } = await admin.from("automation_task_runs").update({
       status, attempt: attempts, finished_at: finishedAt.toISOString(),
       duration_ms: finishedAt.getTime() - startedAt.getTime(),
-      summary: result.summary, output: result.output ?? {},
+      summary: result.summary, output,
       error_message: status === "failed" ? "AUTOMATION_CHECK_FAILED" : null,
     }).eq("id", run.id);
     if (terminalError) throw new Error("Automation database terminal-state update failed.");
