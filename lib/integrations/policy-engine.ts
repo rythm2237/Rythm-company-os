@@ -114,6 +114,7 @@ export function evaluateExecutionPolicy(
   const approvalRequired =
     request.humanApprovalRequired ||
     request.financialImpact ||
+    request.externalSideEffect ||
     request.approvalPolicy !== "not_required";
   if (request.approvalPolicy === "human_only" && request.agentId)
     return deny("RISK_CEILING_EXCEEDED");
