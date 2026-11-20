@@ -83,7 +83,7 @@ export default async function OperationsHealth(){
       <div className="panel-heading"><div><p className="label">Operational incidents</p><h2>Deduplicated incident register</h2></div><span className="pill">latest 50</span></div>
       {incidentUnavailable?<p className="form-error">Incident register is unavailable until the Batch 3 migration is applied: {incidentUnavailable}</p>:null}
       <div className="data-list">
-        {incidents.length?incidents.map(i=><div className="data-row" key={i.id}><div><strong>{i.severity.toUpperCase()} · {i.incident_key}</strong><span>{i.source} · {i.safe_message}{i.error_code?` · ${i.error_code}`:""}</span><span>First {fmt(i.first_seen_at)} · Last {fmt(i.last_seen_at)} · correlation {i.correlation_id}</span></div><div className="row-meta"><span>{i.occurrence_count}×</span><b className={i.status==="resolved"?"state-active":"state-paused"}>{i.status}</b></div></div>):!incidentUnavailable?<p className="empty-state">No operational incidents recorded.</p>:null}
+        {incidents.length?incidents.map(i=><div className="data-row" key={i.id}><div><strong>{i.severity.toUpperCase()} · {i.incident_key}</strong><span>{i.source} · {i.error_code??"INCIDENT_RECORDED"} · details withheld from UI to avoid legacy provider text</span><span>First {fmt(i.first_seen_at)} · Last {fmt(i.last_seen_at)} · correlation {i.correlation_id}</span></div><div className="row-meta"><span>{i.occurrence_count}×</span><b className={i.status==="resolved"?"state-active":"state-paused"}>{i.status}</b></div></div>):!incidentUnavailable?<p className="empty-state">No operational incidents recorded.</p>:null}
       </div>
     </section>
 
