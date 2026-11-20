@@ -3,8 +3,6 @@
  * exception messages, URLs, headers, tokens or tenant IDs as log dimensions.
  * Collection is not notification delivery; alert transport is a separate gate.
  */
-import { randomUUID } from "node:crypto";
-
 export type PilotSurface =
   | "core_routes" | "auth" | "onboarding" | "billing" | "ai_tools"
   | "scheduler" | "background_jobs" | "unknown";
@@ -45,7 +43,7 @@ export const PILOT_SLO_CANDIDATES: readonly PilotSloCandidate[] = [
 ] as const;
 
 export function pilotTraceId(): string {
-  return randomUUID();
+  return crypto.randomUUID();
 }
 
 export function pilotTraceHeaders(traceId: string): Record<string, string> {
