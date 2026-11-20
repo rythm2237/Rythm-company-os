@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import { pilotTraceHeaders, pilotTraceId, recordPilotSignal } from "@/lib/observability/pilot";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,8 @@ export async function GET() {
   const safe = config.supabaseConfigured && externalActionsLocked;
   const status = safe ? (config.agentExecutionEnabled && !executionConfigured ? "degraded" : "ok") : "error";
 
+  const traceId = pilotTraceId();
+  if (status === "error") recordPilotSignal({traceId,surface:"core_routes",severity:"P0",outcome:"failed",code:"CONFIGURATION_UNAVAILABLE",httpStatus:503});
   return NextResponse.json({
     service: "RYTHM Company OS",
     status,
@@ -32,5 +35,5 @@ export async function GET() {
       maxRetries: config.agentMaxRetries,
       costRatesConfigured: config.inputCostPerMillionUsd > 0 || config.outputCostPerMillionUsd > 0,
     },
-  }, { status: status === "error" ? 503 : 200 });
+  }, { status: status === "error" ? 503 : 200, headers: pilotTraceHeaders(traceId) });
 }

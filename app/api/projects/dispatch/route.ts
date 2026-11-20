@@ -13,6 +13,7 @@ import { processContinuousProgramReviews } from "@/lib/projects/continuous-progr
 import { dispatchConnectionSetupSessions } from "@/lib/integrations/connection-setup-agent";
 import { reconcileGoogleConnections } from "@/lib/integrations/connections/google-connection-reconciliation";
 import { dispatchDiagnostic, retryIdempotentRpc, type DispatchHealth } from "@/lib/projects/project-dispatch-resilience";
+import { recordPilotSignal } from "@/lib/observability/pilot";
 
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
@@ -43,6 +44,7 @@ type DispatchContext={traceId:string;deadline:number};
 function reportFailure(ctx:DispatchContext,errors:StepError[],step:string,code="STEP_FAILED"){
   errors.push({step,error:code});
   console.error("project_dispatch_alert",dispatchDiagnostic(ctx.traceId,step,code));
+  recordPilotSignal({traceId:ctx.traceId,surface:"background_jobs",severity:"P1",outcome:"degraded",code:"UPSTREAM_UNAVAILABLE",httpStatus:503});
 }
 async function isolated<T>(step:string,work:()=>Promise<T>,errors:StepError[],fallback:T,ctx:DispatchContext):Promise<T>{
   // Do not launch new mutating work near the function deadline.
@@ -69,6 +71,7 @@ export async function GET(request:Request){
   const service=createServerSupabaseClient();
   if(!service){
     console.error("project_dispatch_alert",dispatchDiagnostic(traceId,"client","UNAVAILABLE"));
+    recordPilotSignal({traceId,surface:"background_jobs",severity:"P0",outcome:"failed",code:"DISPATCH_UNAVAILABLE",httpStatus:503});
     return NextResponse.json({ok:false,error:"Project dispatcher is unavailable.",traceId},{status:503,headers});
   }
   try{
@@ -76,6 +79,7 @@ export async function GET(request:Request){
       return NextResponse.json({ok:false,error:"Unauthorized scheduler request.",traceId},{status:401,headers});
   }catch{
     console.error("project_dispatch_alert",dispatchDiagnostic(traceId,"authorization","UPSTREAM_UNAVAILABLE"));
+    recordPilotSignal({traceId,surface:"background_jobs",severity:"P0",outcome:"failed",code:"UPSTREAM_UNAVAILABLE",httpStatus:503});
     return NextResponse.json({ok:false,error:"Dispatcher authorization service unavailable.",traceId},{status:503,headers});
   }
   // Global DB lease: a failed/unapplied W13 migration must fail closed.
@@ -84,6 +88,7 @@ export async function GET(request:Request){
   catch{lease={data:null,error:true};}
   if(lease.error){
     console.error("project_dispatch_alert",dispatchDiagnostic(traceId,"lease","UPSTREAM_UNAVAILABLE"));
+    recordPilotSignal({traceId,surface:"background_jobs",severity:"P0",outcome:"failed",code:"DISPATCH_UNAVAILABLE",httpStatus:503});
     return NextResponse.json({ok:false,error:"Dispatch lease unavailable.",traceId},{status:503,headers});
   }
   if(lease.data!==true)
@@ -172,6 +177,7 @@ export async function GET(request:Request){
     },{status:errors.length?503:200,headers});
   }catch{
     console.error("project_dispatch_alert",dispatchDiagnostic(traceId,"dispatch","UNEXPECTED_FAILURE"));
+    recordPilotSignal({traceId,surface:"background_jobs",severity:"P0",outcome:"failed",code:"DISPATCH_UNAVAILABLE",httpStatus:503});
     return NextResponse.json({ok:false,error:"Project dispatcher failed.",traceId},{status:503,headers});
   }finally{
     try{

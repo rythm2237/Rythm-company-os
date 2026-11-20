@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { ACTIVE_ORGANIZATION_COOKIE, isOrganizationEntitlementActive, resolveOrganizationContext } from "@/lib/auth/organization-context";
 import { commercialSetupPath, selectedCommercialOffer } from "@/lib/commercial/selection";
+import { pilotTraceId, recordPilotSignal } from "@/lib/observability/pilot";
 
 export async function provisionCompany(formData: FormData) {
   const companyName = String(formData.get("companyName") ?? "").trim();
@@ -34,7 +35,7 @@ export async function provisionCompany(formData: FormData) {
       },
     });
     if (metadataError) {
-      console.error("selected_template_intent_persist_failed", { userId: user.id, templateKey, error: metadataError });
+      recordPilotSignal({ traceId: pilotTraceId(), surface: "onboarding", severity: "P1", outcome: "degraded", code: "UPSTREAM_UNAVAILABLE", httpStatus: 503 });
       redirect(`${setupPath}&error=${encodeURIComponent("Your selection could not be saved. Please try again.")}`);
     }
   }
@@ -49,7 +50,7 @@ export async function provisionCompany(formData: FormData) {
   });
 
   if (error || !organizationId) {
-    console.error("customer_organization_provision_failed", { userId: user.id, error });
+    recordPilotSignal({ traceId: pilotTraceId(), surface: "onboarding", severity: "P1", outcome: "degraded", code: "UPSTREAM_UNAVAILABLE", httpStatus: 503 });
     redirect(`${setupPath}&error=${encodeURIComponent("Company setup could not be completed. No commercial activation was performed.")}`);
   }
 
@@ -59,11 +60,7 @@ export async function provisionCompany(formData: FormData) {
   });
 
   if (contextError || String(activeOrganizationId ?? "") !== organizationIdString) {
-    console.error("new_organization_context_activation_failed", {
-      userId: user.id,
-      organizationId: organizationIdString,
-      error: contextError,
-    });
+    recordPilotSignal({ traceId: pilotTraceId(), surface: "onboarding", severity: "P1", outcome: "degraded", code: "UPSTREAM_UNAVAILABLE", httpStatus: 503 });
     redirect(`${setupPath}&error=${encodeURIComponent("Company setup was created, but its active context could not be selected. Contact RYTHM support before continuing.")}`);
   }
 
