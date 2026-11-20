@@ -47,15 +47,20 @@ async function resolveDecision(formData: FormData) {
   if (responseNote.length < 3) redirect(`/approvals/decisions?approval=${approvalId}&error=CEO%20decision%20note%20is%20required.`);
 
   const { data: approval } = await supabase.from("approval_requests")
-    .select("id,title,risk_level,status,project_id,subject_type")
+    .select("id,title,risk_level,status,project_id,subject_type,expires_at")
     .eq("organization_id", organizationId).eq("id", approvalId).maybeSingle();
   if (approval?.subject_type === "project_task" && approval.project_id) redirect(`/projects/operating?project=${approval.project_id}&view=decisions`);
   if (!approval || approval.status !== "pending") redirect("/approvals/decisions?error=Only%20pending%20decisions%20can%20be%20resolved.");
+  if (approval.expires_at && new Date(approval.expires_at).getTime() <= Date.now()) {
+    redirect("/approvals/decisions?error=This%20decision%20request%20has%20expired.");
+  }
 
   const now = new Date().toISOString();
-  const { error } = await supabase.from("approval_requests").update({ status: resolution, response_note: responseNote, resolved_at: now, approver_user_id: user.id })
-    .eq("organization_id", organizationId).eq("id", approvalId).eq("status", "pending");
-  if (error) redirect(`/approvals/decisions?approval=${approvalId}&error=${encodeURIComponent(error.message)}`);
+  // One compare-and-set winner: replay and concurrent double-clicks must not emit a second audit event.
+  const { data: resolved, error } = await supabase.from("approval_requests").update({ status: resolution, response_note: responseNote, resolved_at: now, approver_user_id: user.id })
+    .eq("organization_id", organizationId).eq("id", approvalId).eq("status", "pending")
+    .select("id").maybeSingle();
+  if (error || !resolved) redirect(`/approvals/decisions?approval=${approvalId}&error=${encodeURIComponent(error?.message ?? "The decision was already resolved or is no longer pending.")}`);
 
   await supabase.from("audit_events").insert({ organization_id: organizationId, actor_type: "user", actor_user_id: user.id, event_type: `approval.${resolution}`, object_type: "approval_request", object_id: approvalId, risk_level: approval.risk_level, payload: { title: approval.title, resolution, response_note: responseNote, decision_workspace: true } });
   revalidatePath("/approvals/decisions");

@@ -81,7 +81,7 @@ try {
     if(failure !== "none"){
       assert.equal(actionWrites.length,0,"A failed required write must prevent action creation");
       assert.equal(taskWrites.length,0,"A failed required write must prevent queued work");
-      assert.equal(result[0].status,"retrying");
+      assert.equal(result[0].status,"failed", "After a meeting session write, failures must stop automatic replay and await human reconciliation");
     }else{
       assert.equal(actionWrites[0].payload.authorization_approval_id,"approval");
       assert.equal(taskWrites[0].payload.waiting_on_approval_id,"approval");
@@ -93,4 +93,4 @@ try {
   if(oldKey===undefined)delete process.env.OPENAI_API_KEY;else process.env.OPENAI_API_KEY=oldKey;
   if(oldModel===undefined)delete process.env.RYTHM_DRY_RUN_MODEL;else process.env.RYTHM_DRY_RUN_MODEL=oldModel;
 }
-console.log("PASS W10 actual meeting worker: tenant-bound internal review, normalized risk, persisted Human CEO gate and fail-closed lifecycle, participants, transcript, recommendation, session, minutes and approval write failures; no formal decision auto-approval (synthetic provider/persistence adapters)");
+console.log("PASS W10 actual meeting worker: tenant-bound internal review, normalized risk, persisted Human CEO gate, manual-review stop on partial failure and fail-closed lifecycle, participants, transcript, recommendation, session, minutes and approval write failures; no formal decision auto-approval (synthetic provider/persistence adapters)");

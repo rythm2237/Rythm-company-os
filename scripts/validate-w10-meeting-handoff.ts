@@ -4,7 +4,7 @@ import {readFile} from "node:fs/promises";
 import {PGlite} from "@electric-sql/pglite";
 async function main(){
  assert.equal(projectMeetingActionNeedsApproval("approval_required",{needs_approval:false,risk:"low"}),true);
- assert.equal(projectMeetingActionNeedsApproval("limited_autonomy",{needs_approval:false,risk:"low"}),false);
+ assert.equal(projectMeetingActionNeedsApproval("limited_autonomy",{needs_approval:false,risk:"low"}),true,"W12: new meeting work always needs CEO approval");
  assert.equal(projectMeetingActionNeedsApproval("full_autonomy_within_policy",{needs_approval:false,risk:"critical"}),true);
  assert.equal(projectMeetingActionNeedsApproval("limited_autonomy",{needs_approval:true,risk:"low"}),true);
  const db=new PGlite();

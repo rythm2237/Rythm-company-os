@@ -30,8 +30,15 @@ export async function POST(request:Request){
     "The latest agent synthesis was reviewed under explicit chair control.",
     session.synthesis?`Latest B-001 synthesis:\n\n${session.synthesis}`:"No synthesis text was available at closure."
   ].join("\n\n");
-  const {error}=await supabase.from("meetings").update({status:"completed",ended_at:now,minutes:{text:minutesText}}).eq("id",meeting.id).eq("organization_id",organizationId).eq("status","running");
+  // Compare-and-set the running state. Only the winning closure creates an audit event.
+  const {data:closed,error}=await supabase.from("meetings").update({status:"completed",ended_at:now,minutes:{text:minutesText}})
+    .eq("id",meeting.id).eq("organization_id",organizationId).eq("status","running").select("id").maybeSingle();
   if(error) return fail(error.message,500);
+  if(!closed){
+    const {data:current}=await supabase.from("meetings").select("status").eq("id",meeting.id).eq("organization_id",organizationId).maybeSingle();
+    if(current?.status==="completed") return NextResponse.json({ok:true,meetingStatus:"completed",alreadyClosed:true});
+    return fail("Meeting status changed during closure; refresh and review.",409);
+  }
   await supabase.from("audit_events").insert({organization_id:organizationId,actor_type:"user",actor_user_id:user.id,event_type:"meeting.closed_by_chair",object_type:"meeting",object_id:meeting.id,risk_level:"low",payload:{session_id:sessionId,human_authority:"Human CEO / Owner",chair_confirmation:true,minutes_persisted:true,external_actions:false}});
   return NextResponse.json({ok:true,meetingStatus:"completed",closedAt:now,title:meeting.title});
 }

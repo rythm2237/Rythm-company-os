@@ -8,6 +8,7 @@ import {extendedMatrix} from './w03-extended.mjs';
 import {routeWave} from './w03-route-wave.mjs';
 import {oauthBoundaryMatrix} from '../validate-w03-oauth-boundary.mjs';
 import {validationRuntimeMatrix} from './w03-validation-runtime.mjs';
+import {verifyW07Approval} from './w07-live-approval.mjs';
 import {publicBoundaryMatrix} from './w03-public-boundary.mjs';
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
@@ -17,6 +18,14 @@ assert.notEqual(process.env.VERCEL_ENV,'production');
 const opts={auth:{persistSession:false,autoRefreshToken:false}};
 const admin=createClient(url,process.env.W03_STAGING_SERVICE_ROLE_KEY,opts);
 const checks=[];let phase='startup',server;
+const w07=process.argv.includes('--w07-only');
+const canary='W07-SYNTHETIC-NOTE-'+randomUUID();
+let serverTail='', serverCanary=false;
+function inspectServerLog(chunk){
+ const text=serverTail+chunk.toString();
+ serverCanary ||= text.includes(canary);
+ serverTail=text.slice(-canary.length);
+}
 const record=(surface,operation,actor,target,ok,detail='')=>{checks.push({surface,operation,actor,target,ok,detail});assert.ok(ok,`${surface}/${operation}/${actor}/${target}/${detail}`);};
 const unwrap=(r,label)=>{if(r.error)throw Error(label+':'+r.error.code);return r.data;};
 const clients=new Map(),cookies=new Map(),seeds=new Map();
@@ -37,11 +46,15 @@ try{
  phase='server';
  mkdirSync('.w03-evidence',{recursive:true});
  const env={...process.env,NEXT_PUBLIC_SUPABASE_URL:url,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:process.env.W03_STAGING_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY:process.env.W03_STAGING_SERVICE_ROLE_KEY,RYTHM_AGENT_EXECUTION_ENABLED:'false',RYTHM_EXTERNAL_ACTIONS_ENABLED:'false',OPENAI_API_KEY:'',ANTHROPIC_API_KEY:'',GEMINI_API_KEY:'',NEXT_TELEMETRY_DISABLED:'1'};
- if(process.argv.includes('--routes-only')||process.argv.includes('--public-only'))Object.assign(env,{NODE_OPTIONS:((process.env.NODE_OPTIONS??'')+' --import '+pathToFileURL(resolve('scripts/fixtures/w03-egress-guard.mjs')).href).trim(),W03_EGRESS_LOG:resolve('.w03-evidence/egress.jsonl'),CRON_SECRET:'W03_SYNTHETIC_CRON',CLOUDFLARE_EMAIL_WORKER_SECRET:'W03_SYNTHETIC_INGEST',RESEND_WEBHOOK_SECRET:'whsec_VzAzX1NZTlRIRVRJQw==',RESEND_API_KEY:'W03_SYNTHETIC_DO_NOT_SEND'});
- server=spawn(process.execPath,['node_modules/next/dist/bin/next','dev','--hostname','localhost','--port','3103'],{env,stdio:'ignore'});
+ if(process.argv.includes('--routes-only')||process.argv.includes('--public-only')||w07)Object.assign(env,{NODE_OPTIONS:((process.env.NODE_OPTIONS??'')+' --import '+pathToFileURL(resolve('scripts/fixtures/w03-egress-guard.mjs')).href).trim(),W03_EGRESS_LOG:resolve('.w03-evidence/egress.jsonl'),CRON_SECRET:'W03_SYNTHETIC_CRON',CLOUDFLARE_EMAIL_WORKER_SECRET:'W03_SYNTHETIC_INGEST',RESEND_WEBHOOK_SECRET:'whsec_VzAzX1NZTlRIRVRJQw==',RESEND_API_KEY:'W03_SYNTHETIC_DO_NOT_SEND'});
+ server=spawn(process.execPath,['node_modules/next/dist/bin/next','dev','--hostname','localhost','--port','3103'],{env,stdio:w07?['ignore','pipe','pipe']:'ignore'});
+ if(w07){
+  server.stdout.on('data',inspectServerLog);
+  server.stderr.on('data',inspectServerLog);
+ }
  for(let i=0;i<90;i++){try{await fetch(api+'/api/crm/leads');break;}catch{await new Promise(r=>setTimeout(r,1000));}}
  phase='seed';
- for(const org of b.companies){
+ if(!w07)for(const org of b.companies){
   const {client:c,user}=clients.get(org.key+'_owner');
   unwrap(await c.rpc('set_active_organization',{target_org_id:org.id}),'active');
   for(const capability of ['contract.create','contract.read','contract.update','finance.create','finance.read','finance.update'])unwrap(await c.from('crm_access_grants').insert({organization_id:org.id,principal_type:'user',principal_id:user.id,capability,resource_type:'company',resource_id:org.id,granted_by:user.id}),'grant');
@@ -75,7 +88,11 @@ try{
   for(const [table,row] of rows){const own=await c.from(table).select('id').eq('id',row.id);record(table,'owner-positive-read',org.key,org.key,!own.error&&own.data?.length===1);}
   const downloaded=await http(org.key+'_owner','/api/crm/documents/'+doc.id);record('files','own-download',org.key,org.key,downloaded.status===200&&(await downloaded.text())==='W03-FILE-'+org.key);
  }
- if(process.argv.includes('--public-only')){
+ if(w07){
+  phase='w07-human-approval';
+  await verifyW07Approval({b,clients,cookies,admin,http,record,unwrap,api,canary});
+  record('w07-approval','server-logs-exclude-note','system','staging',!serverCanary);
+ }else if(process.argv.includes('--public-only')){
   phase='public-and-private-boundaries';await publicBoundaryMatrix({b,clients,admin,http,record,unwrap,seeds});
  }else if(process.argv.includes('--oauth-only')){
   phase='validation-runtime';await validationRuntimeMatrix({b,clients,admin,http,record,unwrap});
