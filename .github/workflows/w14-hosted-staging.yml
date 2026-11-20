@@ -2,7 +2,7 @@ name: W14 Hosted Staging Automation Acceptance (owner-authorized, no Production)
 
 on:
   pull_request:
-    types: [labeled]
+    types: [synchronize, labeled]
 
 permissions:
   contents: read
@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   hosted-staging:
-    if: ${{ github.event.label.name == 'w14-staging-authorized' && github.event.pull_request.number == 465 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'pilot/w14-automation-failure-recovery' }}
+    if: ${{ (github.event.action == 'synchronize' || github.event.label.name == 'w14-staging-authorized') && github.event.pull_request.number == 465 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'pilot/w14-automation-failure-recovery' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: w02-staging
