@@ -51,3 +51,7 @@ Pricing variables must be updated whenever the configured model or its official 
 ## Current scope
 
 The production-hardened foundation permits only owner-triggered, low-risk, dry-run execution by `T-001 — Runtime Validation Agent`. It does not permit autonomous scheduling, specialist-agent execution, controlled-live execution, tools, browsing, messaging, or external writes.
+
+## W15 pilot incident response
+
+See [W15 Pilot Incident Response](W15_PILOT_INCIDENT_RESPONSE.md) for server-side incident log taxonomy, owner-only triage dashboard, 30-day SLO candidates, error budget unknown-state rules, severity protocol, staged alert-delivery gate and rollback. A structured P0 log is **not** a delivered on-call alert.

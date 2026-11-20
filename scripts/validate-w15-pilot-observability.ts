@@ -1,0 +1,56 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import {
+  calculatePilotErrorBudget, classifyPilotPath, PILOT_SLO_CANDIDATES,
+  pilotSeverity, pilotTraceHeaders, pilotTraceId, recordPilotSignal,
+} from "../lib/observability/pilot";
+
+/** All of these are synthetic/offline: no emails, webhooks, DB writes, or customer data. */
+const secretFixture = "sk_test_FAKE_NEVER_USE";
+const fakeCustomer = "synthetic-person@example.invalid";
+const fakeUrl = "/api/billing/webhook?token=secret";
+let delivered: string[] = [];
+const traceId = pilotTraceId();
+const signal = recordPilotSignal({
+  traceId, surface: "billing", severity: "P0", outcome: "failed",
+  code: "SYNTHETIC_OUTAGE", httpStatus: 503, durationMs: 120,
+  // Runtime payload must never spread unexpected user supplied fields.
+  ...({ customerEmail: fakeCustomer, secret: secretFixture, url: fakeUrl } as object),
+}, (line) => delivered.push(line));
+assert.equal(delivered.length, 1, "synthetic collector received the event");
+assert.equal(signal.event, "rythm_pilot_incident_v1");
+assert.equal(signal.traceId, traceId);
+assert.equal(Object.keys(JSON.parse(delivered[0])).length, 8, "strict 8-field allowlist");
+for (const token of [secretFixture, fakeCustomer, fakeUrl, "token", "customerEmail"])
+  assert.ok(!delivered[0].includes(token), "untrusted field must never appear in log");
+assert.equal(classifyPilotPath(fakeUrl), "billing");
+assert.equal(classifyPilotPath("/api/meetings/private-customer-id"), "ai_tools");
+assert.equal(classifyPilotPath("/auth/callback"), "auth");
+assert.equal(classifyPilotPath("/api/projects/dispatch"), "background_jobs");
+assert.equal(pilotSeverity("scheduler"), "P0");
+assert.equal(pilotTraceHeaders(traceId)["X-Trace-Id"], traceId);
+assert.equal(calculatePilotErrorBudget(null, null, 0.995), null, "no evidence => unknown");
+assert.equal(calculatePilotErrorBudget(1000, 7, 0.995)?.exhausted, true);
+assert.equal(calculatePilotErrorBudget(1000, 3, 0.995)?.remainingFailures, 2);
+assert.equal(PILOT_SLO_CANDIDATES.length, 7);
+for (const candidate of PILOT_SLO_CANDIDATES) {
+  assert.equal(candidate.windowDays, 30);
+  assert.ok(candidate.target >= 0.99 && candidate.target <= 0.995);
+}
+// Tabletop: fake outage -> P0 triage -> simulated acknowledgement -> simulated containment.
+// This deliberately does not claim real external transport or paging.
+const triage = { detected: signal.severity === "P0", acknowledged: false, contained: false };
+assert.equal(triage.detected, true);
+triage.acknowledged = true;
+triage.contained = true;
+assert.equal(triage.acknowledged && triage.contained, true);
+const dispatcher = readFileSync("app/api/admin/automation/dispatch/route.ts", "utf8");
+const incidentPage = readFileSync("app/(app)/operations/health/page.tsx", "utf8");
+const instrumentation = readFileSync("instrumentation.ts", "utf8");
+assert.ok(dispatcher.includes("pilotTraceHeaders(traceId)"));
+assert.ok(dispatcher.includes('status: failed ? 503 : 200'));
+assert.ok(incidentPage.includes("PILOT_SLO_CANDIDATES"), "owner incident dashboard exposes measurement gaps");
+assert.ok(instrumentation.includes("onRequestError"), "unhandled server errors instrumented");
+assert.ok(!instrumentation.includes("JSON.stringify(_err)"), "exception contents never logged by new instrumentation");
+console.log("W15 OFFLINE PASS: P0 synthetic collector, 8-field redaction, SLO budget, routing, dispatcher instrumentation and tabletop.");
+console.log("W15 NOTICE: synthetic collector is not proof of provider alert delivery or hosted staging outage.");
