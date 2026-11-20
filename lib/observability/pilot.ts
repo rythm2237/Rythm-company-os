@@ -15,6 +15,7 @@ export type PilotSignalCode =
 
 export type PilotSignal = Readonly<{
   event: "rythm_pilot_incident_v1";
+  environment: "production" | "preview" | "development" | "local";
   traceId: string;
   surface: PilotSurface;
   severity: PilotSeverity;
@@ -83,6 +84,7 @@ export function recordPilotSignal(
   const validCodes: readonly PilotSignalCode[] = ["UNHANDLED_EXCEPTION", "DISPATCH_UNAVAILABLE", "AUTOMATION_TASK_FAILURE", "CONFIGURATION_UNAVAILABLE", "SYNTHETIC_OUTAGE", "UPSTREAM_UNAVAILABLE", "BILLING_RUNTIME_FAILURE", "AUTH_RUNTIME_FAILURE", "AI_RUNTIME_FAILURE"];
   const signal: PilotSignal = {
     event: "rythm_pilot_incident_v1",
+    environment: process.env.VERCEL_ENV === "production" || process.env.VERCEL_ENV === "preview" || process.env.VERCEL_ENV === "development" ? process.env.VERCEL_ENV : "local",
     traceId: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.traceId) ? input.traceId : pilotTraceId(),
     surface: validSurfaces.includes(input.surface) ? input.surface : "unknown",
     severity: validSeverities.includes(input.severity) ? input.severity : "P2",

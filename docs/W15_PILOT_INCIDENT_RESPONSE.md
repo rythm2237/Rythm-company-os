@@ -15,7 +15,7 @@ Status: **feature-branch implementation; delivery and hosted staging not yet acc
 ## Safe log contract
 
 - Server-only `instrumentation.ts` classifies uncaught errors into fixed route families.
-- `lib/observability/pilot.ts` emits `rythm_pilot_incident_v1`: only `event,traceId,surface,severity,outcome,code,httpStatus,durationMs`. Trace IDs are generated server-side UUIDv4, not taken from user input.
+- `lib/observability/pilot.ts` emits `rythm_pilot_incident_v1`: only `event,environment,traceId,surface,severity,outcome,code,httpStatus,durationMs`. Trace IDs are generated server-side UUIDv4, not taken from user input.
 - No stack trace, exception message, request path, URL, query, raw headers, auth token, user/organization ID, prompt, payment payload or provider response is added to W15 signals.
 - `app/api/admin/automation/dispatch/route.ts` emits P1 on failed tasks and P0 when the scheduler itself cannot run, returning 503 and `X-Trace-Id`.
 - W13 project scheduler retains its original DB lease, tenant-safe trace and governance; W15 adds fixed P0 log signals for scheduler-wide failures and P1 for partial steps. No retry/replay behavior or Human CEO approval gate changes.
@@ -29,6 +29,7 @@ Status: **feature-branch implementation; delivery and hosted staging not yet acc
 - Error budget = floor(eligible request count × (1 − target)) − failed requests. **Unknown** until complete measurement, never calculate from `operational_incidents` alone.
 - Availability, p50/p95/p99 latency, request volumes and alert-delivery success must be baselined separately using an approved provider. Do not use Vercel short-retention logs alone for a 30-day SLO.
 - Staging and production must be segmented; synthetic probes cannot contaminate customer SLO denominators.
+- **Critical guard:** Vercel's project-wide Runtime Errors aggregation was observed mixing a Preview synthetic `rythm_pilot_incident_v1` event into the project error groups. Each new event therefore carries a fixed trusted `environment` field. Configure Production alert rules to require `environment=production` AND `code != SYNTHETIC_OUTAGE` (and provider-side deployment/target filters where possible); staging runs must use `environment=preview`. Never treat an unfiltered project-wide error group as a Production incident. The environment field alone does not implement alert delivery.
 
 ## Severity, ownership and first response
 
@@ -57,7 +58,7 @@ Status: **feature-branch implementation; delivery and hosted staging not yet acc
 ### Hosted isolated preview synthetic error gate
 
 - Dedicated endpoint: `GET /api/internal/w15/synthetic-outage`, **only when** `VERCEL_ENV=preview` and `VERCEL_GIT_COMMIT_REF=pilot/w15-incident-observability`.
-- Does not call Supabase, any provider, AI, billing, emails, customer services, or external actions. Returns a synthetic HTTP 503 and `X-Trace-Id`, and writes exactly one allowlisted P0 `SYNTHETIC_OUTAGE` incident to the server runtime logger.
+- Does not call Supabase, any provider, AI, billing, emails, customer services, or external actions. Returns a synthetic HTTP 503 and `X-Trace-Id`, and writes exactly one environment-labelled allowlisted P0 `SYNTHETIC_OUTAGE` incident to the server runtime logger.
 - It is protected by the current Vercel preview SSO setting; check protection before exercising. Production and all other branches return 404.
 - Verify actual Preview response and correlating Vercel Runtime Logs within Hobby plan's **one-hour retention**. Filter for `rythm_pilot_incident_v1`; redact output before retaining evidence. **No actual paging occurs from this endpoint.**
 - The probe must never be reused as an uptime denominator or counted as a customer incident.
@@ -81,7 +82,7 @@ Status: **feature-branch implementation; delivery and hosted staging not yet acc
 
 - On protected Vercel Preview deployment `dpl_5XUt2rmrRxsb47voazxrpYRuBQbq` (`5a4a57c068df2ae40268a5c308c19a71668bf26c`), `GET /api/internal/w15/synthetic-outage` returned **HTTP 503** with JSON `synthetic:true`.
 - The response `X-Trace-Id` matched the generated response body UUID `a5f13220-a890-4830-9d04-3b4cef848e52`.
-- A scoped read of that Preview deployment's Vercel runtime logs located `rythm_pilot_incident_v1` with the **same trace identifier**. The filtered sample did not contain email-address patterns, Bearer credentials, Stripe key prefixes or Resend key prefixes. No raw log body was copied into the report.
+- A scoped read of that Preview deployment's Vercel runtime logs located `rythm_pilot_incident_v1` with the **same trace identifier**. The filtered sample did not contain email-address patterns, Bearer credentials, Stripe key prefixes or Resend key prefixes. This was an earlier eight-field sample; the subsequent nine-field event contract adds environment scoping. No raw log body was copied into the report.
 - This validates **HTTP injection → structured runtime event correlation** on an actual hosted Preview. It does NOT validate a live human alert, acknowledgement or escalation. This was not a Production incident.
 - Native Vercel log-drain listing was inaccessible (API 404) and Observability schema unavailable (API 404); the Hobby log retention limit is one hour. Long-term SLO/error-budget denominator and reliable alert transport remain **unknown**.
 - Existing verified Resend sending domains were inspected read-only, but no recipient, operational on-call roster or W15 incident transport is configured. No email or external message was sent.

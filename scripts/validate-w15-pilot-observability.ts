@@ -20,7 +20,17 @@ const signal = recordPilotSignal({
 assert.equal(delivered.length, 1, "synthetic collector received the event");
 assert.equal(signal.event, "rythm_pilot_incident_v1");
 assert.equal(signal.traceId, traceId);
-assert.equal(Object.keys(JSON.parse(delivered[0])).length, 8, "strict 8-field allowlist");
+assert.equal(Object.keys(JSON.parse(delivered[0])).length, 9, "strict 9-field allowlist");
+assert.ok(["production","preview","development","local"].includes(signal.environment), "environment must be a fixed category, not user input");
+const beforeEnvironment = process.env.VERCEL_ENV;
+process.env.VERCEL_ENV = "preview";
+const previewSignal = recordPilotSignal({
+  traceId: pilotTraceId(), surface: "scheduler", severity: "P0",
+  outcome: "failed", code: "SYNTHETIC_OUTAGE", httpStatus: 503,
+}, () => {});
+assert.equal(previewSignal.environment, "preview", "hosted preview must be identifiable");
+if (beforeEnvironment === undefined) delete process.env.VERCEL_ENV;
+else process.env.VERCEL_ENV = beforeEnvironment;
 for (const token of [secretFixture, fakeCustomer, fakeUrl, "token", "customerEmail"])
   assert.ok(!delivered[0].includes(token), "untrusted field must never appear in log");
 assert.equal(classifyPilotPath(fakeUrl), "billing");
@@ -74,5 +84,5 @@ assert.ok(projectDispatch.includes('surface:"background_jobs",severity:"P0"'), "
 assert.ok(projectDispatch.includes('surface:"background_jobs",severity:"P1"'), "partial dispatch failures must emit P1 signal");
 assert.ok(healthRoute.includes('code:"CONFIGURATION_UNAVAILABLE"'), "critical readiness failures must emit P0");
 assert.ok(healthRoute.includes("pilotTraceHeaders(traceId)"), "health failure provides matching trace header");
-console.log("W15 OFFLINE PASS: P0 synthetic collector, 8-field redaction, SLO budget, routing, dispatcher instrumentation and tabletop.");
+console.log("W15 OFFLINE PASS: P0 synthetic collector, 9-field environment-scoped redaction, SLO budget, routing, dispatcher instrumentation and tabletop.");
 console.log("W15 NOTICE: synthetic collector is not proof of provider alert delivery or hosted staging outage.");
