@@ -18,7 +18,8 @@ Status: **feature-branch implementation; delivery and hosted staging not yet acc
 - `lib/observability/pilot.ts` emits `rythm_pilot_incident_v1`: only `event,traceId,surface,severity,outcome,code,httpStatus,durationMs`. Trace IDs are generated server-side UUIDv4, not taken from user input.
 - No stack trace, exception message, request path, URL, query, raw headers, auth token, user/organization ID, prompt, payment payload or provider response is added to W15 signals.
 - `app/api/admin/automation/dispatch/route.ts` emits P1 on failed tasks and P0 when the scheduler itself cannot run, returning 503 and `X-Trace-Id`.
-- W13 project scheduler traces remain independently governed; W15 must **not** replay failed jobs or bypass CEO approvals.
+- W13 project scheduler retains its original DB lease, tenant-safe trace and governance; W15 adds fixed P0 log signals for scheduler-wide failures and P1 for partial steps. No retry/replay behavior or Human CEO approval gate changes.
+- `/api/health` emits a safe P0 configuration-readiness signal when it returns 503, without recording environment variable values.
 
 ## Candidate service objectives (30-day rolling, not a contractual SLA)
 
@@ -75,3 +76,12 @@ Status: **feature-branch implementation; delivery and hosted staging not yet acc
 - After separate approval: revert the W15 commit, rebuild, stage and promote the approved rollback; existing incident table and W13/W14 functionality must remain unchanged.
 - No new database migration is required for W15's current read-only owner UI.
 - Keep P0 alert-delivery, owner roster, 30-day SLO evidence and hosted staging acceptance open until externally verified.
+
+## Executed staging-only evidence (2026-11-20)
+
+- On protected Vercel Preview deployment `dpl_5XUt2rmrRxsb47voazxrpYRuBQbq` (`5a4a57c068df2ae40268a5c308c19a71668bf26c`), `GET /api/internal/w15/synthetic-outage` returned **HTTP 503** with JSON `synthetic:true`.
+- The response `X-Trace-Id` matched the generated response body UUID `a5f13220-a890-4830-9d04-3b4cef848e52`.
+- A scoped read of that Preview deployment's Vercel runtime logs located `rythm_pilot_incident_v1` with the **same trace identifier**. The filtered sample did not contain email-address patterns, Bearer credentials, Stripe key prefixes or Resend key prefixes. No raw log body was copied into the report.
+- This validates **HTTP injection → structured runtime event correlation** on an actual hosted Preview. It does NOT validate a live human alert, acknowledgement or escalation. This was not a Production incident.
+- Native Vercel log-drain listing was inaccessible (API 404) and Observability schema unavailable (API 404); the Hobby log retention limit is one hour. Long-term SLO/error-budget denominator and reliable alert transport remain **unknown**.
+- Existing verified Resend sending domains were inspected read-only, but no recipient, operational on-call roster or W15 incident transport is configured. No email or external message was sent.

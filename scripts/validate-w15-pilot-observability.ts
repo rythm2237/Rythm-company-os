@@ -68,5 +68,11 @@ assert.ok(syntheticRoute.includes('process.env.VERCEL_GIT_COMMIT_REF !== "pilot/
 assert.ok(syntheticRoute.includes('code: "SYNTHETIC_OUTAGE"'), "fixed safe signal");
 assert.ok(syntheticRoute.includes("status: 503"), "injected synthetic service failure");
 assert.ok(!/(serviceClient|createServerSupabaseClient|fetch\()/.test(syntheticRoute), "probe must have no database or network calls");
+const projectDispatch = readFileSync("app/api/projects/dispatch/route.ts", "utf8");
+const healthRoute = readFileSync("app/api/health/route.ts", "utf8");
+assert.ok(projectDispatch.includes('surface:"background_jobs",severity:"P0"'), "hard dispatch failures must emit fixed P0 signal");
+assert.ok(projectDispatch.includes('surface:"background_jobs",severity:"P1"'), "partial dispatch failures must emit P1 signal");
+assert.ok(healthRoute.includes('code:"CONFIGURATION_UNAVAILABLE"'), "critical readiness failures must emit P0");
+assert.ok(healthRoute.includes("pilotTraceHeaders(traceId)"), "health failure provides matching trace header");
 console.log("W15 OFFLINE PASS: P0 synthetic collector, 8-field redaction, SLO budget, routing, dispatcher instrumentation and tabletop.");
 console.log("W15 NOTICE: synthetic collector is not proof of provider alert delivery or hosted staging outage.");
