@@ -1,0 +1,54 @@
+name: W14 Hosted Staging Automation Acceptance (owner-authorized, no Production)
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: w14-hosted-staging
+  cancel-in-progress: false
+
+jobs:
+  hosted-staging:
+    if: ${{ github.event.label.name == 'w14-staging-authorized' && github.event.pull_request.number == 465 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'pilot/w14-automation-failure-recovery' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: w02-staging
+    env:
+      W14_STAGING_REF: ${{ vars.W02_STAGING_REF }}
+      W14_STAGING_SUPABASE_URL: ${{ vars.W02_STAGING_SUPABASE_URL }}
+      W14_STAGING_SERVICE_ROLE_KEY: ${{ secrets.W02_STAGING_SERVICE_ROLE_KEY }}
+      W14_STAGING_ANON_KEY: ${{ secrets.W02_STAGING_ANON_KEY }}
+      RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
+      RYTHM_AGENT_EXECUTION_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Assert isolated staging and protected credentials only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$W14_STAGING_REF" = "viqjdgohtxqkrdgwtull"
+          test "$W14_STAGING_SUPABASE_URL" = "https://viqjdgohtxqkrdgwtull.supabase.co"
+          test -n "$W14_STAGING_SERVICE_ROLE_KEY"
+          test -n "$W14_STAGING_ANON_KEY"
+          test "$RYTHM_EXTERNAL_ACTIONS_ENABLED" = 'false'
+          test "$RYTHM_AGENT_EXECUTION_ENABLED" = 'false'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: W14 local offline contract first
+        run: npm run test:w14
+      - name: Hosted Supabase real synthetic scheduler and manual permission acceptance
+        run: node scripts/validate-w14-hosted-staging.mjs
+      - name: Sanitize completion
+        if: always()
+        run: echo "W14 test isolated to protected staging and disposable server-only fixtures; no production data, customer API, provider calls or charges."
