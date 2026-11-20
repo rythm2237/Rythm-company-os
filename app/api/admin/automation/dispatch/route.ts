@@ -17,7 +17,13 @@ export async function GET(request: Request) {
 
   try {
     const results = await dispatchDueAutomationTasks();
-    return NextResponse.json({ ok: true, dispatched: results.length, failed: results.filter((result) => "status" in result && result.status === "failed").length }, { headers: { "Cache-Control": "no-store" } });
+    const failed = results.filter((result) => result.status === "failed").length;
+    const skipped = results.filter((result) => result.status === "skipped").length;
+    if (failed) console.error("automation_dispatch_degraded", { failed, skipped });
+    return NextResponse.json(
+      { ok: failed === 0, dispatched: results.length, failed, skipped },
+      { status: failed ? 503 : 200, headers: { "Cache-Control": "no-store" } },
+    );
   } catch {
     console.error("automation_dispatch_failed");
     return NextResponse.json({ ok: false, error: "Automation dispatcher failed." }, { status: 500, headers: { "Cache-Control": "no-store" } });
