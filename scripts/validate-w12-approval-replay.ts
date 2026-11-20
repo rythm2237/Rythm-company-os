@@ -4,6 +4,7 @@ import { PGlite } from '@electric-sql/pglite';
 
 // Execute the same PostgreSQL compare-and-set predicate used by both Owner endpoints
 // against a disposable actual database; do not mutate a hosted/prod database.
+async function main(){
 const db=new PGlite();
 await db.exec(`
   create table approval_requests(
@@ -55,3 +56,6 @@ assert.match(meetingClose,/\.eq\("status","running"\)\.select\("id"\)\.maybeSing
 assert.match(meetingClose,/if\(!closed\)/);
 assert.match(meetingWorker,/projectMeetingActionNeedsApproval/);
 console.log('PASS W12: disposable real PostgreSQL approval tenant denial, approve/reject conflict and replay (1 winner, 1 audit); Owner and meeting-close source compare-and-set guards');
+
+}
+main().catch(error=>{console.error(error);process.exitCode=1;});
