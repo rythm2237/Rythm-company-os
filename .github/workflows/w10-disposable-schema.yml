@@ -199,6 +199,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:w12
+      - run: npm run test:w07
       - run: node --check scripts/validate-w10-agency-reservation.mjs && node --check scripts/validate-w11-role-browser.mjs && node --check scripts/w10-budget-proxy.mjs && node --import tsx scripts/validate-w10-meeting-synthesis.ts && node --import tsx scripts/validate-w10-project-results.tsx && node --import tsx scripts/validate-w10-meeting-content.ts && node --import tsx scripts/validate-w10-provider-compatibility.ts && node --import tsx scripts/validate-w10-meeting-handoff.ts && node --import tsx scripts/validate-w10-meeting-lifecycle.ts && node --import tsx scripts/validate-w10-internal-dispatch.ts && node --import tsx scripts/validate-w10-task-completion.ts && node --import tsx scripts/validate-w10-roadmap-graph.ts && node scripts/validate-w10-roadmap-boundary.mjs && node scripts/validate-w10-task-approval-context.mjs && node --import tsx scripts/validate-w10-team-assignment.ts && node scripts/validate-w10-meeting-approval-boundary.mjs
       - run: google-chrome --version
       - name: Verify reservation and re-login against disposable Auth
