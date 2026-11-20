@@ -9,7 +9,7 @@ import {
 const secretFixture = "sk_test_FAKE_NEVER_USE";
 const fakeCustomer = "synthetic-person@example.invalid";
 const fakeUrl = "/api/billing/webhook?token=secret";
-let delivered: string[] = [];
+const delivered: string[] = [];
 const traceId = pilotTraceId();
 const signal = recordPilotSignal({
   traceId, surface: "billing", severity: "P0", outcome: "failed",
