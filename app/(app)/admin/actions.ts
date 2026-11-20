@@ -20,7 +20,8 @@ export async function runAutomationNow(formData: FormData) {
   }
   revalidatePath("/admin");
   revalidatePath("/admin/automation");
-  redirect(`/admin/automation?message=${encodeURIComponent(result.summary || `Automation ${result.status || "completed"}.`)}`);
+  const feedback = encodeURIComponent(result.summary || `Automation ${result.status || "completed"}.`);
+  redirect(`/admin/automation?${result.status === "failed" ? "error" : "message"}=${feedback}`);
 }
 
 export async function updateAutomationTask(formData: FormData) {
