@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { pilotTraceHeaders, pilotTraceId, recordPilotSignal } from "@/lib/observability/pilot";
+import { deliverPilotP0Alert } from "@/lib/observability/p0-alert-mailer";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,10 @@ export async function GET() {
   const status = safe ? (config.agentExecutionEnabled && !executionConfigured ? "degraded" : "ok") : "error";
 
   const traceId = pilotTraceId();
-  if (status === "error") recordPilotSignal({traceId,surface:"core_routes",severity:"P0",outcome:"failed",code:"CONFIGURATION_UNAVAILABLE",httpStatus:503});
+  if (status === "error") {
+    const p0 = recordPilotSignal({traceId,surface:"core_routes",severity:"P0",outcome:"failed",code:"CONFIGURATION_UNAVAILABLE",httpStatus:503});
+    await deliverPilotP0Alert(p0);
+  }
   return NextResponse.json({
     service: "RYTHM Company OS",
     status,

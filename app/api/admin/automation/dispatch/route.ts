@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { dispatchDueAutomationTasks } from "@/lib/admin/automation/executor";
 import { pilotTraceHeaders, pilotTraceId, recordPilotSignal } from "@/lib/observability/pilot";
+import { deliverPilotP0Alert } from "@/lib/observability/p0-alert-mailer";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -32,10 +33,11 @@ export async function GET(request: Request) {
       { status: failed ? 503 : 200, headers },
     );
   } catch {
-    recordPilotSignal({
+    const p0 = recordPilotSignal({
       traceId, surface: "scheduler", severity: "P0", outcome: "failed",
       code: "DISPATCH_UNAVAILABLE", httpStatus: 500, durationMs: Date.now() - started,
     });
+    await deliverPilotP0Alert(p0);
     return NextResponse.json({ ok: false, error: "Automation dispatcher failed." }, { status: 500, headers });
   }
 }
