@@ -77,6 +77,7 @@ assert.ok(syntheticRoute.includes('process.env.VERCEL_ENV !== "preview"'), "must
 assert.ok(syntheticRoute.includes('process.env.VERCEL_GIT_COMMIT_REF !== "pilot/w15-incident-observability"'), "branch locked");
 assert.ok(syntheticRoute.includes('code: "SYNTHETIC_OUTAGE"'), "fixed safe signal");
 assert.ok(syntheticRoute.includes("status: 503"), "injected synthetic service failure");
+assert.ok(syntheticRoute.includes("await deliverPilotP0Alert(p0)"), "synthetic P0 must exercise fail-closed alert transport");
 assert.ok(!/(serviceClient|createServerSupabaseClient|fetch\()/.test(syntheticRoute), "probe must have no database or network calls");
 const projectDispatch = readFileSync("app/api/projects/dispatch/route.ts", "utf8");
 const healthRoute = readFileSync("app/api/health/route.ts", "utf8");
