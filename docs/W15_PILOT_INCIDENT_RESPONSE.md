@@ -1,6 +1,6 @@
 # W15 — Pilot monitoring, incident response and SLO candidate runbook
 
-Status: **feature-branch implementation; delivery and hosted staging not yet accepted**. The SLOs below are **candidates**, not an approved paid SLA.
+Status: **feature-branch implementation; actual Preview log verified, manual recipient emails tested; automated alert transport/ack not yet accepted**. The SLOs below are **candidates**, not an approved paid SLA.
 
 ## Verified baseline (2026-11-20)
 
@@ -39,7 +39,7 @@ Status: **feature-branch implementation; delivery and hosted staging not yet acc
 | P1 | Partial scheduler failures, critical feature degraded, recurrent high error budget burn | 60 minutes | On-call investigates, notify project owner on continued degradation |
 | P2 | Isolated lower-impact failures with workaround | Next business day | Queue for normal triage |
 
-**Accountable project owner:** the repository owner `rythm2237` is the accountable review contact, **not** an assumed active pager/on-call engineer. **Roster not yet assigned.** Human owner must enter a primary engineer, backup, contact method, time zone, and an acknowledged paging endpoint before any claim of operational on-call. An unattended log line is not a delivered alert.
+**Accountable project owner:** the repository owner `rythm2237` is the accountable review contact, **not** an assumed active pager/on-call engineer. **Pilot contact roles provisionally identified, but on-call acknowledgment remains unproven.** Two authorized email destinations are stored privately as encrypted Vercel variables bound only to branch `pilot/w15-incident-observability`: `RYTHM_P0_ALERT_PRIMARY_EMAIL` and `RYTHM_P0_ALERT_BACKUP_EMAIL`. The primary and backup have **not** been confirmed as separate human responders or as an active, staffed 24/7 rota. Addresses must not be copied into this public repository. Acknowledged paging, escalation and owner coverage still need acceptance. An unattended log line is not a delivered alert.
 
 ## Incident procedure (tabletop script)
 
@@ -53,7 +53,7 @@ Status: **feature-branch implementation; delivery and hosted staging not yet acc
 
 ### Synthetic exercise (automated offline)
 
-`npm run test:w15`: creates a fake P0 billing outage, sends its fixed eight-field record to an **in-memory collector**, asserts no fake token/email/URL leakage, verifies routing, budget math and acknowledgement/containment progression. This is **NOT** a real alert sent to any human.
+`npm run test:w15`: creates a fake P0 billing outage, sends its fixed nine-field record to an **in-memory collector**, asserts no fake token/email/URL leakage, verifies routing, budget math and acknowledgement/containment progression. This is **NOT** a real alert sent to any human.
 
 ### Hosted isolated preview synthetic error gate
 
@@ -86,3 +86,12 @@ Status: **feature-branch implementation; delivery and hosted staging not yet acc
 - This validates **HTTP injection → structured runtime event correlation** on an actual hosted Preview. It does NOT validate a live human alert, acknowledgement or escalation. This was not a Production incident.
 - Native Vercel log-drain listing was inaccessible (API 404) and Observability schema unavailable (API 404); the Hobby log retention limit is one hour. Long-term SLO/error-budget denominator and reliable alert transport remain **unknown**.
 - Existing verified Resend sending domains were inspected read-only, but no recipient, operational on-call roster or W15 incident transport is configured. No email or external message was sent.
+
+## Manually authorized notification test (2026-11-21)
+
+- User explicitly approved a one-time P0 alert-email drill and specified one primary and one backup contact.
+- Two clearly labelled `TEST ONLY` messages were sent through the **authenticated Gmail account**, one to each destination. Sending returned a Gmail message ID for each; both appear in the sender's Sent folder. A Gmail search showed the primary test in the connected primary Inbox. The backup address belongs to a different destination, so actual receipt/reading there is **not independently verified** through this connection.
+- The test message named the **Preview** synthetic `SYNTHETIC_OUTAGE` event and its prior trace, and explicitly stated that it was **manually sent**; no Production outage or customer action was induced.
+- Both contact addresses are provisioned as **encrypted, Preview-branch-only Vercel environment variables**. They are deliberately omitted from the public code, logs and PR body. Provisioning a contact is not evidence that any alert worker reads it.
+- Vercel already has an existing Production-scoped sensitive `RESEND_API_KEY`, but **this W15 Preview branch does not have a Resend sender credential**; no key was copied or decrypted and no production variable was changed. The sender identity, alert rule, transport wiring, human acknowledgement and automatic fallback/escalation are still missing.
+- The real operator-facing delivery acceptance chain `P0 trigger → configured monitoring → provider → primary accepted/delivered → human acknowledgement → backup escalation` remains **OPEN**. Do not close AC1/AC2 based on a manually sent Gmail message.
