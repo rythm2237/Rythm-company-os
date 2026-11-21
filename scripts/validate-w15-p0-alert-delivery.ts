@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { pilotTraceId, recordPilotSignal } from "../lib/observability/pilot";
 import { deliverPilotP0Alert } from "../lib/observability/p0-alert-mailer";
 
+async function main() {
 const env: NodeJS.ProcessEnv = {
   VERCEL_ENV: "preview",
   VERCEL_GIT_COMMIT_REF: "pilot/w15-incident-observability",
@@ -67,3 +68,6 @@ assert.deepEqual(posts.slice(0,2).map(x=>x.headers["Idempotency-Key"]).sort(),
   posts.slice(-2).map(x=>x.headers["Idempotency-Key"]).sort());
 console.log("W15 P0 MAILER OFFLINE PASS: gates, dual contacts, retries, provider receipt, 15-minute idempotency and redacted telemetry");
 console.log("W15 NOTICE: all Resend responses in this test are mocked; inbox delivery or acknowledgement is not established.");
+
+}
+void main().catch((error: unknown) => { console.error(error); process.exitCode = 1; });
