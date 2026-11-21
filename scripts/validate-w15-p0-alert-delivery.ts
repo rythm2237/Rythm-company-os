@@ -12,10 +12,10 @@ const env: NodeJS.ProcessEnv = {
   RYTHM_P0_ALERT_BACKUP_EMAIL: "backup@example.invalid",
   RESEND_API_KEY: "re_TEST_ONLY_NOT_A_REAL_KEY",
 };
-const event = recordPilotSignal({
+const event = { ...recordPilotSignal({
   traceId: pilotTraceId(), surface: "scheduler", severity: "P0",
   outcome: "failed", code: "SYNTHETIC_OUTAGE", httpStatus: 503,
-}, () => {});
+}, () => {}), environment: "preview" as const };
 const posts: { url: string; headers: Record<string, string>; body: Record<string, unknown> }[] = [];
 const logs: string[] = [];
 const ok = async (url: string, init: RequestInit): Promise<Response> => {
