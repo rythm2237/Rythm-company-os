@@ -4,6 +4,7 @@ import { deliverPilotP0Alert } from "../lib/observability/p0-alert-mailer";
 
 async function main() {
 const env: NodeJS.ProcessEnv = {
+  NODE_ENV: "test",
   VERCEL_ENV: "preview",
   VERCEL_GIT_COMMIT_REF: "pilot/w15-incident-observability",
   RYTHM_P0_ALERT_EMAIL_ENABLED: "true",
