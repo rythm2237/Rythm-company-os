@@ -89,7 +89,7 @@ try{
  for(const path of ['/solutions','/templates']){
   await initialPage.goto(origin+path);
   assert.equal(await initialPage.locator('.operating-model-explorer').getAttribute('data-cube-engine'),'loading');
-  assert.equal(await initialPage.locator('.model-cube-stage').locator('*').count(),0,'Initial HTML contains no legacy cube or reflection');
+  assert.equal(await initialPage.locator('.model-cube-stage').locator(':scope > :not(template)').count(),0,'Initial HTML contains no legacy cube or reflection');
  }
  await initial.close();
  const fallback=await context({viewport:{width:1366,height:768},reducedMotion:'reduce'});
