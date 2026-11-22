@@ -53,7 +53,8 @@ export default function StudioCubeScene(props: Props) {
     const rim = new THREE.DirectionalLight(0xc0caff, 1); rim.position.set(2, 4, -5); scene.add(rim);
 
     const rig = new THREE.Group();
-    rig.rotation.set(.1, -.12, .02); scene.add(rig);
+    const initialYaw = -props.selected * Math.PI / 2 - .12;
+    rig.rotation.set(.1, initialYaw, .02); scene.add(rig);
     // One continuous rounded body: no tile grid, separate layers or open corners.
     const geometry = new RoundedBoxGeometry(3, 3, 3, 8, .28);
     const textures: THREE.Texture[] = [], materials: THREE.Material[] = [];
@@ -188,10 +189,11 @@ export default function StudioCubeScene(props: Props) {
       renderer.render(scene, camera);
     }
 
-    let visible = true, disposed = false, lost = false, phase = 0, lastTime = 0, frame = 0, lastSelected = props.selected, transitioning = false, yaw = -.12, pitch = .1, roll = .02;
+    let visible = true, disposed = false, lost = false, phase = 0, lastTime = 0, frame = 0, lastSelected = props.selected, transitioning = false, yaw = initialYaw, pitch = .1, roll = .02;
     const rotation = new THREE.Euler();
     const target = new THREE.Quaternion(), pointer = new THREE.Vector2(), smoothedPointer = new THREE.Vector2();
     function resize() {
+      if (lost) return;
       const { width, height } = element.getBoundingClientRect();
       renderer.setSize(width, height, false);
       (floor.material as THREE.ShaderMaterial).uniforms.uViewportHeight.value = renderer.domElement.height;
