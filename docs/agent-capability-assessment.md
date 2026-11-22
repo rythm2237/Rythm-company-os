@@ -1,6 +1,6 @@
 # Agent capability assessment
 
-This branch contains the offline scoring and budget primitives. It does not expose a route, call a provider, persist assessments, or feed the existing promotion workflow. Existing benchmark actions must not be used as the controlled run for this engine.
+This branch contains offline scoring and budget controls and a separate operator CLI for a controlled provider run. It does not expose a product route, store evidence in the database, or feed the existing promotion workflow. Existing benchmark actions must not be used as the controlled run for this engine.
 
 ## Claim inventory
 
@@ -36,4 +36,14 @@ All fixture levels are provisional under `capability-1`. Senior additionally req
 
 Run `node --import tsx scripts/validate-agent-capability-assessment.ts` with installed dependencies. The run uses in-memory synthetic evidence and no providers or tools. The known-answer baseline yields 100 for each of the five professional and two Rythm cases, with tenant capability unmeasured. Reducing only the holdout yields professional 92 and changes the fixture level from Senior to Advanced. These are harness checks, not agent performance or evidence for delegation.
 
-Integration still needs a controlled transport with fixed provider/model and explicit spend approval, secret-safe evidence capture, private case selection, durable immutable snapshots and run history, tenant-scoped authorization, comparison across compatible versions, an owner UI, human review and a safe staging run. The in-memory reservation primitive must be enforced by that transport before dispatch, including every retry. Production release requires runtime sandbox, end-to-end access, and side-effect checks.
+Production integration still needs secret-safe evidence capture, automated private case selection, durable immutable snapshots and run history, tenant-scoped authorization, comparison across compatible versions, an owner UI, human review and a safe staging run. The operator runner reserves budget before dispatch and the provider transport disables retries. Production release requires runtime sandbox, end-to-end access, and side-effect checks.
+
+## Controlled staging operator run
+
+The isolated CLI is available on this branch. Use a snapshot of the actual staging agent with the fields `agentCode`, `canonicalRole`, `specificationVersion`, and `approvedSystemInstructions`. Review instructions for private data and secrets before exporting. The command requires a separate private holdout JSON with `version` and `prompt`. Keep both inputs and the evidence file outside the repository. Do not use the public holdout or copy Production instructions into an assessment input.
+
+`node --import tsx scripts/run-controlled-gtm-assessment.ts <snapshot.json> <holdout.json> <new-report.json>`
+
+Inject the staging OpenAI credential through `OPENAI_API_KEY` via the execution environment's secret configuration. Set `RYTHM_ASSESSMENT_APPROVED_MICROUSD` only after explicit budget approval. The fixed model is `gpt-5.6-luna` with [published text pricing](https://developers.openai.com/api/docs/models/gpt-5.6-luna). The run allows up to 14 calls with no automatic retries, up to 596,400 reserved tokens, and up to 155,680 micro-USD at those rates. The input reservation uses UTF-8 byte length and a chat overhead allowance, with a conservative 40,000-token reservation ceiling per call. The CLI cannot establish staging provenance by itself. The operator must verify the source before placing the reviewed snapshot in the execution environment. Workflow and governance cases exercise scenario responses. They do not exercise meetings or the execution gateway.
+
+The controlled CLI output is a provisional role result under the fixed model. The run excludes company data retrieval. Results need human review and never update agent progression or product state.
