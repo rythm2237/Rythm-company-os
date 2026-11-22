@@ -22,8 +22,7 @@ try{
     await page.goto(origin+path);
     const explorer=page.locator('.operating-model-explorer');await explorer.waitFor();
     assert.equal(await explorer.getAttribute('data-cube-playing'),'false','Respect reduced motion');
-    assert.equal(await page.locator('.model-cube-primary > .model-cube-face').count(),6);
-    assert.equal(await page.locator('.model-cube-primary').evaluate(el=>getComputedStyle(el).animationName),'none');
+    assert.equal(await page.locator('.model-cube-primary, .model-cube-reflection').count(),0);
     await page.waitForFunction(()=>document.querySelector('.operating-model-explorer')?.dataset.cubeEngine==='webgl');
     const scene=page.locator('.studio-cube-canvas');
     assert.equal(await scene.getAttribute('data-cubies'),'1');
@@ -86,10 +85,19 @@ try{
  assert.equal(await page.locator('.operating-model-explorer').getAttribute('data-cube-playing'),'true');
  await page.waitForTimeout(3000);await page.screenshot({path:`${output}/motion-desktop.png`});
  evidence.push({engine:'WebGL',cubies:1,surface:'continuous',threeAxisMotion:'PASS',navyFaces:'PASS',extrudedTitles:'PASS',planarReflection:'PASS',reflectionPause:'PASS',motion:'PASS',pause:'PASS',resume:'PASS'});const video=page.video();await c.close();await video.saveAs(`${output}/cube-motion.webm`);
+ const initial=await context({javaScriptEnabled:false}),initialPage=await initial.newPage();
+ for(const path of ['/solutions','/templates']){
+  await initialPage.goto(origin+path);
+  assert.equal(await initialPage.locator('.operating-model-explorer').getAttribute('data-cube-engine'),'loading');
+  assert.equal(await initialPage.locator('.model-cube-stage').locator(':scope > :not(template)').count(),0,'Initial HTML contains no legacy cube or reflection');
+ }
+ await initial.close();
  const fallback=await context({viewport:{width:1366,height:768},reducedMotion:'reduce'});
  await fallback.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){if(type==='webgl'||type==='webgl2'||type==='experimental-webgl')return null;return get.call(this,type,...args);};});
  const fallbackPage=await fallback.newPage();await fallbackPage.goto(origin+'/solutions');
  await fallbackPage.waitForFunction(()=>document.querySelector('.operating-model-explorer')?.dataset.cubeEngine==='fallback');
+ assert.equal(await fallbackPage.locator('.model-cube-stage').isVisible(),false);
+ assert.equal(await fallbackPage.locator('.model-cube-motion').count(),0);
  await fallbackPage.locator('.model-cube-options button').nth(1).click();assert.ok((await fallbackPage.locator('.model-cube-detail h2').innerText()).includes('Custom'));
  await fallbackPage.screenshot({path:`${output}/no-webgl-fallback.png`});evidence.push({noWebGLFallback:'PASS'});await fallback.close();
 }finally{await writeFile(`${output}/evidence.json`,JSON.stringify(evidence,null,2));await browser.close();}
