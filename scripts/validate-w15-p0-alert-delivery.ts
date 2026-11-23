@@ -8,6 +8,7 @@ const env: NodeJS.ProcessEnv = {
   VERCEL_ENV: "preview",
   VERCEL_GIT_COMMIT_REF: "pilot/w15-incident-observability",
   RYTHM_P0_ALERT_EMAIL_ENABLED: "true",
+  RYTHM_P0_PREVIEW_TEST_EXPIRES_AT: new Date(30 * 60 * 1000).toISOString(),
   RYTHM_P0_SYNTHETIC_TEST_EMAIL_ENABLED: "true",
   RYTHM_P0_ALERT_FROM: "alerts@rythm-os.com",
   RYTHM_P0_ALERT_PRIMARY_EMAIL: "primary@example.invalid",
@@ -36,12 +37,15 @@ assert.deepEqual(Object.keys(JSON.parse(logs[0])).sort(), ["event","environment"
 for (const forbidden of ["primary@example.invalid","backup@example.invalid",env.RESEND_API_KEY!,event.traceId])
   assert.ok(!logs[0].includes(forbidden), "safe metadata logs must not expose addresses, keys or traces");
 const before = posts.length;
-assert.equal((await deliverPilotP0Alert(event, { env: { ...env, RYTHM_P0_ALERT_EMAIL_ENABLED: "false" }, fetcher: ok })).state, "disabled");
-assert.equal((await deliverPilotP0Alert(event, { env: { ...env, VERCEL_GIT_COMMIT_REF: "main" }, fetcher: ok })).state, "disabled");
-assert.equal((await deliverPilotP0Alert(event, { env: { ...env, RESEND_API_KEY: "" }, fetcher: ok })).state, "unconfigured");
-assert.equal((await deliverPilotP0Alert(event, { env: { ...env, RYTHM_P0_SYNTHETIC_TEST_EMAIL_ENABLED: "false" }, fetcher: ok })).state, "suppressed");
-assert.equal((await deliverPilotP0Alert({ ...event, severity: "P1" }, { env, fetcher: ok })).state, "suppressed");
-assert.equal((await deliverPilotP0Alert({ ...event, environment: "production" }, { env: { ...env, VERCEL_ENV: "production", VERCEL_GIT_COMMIT_REF: "main" }, fetcher: ok })).state, "disabled", "explicit production approval required");
+assert.equal((await deliverPilotP0Alert(event, { env: { ...env, RYTHM_P0_PREVIEW_TEST_EXPIRES_AT: "" }, fetcher: ok, now: 0 })).state, "disabled", "missing expiry");
+assert.equal((await deliverPilotP0Alert(event, { env: { ...env, RYTHM_P0_PREVIEW_TEST_EXPIRES_AT: new Date(-1000).toISOString() }, fetcher: ok, now: 0 })).state, "disabled", "expired Preview");
+assert.equal((await deliverPilotP0Alert(event, { env: { ...env, RYTHM_P0_PREVIEW_TEST_EXPIRES_AT: new Date(4*60*60*1000).toISOString() }, fetcher: ok, now: 0 })).state, "disabled", "expiry cannot exceed one hour");
+assert.equal((await deliverPilotP0Alert(event, { env: { ...env, RYTHM_P0_ALERT_EMAIL_ENABLED: "false" }, fetcher: ok, now: 0 })).state, "disabled");
+assert.equal((await deliverPilotP0Alert(event, { env: { ...env, VERCEL_GIT_COMMIT_REF: "main" }, fetcher: ok, now: 0 })).state, "disabled");
+assert.equal((await deliverPilotP0Alert(event, { env: { ...env, RESEND_API_KEY: "" }, fetcher: ok, now: 0 })).state, "unconfigured");
+assert.equal((await deliverPilotP0Alert(event, { env: { ...env, RYTHM_P0_SYNTHETIC_TEST_EMAIL_ENABLED: "false" }, fetcher: ok, now: 0 })).state, "suppressed");
+assert.equal((await deliverPilotP0Alert({ ...event, severity: "P1" }, { env, now: 0, fetcher: ok })).state, "suppressed");
+assert.equal((await deliverPilotP0Alert({ ...event, environment: "production" }, { env: { ...env, VERCEL_ENV: "production", VERCEL_GIT_COMMIT_REF: "main" }, fetcher: ok, now: 0 })).state, "disabled", "explicit production approval required");
 assert.equal(posts.length, before, "disabled and invalid states must not touch provider");
 let attempts = 0;
 const retryKeys: string[] = [];
@@ -50,12 +54,12 @@ const flaky = async (_url: string, init: RequestInit) => {
   retryKeys.push((init.headers as Record<string,string>)["Idempotency-Key"]);
   return attempts <= 2 ? Response.json({}, { status: 503 }) : Response.json({ id: "ok" });
 };
-const retried = await deliverPilotP0Alert(event, { env, fetcher: flaky, sink: line => logs.push(line) });
+const retried = await deliverPilotP0Alert(event, { env, now: 0, fetcher: flaky, sink: line => logs.push(line) });
 assert.equal(attempts, 4, "each role gets one retry on transient failure");
 assert.equal(retried.state, "accepted");
 assert.equal(retryKeys[0], retryKeys[2], "primary retry key unchanged");
 assert.equal(retryKeys[1], retryKeys[3], "backup retry key unchanged");
-const partial = await deliverPilotP0Alert(event, { env, fetcher: async (_url, init) => {
+const partial = await deliverPilotP0Alert(event, { env, now: 0, fetcher: async (_url, init) => {
   const data = JSON.parse(String(init.body)) as {to:string[]};
   return data.to[0].startsWith("primary")
     ? Response.json({ id: "ok" })
