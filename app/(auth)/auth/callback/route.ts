@@ -3,6 +3,7 @@ import { safeAuthPath } from "@/lib/auth/redirect";
 import { recordConfirmedPublicConversion } from "@/lib/analytics/server-conversions";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { pilotTraceId, recordPilotSignal } from "@/lib/observability/pilot";
 
 function authFailureUrl(origin: string, next: string, flow: string | null) {
   const message = flow === "oauth" || flow === "oauth_signup"
@@ -50,11 +51,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createAuthServerClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
-    console.error("auth_callback_exchange_failed", {
-      status: error.status,
-      code: error.code,
-      flow,
-    });
+    console.error("auth_callback_exchange_failed");
     return NextResponse.redirect(authFailureUrl(origin, next, flow));
   }
 
@@ -78,7 +75,7 @@ export async function GET(request: NextRequest) {
       p_email: user.email,
     });
     if (accepted.error) {
-      console.error("company_invitation_accept_failed", { code: accepted.error.code });
+      console.error("company_invitation_accept_failed");
       return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("This company invitation is invalid, expired, or does not match this email.")}`);
     }
 
@@ -93,20 +90,13 @@ export async function GET(request: NextRequest) {
   if (flow === "oauth" || flow === "oauth_signup") {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      console.error("oauth_callback_user_missing", {
-        status: userError?.status ?? null,
-        code: userError?.code ?? null,
-        message: userError?.message ?? "No authenticated user after OAuth exchange.",
-      });
+      console.error("oauth_callback_user_missing");
       return NextResponse.redirect(authFailureUrl(origin, next, flow));
     }
 
     const { data: organizations, error: organizationError } = await supabase.rpc("list_my_organizations");
     if (organizationError) {
-      console.error("oauth_organization_lookup_failed", {
-        code: organizationError.code,
-        message: organizationError.message,
-      });
+      recordPilotSignal({ traceId: pilotTraceId(), surface: "auth", severity: "P1", outcome: "degraded", code: "AUTH_RUNTIME_FAILURE", httpStatus: 503 });
       return NextResponse.redirect(
         `${origin}/login?force=1&next=${encodeURIComponent(next)}&error=${encodeURIComponent("Your account was authenticated, but organization access could not be verified. Try again.")}`,
       );
@@ -123,7 +113,7 @@ export async function GET(request: NextRequest) {
       updated_at: new Date().toISOString(),
     });
     if (profileError) {
-      console.error("oauth_profile_upsert_failed", { code: profileError.code });
+      console.error("oauth_profile_upsert_failed");
     }
 
     if (flow === "oauth_signup") {

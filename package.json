@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment && npm run test:integration-availability && npm run test:continuous-program && npm run test:google-provider-repair && npm run test:google-business-quota && npm run test:project-details-ux && npm run test:w02 && npm run test:w13 && npm run test:w14",
+    "prebuild": "node scripts/materialize-donya-bg.mjs && node scripts/materialize-2nya-hero.mjs && npm run test:project-os && npm run test:cockpit && npm run test:project-supervisor && npm run test:connections-phase1 && npm run test:connections-phase2 && npm run test:security-definer && npm run test:tenant-email && npm run test:commercial-funnel && npm run test:commercial-payment && npm run test:integration-availability && npm run test:continuous-program && npm run test:google-provider-repair && npm run test:google-business-quota && npm run test:project-details-ux && npm run test:w02 && npm run test:w13 && npm run test:w14 && npm run test:w15",
     "build": "next build",
     "postbuild": "npm run test:project-completion && node scripts/w06-production-signed-transport-smoke.mjs",
     "start": "next start",
@@ -67,6 +67,7 @@
     "test:w13": "node --import tsx scripts/validate-w13-dispatch-resilience.ts && node scripts/validate-w13-dispatch-handler.mjs",
     "test:w07": "node scripts/validate-w07-agent-boundaries.mjs && node scripts/validate-w07-approval-claim.mjs",
     "test:w12": "node --import tsx scripts/validate-w12-approval-replay.ts && node --import tsx scripts/validate-w12-evidence-quality.ts && node scripts/validate-w12-governed-meetings.mjs && node scripts/validate-w10-meeting-approval-boundary.mjs",
+    "test:w15": "node --import tsx scripts/validate-w15-pilot-observability.ts && node --import tsx scripts/validate-w15-p0-alert-delivery.ts",
     "test:w14": "node --import tsx scripts/validate-w14-automation-recovery.ts && npm run test:admin-automation"
   },
   "dependencies": {

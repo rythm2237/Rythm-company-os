@@ -1,0 +1,33 @@
+name: W15 External Read-only Availability Probe
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/w15-external-probe.yml"
+      - "scripts/w15-external-probe.mjs"
+      - "scripts/validate-w15-external-probe.mjs"
+  workflow_dispatch:
+
+# Deliberately no cron or Production workflow activation before independent release/budget approval.
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify external probe in isolation
+        run: node scripts/validate-w15-external-probe.mjs
+      - name: Check live public RYTHM endpoints from GitHub runner
+        run: node scripts/w15-external-probe.mjs
+      - name: Preserve redacted read-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w15-external-probe-evidence
+          path: test-results/w15-external-probe.json
+          retention-days: 7
