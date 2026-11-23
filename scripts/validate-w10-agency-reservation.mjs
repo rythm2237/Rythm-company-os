@@ -50,13 +50,13 @@ async function mailLink(email,type){
  throw Error("Missing local "+type+" message");
 }
 
-async function login(page, email, password) {
-  const next = "/setup/company" + selection;
+async function login(page, email, password, next = "/setup/company" + selection) {
   await page.goto(app + "/login?force=1&next=" + encodeURIComponent(next));
   await page.locator('[name="email"]').fill(email);
   await page.locator('[name="password"]').fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await page.waitForURL(url => ["/setup/company", "/activation", "/studio/templates"].includes(url.pathname));
+  await page.waitForURL(url => next === "/ai" ? url.pathname !== "/login"
+    : ["/setup/company", "/activation", "/studio/templates"].includes(url.pathname));
 }
 
 const operatorEmail = "w10-billing-" + randomUUID() + "@example.com";
@@ -159,23 +159,36 @@ try {
       console.log(`PASS W10 Agency reservation (${profile}): pending entitlement and Owner persisted across a fresh login`);
 
       const now = Date.now();
-      const activation = await billing.rpc("platform_confirm_company_payment_v1", {
+      const invoice = "W10-SYNTHETIC-" + id;
+      const step = async (action, orderId, details) => result(await billing.rpc("platform_assisted_billing_v1", {
         p_organization_id: org.id,
-        p_invoice_reference: "W10-SYNTHETIC-" + id,
-        p_amount: entitlement.base_price,
-        p_currency: entitlement.currency,
-        p_period_start: new Date(now - 60000).toISOString(),
-        p_period_end: new Date(now + 7 * 86400000).toISOString(),
+        p_action: action,
+        p_order_id: orderId,
+        p_details: details,
+      }), "Assisted synthetic billing " + action);
+      const orderId = await step("quote", null, {
+        reference: "QUOTE-" + id, amount: entitlement.base_price,
+        start: new Date(now - 60000).toISOString(),
+        end: new Date(now + 7 * 86400000).toISOString(),
       });
-      if (activation.error?.code === "42501") {
-        const safeDetail = activation.error.message.match(/^[A-Za-z0-9_ .()"-]{1,200}$/);
-        console.log("W10 local activation authorization: " + (safeDetail?.[0] ?? "other authorization rejection"));
-      }
-      result(activation, "Record synthetic invoice in disposable database");
+      await step("sign", orderId, { reference: "ORDER-" + id });
+      await step("approve", orderId, {
+        reference: "REVIEW-" + id, invoice, amount: 0,
+        due: new Date(now + 86400000).toISOString(),
+      });
+      await step("settle", orderId, {
+        reference: "BANK-" + id, amount: entitlement.base_price, currency: entitlement.currency,
+      });
       const active = result(await admin.from("organization_entitlements")
         .select("status").eq("organization_id", org.id).single(), "Read activated entitlement");
       assert.equal(active.status, "active");
       console.log(`PASS W10 assisted activation (${profile}): active entitlement persisted`);
+
+      await page.goto(app + "/billing");
+      await page.getByText("Confirmed paid", { exact: true }).waitFor();
+      await page.getByText(invoice, { exact: false }).waitFor();
+      assert.equal(await page.getByText("Record finance approval", { exact: true }).count(), 0);
+      console.log(`PASS W16 billing browser (${profile}): Owner sees a confirmed paid period and own invoice reference`);
 
       await page.goto(app + "/studio/templates?template=" + template);
       await page.getByRole("button", { name: "Provision AI Advertising Agency", exact: true }).click();
@@ -297,6 +310,20 @@ try {
       }), "Add restricted member");
       const memberClient = createClient(backend, publicKey, { auth: { persistSession: false, autoRefreshToken: false } });
       result(await memberClient.auth.signInWithPassword({ email: memberEmail, password: memberPassword }), "Sign in restricted member");
+      const hiddenPayments = result(await memberClient.from("billing_payments")
+        .select("id").eq("organization_id", org.id), "Viewer billing RLS");
+      assert.equal(hiddenPayments.length, 0, "Viewer must not read billing records directly");
+      const viewerContext = await localContext(options);
+      try {
+        const viewerPage = await viewerContext.newPage();
+        await login(viewerPage, memberEmail, memberPassword, "/ai");
+        await viewerPage.goto(app + "/billing");
+        await viewerPage.waitForURL(url => url.pathname !== "/billing");
+        assert.equal(await viewerPage.getByText(invoice, { exact: false }).count(), 0);
+        console.log(`PASS W16 billing browser (${profile}): Viewer redirected and tenant payment hidden by RLS`);
+      } finally {
+        await viewerContext.close();
+      }
       const visibleCustomer = result(await memberClient.from("crm_accounts").select("id").eq("id", customerId), "Member customer visibility");
       assert.equal(visibleCustomer.length, 1);
       const hiddenContracts = result(await memberClient.from("project_contracts").select("id").eq("id", contract.id), "Member contract boundary");
