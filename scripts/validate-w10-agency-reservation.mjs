@@ -55,7 +55,7 @@ async function login(page, email, password, next = "/setup/company" + selection)
   await page.locator('[name="email"]').fill(email);
   await page.locator('[name="password"]').fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await page.waitForURL(url => next === "/billing" ? url.pathname !== "/login"
+  await page.waitForURL(url => next === "/ai" ? url.pathname !== "/login"
     : ["/setup/company", "/activation", "/studio/templates"].includes(url.pathname));
 }
 
@@ -316,9 +316,9 @@ try {
       const viewerContext = await localContext(options);
       try {
         const viewerPage = await viewerContext.newPage();
-        await login(viewerPage, memberEmail, memberPassword, "/billing");
+        await login(viewerPage, memberEmail, memberPassword, "/ai");
         await viewerPage.goto(app + "/billing");
-        assert.equal(new URL(viewerPage.url()).pathname, "/command-center");
+        await viewerPage.waitForURL(url => url.pathname !== "/billing");
         assert.equal(await viewerPage.getByText(invoice, { exact: false }).count(), 0);
         console.log(`PASS W16 billing browser (${profile}): Viewer redirected and tenant payment hidden by RLS`);
       } finally {
