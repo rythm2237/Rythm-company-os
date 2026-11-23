@@ -3,24 +3,35 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requirePlatformAdmin } from "@/lib/admin/authorization";
 
-export async function confirmCompanyPayment(form: FormData) {
+export async function recordAssistedBillingAction(form: FormData) {
   const { supabase } = await requirePlatformAdmin();
-  const organizationId = String(form.get("organizationId") ?? "");
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(organizationId)) throw new Error("Invalid organization");
+  const field = (name: string) => String(form.get(name) ?? "").trim();
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const organizationId = field("organizationId");
+  const orderId = field("orderId");
+  if (!uuid.test(organizationId) || (orderId && !uuid.test(orderId))) throw new Error("Invalid billing target");
   const path = `/admin/customers/${organizationId}`;
-  if (form.get("paymentVerified") !== "yes") redirect(`${path}?activationError=Confirm%20external%20payment%20verification%20first`);
-  const start = Date.parse(String(form.get("periodStart") ?? "") + "T00:00:00Z");
-  const end = Date.parse(String(form.get("periodEnd") ?? "") + "T00:00:00Z");
-  if (!Number.isFinite(start) || !Number.isFinite(end)) redirect(`${path}?activationError=Invalid%20service%20dates`);
-  const { error } = await supabase.rpc("platform_confirm_company_payment_v1", {
+  if (field("verified") !== "yes") redirect(`${path}?activationError=Confirm%20external%20evidence%20first`);
+  const date = (name: string) => field(name) ? `${field(name)}T00:00:00Z` : null;
+  const { error } = await supabase.rpc("platform_assisted_billing_v1", {
     p_organization_id: organizationId,
-    p_invoice_reference: String(form.get("invoiceReference") ?? "").trim(),
-    p_amount: Number(form.get("amount")),
-    p_currency: String(form.get("currency") ?? "").toUpperCase(),
-    p_period_start: new Date(start).toISOString(),
-    p_period_end: new Date(end).toISOString(),
+    p_action: field("step"),
+    p_order_id: orderId || null,
+    p_details: {
+      reference: field("reference"),
+      invoice: field("invoice"),
+      currency: field("currency"),
+      amount: field("amount") || null,
+      agentLimit: field("agentLimit") || null,
+      start: date("start"),
+      end: date("end"),
+      due: date("due"),
+    },
   });
-  if (error) redirect(`${path}?activationError=${encodeURIComponent(error.message)}`);
+  if (error) {
+    const expected = error.code === "P0001";
+    redirect(`${path}?activationError=${encodeURIComponent(expected ? error.message : "Billing update failed. Verify the evidence, review duplicate references, and retry.")}`);
+  }
   revalidatePath(path);
   revalidatePath("/activation");
   revalidatePath("/billing");
