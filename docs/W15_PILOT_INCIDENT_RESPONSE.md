@@ -1,6 +1,6 @@
 # W15 — Pilot monitoring, incident response and SLO candidate runbook
 
-Status: **feature-branch implementation; actual Preview log verified, manual recipient emails tested; automated alert transport/ack not yet accepted**. The SLOs below are **candidates**, not an approved paid SLA.
+Status (2026-11-23): **Pilot single-operator risk exception ACCEPTED by project owner; production release NOT approved.** Hosted Preview P0 → RYTHM incident log → Resend → both inboxes was verified with real provider `delivered` status. Both Preview sending flags were subsequently set to `false`, and the fresh disabled Preview was verified not to send. **Human acknowledgement, independent escalation, durable alerting, 30-day SLI/SLO and Production deployment remain unverified or open.** The SLOs below are proposals, not contractual or staffed service guarantees.
 
 ## Verified baseline (2026-11-20)
 
@@ -11,6 +11,21 @@ Status: **feature-branch implementation; actual Preview log verified, manual rec
 - A scoped 30-minute Vercel sample showed 72 info events and no error/fatal log records under a separate filter. This does **not** establish an uptime number.
 - Existing owner-only diagnostics: `app/(app)/operations/health/page.tsx`; existing W13 dispatcher trace and health DB; W14 scheduler failure classifications.
 - Actual on-call rota, alert transport, delivery confirmation, historical request denominator and per-route latency percentiles: **UNVERIFIED / UNCONFIGURED**. Do not mislabel them healthy.
+
+
+## Pilot-only risk decision — single operator (approved 2026-11-23)
+
+**Decision:** The owner expressly authorized `Single-Operator On-call` for RYTHM **Pilot only**, despite owning both alert mailboxes. This is an *explicit exception* to the original W15 independent primary/backup staffing goal, **not** technical proof that the backup-on-call acceptance criterion has passed and **not** authorization for production rollout, customer SLA, paid on-call service or 24/7 support.
+
+**Accepted operational risk:** Both channels may go unseen if the same operator is asleep, away, unable to access email or affected by a common mailbox/device/provider issue. A notification delivered to two inboxes does not provide an independent human escalation. The 15-minute P0 acknowledgment and 60-minute P1 targets remain uncommitted, unmeasured planning objectives. Coverage hours are unspecified, so no coverage claim is made.
+
+**Pilot controls and required conduct:**
+1. Keep the Pilot scoped to internal/controlled evaluation with **best-effort** incident response; do not promise real-time coverage to external users.
+2. Check alerts when available. For any real P0 manually log **UTC detection/acknowledgement time**, incident code, affected subsystem, response action, follow-up and resolution in the approved incident record; redact any user secrets or personal information. No application-side acknowledgment flow has been verified.
+3. If the operator is unavailable, the Pilot has **no staffed fallback**; do not silently reinterpret the second inbox as a human backup. Suspend or restrict externally sensitive Pilot operations if continuous supervision becomes a prerequisite.
+4. Before a managed public launch, paid/contractual SLA or 24/7 service, appoint and verify an **independent consenting responder**, implement a durable incident/ack/escalation mechanism, and measure supported SLOs over a defined denominator and time window. The owner must explicitly approve a separate Production release after reconciliation with current `main`.
+
+**Gate accounting:** `AC2 — Pilot risk acceptance: ACCEPTED WITH EXCEPTION`; `AC2 — independent backup and verified human escalation: NOT MET`. The real hosted Preview provider-delivery subtest of `AC1` is **PASS**, but end-to-end human response and sustained Production coverage remain **OPEN**. W15 as a whole is **not unconditionally complete**; keep PR draft until separately approved release criteria are met.
 
 ## Safe log contract
 
@@ -39,7 +54,7 @@ Status: **feature-branch implementation; actual Preview log verified, manual rec
 | P1 | Partial scheduler failures, critical feature degraded, recurrent high error budget burn | 60 minutes | On-call investigates, notify project owner on continued degradation |
 | P2 | Isolated lower-impact failures with workaround | Next business day | Queue for normal triage |
 
-**Accountable project owner:** the repository owner `rythm2237` is the accountable review contact, **not** an assumed active pager/on-call engineer. **Pilot contact roles provisionally identified, but on-call acknowledgment remains unproven.** Two authorized email destinations are stored privately as encrypted Vercel variables bound only to branch `pilot/w15-incident-observability`: `RYTHM_P0_ALERT_PRIMARY_EMAIL` and `RYTHM_P0_ALERT_BACKUP_EMAIL`. The primary and backup have **not** been confirmed as separate human responders or as an active, staffed 24/7 rota. Addresses must not be copied into this public repository. Acknowledged paging, escalation and owner coverage still need acceptance. An unattended log line is not a delivered alert.
+**Pilot operator and risk owner:** the project owner explicitly accepts being the **sole on-call operator** for the limited Pilot. The two configured email destinations (`RYTHM_P0_ALERT_PRIMARY_EMAIL` and `RYTHM_P0_ALERT_BACKUP_EMAIL`) are both owned by this **same person**; they are redundant mailboxes, **not an independent backup responder**. Both addresses are privately stored as branch-restricted Vercel env variables and must not be committed to Git. Owner coverage hours have **not been set**; the Pilot is **best effort**, not staffed 24/7. There is no tested human acknowledgement channel, separate escalation recipient or service guarantee. An unattended log line or provider-delivered email does not establish human acknowledgement.
 
 ## Incident procedure (tabletop script)
 
