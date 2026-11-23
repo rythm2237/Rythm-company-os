@@ -54,6 +54,44 @@ export async function GET(request: NextRequest) {
   }
 
   const requestedOrganizationId = request.nextUrl.searchParams.get("organizationId");
+  if (request.nextUrl.searchParams.get("scope") === "account") {
+    if (request.nextUrl.searchParams.has("organizationId")) {
+      return NextResponse.json({ error: "INVALID_SCOPE" }, { status: 400 });
+    }
+
+    const { data: profile, error } = await supabase
+      .from("customer_profiles")
+      .select("full_name,company_name,country_code,preferred_language,onboarding_status,created_at,updated_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("privacy_account_export_failed", { code: error.code });
+      return NextResponse.json({ error: "EXPORT_FAILED" }, { status: 500 });
+    }
+
+    return new NextResponse(JSON.stringify({
+      schemaVersion: "2026-11-23.1",
+      generatedAt: new Date().toISOString(),
+      scope: "account-profile",
+      account: {
+        id: user.id,
+        email: user.email ?? null,
+        createdAt: user.created_at,
+        lastSignInAt: user.last_sign_in_at ?? null,
+      },
+      profile,
+      notes: ["This download includes your basic account and profile. Request access through the privacy channel for additional personal data."],
+    }, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Disposition": 'attachment; filename="rythm-account-profile.json"',
+        "Cache-Control": "no-store, max-age=0",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
+
   let organizationId = requestedOrganizationId;
 
   if (!organizationId) {
