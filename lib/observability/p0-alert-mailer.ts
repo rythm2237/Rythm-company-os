@@ -28,6 +28,13 @@ export async function deliverPilotP0Alert(signal: PilotSignal, deps: Deps = {}):
     env.RYTHM_P0_PRODUCTION_ALERTS_APPROVED === "true";
   if (env.RYTHM_P0_ALERT_EMAIL_ENABLED !== "true" || !(preview || production))
     return { state: "disabled", ...none };
+  // Preview deployments are immutable; an expiring flag prevents stale builds from paging forever.
+  if (preview) {
+    const expiresAt = Date.parse(env.RYTHM_P0_PREVIEW_TEST_EXPIRES_AT ?? "");
+    const clock = deps.now ?? Date.now();
+    if (!Number.isFinite(expiresAt) || expiresAt <= clock || expiresAt > clock + 3_600_000)
+      return { state: "disabled", ...none };
+  }
   if (signal.severity !== "P0" || signal.outcome !== "failed" ||
       !/^[a-z_]{3,40}$/.test(signal.surface) || !/^[A-Z0-9_]{3,64}$/.test(signal.code))
     return { state: "suppressed", ...none };
