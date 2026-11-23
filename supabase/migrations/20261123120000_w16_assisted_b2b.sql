@@ -48,6 +48,7 @@ begin
       'create policy billing_owner_read on public.%1$I for select to authenticated using
        (exists (select 1 from public.organization_members m where m.organization_id=%1$I.organization_id
         and m.user_id=(select auth.uid()) and m.role=''owner'' and m.membership_status=''active''))', v_table);
+    execute format('grant select on public.%I to authenticated', v_table);
     execute format('revoke insert,update,delete,truncate,references,trigger on public.%I from public,anon,authenticated', v_table);
   end loop;
 end $$;
