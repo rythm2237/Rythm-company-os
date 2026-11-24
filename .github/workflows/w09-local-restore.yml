@@ -1,0 +1,42 @@
+name: W09 Synthetic Local Restore Drill
+on:
+  pull_request:
+    paths:
+      - 'scripts/qa/w09-local-restore-drill.mjs'
+      - '.github/workflows/w09-local-restore.yml'
+      - 'docs/DISASTER_RECOVERY_RUNBOOK.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      SUPABASE_ACCESS_TOKEN: ""
+      SUPABASE_DB_PASSWORD: ""
+      SUPABASE_SERVICE_ROLE_KEY: ""
+      SUPABASE_SECRET_KEY: ""
+      DATABASE_URL: ""
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
+        with:
+          version: 2.84.2
+      - name: Syntax check
+        run: node --check scripts/qa/w09-local-restore-drill.mjs
+      - name: Real isolated component restore (synthetic data only)
+        run: node scripts/qa/w09-local-restore-drill.mjs
+      - name: Confirm local stacks disposed
+        if: always()
+        run: |
+          set -euo pipefail
+          if docker ps --format '{{.Names}}' | grep -q 'supabase_.*w09-'; then
+            echo 'W09 local containers remain'
+            exit 1
+          fi
