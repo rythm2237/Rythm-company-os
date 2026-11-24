@@ -22,8 +22,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Check intentional Production release hold
+        id: release_hold
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          node -e 'const c=require("./vercel.json"); const g=c.git?.deploymentEnabled; const hold=process.env.EVENT_NAME==="push"&&(g===false||g?.main===false); console.log(hold?"Automatic Production deployment intentionally held.":"Normal deployment verification."); require("fs").appendFileSync(process.env.GITHUB_OUTPUT,"skip="+hold+"\n")'
       - name: Wait for matching Production deployment
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.release_hold.outputs.skip != 'true'
         env:
           EXPECTED_SHA: ${{ github.sha }}
           VERSION_URL: https://rythm-os.com/api/system/deployment-version
@@ -42,6 +48,7 @@ jobs:
           echo "Production did not reach expected SHA $EXPECTED_SHA within 10 minutes." >&2
           exit 1
       - name: Crawl canonical Production site
+        if: steps.release_hold.outputs.skip != 'true'
         env:
           SEO_CRAWL_ORIGIN: https://rythm-os.com
         run: node scripts/crawl-production.mjs
