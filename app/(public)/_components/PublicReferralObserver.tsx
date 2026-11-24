@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { readAnalyticsConsent } from "@/lib/analytics/consent";
 import {
   readPublicAttribution,
   trackPublicExperienceEvent,
@@ -46,6 +47,7 @@ function recordConversionOnce(name: "demo_conversion" | "signup_conversion" | "e
 
 export default function PublicReferralObserver() {
   useEffect(() => {
+    if (readAnalyticsConsent() !== "granted") return;
     if (!readPublicAttribution() && document.referrer) {
       try {
         const referrer = new URL(document.referrer);
