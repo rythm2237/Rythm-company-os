@@ -4,7 +4,7 @@ begin;
 -- Candidate dates are informational until the applicable policy is approved.
 create function public.privacy_preview_account_erasure(p_request_id uuid)
 returns table (
-  resource text, record_id uuid, records bigint, proposed_action text, reason text,
+  resource text, record_id text, records bigint, proposed_action text, reason text,
   retention_from timestamptz, proposed_expiry timestamptz, review_at timestamptz,
   access_scope text, after_expiry text
 )
@@ -33,14 +33,14 @@ begin
     where a.user_id = subject_id and a.kind = 'personal'
       and w.kind = 'personal' and w.organization_id is null
   )
-  select 'personal_file'::text, f.id, 1::bigint, 'erase_candidate'::text,
+  select 'personal_file'::text, f.id::text, 1::bigint, 'erase_candidate'::text,
     'Subject-owned personal file. Verify binary and derivatives together.'::text,
     null::timestamptz, null::timestamptz, null::timestamptz,
     'verified subject and authorized operators'::text, 'erase via Private Storage workflow'::text
   from public.aiw_files f join personal_workspaces w on w.id = f.workspace_id
   where f.created_by = subject_id
   union all
-  select 'personal_memory', m.id, 1::bigint,
+  select 'personal_memory', m.id::text, 1::bigint,
     case when h.review_at is null then 'erase_candidate' else 'retain_hold' end,
     coalesce(h.retention_reason, 'Subject-owned personal memory without a recorded hold.'),
     h.retention_start, null::timestamptz, h.review_at,
@@ -54,13 +54,13 @@ begin
   ) h on true
   where m.created_by = subject_id and m.scope in ('personal', 'project')
   union all
-  select 'audit_event', e.id, 1::bigint, 'review_audit_retention',
+  select 'audit_event', e.id::text, 1::bigint, 'review_audit_retention',
     'Event timestamp anchors the proposed 90-day review. Confirm retention basis and any hold.',
     e.created_at, e.created_at + interval '2160 hours', null::timestamptz,
     'authorized audit operators', 'erase or retain truly anonymous statistics after authorized review'
   from public.audit_events e where e.actor_user_id = subject_id
   union all
-  select concat(d.schema_name, '.', d.relation_name, '.', d.field_name), null::uuid,
+  select concat(d.schema_name, '.', d.relation_name, '.', d.field_name), null::text,
     d.matching_rows,
     case
       when d.schema_name = 'public' and (d.relation_name like 'finance\_%' or d.relation_name like 'billing\_%'

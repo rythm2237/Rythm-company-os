@@ -257,6 +257,27 @@ jobs:
           RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
         run: |
           set -euo pipefail
+          psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          do $$
+          declare fixture_user uuid := gen_random_uuid(); fixture_case uuid := gen_random_uuid();
+                  fixture_event bigint;
+          begin
+            insert into auth.users (id, email, aud, role)
+              values (fixture_user, 'w17-preview-' || fixture_user || '@example.test', 'authenticated', 'authenticated');
+            insert into public.privacy_requests (id, requested_by_user_id, request_type, scope, status, verified_at)
+              values (fixture_case, fixture_user, 'deletion', 'account', 'in_progress', now());
+            insert into public.audit_events (actor_type, actor_user_id, event_type, object_type, created_at)
+              values ('user', fixture_user, 'privacy_fixture', 'account', '2026-08-01T00:00:00Z')
+              returning id into fixture_event;
+            if not exists (
+              select from public.privacy_preview_account_erasure(fixture_case) p
+              where p.resource = 'audit_event' and p.record_id = fixture_event::text
+                and p.proposed_expiry = '2026-10-30T00:00:00Z'::timestamptz
+            ) then raise exception 'W17 preview audit record or expiry missing'; end if;
+          end $$;
+          rollback;
+          SQL
           cd "$RUNNER_TEMP/w10-disposable"
           source <(supabase status -o env)
           test "$API_URL" = http://127.0.0.1:54321

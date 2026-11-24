@@ -29,7 +29,7 @@ try {
     create table user_ai_preferences (user_id uuid primary key, preferred_language text, updated_at timestamptz);
     create table organizations (id uuid primary key);
     create table public.audit_events (
-      id uuid primary key, actor_user_id uuid references auth.users(id),
+      id bigint generated always as identity primary key, actor_user_id uuid references auth.users(id),
       created_at timestamptz not null, payload jsonb not null default '{}'
     );
     create table public.finance_documents (id uuid primary key, user_id uuid references auth.users(id));
@@ -47,8 +47,8 @@ try {
   await db.query("insert into auth.users (id, email) values ($1, 'subject@example.test'), ($2, 'foreign@example.test')", [subject, foreign]);
   await db.query("insert into organizations values ($1)", [org]);
   await db.query(
-    "insert into audit_events values ($1,$2,'2026-08-01T00:00:00Z','{\"text\":\"SUBJECT_AUDIT_CANARY\"}'), ($3,$4,'2026-08-01T00:00:00Z','{\"text\":\"FOREIGN_AUDIT_CANARY\"}')",
-    [id(30), subject, id(31), foreign],
+    "insert into audit_events (actor_user_id, created_at, payload) values ($1,'2026-08-01T00:00:00Z','{\"text\":\"SUBJECT_AUDIT_CANARY\"}'), ($2,'2026-08-01T00:00:00Z','{\"text\":\"FOREIGN_AUDIT_CANARY\"}')",
+    [subject, foreign],
   );
   await db.query("insert into finance_documents values ($1,$2), ($3,$4)", [id(32), subject, id(33), foreign]);
   await db.query("insert into organization_members values ($1,$2), ($3,$4)", [id(34), subject, id(35), foreign]);
@@ -139,10 +139,10 @@ try {
   assert.equal(candidates.find(row => row.record_id === retained)?.proposed_action, "retain_hold");
   assert.equal(candidates.find(row => row.record_id === retained)?.proposed_expiry, null);
   assert.equal(candidates.find(row => row.record_id === file)?.proposed_action, "erase_candidate");
-  assert.equal(candidates.find(row => row.record_id === id(30))?.proposed_expiry.toISOString(), "2026-10-30T00:00:00.000Z");
+  assert.equal(candidates.find(row => row.resource === "audit_event" && row.record_id === "1")?.proposed_expiry.toISOString(), "2026-10-30T00:00:00.000Z");
   assert.equal(candidates.find(row => row.resource === "public.finance_documents.user_id")?.proposed_action, "review_financial_basis");
   assert.equal(candidates.find(row => row.resource === "public.organization_members.user_id")?.proposed_action, "review_customer_instruction");
-  assert.ok(candidates.every(row => ![foreignFile, company, unrelated, id(31), id(33), id(35)].includes(row.record_id)));
+  assert.ok(candidates.every(row => ![foreignFile, company, unrelated, "2", id(33), id(35)].includes(row.record_id)));
   assert.doesNotMatch(JSON.stringify(candidates), /CANARY|example.test/);
   assert.equal((await db.query("select count(*)::integer as n from aiw_memories")).rows[0].n, 4);
   await assert.rejects(dispose(secondRequest, retained, "erase"), { code: "55000" });
