@@ -97,6 +97,9 @@ jobs:
       - run: node --import tsx scripts/validate-logout-browser.ts
         env:
           CRM_BROWSER_CHANNEL: chrome
+      - run: node scripts/validate-w17-analytics-browser.mjs
+        env:
+          CRM_BROWSER_CHANNEL: chrome
       - run: npm run test:crm-sales-browser
         env:
           CRM_BROWSER_CHANNEL: chrome
