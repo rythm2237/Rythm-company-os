@@ -87,6 +87,60 @@ $$;
 revoke all on function public.privacy_collect_personal_export(uuid)
   from public, anon, authenticated, service_role;
 
+-- Count direct references without reading record contents or changing data.
+-- Cascading and nullable references also require a disposition decision.
+create function public.privacy_inventory_account_dependencies(p_request_id uuid)
+returns table (schema_name text, relation_name text, field_name text, on_delete text, matching_rows bigint)
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+declare
+  subject_id uuid;
+  dependency record;
+  row_count bigint;
+begin
+  select requested_by_user_id into subject_id
+  from public.privacy_requests
+  where id = p_request_id and request_type = 'deletion' and scope = 'account'
+    and organization_id is null and status = 'in_progress'
+    and verified_at is not null and verified_at <= now();
+
+  if not found then
+    raise exception 'Verified account erasure case required for dependency inventory' using errcode = '42501';
+  end if;
+
+  for dependency in
+    select n.nspname::text as schema_name, t.relname::text as relation_name,
+           a.attname::text as field_name,
+           case c.confdeltype when 'c' then 'cascade' when 'n' then 'set_null'
+             when 'd' then 'set_default' when 'r' then 'restrict' else 'no_action' end as on_delete
+    from pg_catalog.pg_constraint c
+    join pg_catalog.pg_class t on t.oid = c.conrelid
+    join pg_catalog.pg_namespace n on n.oid = t.relnamespace
+    join pg_catalog.pg_attribute a on a.attrelid = t.oid and a.attnum = c.conkey[1]
+    join pg_catalog.pg_attribute target
+      on target.attrelid = c.confrelid and target.attnum = c.confkey[1] and target.attname = 'id'
+    where c.contype = 'f' and c.confrelid = 'auth.users'::regclass
+      and cardinality(c.conkey) = 1 and c.conparentid = 0
+      and n.nspname in ('public', 'storage')
+    order by n.nspname, t.relname, a.attname
+  loop
+    execute format('select count(*) from %I.%I where %I = $1',
+      dependency.schema_name, dependency.relation_name, dependency.field_name)
+      into row_count using subject_id;
+    if row_count > 0 then
+      return query select dependency.schema_name, dependency.relation_name,
+        dependency.field_name, dependency.on_delete, row_count;
+    end if;
+  end loop;
+end;
+$$;
+
+revoke all on function public.privacy_inventory_account_dependencies(uuid)
+  from public, anon, authenticated, service_role;
+
 -- Run while the restore remains isolated, after importing authoritative
 -- post-backup case and disposition evidence. A retained record stays protected.
 create function public.privacy_reconcile_restored_memory(p_request_id uuid, p_memory_id uuid)

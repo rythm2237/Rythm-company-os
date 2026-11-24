@@ -21,6 +21,7 @@ jobs:
       - run: npm run test:w13
       - run: npm run test:w14
       - run: npm run test:w15
+      - run: npm run test:w17
       - run: npm run test:w12
       - run: npm run test:w07
       - run: npm run test:w05

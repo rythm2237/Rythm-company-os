@@ -77,6 +77,7 @@ try {
     [file, workspace, foreignFile, foreignWorkspace],
   );
   const collect = (caseId, database = db) => database.query("select * from privacy_collect_personal_export($1)", [caseId]);
+  const inventory = caseId => db.query("select * from privacy_inventory_account_dependencies($1)", [caseId]);
   const reconcile = (caseId, memoryId, database = db) => database.query(
     "select privacy_reconcile_restored_memory($1, $2) as disposition", [caseId, memoryId],
   );
@@ -84,12 +85,21 @@ try {
     await db.exec(`set role ${role}`);
     await assert.rejects(dispose(request, target, "erase"), { code: "42501" });
     await assert.rejects(collect(accessRequest), { code: "42501" });
+    await assert.rejects(inventory(request), { code: "42501" });
     await assert.rejects(reconcile(request, target), { code: "42501" });
     await assert.rejects(db.query("select * from privacy_memory_dispositions"), { code: "42501" });
     await db.exec("reset role");
   }
   await assert.rejects(collect(unverified), { code: "42501" });
   await assert.rejects(collect(request), { code: "42501" });
+  await assert.rejects(inventory(accessRequest), { code: "42501" });
+  await assert.rejects(inventory(unverified), { code: "42501" });
+  const dependencies = (await inventory(request)).rows;
+  assert.deepEqual(dependencies.find(row => row.relation_name === "aiw_files"), {
+    schema_name: "public", relation_name: "aiw_files", field_name: "created_by", on_delete: "no_action", matching_rows: 1,
+  });
+  assert.equal(dependencies.find(row => row.relation_name === "aiw_accounts")?.on_delete, "cascade");
+  assert.doesNotMatch(JSON.stringify(dependencies), /CANARY|example.test/);
   const draft = JSON.stringify((await collect(accessRequest)).rows);
   assert.match(draft, /subject@example.test/);
   assert.match(draft, /ERASE_CANARY/);

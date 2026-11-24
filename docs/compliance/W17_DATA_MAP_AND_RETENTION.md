@@ -35,6 +35,8 @@ An erase operation deletes the record and records its disposition in one transac
 
 A database operator can run `privacy_collect_personal_export(request_id)` for an in-progress, verified access, export or portability case scoped to an account. The result includes allowlisted Auth and profile fields, preferences, personal projects, conversations and messages, personal memories, saved prompts, file metadata and extracted chunks. The workspace is resolved from the verified subject. Organization data, credentials, storage paths and internal case notes are excluded. Review the draft for other people's information and for the applicable request type before secure delivery. Reconcile file binaries, organization/controller data, processor records and any other uncovered source separately. Keep the draft out of tickets, logs and the case evidence ledger.
 
+For a verified account deletion case, run `privacy_inventory_account_dependencies(request_id)` before deciding how to handle related records. It returns counts of direct foreign-key references in the application and Storage schemas, including cascading links. Inspect ownership transfers, shared records, holds and immutable ledgers before account deletion. Check indirect references, Storage binaries, processors and backups independently.
+
 ## Reapply personal memory erasure during an isolated restore
 
 1. Keep the restored system disconnected from users, workers and external providers. Ensure the privacy schema is present. Using the authoritative post-backup privacy case and disposition records, reconcile the verified subject and import the evidence through the restricted operator session.
