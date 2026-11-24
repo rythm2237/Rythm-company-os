@@ -23,7 +23,7 @@ const bundle = await build({
   bundle: true, write: false, jsx: "automatic", format: "iife",
   define: { "process.env.NODE_ENV": '"production"' },
   plugins: [{ name: "fixture-navigation", setup(b) {
-    b.onResolve({filter:/^next\\/navigation$/},()=>({path:"navigation",namespace:"fixture"}));
+    b.onResolve({filter:/^next\/navigation$/},()=>({path:"navigation",namespace:"fixture"}));
     b.onLoad({filter:/.*/,namespace:"fixture"},()=>({loader:"js",contents:"export const usePathname = () => window.location.pathname;"}));
   }}],
 });
