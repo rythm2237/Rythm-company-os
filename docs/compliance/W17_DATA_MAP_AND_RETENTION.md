@@ -31,6 +31,18 @@ A retention decision blocks ordinary updates and deletions, including cascading 
 
 An erase operation deletes the record and records its disposition in one transaction. A retry with the same in-progress verified case returns the existing outcome. The command does not close the request. Continue reviewing other surfaces, including project and organization data, derived files, processor records, logs, and backups. Avoid dropping the evidence ledger during any rollback after it contains dispositions.
 
+## Reviewed account export
+
+A database operator can run `privacy_collect_personal_export(request_id)` for an in-progress, verified access, export or portability case scoped to an account. The result includes allowlisted Auth and profile fields, preferences, personal projects, conversations and messages, personal memories, saved prompts, file metadata and extracted chunks. The workspace is resolved from the verified subject. Organization data, credentials, storage paths and internal case notes are excluded. Review the draft for other people's information and for the applicable request type before secure delivery. Reconcile file binaries, organization/controller data, processor records and any other uncovered source separately. Keep the draft out of tickets, logs and the case evidence ledger.
+
+## Reapply personal memory erasure during an isolated restore
+
+1. Keep the restored system disconnected from users, workers and external providers. Ensure the privacy schema is present. Using the authoritative post-backup privacy case and disposition records, reconcile the verified subject and import the evidence through the restricted operator session.
+2. Call `privacy_reconcile_restored_memory(request_id, memory_id)` for each recorded personal memory erasure that the backup may have reintroduced. The command verifies the case and subject, honors retention holds and returns `erased` or `already_absent`. Investigate scope mismatches before reconnecting.
+3. Verify that erased records are absent and holds still apply. Confirm the remaining restore checks for other active data, storage, queues and processors before reconnecting.
+
+The W17 validator creates a synthetic database backup before erasure, restores it into a separate offline PostgreSQL instance using PGlite, imports post-backup evidence and verifies scoped, repeatable reconciliation. Run the applicable W09 recovery exercise separately to verify deployed backup and Storage handling.
+
 ## Hosted fixture commands
 
 Apply the two W17 migrations to the allowlisted Supabase Staging project. Start the candidate Next.js server on `http://localhost:3000` using the Staging-only configuration. Run `node scripts/validate-w17-hosted-staging.mjs` with `W17_STAGING_REF`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RYTHM_ENV=staging`, `RYTHM_AGENT_EXECUTION_ENABLED=false`, and `RYTHM_EXTERNAL_ACTIONS_ENABLED=false`. Supply keys through the server environment. The validator creates two synthetic identities, organizations and private files, verifies HTTP scope and chunk/binary removal, then cleans up each fixture. Validate operator-only disposition in a separate database transaction with disposable fixtures. The hosted validator exercises the existing AI Workspace file delete route and does not fulfil a complete data-subject erasure case.
