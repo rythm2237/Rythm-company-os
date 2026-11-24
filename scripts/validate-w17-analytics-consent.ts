@@ -1,0 +1,28 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { ANALYTICS_CONSENT_COOKIE, hasAnalyticsConsent, parseAnalyticsConsent, readAnalyticsConsent } from "../lib/analytics/consent";
+
+const c = ANALYTICS_CONSENT_COOKIE;
+assert.equal(hasAnalyticsConsent(""), false);
+assert.equal(hasAnalyticsConsent("rythm_analytics_consent=granted"), false);
+assert.equal(hasAnalyticsConsent(c+"=denied"), false);
+assert.equal(hasAnalyticsConsent(c+"=granted; other=value"), true);
+assert.equal(hasAnalyticsConsent("other=value; "+c+"=granted"), true);
+assert.equal(hasAnalyticsConsent(c+"=granted; "+c+"=denied"), false);
+assert.equal(hasAnalyticsConsent(c+"=denied; "+c+"=granted"), false);
+assert.equal(hasAnalyticsConsent(c+"=granted; "+c+"=granted"), false);
+assert.equal(parseAnalyticsConsent(c+"=unexpected"), null);
+assert.equal(parseAnalyticsConsent(c+"=denied"), "denied");
+assert.equal(readAnalyticsConsent(), null);
+const api = readFileSync("app/api/analytics/public-events/route.ts","utf8");
+assert.ok(api.indexOf("if (!hasAnalyticsConsent(") >= 0);
+assert.ok(api.indexOf("if (!hasAnalyticsConsent(") < api.indexOf("const supabase = createAnalyticsAdminClient()"));
+const client = readFileSync("lib/analytics/public-events.ts","utf8");
+assert.ok(client.indexOf('if (readAnalyticsConsent() !== "granted") return;') < client.indexOf('void fetch("/api/analytics/public-events"'));
+const server = readFileSync("lib/analytics/server-conversions.ts","utf8");
+assert.ok(server.includes('choices.length !== 1 || choices[0].value !== "granted"'));
+const ui = readFileSync("components/analytics/GoogleAnalyticsConsent.tsx","utf8");
+assert.ok(ui.includes("Manage analytics preferences"));
+assert.ok(ui.includes("clearOptionalAnalyticsState();"));
+assert.ok(ui.includes("window.location.reload();"));
+console.log("W17 analytics consent parser and source-boundary checks PASS (not a browser or provider-retention test)");
