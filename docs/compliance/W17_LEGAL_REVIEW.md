@@ -1,6 +1,6 @@
 # W17 | Open EU legal review items
 
-Operational owner for every item: Tayyebialashti Yaser E.V. / RYTHM Privacy Operations. Decision authority: qualified EU privacy counsel to be appointed by the operational owner. Status: open, pending qualified review. These are release sign-off items.
+Operational owner for every item: Tayyebialashti Yaser E.V. / RYTHM Privacy Operations. Decision authority: qualified EU privacy counsel to be appointed by the operational owner. Status: open, pending qualified review. These are mandatory W35 commercial-launch sign-off items. Owner decision 2026-11-24: separate W17 technical completion from independent legal review; carry every open item below forward to W35 without deeming it approved. W17 may be classified technically complete only after its technical acceptance evidence passes. Restricted synthetic-only staging/engineering deployment is distinct from enabling real customer processing, destructive real-account operations or commercial launch. Existing legal/provider restrictions remain in force for real data; W35 must be completed before any such activation. No independent legal approval is claimed.
 
 | Open question | Evidence for reviewer |
 | --- | --- |
