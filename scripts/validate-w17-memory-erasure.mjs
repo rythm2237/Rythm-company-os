@@ -28,6 +28,12 @@ try {
     );
     create table user_ai_preferences (user_id uuid primary key, preferred_language text, updated_at timestamptz);
     create table organizations (id uuid primary key);
+    create table public.audit_events (
+      id uuid primary key, actor_user_id uuid references auth.users(id),
+      created_at timestamptz not null, payload jsonb not null default '{}'
+    );
+    create table public.finance_documents (id uuid primary key, user_id uuid references auth.users(id));
+    create table public.organization_members (id uuid primary key, user_id uuid references auth.users(id));
     create function auth.uid() returns uuid language sql as 'select null::uuid';
     create function is_org_owner(uuid) returns boolean language sql as 'select false';
   `);
@@ -37,8 +43,15 @@ try {
   await db.exec(await migration("20261123151000_w17_personal_memory_erasure.sql"));
   await db.exec(await migration("20261124100000_w17_reviewed_export_restore.sql"));
   await db.exec(await migration("20261124110000_w17_default_personal_erasure.sql"));
+  await db.exec(await migration("20261124130000_w17_account_erasure_preview.sql"));
   await db.query("insert into auth.users (id, email) values ($1, 'subject@example.test'), ($2, 'foreign@example.test')", [subject, foreign]);
   await db.query("insert into organizations values ($1)", [org]);
+  await db.query(
+    "insert into audit_events values ($1,$2,'2026-08-01T00:00:00Z','{\"text\":\"SUBJECT_AUDIT_CANARY\"}'), ($3,$4,'2026-08-01T00:00:00Z','{\"text\":\"FOREIGN_AUDIT_CANARY\"}')",
+    [id(30), subject, id(31), foreign],
+  );
+  await db.query("insert into finance_documents values ($1,$2), ($3,$4)", [id(32), subject, id(33), foreign]);
+  await db.query("insert into organization_members values ($1,$2), ($3,$4)", [id(34), subject, id(35), foreign]);
   await db.query(
     "insert into aiw_accounts (id, user_id, kind) values ($1,$2,'personal'), ($3,$4,'personal')",
     [account, subject, foreignAccount, foreign],
@@ -79,6 +92,7 @@ try {
   );
   const collect = (caseId, database = db) => database.query("select * from privacy_collect_personal_export($1)", [caseId]);
   const inventory = caseId => db.query("select * from privacy_inventory_account_dependencies($1)", [caseId]);
+  const preview = caseId => db.query("select * from privacy_preview_account_erasure($1)", [caseId]);
   const eraseBatch = (caseId, size = 1) => db.query(
     "select * from privacy_erase_account_memories($1, $2)", [caseId, size],
   );
@@ -90,6 +104,7 @@ try {
     await assert.rejects(dispose(request, target, "erase"), { code: "42501" });
     await assert.rejects(collect(accessRequest), { code: "42501" });
     await assert.rejects(inventory(request), { code: "42501" });
+    await assert.rejects(preview(request), { code: "42501" });
     await assert.rejects(eraseBatch(request), { code: "42501" });
     await assert.rejects(reconcile(request, target), { code: "42501" });
     await assert.rejects(db.query("select * from privacy_memory_dispositions"), { code: "42501" });
@@ -99,6 +114,8 @@ try {
   await assert.rejects(collect(request), { code: "42501" });
   await assert.rejects(inventory(accessRequest), { code: "42501" });
   await assert.rejects(inventory(unverified), { code: "42501" });
+  await assert.rejects(preview(unverified), { code: "42501" });
+  await assert.rejects(preview(accessRequest), { code: "42501" });
   const dependencies = (await inventory(request)).rows;
   assert.deepEqual(dependencies.find(row => row.relation_name === "aiw_files"), {
     schema_name: "public", relation_name: "aiw_files", field_name: "created_by", on_delete: "no_action", matching_rows: 1,
@@ -117,6 +134,17 @@ try {
   await assert.rejects(dispose(request, retained, "retain"), { code: "22023" });
   const review = new Date(Date.now() + 86400000).toISOString();
   assert.deepEqual((await dispose(request, retained, "retain", "legal_obligation", review)).rows, [{ disposition: "retained" }]);
+  const candidates = (await preview(request)).rows;
+  assert.equal(candidates.find(row => row.record_id === target)?.proposed_action, "erase_candidate");
+  assert.equal(candidates.find(row => row.record_id === retained)?.proposed_action, "retain_hold");
+  assert.equal(candidates.find(row => row.record_id === retained)?.proposed_expiry, null);
+  assert.equal(candidates.find(row => row.record_id === file)?.proposed_action, "erase_candidate");
+  assert.equal(candidates.find(row => row.record_id === id(30))?.proposed_expiry.toISOString(), "2026-10-30T00:00:00.000Z");
+  assert.equal(candidates.find(row => row.resource === "public.finance_documents.user_id")?.proposed_action, "review_financial_basis");
+  assert.equal(candidates.find(row => row.resource === "public.organization_members.user_id")?.proposed_action, "review_customer_instruction");
+  assert.ok(candidates.every(row => ![foreignFile, company, unrelated, id(31), id(33), id(35)].includes(row.record_id)));
+  assert.doesNotMatch(JSON.stringify(candidates), /CANARY|example.test/);
+  assert.equal((await db.query("select count(*)::integer as n from aiw_memories")).rows[0].n, 4);
   await assert.rejects(dispose(secondRequest, retained, "erase"), { code: "55000" });
   await assert.rejects(db.query("delete from aiw_memories where id = $1", [retained]), { code: "55000" });
   await assert.rejects(db.query("update aiw_memories set content = 'changed' where id = $1", [retained]), { code: "55000" });

@@ -39,6 +39,21 @@ A database operator can run `privacy_collect_personal_export(request_id)` for an
 
 For a verified account deletion case, run `privacy_inventory_account_dependencies(request_id)` before deciding how to handle related records. It returns counts of direct foreign-key references in the application and Storage schemas, including cascading links. Inspect ownership transfers, shared records, holds and immutable ledgers before account deletion. Check indirect references, Storage binaries, processors and backups independently.
 
+## Proposed account-erasure policy and operator preview
+
+Use `privacy_preview_account_erasure(request_id)` for a verified, in-progress account erasure request. It lists personal file and memory candidates, existing memory holds, the proposed 90-day audit review date from the original event, and grouped direct foreign-key dependencies. The preview shows the proposed action, reason, origins or review dates available, access scope and follow-up. Financial and customer dependencies without record-level verification require review and receive no automatic expiry. The output contains identifiers and counts, not content. It never authorizes or executes deletion and is not an exhaustive inventory of indirect references.
+
+| Data | Proposed disposition and clock |
+| --- | --- |
+| Account and personal content | Revoke account access and session renewal at erasure. Review personal records, private files and derivatives for removal. Verify processor copies separately. Keep the request response deadline anchored to receipt. |
+| Accounting and VAT OSS | Verify issuer and tax scope first. Under Hungarian Accounting Act §169, retain in-scope accounting records for at least eight years, with the start determined by document and period. Actual OSS records follow ten years from the end of the transaction's calendar year. Limit access and preserve readability and traceability. Review lawful expiry before removal. |
+| Audit and receipt | Proposed audit duration is 90 days from the event. Proposed minimal erasure receipt duration is 12 months after closure. Confirm necessity and access before using either. A specific legal hold takes priority until reviewed and released. |
+| Customer records | Use the documented customer instruction. Revoke individual access and resolve sole ownership with an authorized customer representative. Review identifiable text and attachments before treating records as anonymous. |
+| Mail | Decide separately for raw MIME, parsed content, ingestion audit data and Gmail copies. The proposed audit period is not a raw-mail expiry rule. Check message storage, processor settings and customer instructions. |
+| Backups | Proposed target is 30 days from copy creation. Verify each copy's policy and apply prior erasures in isolated recovery before reopening. Keep statutory financial archives on their own schedule. |
+
+Account erasure does not restart any retention clock. Confirm dates, exceptions, access and the expiry action before applying the policy to a real case. Sources are the [GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj), [Hungarian Accounting Act §169](https://net.jogtar.hu/jogszabaly?docid=a0000100.tv) and the [European Commission OSS guidance](https://vat-one-stop-shop.ec.europa.eu/one-stop-shop/record-keeping-and-audits-oss_en).
+
 ## Reapply personal memory erasure during an isolated restore
 
 1. Keep the restored system disconnected from users, workers and external providers. Ensure the privacy schema is present. Using the authoritative post-backup privacy case and disposition records, reconcile the verified subject and import the evidence through the restricted operator session.
