@@ -6,10 +6,11 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
 const project = "viqjdgohtxqkrdgwtull";
-const backend = `https://${project}.supabase.co`;
+const disposable = process.env.W17_DISPOSABLE_SUPABASE === "true";
+const backend = disposable ? "http://127.0.0.1:54321" : `https://${project}.supabase.co`;
 const app = "http://localhost:3000";
 const bucket = "ai-workspace-private";
-assert.equal(process.env.W17_STAGING_REF, project);
+if (!disposable) assert.equal(process.env.W17_STAGING_REF, project);
 assert.equal(process.env.NEXT_PUBLIC_SUPABASE_URL, backend);
 assert.equal(process.env.RYTHM_ENV, "staging");
 assert.equal(process.env.RYTHM_AGENT_EXECUTION_ENABLED, "false");
@@ -34,6 +35,8 @@ async function seed() {
   const { user } = checked(await admin.auth.admin.createUser({ email, password, email_confirm: true }), "create synthetic identity");
   const fixture = { user: user.id, org: randomUUID(), workspace: randomUUID(), file: randomUUID(), body: "w17-file-" + suffix };
   fixtures.push(fixture);
+  checked(await admin.from("customer_profiles").upsert({ user_id: fixture.user, full_name: "W17 Synthetic" }),
+    "seed synthetic profile");
   checked(await admin.from("organizations").insert({
     id: fixture.org, name: "W17 " + suffix, slug: "w17-" + suffix, owner_user_id: fixture.user, status: "draft",
   }), "create synthetic organization");
@@ -46,9 +49,21 @@ async function seed() {
     user_id: fixture.user, kind: "personal", plan_code: "free_trial", plan_status: "active",
   })
     .select("id").single(), "create AI account");
+  fixture.account = account.id;
   checked(await admin.from("aiw_workspaces").insert({
     id: fixture.workspace, account_id: account.id, kind: "personal", name: "W17 personal", created_by: fixture.user,
   }), "create AI workspace");
+
+  const wallet = checked(await admin.from("usage_wallets").insert({
+    personal_account_id: fixture.account, payer_type: "personal",
+  }).select("id").single(), "create synthetic wallet");
+  fixture.wallet = wallet.id;
+  fixture.usage = randomUUID();
+  checked(await admin.from("ai_usage_requests").insert({
+    id: fixture.usage, wallet_id: fixture.wallet, workspace_id: fixture.workspace, user_id: fixture.user,
+    request_kind: "file_ingestion", routing_mode: "auto", prompt_profile: "normal", reserved_micros: 0,
+    status: "settled", internal_result: fixture.body, idempotency_key: `${fixture.workspace}:file-${fixture.file}:file_ingestion`,
+  }), "seed synthetic extraction result");
 
   fixture.path = `${fixture.workspace}/${fixture.file}/canary.txt`;
   checked(await admin.storage.from(bucket).upload(fixture.path, Buffer.from(fixture.body), { contentType: "text/plain" }), "upload synthetic file");
@@ -56,7 +71,7 @@ async function seed() {
     id: fixture.file, workspace_id: fixture.workspace, filename: "canary.txt", mime_type: "text/plain",
     storage_path: fixture.path, byte_size: Buffer.byteLength(fixture.body),
     sha256: createHash("sha256").update(fixture.body).digest("hex"), ingestion_status: "ready",
-    chunk_count: 1, created_by: fixture.user,
+    chunk_count: 1, created_by: fixture.user, usage_request_id: disposable ? null : fixture.usage,
   }), "register file metadata");
   checked(await admin.from("aiw_file_chunks").insert({
     workspace_id: fixture.workspace, file_id: fixture.file, chunk_index: 0, content: fixture.body,
@@ -69,7 +84,9 @@ async function seed() {
       setAll: entries => entries.forEach(({ name, value }) => cookies.set(name, value)),
     },
   });
-  checked(await auth.auth.signInWithPassword({ email, password }), "synthetic login");
+  const { session } = checked(await auth.auth.signInWithPassword({ email, password }), "synthetic login");
+  fixture.token = session.access_token;
+  fixture.refreshToken = session.refresh_token;
   fixture.cookie = [...cookies].map(([name, value]) => `${name}=${encodeURIComponent(value)}`).join("; ");
   return fixture;
 }
@@ -92,6 +109,26 @@ async function assertFile(fixture, present) {
   if (present) {
     const blob = checked(await admin.storage.from(bucket).download(fixture.path), "download synthetic binary");
     assert.equal(await blob.text(), fixture.body);
+  }
+  const usage = checked(await admin.from("ai_usage_requests").select("id,status,internal_result")
+    .eq("id", fixture.usage).single(), "inspect extraction result and accounting record");
+  assert.equal(usage.status, "settled");
+  assert.equal(usage.internal_result, present ? fixture.body : null);
+}
+
+async function deleteFixture(fixture) {
+  const steps = [
+    ["privacy cases", () => admin.from("privacy_requests").delete().eq("requested_by_user_id", fixture.user)],
+    ["usage request", () => admin.from("ai_usage_requests").delete().eq("wallet_id", fixture.wallet)],
+    ["organization", () => admin.from("organizations").delete().eq("id", fixture.org)],
+    ["personal workspace", () => admin.from("aiw_workspaces").delete().eq("id", fixture.workspace).eq("created_by", fixture.user)],
+    ["identity", () => admin.auth.admin.deleteUser(fixture.user)],
+  ];
+  if (fixture.path) steps.unshift(["private object", () => admin.storage.from(bucket).remove([fixture.path])],
+    ["file and chunks", () => admin.from("aiw_files").delete().eq("id", fixture.file).eq("workspace_id", fixture.workspace)]);
+  for (const [label, clean] of steps) {
+    if (label === "usage request" && !fixture.wallet) continue;
+    checked(await clean(), label);
   }
 }
 
@@ -119,26 +156,39 @@ try {
   await assertFile(b, true);
   const deletePath = "/api/ai-workspace/files?id=";
   assert.equal((await request(a, deletePath + b.file, { method: "DELETE" })).status, 404);
+  const finalizeBeforeStorage = checked(await admin.rpc("aiw_erase_personal_file", {
+    p_user_id: a.user, p_file_id: a.file, p_finalize: true,
+  }).single(), "attempt finalize before removing binary");
+  assert.equal(finalizeBeforeStorage.outcome, "object_present");
+  checked(await admin.from("aiw_files").update({ ingestion_status: "processing" }).eq("id", a.file), "simulate in-flight ingestion");
+  assert.equal((await request(a, deletePath + a.file, { method: "DELETE" })).status, 409);
+  await assertFile(a, true);
+  checked(await admin.from("aiw_files").update({ ingestion_status: "ready" }).eq("id", a.file), "complete synthetic ingestion");
+  // Simulate a prior attempt that removed the binary before SQL finalization.
+  checked(await admin.storage.from(bucket).remove([a.path]), "remove synthetic binary before retry");
   assert.equal((await request(a, deletePath + a.file, { method: "DELETE" })).status, 200);
   await assertFile(a, false);
   await assertFile(b, true);
-  console.log("PASS W17 hosted fixture: privacy intake, profile export, foreign export denial, private file and derived chunk removal, and second workspace preserved");
+  await deleteFixture(a);
+  fixtures.splice(fixtures.indexOf(a), 1);
+  const publicClient = createClient(backend, anon, { auth: { persistSession: false, autoRefreshToken: false } });
+  const previousSession = await publicClient.auth.getUser(a.token);
+  assert.ok(previousSession.error);
+  assert.equal(previousSession.data.user, null);
+  const previousRefresh = await publicClient.auth.refreshSession({ refresh_token: a.refreshToken });
+  assert.ok(previousRefresh.error);
+  const deletedProfile = checked(await admin.from("customer_profiles").select("user_id")
+    .eq("user_id", a.user).maybeSingle(), "check deleted profile");
+  assert.equal(deletedProfile, null);
+  assert.equal((await request(b, "/api/privacy/export?scope=account")).status, 200);
+  console.log("PASS W17: file retry, binary/chunks/extraction erasure, accounting preservation, synthetic identity deletion, token rejection, and second workspace preserved");
 } finally {
   const failures = [];
   for (const fixture of fixtures) {
-    const steps = [
-      ["privacy cases", () => admin.from("privacy_requests").delete().eq("requested_by_user_id", fixture.user)],
-      ["organization", () => admin.from("organizations").delete().eq("id", fixture.org)],
-      ["personal workspace", () => admin.from("aiw_workspaces").delete().eq("id", fixture.workspace).eq("created_by", fixture.user)],
-      ["identity", () => admin.auth.admin.deleteUser(fixture.user)],
-    ];
-    if (fixture.path) steps.unshift(["private object", () => admin.storage.from(bucket).remove([fixture.path])]);
-    for (const [label, clean] of steps) {
-      try {
-        checked(await clean(), label);
-      } catch (error) {
-        failures.push(error.message);
-      }
+    try {
+      await deleteFixture(fixture);
+    } catch (error) {
+      failures.push(error.message);
     }
   }
   if (failures.length) {
