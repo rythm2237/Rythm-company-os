@@ -7,6 +7,7 @@ on:
       - 'scripts/validate-w10-agency-reservation.mjs'
       - 'scripts/validate-w11-role-browser.mjs'
       - 'scripts/w10-budget-proxy.mjs'
+      - 'scripts/validate-w17-hosted-staging.mjs'
 permissions:
   contents: read
 jobs:
@@ -246,6 +247,49 @@ jobs:
           trap 'kill "$app_pid" "$proxy_pid" 2>/dev/null || true' EXIT
           curl -fsS --retry 25 --retry-connrefused --retry-delay 2 http://localhost:3000/login -o /dev/null
           W10_LOCAL_SERVICE_KEY="$SERVICE_ROLE_KEY" node scripts/validate-w10-agency-reservation.mjs
+      - name: Verify W17 file and identity erasure on disposable Supabase
+        if: ${{ github.head_ref == 'work/w17-gdpr' }}
+        env:
+          W17_DISPOSABLE_SUPABASE: 'true'
+          AUTH_SITE_ORIGIN: http://localhost:3000
+          RYTHM_ENV: staging
+          RYTHM_AGENT_EXECUTION_ENABLED: 'false'
+          RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
+        run: |
+          set -euo pipefail
+          psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          do $$
+          declare fixture_user uuid := gen_random_uuid(); fixture_case uuid := gen_random_uuid();
+                  fixture_event bigint;
+          begin
+            insert into auth.users (id, email, aud, role)
+              values (fixture_user, 'w17-preview-' || fixture_user || '@example.test', 'authenticated', 'authenticated');
+            insert into public.privacy_requests (id, requested_by_user_id, request_type, scope, status, verified_at)
+              values (fixture_case, fixture_user, 'deletion', 'account', 'in_progress', now());
+            insert into public.audit_events (actor_type, actor_user_id, event_type, object_type, created_at)
+              values ('user', fixture_user, 'privacy_fixture', 'account', '2026-08-01T00:00:00Z')
+              returning id into fixture_event;
+            if not exists (
+              select from public.privacy_preview_account_erasure(fixture_case) p
+              where p.resource = 'audit_event' and p.record_id = fixture_event::text
+                and p.proposed_expiry = '2026-10-30T00:00:00Z'::timestamptz
+            ) then raise exception 'W17 preview audit record or expiry missing'; end if;
+          end $$;
+          rollback;
+          SQL
+          cd "$RUNNER_TEMP/w10-disposable"
+          source <(supabase status -o env)
+          test "$API_URL" = http://127.0.0.1:54321
+          export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
+          export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$ANON_KEY"
+          export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          cd "$GITHUB_WORKSPACE"
+          ./node_modules/.bin/next start --hostname localhost --port 3000 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          curl -fsS --retry 25 --retry-connrefused --retry-delay 2 http://localhost:3000/login -o /dev/null
+          node scripts/validate-w17-hosted-staging.mjs
       - name: Print sanitized synthetic evidence
         if: always()
         run: |

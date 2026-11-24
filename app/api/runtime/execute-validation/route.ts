@@ -102,6 +102,7 @@ export async function POST(request: Request) {
     try {
       const response = await client.responses.create({
         model: config.dryRunModel,
+        store: false,
         max_output_tokens: 300,
         input: [
           {

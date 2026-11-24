@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
       .eq("organization_id", organizationId)
       .eq("user_id", user.id)
       .eq("role", "owner")
+      .eq("membership_status", "active")
       .maybeSingle();
 
     if (membershipError) {

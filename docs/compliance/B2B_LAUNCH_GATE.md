@@ -98,6 +98,15 @@ Re-run the legal/privacy/security launch review before:
 - materially changing business entity, registered address, tax status or invoicing model;
 - launching outside the current EU/Hungary legal baseline in a jurisdiction with additional requirements.
 
+## W35 — mandatory independent privacy/legal approval
+
+Owner roadmap decision (2026-11-24): carry the outstanding W17 independent legal review to W35, without waiving it. Before commercial launch, onboarding real customers or activating real customer data processing or account-erasure operations, obtain and record qualified EU privacy counsel approval of the applicable scope and close the required provider/contract gaps. Use [W17 legal review register](W17_LEGAL_REVIEW.md), [W17 final review packet](W17_FINAL_REVIEW_PACKET.md) and [execution evidence](W17_RELEASE_GATE_EXECUTION.md).
+
+- Record reviewer, review date, applicable terms/DPAs, controller/processor roles, subprocessors, transfers, approved retention clocks and deletion exceptions, consent/disclosure requirements, backup and restore handling, and each remaining condition.
+- Resolve personal Gmail/Drive contract suitability and any required replacement; do not assume encryption alone removes the processor question. Verify actual OpenAI, Cloudflare Email Routing, Google Analytics, Resend and other enabled provider settings and terms.
+- Verify all technical acceptance evidence and any restrictions preventing unapproved real processing. No real-data activation on the basis of a synthetic test or owner approval alone.
+- W17 technical completion, even if later achieved, is not W35 legal approval. No commercial launch or removal of existing legal restrictions until the gate is satisfied.
+
 ## Release classification rule
 
-B2B may be classified as `B2B LEGAL BASELINE READY` when the repository/product controls above are deployed and the three external legal/fiscal launch gates have documented evidence. Security uplifts should continue according to risk and commercial maturity but do not, by themselves, prevent this legal baseline classification.
+B2B may be classified as `B2B LEGAL BASELINE READY` when the repository/product controls above are deployed and the three external legal/fiscal launch gates and W35 independent privacy/legal gate have documented evidence. Security uplifts should continue according to risk and commercial maturity but do not, by themselves, prevent this legal baseline classification.

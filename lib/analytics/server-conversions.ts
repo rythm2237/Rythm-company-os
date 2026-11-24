@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
+import { ANALYTICS_CONSENT_COOKIE } from "@/lib/analytics/consent";
 import { PUBLIC_ATTRIBUTION_COOKIE, type PublicAttribution } from "@/lib/analytics/public-events";
 import { createAnalyticsAdminClient } from "@/lib/supabase/analytics-admin";
 
@@ -44,6 +45,8 @@ function parseAttribution(raw: string | undefined): PublicAttribution | null {
 
 export async function readServerPublicAttribution() {
   const cookieStore = await cookies();
+  const choices = cookieStore.getAll(ANALYTICS_CONSENT_COOKIE);
+  if (choices.length !== 1 || choices[0].value !== "granted") return null;
   return parseAttribution(cookieStore.get(PUBLIC_ATTRIBUTION_COOKIE)?.value);
 }
 

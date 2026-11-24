@@ -1,0 +1,59 @@
+name: W17 hosted privacy staging
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: w17-hosted-staging
+  cancel-in-progress: false
+
+jobs:
+  hosted-staging:
+    if: ${{ github.event.label.name == 'w17-staging-authorized' && github.event.pull_request.number == 471 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'work/w17-gdpr' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    environment: w02-staging
+    env:
+      W17_STAGING_REF: ${{ vars.W02_STAGING_REF }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.W02_STAGING_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.W02_STAGING_ANON_KEY }}
+      RYTHM_ENV: staging
+      RYTHM_AGENT_EXECUTION_ENABLED: 'false'
+      RYTHM_EXTERNAL_ACTIONS_ENABLED: 'false'
+      AUTH_SITE_ORIGIN: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Validate isolated backend
+        run: |
+          test "$W17_STAGING_REF" = viqjdgohtxqkrdgwtull
+          test "$NEXT_PUBLIC_SUPABASE_URL" = https://viqjdgohtxqkrdgwtull.supabase.co
+          test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:w17
+      - run: npx --no-install next build
+      - name: Run real Auth, HTTP and Storage fixtures
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.W02_STAGING_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/next start --hostname localhost --port 3000 > "$RUNNER_TEMP/w17-server.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://localhost:3000/login >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:3000/login >/dev/null
+          node scripts/validate-w17-hosted-staging.mjs

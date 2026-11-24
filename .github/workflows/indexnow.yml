@@ -21,6 +21,12 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+      - name: Check intentional Production release hold
+        id: release_hold
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          node -e 'const c=require("./vercel.json"); const g=c.git?.deploymentEnabled; const hold=process.env.EVENT_NAME==="push"&&(g===false||g?.main===false); console.log(hold?"Automatic Production deployment intentionally held.":"Normal deployment verification."); require("fs").appendFileSync(process.env.GITHUB_OUTPUT,"skip="+hold+"\n")'
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -28,6 +34,7 @@ jobs:
           node-version: "22"
 
       - name: Capture pre-deploy sitemap for deletion detection
+        if: steps.release_hold.outputs.skip != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -42,6 +49,7 @@ jobs:
           fi
 
       - name: Wait for matching production deployment
+        if: steps.release_hold.outputs.skip != 'true'
         shell: bash
         env:
           EXPECTED_SHA: ${{ github.sha }}
@@ -62,6 +70,7 @@ jobs:
           exit 1
 
       - name: Submit production URLs to IndexNow
+        if: steps.release_hold.outputs.skip != 'true'
         env:
           INDEXNOW_PREVIOUS_SITEMAP_FILE: /tmp/indexnow-before.xml
         run: node scripts/submit-indexnow.mjs
