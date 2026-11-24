@@ -68,7 +68,7 @@
     "test:w07": "node scripts/validate-w07-agent-boundaries.mjs && node scripts/validate-w07-approval-claim.mjs",
     "test:w12": "node --import tsx scripts/validate-w12-approval-replay.ts && node --import tsx scripts/validate-w12-evidence-quality.ts && node scripts/validate-w12-governed-meetings.mjs && node scripts/validate-w10-meeting-approval-boundary.mjs",
     "test:w15": "node --import tsx scripts/validate-w15-pilot-observability.ts && node --import tsx scripts/validate-w15-p0-alert-delivery.ts",
-    "test:w17": "node scripts/validate-w17-privacy-intake.mjs && node scripts/validate-w17-privacy-export.mjs && node scripts/validate-w17-memory-erasure.mjs",
+    "test:w17": "node scripts/validate-w17-privacy-intake.mjs && node scripts/validate-w17-privacy-export.mjs && node scripts/validate-w17-memory-erasure.mjs && node --import tsx scripts/validate-w17-analytics-consent.ts",
     "test:w14": "node --import tsx scripts/validate-w14-automation-recovery.ts && npm run test:admin-automation"
   },
   "dependencies": {
