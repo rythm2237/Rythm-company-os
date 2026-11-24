@@ -55,3 +55,12 @@ The production-hardened foundation permits only owner-triggered, low-risk, dry-r
 ## W15 pilot incident response
 
 See [W15 Pilot Incident Response](W15_PILOT_INCIDENT_RESPONSE.md) for server-side incident log taxonomy, owner-only triage dashboard, 30-day SLO candidates, error budget unknown-state rules, severity protocol, staged alert-delivery gate and rollback. A structured P0 log is **not** a delivered on-call alert.
+
+
+## Disaster recovery (W09)
+
+See [DISASTER_RECOVERY_RUNBOOK.md](./DISASTER_RECOVERY_RUNBOOK.md) for the owner-controlled recovery procedure, scoped acceptance evidence and limitations. On 2026-11-17 an encrypted pre-customer production composite archive passed independent offsite SHA-256 verification, authenticated local decryption and isolated offline logical database replay (32 segments, indexes/constraints/triggers, and 14/14 Storage byte checks). Independent synthetic restored-backend and representative Next.js route tests also passed.
+
+**This is not proof of atomic point-in-time recovery or a fully rebuilt production application.** The two segmented continuously written tables use a fixed lagged cutoff; other database data and Storage objects were captured at separate times. The operator intentionally excluded newer event rows. Provider secrets, full real-data Auth/Storage API rehydration, measured customer RTO/RPO, owner-approved responder assignments, retention and consistent-checkpoint strategy remain separate gates.
+
+**Before the first real customer data is received (even if unpaid):** activate and verify encrypted independent scheduled backups, freshness and restore monitoring, access-controlled retention, passphrase/secret custody, a nominated primary and backup responder, and appropriate security/data-protection validation. Do not mistake merging this runbook and offline CI drill into `main` for enabling a backup scheduler, migrating a production database, performing a production restore or completing customer-data launch readiness. Do not restore or roll back production during a drill.

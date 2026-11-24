@@ -1,0 +1,31 @@
+name: W09 Storage runtime proof
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/w09-storage-runtime-proof.yml'
+permissions:
+  contents: read
+jobs:
+  runtime-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Verify exact unmodified image on fresh Linux runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='docker.io/supabase/storage-api@sha256:09b6d74764b75f5f49787273a9deb840b3132ccb4137a4a4b41a181d915202bd'
+          docker info --format '{{.OSType}}/{{.Architecture}}'
+          docker pull --platform linux/amd64 "$image"
+          docker image inspect "$image" --format '{{.Os}}/{{.Architecture}}'
+          docker run --rm --network none --platform linux/amd64 --entrypoint /bin/sh "$image" -ec '
+            for f in /usr/local/bin/node /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1; do
+              test -s "$f"
+              ls -lL "$f"
+              sha256sum "$f"
+            done
+            node -p "process.version + \" \" + process.arch"
+            test "$(node -p process.arch)" = x64
+            echo W09_STORAGE_RUNTIME_PROOF_PASS
+          '
