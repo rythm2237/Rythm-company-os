@@ -1,3 +1,5 @@
+import { readAnalyticsConsent } from "./consent";
+
 export type PublicExperienceEventName =
   | "tour_prompt_seen"
   | "tour_started"
@@ -43,7 +45,7 @@ export const PUBLIC_ATTRIBUTION_SESSION_KEY = "rythm:public-attribution";
 export const PUBLIC_ATTRIBUTION_COOKIE = "rythm_public_attribution";
 
 export function readPublicAttribution(): PublicAttribution | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined" || readAnalyticsConsent() !== "granted") return null;
 
   try {
     const raw = window.sessionStorage.getItem(PUBLIC_ATTRIBUTION_SESSION_KEY);
@@ -65,7 +67,7 @@ export function readPublicAttribution(): PublicAttribution | null {
 }
 
 export function writePublicAttribution(attribution: PublicAttribution) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || readAnalyticsConsent() !== "granted") return;
   try {
     const serialized = JSON.stringify(attribution);
     window.sessionStorage.setItem(PUBLIC_ATTRIBUTION_SESSION_KEY, serialized);
@@ -87,6 +89,8 @@ export function trackPublicExperienceEvent(event: PublicExperienceEvent) {
   if (typeof window === "undefined") return;
 
   window.dispatchEvent(new CustomEvent<PublicExperienceEvent>("rythm:public-experience", { detail: event }));
+
+  if (readAnalyticsConsent() !== "granted") return;
 
   const payload = JSON.stringify({
     name: event.name,
