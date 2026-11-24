@@ -2,6 +2,11 @@
 
 Status: BLOCKED for Production. Owner approval for the internal retention proposal and release is recorded in PR #471. It does not replace the release sign-off requirements in W17_LEGAL_REVIEW.md. No real deletion or new paid provider plan is authorized by this record.
 
+## Owner-approved W17/W35 scope split — 2026-11-24
+
+The owner directed independent qualified legal review to W35. See W17_LEGAL_REVIEW.md and B2B_LAUNCH_GATE.md for the mandatory commercial-launch gate. Older references below to legal sign-off before release mean real customer data activation/commercial release, not completion of technical testing in an isolated synthetic environment. No legal approval, provider contract approval, real-account erasure, or customer activation is implied. Technical closure requires the exact integration candidate, passing CI, isolated DB checks and browser/network acceptance. A public Production deployment is not equivalent to synthetic staging; do not assume that it cannot process real visitor or customer data. Until enforceable scope restrictions and outstanding technical risks are reviewed, keep the PR draft and Production unchanged.
+
+
 ## Verified facts
 
 - Operational archive drill and scoped synthetic memory reconciliation passed on the restored operational database; local named container and two temporary directory absence checks passed. See PR #471 comments 7133595918 and 7133864781. Not a second physical restore, complete account erasure or secure wipe.
