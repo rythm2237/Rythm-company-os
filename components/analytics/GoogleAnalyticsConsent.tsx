@@ -13,7 +13,7 @@ const ALLOWED_HOSTS = new Set(["rythm-os.com", "www.rythm-os.com"]);
 type AnalyticsWindow = Window & {
   dataLayer?: unknown[];
   gtag?: (...args: unknown[]) => void;
-  [key: `ga-disable-${string}`]: boolean | undefined;
+  "ga-disable-G-R0VW9SY7Z9"?: boolean;
 };
 
 function writeConsent(value: "granted" | "denied") {
