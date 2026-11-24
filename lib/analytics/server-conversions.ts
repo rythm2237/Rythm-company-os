@@ -45,7 +45,8 @@ function parseAttribution(raw: string | undefined): PublicAttribution | null {
 
 export async function readServerPublicAttribution() {
   const cookieStore = await cookies();
-  if (cookieStore.get(ANALYTICS_CONSENT_COOKIE)?.value !== "granted") return null;
+  const choices = cookieStore.getAll(ANALYTICS_CONSENT_COOKIE);
+  if (choices.length !== 1 || choices[0].value !== "granted") return null;
   return parseAttribution(cookieStore.get(PUBLIC_ATTRIBUTION_COOKIE)?.value);
 }
 
