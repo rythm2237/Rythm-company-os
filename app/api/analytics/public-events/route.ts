@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hasAnalyticsConsent } from "@/lib/analytics/consent";
 import { createAnalyticsAdminClient } from "@/lib/supabase/analytics-admin";
 
 const EVENT_NAMES = new Set([
@@ -78,6 +79,7 @@ function safeProperties(value: unknown) {
 }
 
 export async function POST(request: Request) {
+  if (!hasAnalyticsConsent(request.headers.get("cookie") ?? "")) return new NextResponse(null, { status: 204 });
   const contentLength = Number(request.headers.get("content-length") ?? "0");
   if (contentLength > 4096) {
     return NextResponse.json({ ok: false }, { status: 413 });
