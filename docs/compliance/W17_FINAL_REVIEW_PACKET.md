@@ -2,6 +2,11 @@
 
 Status: technical remediation in draft branch, release BLOCKED. Owner authorization is recorded in PR #471. This packet is an engineering/privacy review aid, not legal advice or legal approval.
 
+## Owner-approved W17/W35 scope split — 2026-11-24
+
+The owner directed independent qualified legal review to W35. See W17_LEGAL_REVIEW.md and B2B_LAUNCH_GATE.md for the mandatory commercial-launch gate. Older references below to legal sign-off before release mean real customer data activation/commercial release, not completion of technical testing in an isolated synthetic environment. No legal approval, provider contract approval, real-account erasure, or customer activation is implied. Technical closure requires the exact integration candidate, passing CI, isolated DB checks and browser/network acceptance. A public Production deployment is not equivalent to synthetic staging; do not assume that it cannot process real visitor or customer data. Until enforceable scope restrictions and outstanding technical risks are reviewed, keep the PR draft and Production unchanged.
+
+
 ## Evidence and known boundaries
 
 - W09 integration is on main 66036e557da6ac5dbb4d3a61eb58b0d300fcf3fe. The actual operational archive restore and synthetic personal-memory erasure reconciliation passed on 2026-11-24; named transient paths and container absence checked. No actual account deletion or full application recovery established.
