@@ -53,6 +53,16 @@ The signed-in file deletion route verifies ownership and waits for ingestion to 
 
 Account erasure still requires verified identity and authority, reconciliation of queued work and all eligible data, and review of dependencies that prevent Auth deletion. Review organization ownership and references, retained usage records, provider copies, and backup copies before closing a case. A successful synthetic identity deletion verifies Auth and token behavior for that scoped fixture, including stale access and refresh tokens. It does not resolve the deletion policy for customer accounts with shared or retained history.
 
+## Processor and backup evidence
+
+| System | Evidence and remaining checks |
+| --- | --- |
+| OpenAI | The repository's direct Responses calls specify `store: false`. Confirm the live organization's project-level Data Controls, provider monitoring retention and any enabled endpoint exceptions before claiming provider-side erasure. See [OpenAI Data Controls](https://developers.openai.com/api/docs/guides/your-data). |
+| Supabase | The production project region was verified as `eu-west-1`. The account's scheduled backup and PITR settings still require dashboard evidence. Database backups and separately exported Storage binaries require separate expiry and restore evidence. See [Supabase backups](https://supabase.com/docs/guides/platform/backups). |
+| Vercel | The production project was located. Its log drain configuration was unavailable through the connected API. Verify the account's active drains, downstream destinations and applicable log retention. See [Vercel Logs](https://vercel.com/docs/logs). |
+| Cloudflare and destination mailbox | Verify the active privacy-address routing destination and mailbox retention. Routing configuration and retention at the receiving mailbox are distinct. See [Cloudflare routing addresses](https://developers.cloudflare.com/email-service/configuration/email-routing-addresses/). |
+| W09 offline recovery | The encrypted archive and separate checksum are present in restricted storage. Prior W09 recovery evidence reports 32 database segments and 14 Storage objects restored. Verify the retention or expiry for the actual copy and repeat the restoration check with W17 post-backup erasure evidence before using the restore procedure on real data. Keep decryption credentials in the operator's local environment. |
+
 ## Hosted fixture commands
 
 Apply the W17 migrations to the allowlisted Supabase Staging project. Start the candidate Next.js server on `http://localhost:3000` using the Staging-only configuration. Run `node scripts/validate-w17-hosted-staging.mjs` with `W17_STAGING_REF`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RYTHM_ENV=staging`, `RYTHM_AGENT_EXECUTION_ENABLED=false`, and `RYTHM_EXTERNAL_ACTIONS_ENABLED=false`. Supply keys through the server environment. The disposable Supabase CI also runs this validator using only loopback credentials. The validator checks two synthetic accounts and private files, tests Storage and database erasure through the real route, verifies stale token rejection after synthetic identity deletion, and cleans up the fixtures. Validate operator-only disposition through the separate W17 database and restore tests.
