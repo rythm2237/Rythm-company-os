@@ -67,10 +67,29 @@ export default function GoogleAnalyticsConsent() {
     const consent = readAnalyticsConsent();
     if (consent === "granted") {
       loadGoogleAnalytics();
-      return;
+    } else {
+      clearOptionalAnalyticsState();
+      if (consent !== "denied") setVisible(true);
     }
-    clearOptionalAnalyticsState();
-    if (consent !== "denied") setVisible(true);
+
+    // Cookies are shared by tabs on the same host. Recheck on focus and
+    // periodically so an already-loaded analytics script stops after withdrawal.
+    const reconcileChoice = () => {
+      const current = readAnalyticsConsent();
+      if (current === consent) return;
+      if (current !== "granted") clearOptionalAnalyticsState();
+      window.location.reload();
+    };
+    window.addEventListener("focus", reconcileChoice);
+    window.addEventListener("pageshow", reconcileChoice);
+    document.addEventListener("visibilitychange", reconcileChoice);
+    const timer = window.setInterval(reconcileChoice, 2000);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", reconcileChoice);
+      window.removeEventListener("pageshow", reconcileChoice);
+      document.removeEventListener("visibilitychange", reconcileChoice);
+    };
   }, []);
 
   if (!visible) return eligibleHost && pathname === "/cookies" ? (
