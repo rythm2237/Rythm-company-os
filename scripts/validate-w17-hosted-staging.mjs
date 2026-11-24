@@ -40,7 +40,11 @@ async function seed() {
   checked(await admin.from("organization_members").insert({
     organization_id: fixture.org, user_id: fixture.user, role: "owner", membership_status: "active",
   }), "register synthetic owner");
-  const account = checked(await admin.from("aiw_accounts").insert({ user_id: fixture.user, kind: "personal" })
+  // File routes provision credits for an unconfigured account. Preconfigure the
+  // synthetic plan so these privacy checks create no immutable ledger entries.
+  const account = checked(await admin.from("aiw_accounts").insert({
+    user_id: fixture.user, kind: "personal", plan_code: "free_trial", plan_status: "active",
+  })
     .select("id").single(), "create AI account");
   checked(await admin.from("aiw_workspaces").insert({
     id: fixture.workspace, account_id: account.id, kind: "personal", name: "W17 personal", created_by: fixture.user,
@@ -131,8 +135,8 @@ try {
     for (const [label, clean] of steps) {
       try {
         checked(await clean(), label);
-      } catch {
-        failures.push(label);
+      } catch (error) {
+        failures.push(error.message);
       }
     }
   }
