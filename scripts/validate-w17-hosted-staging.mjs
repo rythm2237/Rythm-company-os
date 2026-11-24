@@ -129,6 +129,7 @@ try {
     const steps = [
       ["privacy cases", () => admin.from("privacy_requests").delete().eq("requested_by_user_id", fixture.user)],
       ["organization", () => admin.from("organizations").delete().eq("id", fixture.org)],
+      ["personal workspace", () => admin.from("aiw_workspaces").delete().eq("id", fixture.workspace).eq("created_by", fixture.user)],
       ["identity", () => admin.auth.admin.deleteUser(fixture.user)],
     ];
     if (fixture.path) steps.unshift(["private object", () => admin.storage.from(bucket).remove([fixture.path])]);
