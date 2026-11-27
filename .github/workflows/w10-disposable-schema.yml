@@ -181,14 +181,14 @@ jobs:
           end $$;
           SQL
       - name: W13 real queue claim and idempotency (disposable local PostgreSQL only)
-        if: ${{ github.head_ref == 'pilot/w13-dispatch-resilience' }}
+        if: ${{ (github.head_ref == 'pilot/w13-dispatch-resilience' || (github.head_ref == 'pilot/w18-release-acceptance' && github.event.pull_request.head.repo.full_name == github.repository)) }}
         run: |
           set -euo pipefail
           test -f scripts/fixtures/w13-real-queue-local.sql
           psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
             -v ON_ERROR_STOP=1 -f scripts/fixtures/w13-real-queue-local.sql
       - name: W11 real CRM relational invariant and restricted-member RLS (disposable local PostgreSQL)
-        if: ${{ github.head_ref == 'pilot/w11-crm-contract-accountability' }}
+        if: ${{ (github.head_ref == 'pilot/w11-crm-contract-accountability' || (github.head_ref == 'pilot/w18-release-acceptance' && github.event.pull_request.head.repo.full_name == github.repository)) }}
         run: |
           set -euo pipefail
           test -f scripts/fixtures/w11-real-crm-local.sql
@@ -213,7 +213,7 @@ jobs:
           NEXT_TELEMETRY_DISABLED: '1'
           # Paid acceptance evidence is archived; routine CI must not spend.
           W10_LIVE_AI: 'false'
-          W11_ROLE_BROWSER: ${{ github.head_ref == 'pilot/w11-crm-contract-accountability' }}
+          W11_ROLE_BROWSER: ${{ (github.head_ref == 'pilot/w11-crm-contract-accountability' || (github.head_ref == 'pilot/w18-release-acceptance' && github.event.pull_request.head.repo.full_name == github.repository)) }}
           W10_PROVIDER_KEY: ''
         run: |
           set -euo pipefail
@@ -248,7 +248,7 @@ jobs:
           curl -fsS --retry 25 --retry-connrefused --retry-delay 2 http://localhost:3000/login -o /dev/null
           W10_LOCAL_SERVICE_KEY="$SERVICE_ROLE_KEY" node scripts/validate-w10-agency-reservation.mjs
       - name: Verify W17 file and identity erasure on disposable Supabase
-        if: ${{ github.head_ref == 'work/w17-gdpr' }}
+        if: ${{ (github.head_ref == 'work/w17-gdpr' || (github.head_ref == 'pilot/w18-release-acceptance' && github.event.pull_request.head.repo.full_name == github.repository)) }}
         env:
           W17_DISPOSABLE_SUPABASE: 'true'
           AUTH_SITE_ORIGIN: http://localhost:3000
