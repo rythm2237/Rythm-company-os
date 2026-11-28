@@ -7,6 +7,9 @@ import { verifyW11RoleBrowser } from "./validate-w11-role-browser.mjs";
 
 mkdirSync("test-results", { recursive: true });
 const evidence = [];
+const discoveryBenchmark = [];
+const discoveryOrgIds = [];
+const w19 = process.env.W19_DISCOVERY_TEST === 'true';
 const app = "http://localhost:3000";
 const backend = "http://127.0.0.1:54321";
 const template = "ready_ai_advertising_agency_v1";
@@ -85,10 +88,10 @@ async function localContext(options) {
   return context;
 }
 try {
-  for (const [profile, options] of [
-    ["desktop", { viewport: { width: 1440, height: 900 } }],
-    ["mobile", devices["Pixel 7"]],
-  ]) {
+  const viewports = [["desktop", { viewport: { width: 1440, height: 900 } }], ["mobile", devices["Pixel 7"]]];
+  const journeys = w19 ? viewports.flatMap(([profile,options])=>[[profile,options,"before"],[profile,options,"after"]]) : viewports.map(([profile,options])=>[profile,options,"existing"]);
+  for (const [profile, options, discoveryMode] of journeys) {
+    const journeyStart=performance.now();
     const id = randomUUID();
     const email = "w10-" + id + "@example.com";
     const name = "W10 Agency " + id;
@@ -122,6 +125,12 @@ try {
     assert.equal(org.name, name);
     const ownerClient = createClient(backend, publicKey, { auth: { persistSession: false, autoRefreshToken: false } });
     result(await ownerClient.auth.signInWithPassword({ email, password }), "Sign in synthetic Owner for authorization checks");
+    for (const previousId of discoveryOrgIds) {
+      assert.deepEqual(result(await ownerClient.from("organizations").select("mission").eq("id",previousId),"W19 cross-tenant profile read"),[]);
+      const denied=await ownerClient.from("organizations").update({mission:"W19 denied mutation"}).eq("id",previousId).select("id");
+      assert.ok(denied.error||denied.data?.length===0,"W19 cross-tenant profile mutation must fail");
+      assert.deepEqual(result(await ownerClient.from("audit_events").select("id").eq("organization_id",previousId).eq("event_type","organization.profile_updated"),"W19 foreign confirmation read"),[]);
+    }
     for (const previous of isolatedOrganizations) {
       const records = result(await ownerClient.from("projects").select("id").eq("id", previous.projectId), "Cross-tenant project read");
       assert.deepEqual(records, []);
@@ -203,6 +212,65 @@ try {
       assert.ok(workforce.length >= 7, "Seven Agency specialists must persist");
       assert.ok(workforce.every(agent => agent.organization_id === org.id && departments.some(department => department.id === agent.department_id)), "Every specialist must reference its own tenant department");
       console.log(`PASS W10 workforce (${profile}): persisted departments and tenant-bound specialists`);
+      if(w19) {
+        const pre=result(await admin.from("organizations").select("name,mission,vision,default_currency,timezone,legal_name,registered_address").eq("id",org.id).single(),"W19 pre-profile");
+        const preAudit=await admin.from("audit_events").select("id",{count:"exact",head:true}).eq("organization_id",org.id).eq("event_type","organization.profile_updated").eq("actor_type","user");
+        assert.equal(preAudit.count,0);
+        const route=discoveryMode==="before"?"/company/profile":"/company/profile/discovery";
+        const form=page.locator(discoveryMode==="before"?"form.ops-form-grid":'form[aria-label="Business discovery"]');
+        // Candidate-specific validation is separate from the timed clean path.
+        if(discoveryMode==="after") {
+          await page.getByRole("link",{name:"Review & confirm profile",exact:true}).click();
+          await page.waitForURL(url=>url.pathname===route);
+          await form.waitFor();
+          assert.equal(await form.locator('[name="category"]').inputValue(),"Advertising and marketing");
+          assert.equal(await form.locator('[name="services"]').inputValue(),"");
+          assert.equal(await form.locator('[name="confirm"]').evaluate(el=>el.validity.valueMissing),true);
+          await form.getByText("Optional: describe your actual business to refine suggestions",{exact:true}).click();
+          await form.getByLabel("Business context (used only on this page)").fill(profile==="desktop"?"We provide SEO":"We provide paid ads");
+          await form.getByRole("button",{name:"Refresh suggestions from my description"}).click();
+          assert.equal(await form.locator('[name="subcategory"]').inputValue(),profile==="desktop"?"SEO agency":"Performance marketing agency");
+          assert.match(await form.getByRole("status").innerText(),/medium/);
+          await form.locator('[name="confirm"]').check();
+          await form.locator('[name="services"]').fill("Owner-corrected synthetic service");
+          assert.equal(await form.locator('[name="confirm"]').isChecked(),false);
+          assert.equal(await form.locator('[name="services"]').inputValue(),"Owner-corrected synthetic service");
+          assert.match(await form.getByRole("status").innerText(),/Manually edited/);
+          const overflow=await form.evaluate(el=>el.scrollWidth>el.clientWidth+2);
+          assert.equal(overflow,false,"W19 form horizontal overflow");
+          await page.goto(app+"/company/launch");
+        }
+        const timer=performance.now();
+        let actions=1;
+        if(discoveryMode==="before") await page.goto(app+route);
+        else await page.getByRole("link",{name:"Review & confirm profile",exact:true}).click();
+        await form.waitFor();
+        const visibleFields=await form.locator("input:visible, textarea:visible").count();
+        const requiredTextFields=await form.locator("input[required]:not([type=checkbox]):visible, textarea[required]:visible").count();
+        for(const [name,value] of [["mission","Provide reliable synthetic agency services"],["vision","Build a trustworthy synthetic agency"]]) {
+          const field=form.locator('[name="'+name+'"]');
+          if(!(await field.inputValue()).trim()){await field.fill(value);actions++;}
+        }
+        if(discoveryMode==="after"){await form.locator('[name="confirm"]').check();actions++;}
+        await form.getByRole("button",{name:discoveryMode==="before"?"Save company profile":"Confirm & save profile",exact:true}).click();actions++;
+        await page.waitForURL(url=>discoveryMode==="before"?url.pathname==="/company/profile"&&url.searchParams.has("message"):url.pathname==="/company/launch"&&url.searchParams.has("message"));
+        const profileMs=Math.round(performance.now()-timer);
+        const persisted=result(await admin.from("organizations").select("name,mission,vision,default_currency,timezone,legal_name,registered_address").eq("id",org.id).single(),"W19 persisted profile");
+        const audit=await admin.from("audit_events").select("id,payload").eq("organization_id",org.id).eq("event_type","organization.profile_updated").eq("actor_type","user");
+        assert.ok(!audit.error);assert.equal(audit.data.length,1);
+        if(discoveryMode==="after"){
+          assert.match(persisted.mission,/Category: Advertising and marketing/);
+          assert.equal(audit.data[0].payload.source,"w19_business_discovery");
+          for(const field of ["name","default_currency","timezone","legal_name","registered_address"])assert.deepEqual(persisted[field],pre[field],"W19 preserve "+field);
+          await page.goto(app+route);await page.waitForURL(url=>url.pathname==="/company/profile");
+        }
+        const record={profile,mode:discoveryMode,visibleFields,requiredTextFields,actions,profileMs,signupToConfirmationMs:Math.round(performance.now()-journeyStart),scope:"automated disposable profile confirmation; total includes synthetic signup, billing, provisioning and candidate checks"};
+        discoveryBenchmark.push(record);discoveryOrgIds.push(org.id);
+        writeFileSync("test-results/w19-benchmark.json",JSON.stringify(discoveryBenchmark,null,2));
+        console.log("W19_BENCHMARK "+JSON.stringify(record));
+        if(discoveryMode==="before") continue;
+      }
+
 
 
       const customerName = "W10 Sample Client " + id;

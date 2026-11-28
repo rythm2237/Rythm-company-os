@@ -1,11 +1,15 @@
 "use client";
 import { useState } from "react";
-import { discoverBusiness, discoveryLimits, formatDiscoveryMission, baseDiscoveryMission } from "@/lib/business-discovery";
+import { discoverBusiness, discoveryLimits, formatDiscoveryMission, baseDiscoveryMission, parseDiscoveryMission } from "@/lib/business-discovery";
 import { SubmitButton } from "@/components/ui/Button";
 
 type Props = {templateKey:string; mission:string; vision:string; currency:string; timezone:string; action:(data:FormData)=>void|Promise<void>};
 export default function DiscoveryForm({templateKey,mission,vision,currency,timezone,action}:Props) {
-  const [draft,setDraft]=useState(()=>discoverBusiness(templateKey));
+  const [draft,setDraft]=useState(()=>{
+    const previous=parseDiscoveryMission(mission);
+    if(previous.mission!==mission) return {...discoverBusiness(templateKey),category:previous.category,subcategory:previous.subcategory,services:previous.services,basis:"Previously entered draft; review and confirm again.",confidence:"unknown" as const};
+    return discoverBusiness(templateKey);
+  });
   const [description,setDescription]=useState("");
   const [purpose,setPurpose]=useState(baseDiscoveryMission(mission));
   const [goal,setGoal]=useState(vision);
@@ -13,7 +17,7 @@ export default function DiscoveryForm({templateKey,mission,vision,currency,timez
   const change=(field:"category"|"subcategory"|"services",value:string)=>{setDraft(d=>({...d,[field]:value,basis:"Manually edited; not independently verified.",confidence:"unknown"}));setConfirmed(false);};
   return <form action={action} className="ops-form-grid" aria-label="Business discovery">
     <div style={{gridColumn:"1 / -1"}}>
-      <p>Review the template-based suggestions below. Nothing is sent to an AI provider, website or analytics service. No changes are saved until you confirm.</p>
+      <p>Review the template-based suggestions below. This form does not send your business description to an AI provider, website or analytics service. No changes are saved until you confirm.</p>
       <details><summary>Optional: describe your actual business to refine suggestions</summary>
         <label><span>Business context (used only on this page)</span><textarea value={description} maxLength={1200} rows={3} onChange={e=>setDescription(e.target.value)} placeholder="e.g. We provide SEO and content marketing"/></label>
         <button type="button" className="secondary-button" onClick={()=>{setDraft(discoverBusiness(templateKey,description));setConfirmed(false);}}>Refresh suggestions from my description</button>

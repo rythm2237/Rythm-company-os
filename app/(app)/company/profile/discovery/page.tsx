@@ -7,7 +7,7 @@ import DiscoveryForm from "./DiscoveryForm";
 
 export const dynamic="force-dynamic";
 const path="/company/profile/discovery";
-const fail=(message:string):never=>redirect(path+"?error="+encodeURIComponent(message));
+function fail(message:string):never { redirect(path+"?error="+encodeURIComponent(message)); }
 
 async function saveDiscovery(expectedOrg:string,expectedUpdatedAt:string,form:FormData) {
   "use server";

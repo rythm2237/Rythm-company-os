@@ -12,7 +12,9 @@ assert.equal(discoverBusiness(agency,"We provide software development").confiden
 assert.equal(discoverBusiness(software,"We provide software development").subcategory,"Software development");
 assert.equal(discoverBusiness(software).category,"Software and technology");
 assert.equal(discoverBusiness("unsupported").category,"");
-assert.equal(discoverBusiness("unsupported","SEO").subcategory,"");
+assert.equal(discoverBusiness("unsupported","SEO").subcategory,"SEO agency");
+assert.equal(discoverBusiness("unsupported","software development").category,"Software and technology");
+assert.equal(discoverBusiness("unsupported","SEO and software development").confidence,"unknown");
 const form=new FormData();
 form.set("mission","Deliver reliable work");form.set("vision","Build trust");
 assert.equal(validateDiscovery(form),null);

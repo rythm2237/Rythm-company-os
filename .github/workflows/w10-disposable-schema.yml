@@ -8,6 +8,8 @@ on:
       - 'scripts/validate-w11-role-browser.mjs'
       - 'scripts/w10-budget-proxy.mjs'
       - 'scripts/validate-w17-hosted-staging.mjs'
+      - 'app/(app)/company/profile/discovery/**'
+      - 'lib/business-discovery.ts'
 permissions:
   contents: read
 jobs:
@@ -92,6 +94,9 @@ jobs:
           grant select on public.crm_accounts, public.project_contracts,
             public.projects, public.project_contract_links to service_role;
           grant select, insert on public.projects, public.project_contract_links to authenticated;
+          -- W19: mirror observed hosted grants, with existing RLS still authoritative.
+          grant update on public.organizations to authenticated;
+          grant select, insert on public.audit_events to authenticated;
           grant select, insert, update on public.action_items to authenticated;
           grant select on public.action_items to service_role;
           grant select on public.approval_requests, public.decisions to authenticated;
@@ -213,6 +218,7 @@ jobs:
           NEXT_TELEMETRY_DISABLED: '1'
           # Paid acceptance evidence is archived; routine CI must not spend.
           W10_LIVE_AI: 'false'
+          W19_DISCOVERY_TEST: 'true'
           W11_ROLE_BROWSER: ${{ github.head_ref == 'pilot/w11-crm-contract-accountability' }}
           W10_PROVIDER_KEY: ''
         run: |
