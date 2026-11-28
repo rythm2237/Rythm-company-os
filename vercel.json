@@ -30,7 +30,8 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "main": false
+      "main": false,
+      "w19-progressive-business-discovery": false
     }
   }
 }

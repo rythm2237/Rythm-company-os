@@ -22,6 +22,7 @@ jobs:
       - run: npm run test:w14
       - run: npm run test:w15
       - run: npm run test:w17
+      - run: node --import tsx scripts/validate-w19-discovery.ts
       - run: npm run test:w12
       - run: npm run test:w07
       - run: npm run test:w05
