@@ -238,6 +238,24 @@ try {
           assert.match(await form.getByRole("status").innerText(),/Manually edited/);
           const overflow=await form.evaluate(el=>el.scrollWidth>el.clientWidth+2);
           assert.equal(overflow,false,"W19 form horizontal overflow");
+          // Invalid native submission must not save, and a stale server action must fail closed.
+          for(const [name,value] of [["mission","Synthetic test mission"],["vision","Synthetic test vision"]]) {
+            await form.locator('[name="'+name+'"]').fill(value);
+          }
+          const submit=form.getByRole("button",{name:"Confirm & save profile",exact:true});
+          await submit.click();
+          assert.equal(new URL(page.url()).pathname,route);
+          assert.equal(await form.locator('[name="confirm"]').evaluate(el=>el.validity.valueMissing),true);
+          assert.equal((await admin.from("audit_events").select("id",{count:"exact",head:true}).eq("organization_id",org.id).eq("event_type","organization.profile_updated")).count,0);
+          await form.locator('[name="confirm"]').check();
+          const stale=result(await admin.from("organizations").update({updated_at:new Date(Date.now()+2000).toISOString()}).eq("id",org.id).select("updated_at").single(),"W19 simulate concurrent edit");
+          assert.ok(stale.updated_at);
+          await submit.click();
+          await page.waitForURL(url=>url.pathname===route&&url.searchParams.has("error"));
+          await page.getByRole("alert").filter({hasText:"Profile changed or could not be saved"}).waitFor();
+          assert.deepEqual(result(await admin.from("organizations").select("mission,vision").eq("id",org.id).single(),"W19 stale write denied"),{mission:pre.mission,vision:pre.vision});
+          assert.equal((await admin.from("audit_events").select("id",{count:"exact",head:true}).eq("organization_id",org.id).eq("event_type","organization.profile_updated")).count,0);
+          console.log("PASS W19 native validation and stale server-action error ("+profile+")");
           await page.goto(app+"/company/launch");
         }
         const timer=performance.now();
@@ -251,7 +269,11 @@ try {
           const field=form.locator('[name="'+name+'"]');
           if(!(await field.inputValue()).trim()){await field.fill(value);actions++;}
         }
-        if(discoveryMode==="after"){await form.locator('[name="confirm"]').check();actions++;}
+        if(discoveryMode==="after"){
+          // Both personas explicitly correct the service rather than simply accepting defaults.
+          await form.locator('[name="services"]').fill("Owner-corrected synthetic service");actions++;
+          await form.locator('[name="confirm"]').check();actions++;
+        }
         await form.getByRole("button",{name:discoveryMode==="before"?"Save company profile":"Confirm & save profile",exact:true}).click();actions++;
         await page.waitForURL(url=>discoveryMode==="before"?url.pathname==="/company/profile"&&url.searchParams.has("message"):url.pathname==="/company/launch"&&url.searchParams.has("message"));
         const profileMs=Math.round(performance.now()-timer);
@@ -260,11 +282,13 @@ try {
         assert.ok(!audit.error);assert.equal(audit.data.length,1);
         if(discoveryMode==="after"){
           assert.match(persisted.mission,/Category: Advertising and marketing/);
+          assert.match(persisted.mission,/Services: Owner-corrected synthetic service/);
+          console.log("PASS W19 persisted manual override ("+profile+")");
           assert.equal(audit.data[0].payload.source,"w19_business_discovery");
           for(const field of ["name","default_currency","timezone","legal_name","registered_address"])assert.deepEqual(persisted[field],pre[field],"W19 preserve "+field);
           await page.goto(app+route);await page.waitForURL(url=>url.pathname==="/company/profile");
         }
-        const record={profile,mode:discoveryMode,visibleFields,requiredTextFields,actions,profileMs,signupToConfirmationMs:Math.round(performance.now()-journeyStart),scope:"automated disposable profile confirmation; total includes synthetic signup, billing, provisioning and candidate checks"};
+        const record={profile,mode:discoveryMode,visibleFields,requiredTextFields,actions,profileMs,signupToConfirmationMs:Math.round(performance.now()-journeyStart),scope:"automated disposable profile confirmation; after includes explicit service correction; total includes synthetic signup, billing, provisioning and candidate checks"};
         discoveryBenchmark.push(record);discoveryOrgIds.push(org.id);
         writeFileSync("test-results/w19-benchmark.json",JSON.stringify(discoveryBenchmark,null,2));
         console.log("W19_BENCHMARK "+JSON.stringify(record));

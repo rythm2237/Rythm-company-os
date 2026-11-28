@@ -8,6 +8,13 @@ assert.equal(discoverBusiness(agency,"We provide SEO").subcategory,"SEO agency")
 assert.equal(discoverBusiness(agency,"We offer SEO and paid ads").subcategory,"");
 assert.equal(discoverBusiness(agency,"We do not offer SEO").services,"");
 assert.equal(discoverBusiness(agency,"We might provide SEO").services,"");
+assert.equal(discoverBusiness(agency,"We don’t offer SEO, PPC; branding").services,"");
+assert.equal(discoverBusiness(agency,"Our competitor offers SEO").services,"");
+assert.equal(discoverBusiness(agency,"Our client needs paid ads").services,"");
+assert.equal(discoverBusiness(agency,"We plan to provide SEO").services,"");
+assert.equal(discoverBusiness(software,"SaaS").services,"");
+assert.equal(discoverBusiness(agency,"SEO, PPC").services,"Search engine optimization, Paid advertising");
+assert.equal(discoverBusiness(agency,"We offer SEO. We do not provide paid advertising.").services,"Search engine optimization");
 assert.equal(discoverBusiness(agency,"We provide software development").confidence,"unknown");
 assert.equal(discoverBusiness(software,"We provide software development").subcategory,"Software development");
 assert.equal(discoverBusiness(software).category,"Software and technology");

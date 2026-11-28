@@ -7,14 +7,24 @@ const signals = [
   { name: "Brand and design", family: "Creative agency", pattern: /\b(branding|graphic design|brand design)\b/i },
   { name: "Content and social media", family: "Content agency", pattern: /\b(content marketing|social media|copywriting)\b/i },
   { name: "Web development", family: "Digital agency", pattern: /\b(web development|website development|web design)\b/i },
-  { name: "Software development", family: "Software development", pattern: /\b(software development|application development|saas)\b/i },
+  { name: "Software development", family: "Software development", pattern: /\b(software development|application development)\b/i },
 ] as const;
 export type DiscoveryDraft = {category:string; subcategory:string; services:string; basis:string; confidence:"high"|"medium"|"unknown"};
 export function discoverBusiness(templateKey: string, context = ""): DiscoveryDraft {
   const input = context.slice(0,1200);
-  // Match positive, short clauses; uncertain/negative clauses are not evidence.
-  const clauses = input.split(/[;,\n.!?]+/).filter(s=>! /\b(no|not|never|don't|doesn't|without|maybe|might|considering|exclude)\b/i.test(s));
-  const matches = signals.filter(s=>clauses.some(c=>s.pattern.test(c)));
+  // Keep comma/semicolon lists together so negation cannot leak into the next item.
+  // Accept explicit self-described offerings or short lists of known service names only.
+  const clauses = input.replace(/[’‘]/g,"'").split(/[\n.!?]+/).filter(s=>! /\b(no|not|never|don't|doesn't|without|maybe|might|considering|exclude|plan|planning|want|wish|hope|need|looking|competitor|competitors|formerly|used to|cannot|can't)\b/i.test(s));
+  const accepted = clauses.filter(clause=>{
+    const text=clause.trim();
+    if (/^(?:we|i|our (?:company|agency|business|team))\s+(?:provide|offer|deliver|specialize in|specialise in)\b/i.test(text)) return true;
+    const items=text.split(/[,;/]|\band\b/i).map(s=>s.trim()).filter(Boolean);
+    return items.length>0 && items.every(item=>signals.some(signal=>{
+      const match=item.match(signal.pattern);
+      return match?.[0].toLowerCase()===item.toLowerCase();
+    }));
+  });
+  const matches = signals.filter(s=>accepted.some(c=>s.pattern.test(c)));
   const advertising = templateKey===agency;
   const engineering = templateKey===software;
   const relevant = matches.filter(s=>engineering ? s.family==="Software development"||s.family==="Digital agency" : advertising ? s.family!=="Software development" : true);
@@ -28,7 +38,7 @@ export function discoverBusiness(templateKey: string, context = ""): DiscoveryDr
     category,
     subcategory: !conflicting&&families.length===1&&Boolean(category) ? families[0] : "",
     services: !conflicting ? relevant.map(s=>s.name).join(", ") : "",
-    basis: conflicting ? "Context conflicts with the installed template. Review manually; no services assumed." : relevant.length ? "Possible matches in your supplied description; confirm or remove each." : category ? "Installed template category only; actual services and specialization are unknown." : "No recognized installed template. Enter the category only if known.",
+    basis: conflicting ? "Context is ambiguous or conflicts with the installed template. Review manually; no services assumed." : relevant.length ? "Possible matches in your supplied description; confirm or remove each." : category ? "Installed template category only; actual services and specialization are unknown." : "No recognized installed template. Enter the category only if known.",
     confidence: conflicting ? "unknown" : relevant.length ? "medium" : category ? "high" : "unknown",
   };
 }
